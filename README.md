@@ -10,6 +10,20 @@ evaluate, and apply scientific knowledge with traceable evidence and visible
 uncertainty. This repository does not build the AI layer yet. It builds the
 reliable core that future AI, graph, API, and web systems can trust.
 
+## Project Vision
+
+Knowledge Engine is an open-source effort to organize, connect, and accelerate
+scientific knowledge.
+
+The long-term objective is to build a transparent, reproducible, AI-assisted
+platform that helps researchers discover connections across disciplines while
+preserving evidence, citations, and scientific rigor.
+
+The project begins with reliable document ingestion and search, then gradually
+expands toward metadata enrichment, knowledge graphs, semantic search, and
+AI-assisted reasoning. Every stage is designed to remain open, modular, and
+community-driven.
+
 ## Status
 
 Phase 0 is implemented:
