@@ -4,6 +4,9 @@ Thank you for helping build Knowledge Engine Core. The project is intentionally
 beginner friendly, but it is also meant to become durable infrastructure. Please
 favor clear, tested, well-documented changes over clever shortcuts.
 
+We are not optimizing for getting code written quickly. We are optimizing for
+the project still being healthy in 10 years.
+
 ## Development Workflow
 
 1. Open or choose an issue before starting non-trivial work.

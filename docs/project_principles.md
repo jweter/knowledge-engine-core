@@ -4,6 +4,16 @@ Knowledge Engine Core is the foundation of a long-term open scientific knowledge
 platform. These principles should guide technical decisions, community norms, and
 future architecture.
 
+## Ten-Year Maintainability
+
+We are not optimizing for getting code written quickly. We are optimizing for the
+project still being healthy in 10 years.
+
+This means stable interfaces are usually better than quick hacks, documentation
+belongs beside implementation, architecture should be thoughtful without becoming
+prematurely abstract, and progress should happen through careful incremental
+evolution.
+
 ## Science First
 
 The project exists to improve access to scientific knowledge. Product decisions
