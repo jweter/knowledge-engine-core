@@ -2,6 +2,8 @@
 
 Phase 1 should prove the system on a real but bounded scientific corpus.
 
+The detailed design is maintained in `docs/phase1_design.md`.
+
 ## Recommended Domain
 
 Start with obesity and metabolic disease because it has large public literature,
@@ -14,6 +16,8 @@ clear scientific impact, and many cross-cutting mechanisms.
 - Track source provenance and import failures.
 - Improve metadata through PubMed and Crossref enrichment.
 - Record parser failures as structured issues.
+- Keep bulk ingestion resumable and idempotent.
+- Add a migration strategy before schema changes become user-facing.
 
 ## Non-Goals
 
