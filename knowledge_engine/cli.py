@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import unicodedata
 from pathlib import Path
 from typing import Annotated
 
@@ -84,8 +85,8 @@ def search(
         table.add_row(
             str(result.paper_id),
             f"{result.score:.3f}",
-            result.title,
-            result.snippet,
+            _safe_text(result.title),
+            _safe_text(result.snippet),
         )
     console.print(table)
 
@@ -104,7 +105,7 @@ def answer(
     with database.session() as session:
         results = SearchService(session).answer_retrieval(question, limit=limit)
 
-    console.print(f"[bold]Question:[/bold] {question}")
+    console.print(f"[bold]Question:[/bold] {_safe_text(question)}")
     if fts_query:
         console.print(f"[bold]Retrieval query:[/bold] {fts_query}")
 
@@ -117,11 +118,11 @@ def answer(
     console.print("[bold]Relevant papers[/bold]")
     for rank, result in enumerate(results, start=1):
         console.print()
-        console.print(f"[bold]{rank}. {result.title}[/bold]")
+        console.print(f"[bold]{rank}. {_safe_text(result.title)}[/bold]")
         console.print(f"Publication year: {result.publication_year or 'Unknown'}")
-        console.print(f"Matching abstract/snippet: {_best_snippet(result)}")
-        console.print(f"Why it matched: {_why_matched(result)}")
-        console.print(f"Citation: {_citation(result)}")
+        console.print(f"Matching abstract/snippet: {_safe_text(_best_snippet(result))}")
+        console.print(f"Why it matched: {_safe_text(_why_matched(result))}")
+        console.print(f"Citation: {_safe_text(_citation(result))}")
 
     _print_retrieval_disclaimer()
 
@@ -145,8 +146,8 @@ def list_papers() -> None:
         authors = ", ".join(link.author.name for link in paper.author_links) or "-"
         table.add_row(
             str(paper.id),
-            paper.title,
-            authors,
+            _safe_text(paper.title),
+            _safe_text(authors),
             str(paper.page_count),
             str(paper.word_count),
         )
@@ -184,6 +185,12 @@ def _truncate(value: str, max_length: int) -> str:
     if len(normalized) <= max_length:
         return normalized
     return f"{normalized[: max_length - 3].rstrip()}..."
+
+
+def _safe_text(value: str) -> str:
+    """Normalize extracted PDF text for reliable CLI display."""
+
+    return unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
 
 
 def _print_retrieval_disclaimer() -> None:

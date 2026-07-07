@@ -17,6 +17,10 @@ def test_cli_help() -> None:
     assert "Offline scientific paper ingestion and search" in result.output
 
 
+def test_safe_text_normalizes_pdf_ligatures() -> None:
+    assert cli._safe_text("Efﬁcacy") == "Efficacy"
+
+
 def test_answer_command_returns_retrieval_only_results(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
