@@ -28,4 +28,5 @@ data/*.sqlite3-*
 data/*.db
 data/*.db-*
 papers/*.pdf
+papers/**/*.pdf
 *.log

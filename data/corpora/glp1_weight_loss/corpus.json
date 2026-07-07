@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1",
+  "corpus_id": "glp1_weight_loss",
+  "name": "GLP-1 Weight Loss Prototype Corpus",
+  "milestone": "VS-0",
+  "status": "defined_not_imported",
+  "purpose": "Prototype one end-to-end scientific question through the Knowledge Engine architecture.",
+  "scientific_question": {
+    "question_id": "q_glp1_weight_loss_adults",
+    "text": "Do GLP-1 receptor agonists reduce body weight in adults with overweight or obesity?",
+    "question_type": "intervention_effect",
+    "population": "Adults with overweight or obesity",
+    "intervention": "GLP-1 receptor agonists",
+    "comparison": "Placebo, usual care, lifestyle intervention, or other comparator described by each source",
+    "outcome": "Body weight, BMI, or percent body weight change",
+    "time_scope": "Any clearly reported treatment duration"
+  },
+  "target_source_count": 10,
+  "source_document_policy": {
+    "commit_pdfs_to_repository": false,
+    "local_pdf_directory": "papers/corpora/glp1_weight_loss/",
+    "source_list_template": "data/corpora/glp1_weight_loss/sources.csv"
+  },
+  "criteria": {
+    "inclusion_criteria": "data/corpora/glp1_weight_loss/inclusion_criteria.md",
+    "exclusion_criteria": "data/corpora/glp1_weight_loss/exclusion_criteria.md",
+    "license_policy": "data/corpora/glp1_weight_loss/license_policy.md"
+  },
+  "prototype_boundaries": {
+    "import_papers": false,
+    "parse_pdfs": false,
+    "modify_database_schema": false,
+    "metadata_enrichment": false,
+    "evidence_extraction": false
+  }
+}
