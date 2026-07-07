@@ -12,7 +12,7 @@ from rich.table import Table
 from knowledge_engine.config import build_settings
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.parser import PyMuPDFParser
-from knowledge_engine.search import SearchService
+from knowledge_engine.search import SearchResult, SearchService, build_natural_language_fts_query
 
 app = typer.Typer(help="Offline scientific paper ingestion and search.")
 console = Console()
@@ -22,6 +22,7 @@ KeywordOption = Annotated[
     typer.Option("--keyword", "-k", help="Keyword to attach."),
 ]
 SearchQueryArgument = Annotated[str, typer.Argument(help="Keyword or quoted phrase query.")]
+QuestionArgument = Annotated[str, typer.Argument(help="Natural-language scientific question.")]
 SearchLimitOption = Annotated[int, typer.Option("--limit", "-n", min=1, max=100)]
 
 
@@ -89,6 +90,42 @@ def search(
     console.print(table)
 
 
+@app.command()
+def answer(
+    question: QuestionArgument,
+    limit: SearchLimitOption = 5,
+) -> None:
+    """Retrieve papers relevant to a scientific question."""
+
+    database = _database()
+    database.initialize()
+    fts_query = build_natural_language_fts_query(question)
+
+    with database.session() as session:
+        results = SearchService(session).answer_retrieval(question, limit=limit)
+
+    console.print(f"[bold]Question:[/bold] {question}")
+    if fts_query:
+        console.print(f"[bold]Retrieval query:[/bold] {fts_query}")
+
+    if not results:
+        console.print("[yellow]No relevant papers found in the indexed corpus.[/yellow]")
+        _print_retrieval_disclaimer()
+        return
+
+    console.print()
+    console.print("[bold]Relevant papers[/bold]")
+    for rank, result in enumerate(results, start=1):
+        console.print()
+        console.print(f"[bold]{rank}. {result.title}[/bold]")
+        console.print(f"Publication year: {result.publication_year or 'Unknown'}")
+        console.print(f"Matching abstract/snippet: {_best_snippet(result)}")
+        console.print(f"Why it matched: {_why_matched(result)}")
+        console.print(f"Citation: {_citation(result)}")
+
+    _print_retrieval_disclaimer()
+
+
 @app.command("list")
 def list_papers() -> None:
     """List imported papers."""
@@ -114,6 +151,47 @@ def list_papers() -> None:
             str(paper.word_count),
         )
     console.print(table)
+
+
+def _best_snippet(result: SearchResult) -> str:
+    """Return the best available short evidence snippet for display."""
+
+    if result.snippet:
+        return result.snippet
+    if result.abstract:
+        return _truncate(result.abstract, max_length=280)
+    return "No abstract or snippet available."
+
+
+def _why_matched(result: SearchResult) -> str:
+    """Explain why a paper appeared in answer retrieval."""
+
+    return f"Matched indexed title, abstract, or body text using: {result.matched_query}"
+
+
+def _citation(result: SearchResult) -> str:
+    """Create a simple citation from currently available metadata."""
+
+    year = str(result.publication_year) if result.publication_year else "n.d."
+    doi = f" DOI: {result.doi}." if result.doi else ""
+    return f"{result.title} ({year}).{doi}"
+
+
+def _truncate(value: str, max_length: int) -> str:
+    """Truncate long text for CLI display."""
+
+    normalized = " ".join(value.split())
+    if len(normalized) <= max_length:
+        return normalized
+    return f"{normalized[: max_length - 3].rstrip()}..."
+
+
+def _print_retrieval_disclaimer() -> None:
+    """Print the required retrieval-only disclaimer."""
+
+    console.print()
+    console.print("[bold]This is retrieval only.[/bold]")
+    console.print("[bold]No scientific synthesis has been performed.[/bold]")
 
 
 @app.command()

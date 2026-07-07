@@ -457,3 +457,75 @@ source, claim, evidence, and provenance boundaries are visible.
   make the prototype feel more advanced.
 - The prototype proves architecture by traceability, not by automation.
 
+## Implemented Retrieval Slice
+
+The first coding milestone adds one CLI command:
+
+```text
+ke answer "Do GLP-1 receptor agonists reduce body weight?"
+```
+
+This command demonstrates the smallest working scientific pipeline currently
+available in Knowledge Engine Core:
+
+```text
+Scientific Question
+  -> Existing SQLite corpus
+  -> Existing FTS index
+  -> Ranked relevant papers
+  -> Matching snippets
+  -> Simple citations
+  -> Retrieval-only disclaimer
+```
+
+### What It Does
+
+- Accepts a natural-language scientific question.
+- Converts the question into a conservative SQLite FTS query.
+- Uses the existing search index and ranking behavior.
+- Returns matching imported papers.
+- Displays paper title.
+- Displays publication year when available.
+- Displays a matching abstract or text snippet.
+- Explains that the paper matched indexed title, abstract, or body text.
+- Displays a simple citation using title, year, and DOI when available.
+- Ends with:
+
+```text
+This is retrieval only.
+No scientific synthesis has been performed.
+```
+
+### What It Does Not Do
+
+- It does not import papers.
+- It does not select the corpus automatically.
+- It does not extract claims.
+- It does not create evidence records.
+- It does not classify support, contradiction, or qualification.
+- It does not synthesize scientific conclusions.
+- It does not use AI, LLMs, embeddings, vector search, or a knowledge graph.
+
+### Limitations
+
+- Retrieval quality depends entirely on the existing SQLite FTS index.
+- Natural-language questions are reduced to keyword-style FTS queries.
+- Snippets are evidence-adjacent but are not evidence records.
+- Citations use only metadata currently stored in the database.
+- The command may retrieve papers that mention query terms without directly
+  answering the question.
+- The command may miss relevant papers that use different terminology.
+
+### Architectural Meaning
+
+This milestone proves that a scientific question can enter the system and return
+traceable source material from the indexed corpus. It does not yet prove the
+Evidence Layer or Reasoning Layer. The output is intentionally framed as
+retrieval because no scientific synthesis has been performed.
+
+### Next Slice
+
+VS-2 should add a tiny curated source set and end-to-end demo data so the command
+can be exercised against approximately one to ten real or generated prototype
+papers. It should still avoid claim extraction, AI summarization, embeddings,
+and knowledge graph construction.
