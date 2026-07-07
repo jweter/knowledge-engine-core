@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import csv
 import unicodedata
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
@@ -25,6 +27,29 @@ KeywordOption = Annotated[
 SearchQueryArgument = Annotated[str, typer.Argument(help="Keyword or quoted phrase query.")]
 QuestionArgument = Annotated[str, typer.Argument(help="Natural-language scientific question.")]
 SearchLimitOption = Annotated[int, typer.Option("--limit", "-n", min=1, max=100)]
+SourcesCsvOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--sources",
+        help="Optional corpus sources.csv metadata overlay for display only.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+
+
+@dataclass(frozen=True)
+class CorpusSourceMetadata:
+    """Curated display metadata loaded from a corpus sources CSV."""
+
+    title: str
+    authors: str
+    year: str
+    journal: str
+    doi: str
+    source_url: str
+    license_type: str
 
 
 def _database() -> Database:
@@ -95,12 +120,14 @@ def search(
 def answer(
     question: QuestionArgument,
     limit: SearchLimitOption = 5,
+    sources: SourcesCsvOption = None,
 ) -> None:
     """Retrieve papers relevant to a scientific question."""
 
     database = _database()
     database.initialize()
     fts_query = build_natural_language_fts_query(question)
+    metadata_overlay = _load_sources_overlay(sources) if sources else {}
 
     with database.session() as session:
         results = SearchService(session).answer_retrieval(question, limit=limit)
@@ -117,12 +144,19 @@ def answer(
     console.print()
     console.print("[bold]Relevant papers[/bold]")
     for rank, result in enumerate(results, start=1):
+        curated = _find_curated_metadata(result, metadata_overlay)
         console.print()
-        console.print(f"[bold]{rank}. {_safe_text(result.title)}[/bold]")
-        console.print(f"Publication year: {result.publication_year or 'Unknown'}")
+        console.print(f"[bold]{rank}. {_safe_text(_display_title(result, curated))}[/bold]")
+        if curated:
+            console.print("Metadata source: corpus sources.csv")
+            console.print(f"Authors: {_safe_text(curated.authors or 'Unknown')}")
+            console.print(f"Journal: {_safe_text(curated.journal or 'Unknown')}")
+            console.print(f"Source URL: {_safe_text(curated.source_url or 'Unknown')}")
+            console.print(f"License: {_safe_text(curated.license_type or 'Unknown')}")
+        console.print(f"Publication year: {_display_year(result, curated)}")
         console.print(f"Matching abstract/snippet: {_safe_text(_best_snippet(result))}")
         console.print(f"Why it matched: {_safe_text(_why_matched(result))}")
-        console.print(f"Citation: {_safe_text(_citation(result))}")
+        console.print(f"Citation: {_safe_text(_citation(result, curated))}")
 
     _print_retrieval_disclaimer()
 
@@ -170,12 +204,76 @@ def _why_matched(result: SearchResult) -> str:
     return f"Matched indexed title, abstract, or body text using: {result.matched_query}"
 
 
-def _citation(result: SearchResult) -> str:
+def _display_title(result: SearchResult, curated: CorpusSourceMetadata | None) -> str:
+    """Return the title to display for an answer result."""
+
+    return curated.title if curated and curated.title else result.title
+
+
+def _display_year(result: SearchResult, curated: CorpusSourceMetadata | None) -> str:
+    """Return the publication year to display for an answer result."""
+
+    if curated and curated.year:
+        return curated.year
+    return str(result.publication_year or "Unknown")
+
+
+def _citation(result: SearchResult, curated: CorpusSourceMetadata | None = None) -> str:
     """Create a simple citation from currently available metadata."""
 
-    year = str(result.publication_year) if result.publication_year else "n.d."
-    doi = f" DOI: {result.doi}." if result.doi else ""
-    return f"{result.title} ({year}).{doi}"
+    title = _display_title(result, curated)
+    year = _display_year(result, curated)
+    if year == "Unknown":
+        year = "n.d."
+    doi_value = curated.doi if curated and curated.doi else result.doi
+    doi = f" DOI: {doi_value}." if doi_value else ""
+    return f"{title} ({year}).{doi}"
+
+
+def _load_sources_overlay(path: Path) -> dict[str, CorpusSourceMetadata]:
+    """Load curated metadata keyed by DOI from a corpus sources CSV."""
+
+    with path.open(newline="", encoding="utf-8") as csv_file:
+        reader = csv.DictReader(csv_file)
+        if reader.fieldnames is None:
+            raise typer.BadParameter("sources CSV is empty.")
+        required_columns = {"doi", "title"}
+        missing_columns = sorted(required_columns.difference(reader.fieldnames))
+        if missing_columns:
+            missing = ", ".join(missing_columns)
+            raise typer.BadParameter(f"sources CSV is missing required column(s): {missing}.")
+
+        overlay: dict[str, CorpusSourceMetadata] = {}
+        for row in reader:
+            doi = (row.get("doi") or "").strip()
+            if not doi:
+                continue
+            overlay[_normalize_doi(doi)] = CorpusSourceMetadata(
+                title=(row.get("title") or "").strip(),
+                authors=(row.get("authors") or "").strip(),
+                year=(row.get("year") or "").strip(),
+                journal=(row.get("venue") or "").strip(),
+                doi=doi,
+                source_url=(row.get("source_url") or "").strip(),
+                license_type=(row.get("license_type") or "").strip(),
+            )
+    return overlay
+
+
+def _find_curated_metadata(
+    result: SearchResult, metadata_overlay: dict[str, CorpusSourceMetadata]
+) -> CorpusSourceMetadata | None:
+    """Find curated display metadata for a search result."""
+
+    if not result.doi:
+        return None
+    return metadata_overlay.get(_normalize_doi(result.doi))
+
+
+def _normalize_doi(doi: str) -> str:
+    """Normalize a DOI for metadata overlay matching."""
+
+    return doi.strip().lower().removeprefix("https://doi.org/").removeprefix("doi:")
 
 
 def _truncate(value: str, max_length: int) -> str:

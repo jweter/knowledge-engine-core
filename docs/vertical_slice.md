@@ -529,3 +529,19 @@ VS-2 should add a tiny curated source set and end-to-end demo data so the comman
 can be exercised against approximately one to ten real or generated prototype
 papers. It should still avoid claim extraction, AI summarization, embeddings,
 and knowledge graph construction.
+
+## VS-4 Metadata Overlay
+
+VS-4 adds an optional display-time metadata overlay:
+
+```text
+ke answer "Do GLP-1 receptor agonists reduce body weight in adults with overweight or obesity?" --sources data/corpora/glp1_weight_loss/sources.csv
+```
+
+When `--sources` is provided, `ke answer` loads the corpus source CSV, matches
+retrieval results by DOI, and displays curated title, authors, year, journal,
+source URL, and license type when available.
+
+This is intentionally not metadata enrichment. It does not modify parser output,
+database records, the database schema, or search ranking. Curated metadata is
+used only for display and is labeled as coming from the corpus source file.
