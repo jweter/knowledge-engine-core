@@ -39,6 +39,13 @@ The first source set should prefer:
 - `license_policy.md`: policy for legal and reproducible use of source
   documents.
 
+## Source List Fields
+
+`sources.csv` records source metadata, local file references, inclusion status,
+and legal provenance. The VS-3 fields `pdf_url`, `license_type`, and
+`license_url` identify the exact publisher PDF and license evidence used for a
+local import.
+
 ## Local PDF Location
 
 When VS-1 or later milestones begin, local PDFs should be placed under:
@@ -54,4 +61,3 @@ reconstruct the corpus without committing copyrighted documents.
 
 VS-0 only. The corpus has been defined, but no papers have been imported,
 parsed, enriched, or converted into evidence records.
-
