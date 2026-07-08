@@ -631,3 +631,22 @@ papers without manual evidence clearly labeled as not available.
 VS-11 remains manual and display-focused. It does not synthesize the records,
 calculate consensus, score confidence, automate extraction, modify schemas, or
 import additional papers.
+
+## VS-12 Evidence Review Status
+
+VS-12 adds minimal manual review fields to evidence records:
+
+- `review_status`
+- `review_checklist`
+- `review_notes`
+
+Both current GLP-1 evidence records are marked `draft` because they are
+prototype manual extractions and have not received independent secondary review.
+
+The review status appears in `ke evidence`, `ke answer --evidence`, and
+`ke evidence-report`. Missing historical review fields fall back to
+`unspecified` so older records remain displayable.
+
+This milestone improves scientific trust workflow visibility. It does not add
+synthesis, consensus, confidence scoring, automated extraction, schema changes,
+or parser changes.

@@ -219,6 +219,11 @@ def evidence(records_path: EvidenceRecordsArgument) -> None:
         console.print(f"Source title: {_safe_text(_record_value(record, 'source_title'))}")
         console.print(f"DOI: {_safe_text(_record_value(record, 'source_doi'))}")
         console.print(f"Study type: {_safe_text(_record_value(record, 'study_type'))}")
+        console.print(f"Review status: {_safe_text(_review_status(record))}")
+        console.print(f"Review checklist: {_safe_text(_review_checklist_summary(record))}")
+        review_notes = _review_notes(record)
+        if review_notes:
+            console.print(f"Review notes: {_safe_text(review_notes)}")
         console.print(f"Claim text: {_safe_text(_record_value(record, 'claim_text'))}")
         console.print(
             f"Evidence direction: {_safe_text(_record_value(record, 'evidence_direction'))}"
@@ -466,6 +471,11 @@ def _print_evidence_preview(records: list[dict[str, Any]]) -> None:
             f"  Evidence record ID: {_safe_text(_record_value(record, 'evidence_record_id'))}"
         )
         console.print("  Extraction method: manual")
+        console.print(f"  Review status: {_safe_text(_review_status(record))}")
+        console.print(f"  Review checklist: {_safe_text(_review_checklist_summary(record))}")
+        review_notes = _review_notes(record)
+        if review_notes:
+            console.print(f"  Review notes: {_safe_text(review_notes)}")
         console.print(
             f"  Evidence direction: {_safe_text(_record_value(record, 'evidence_direction'))}"
         )
@@ -577,6 +587,9 @@ def _report_evidence_lines(record: dict[str, Any]) -> list[str]:
         "",
         f"- Evidence record ID: {_report_record_value(record, 'evidence_record_id')}",
         f"- Extraction method: {_report_record_value(record, 'extraction_method')} (manual)",
+        f"- Review status: {_report_text(_review_status(record))}",
+        f"- Review checklist: {_report_text(_review_checklist_summary(record))}",
+        f"- Review notes: {_report_text(_review_notes(record) or 'None')}",
         f"- Evidence direction: {_report_record_value(record, 'evidence_direction')}",
         f"- Claim text: {_report_record_value(record, 'claim_text')}",
         f"- Population: {_report_record_value(record, 'population')}",
@@ -603,6 +616,60 @@ def _report_record_value(record: dict[str, Any], key: str) -> str:
     """Return a normalized evidence record value for Markdown report output."""
 
     return _report_text(_record_value(record, key))
+
+
+def _review_status(record: dict[str, Any]) -> str:
+    """Return the manual review status for an evidence record."""
+
+    value = record.get("review_status")
+    if not isinstance(value, str) or not value.strip():
+        return "unspecified"
+    return value.strip()
+
+
+def _review_checklist_summary(record: dict[str, Any]) -> str:
+    """Summarize the manual review checklist for display."""
+
+    checklist = record.get("review_checklist")
+    if not isinstance(checklist, dict) or not checklist:
+        return "not recorded"
+
+    labels = {
+        "source_verified": "source verified",
+        "doi_verified": "DOI verified",
+        "manual_extraction_labeled": "manual extraction labeled",
+        "source_span_present": "source span present",
+        "limitations_recorded": "limitations recorded",
+        "uncertainty_recorded": "uncertainty recorded",
+        "no_synthesis_language": "no synthesis language",
+        "ready_for_secondary_review": "secondary review",
+    }
+    completed = [
+        labels.get(key, key.replace("_", " "))
+        for key, value in checklist.items()
+        if isinstance(value, bool) and value
+    ]
+    incomplete = [
+        labels.get(key, key.replace("_", " "))
+        for key, value in checklist.items()
+        if isinstance(value, bool) and not value
+    ]
+
+    parts: list[str] = []
+    if completed:
+        parts.append(", ".join(completed))
+    if incomplete:
+        parts.append(f"needs {', '.join(incomplete)}")
+    return "; ".join(parts) if parts else "not recorded"
+
+
+def _review_notes(record: dict[str, Any]) -> str | None:
+    """Return optional manual review notes."""
+
+    value = record.get("review_notes")
+    if not isinstance(value, str) or not value.strip():
+        return None
+    return value.strip()
 
 
 def _report_authors(curated: CorpusSourceMetadata | None) -> str:

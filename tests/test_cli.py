@@ -176,6 +176,8 @@ def test_answer_command_displays_doi_matched_manual_evidence(
     assert "Reviewed evidence: available" in result.output
     assert "Evidence record ID: ev-1" in result.output
     assert "Extraction method: manual" in result.output
+    assert "Review status: draft" in result.output
+    assert "needs secondary review" in result.output
     assert "Evidence direction: supports" in result.output
     assert "Semaglutide provided evidence" in result.output
     assert "Percent body weight change." in result.output
@@ -320,6 +322,7 @@ def test_evidence_report_prints_markdown_without_output(
     assert "Curated STEP 5 Trial" in result.output
     assert "Reviewed evidence: available" in result.output
     assert "Evidence record ID: ev-1" in result.output
+    assert "Review status: draft" in result.output
     assert "No scientific synthesis has been performed." in result.output
 
 
@@ -355,6 +358,7 @@ def test_evidence_report_writes_markdown_output(
     assert "Curated STEP 5 Trial" in report
     assert "Greater body-weight reduction with semaglutide." in report
     assert "Metadata source: corpus sources.csv" in report
+    assert "Review status: draft" in report
 
 
 def test_evidence_report_marks_paper_without_evidence(
@@ -496,6 +500,17 @@ def test_evidence_command_displays_manual_evidence_record(tmp_path: Path) -> Non
             '"source_title":"STEP 5 trial",'
             '"source_doi":"10.1038/s41591-022-02026-4",'
             '"study_type":"randomized_controlled_trial",'
+            '"review_status":"draft",'
+            '"review_checklist":{'
+            '"source_verified":true,'
+            '"doi_verified":true,'
+            '"manual_extraction_labeled":true,'
+            '"source_span_present":true,'
+            '"limitations_recorded":true,'
+            '"uncertainty_recorded":true,'
+            '"no_synthesis_language":true,'
+            '"ready_for_secondary_review":false},'
+            '"review_notes":"Prototype record awaiting secondary review.",'
             '"claim_text":"Semaglutide provided evidence of greater weight reduction.",'
             '"evidence_direction":"supports",'
             '"population":"Adults with overweight or obesity without diabetes.",'
@@ -518,9 +533,30 @@ def test_evidence_command_displays_manual_evidence_record(tmp_path: Path) -> Non
     assert result.exit_code == 0
     assert "Evidence record: ev-1" in result.output
     assert "STEP 5 trial" in result.output
+    assert "Review status: draft" in result.output
+    assert "Review notes: Prototype record awaiting secondary review." in result.output
     assert "Extraction method: manual_human_review (manual)" in result.output
     assert "This is manually extracted evidence." in result.output
     assert "No scientific synthesis has been performed." in result.output
+
+
+def test_evidence_command_falls_back_when_review_status_missing(tmp_path: Path) -> None:
+    records_path = tmp_path / "evidence_records.jsonl"
+    records_path.write_text(
+        (
+            '{"evidence_record_id":"ev-1",'
+            '"source_title":"STEP 5 trial",'
+            '"source_doi":"10.1038/s41591-022-02026-4",'
+            '"study_type":"randomized_controlled_trial"}\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["evidence", str(records_path)])
+
+    assert result.exit_code == 0
+    assert "Review status: unspecified" in result.output
+    assert "Review checklist: not recorded" in result.output
 
 
 def test_evidence_command_fails_for_missing_file(tmp_path: Path) -> None:
@@ -559,6 +595,18 @@ def write_evidence_records(tmp_path: Path, overrides: list[dict[str, str]]) -> P
             "source_doi": "10.1038/s41591-022-02026-4",
             "source_title": "STEP 5 trial",
             "study_type": "randomized_controlled_trial",
+            "review_status": "draft",
+            "review_checklist": {
+                "source_verified": True,
+                "doi_verified": True,
+                "manual_extraction_labeled": True,
+                "source_span_present": True,
+                "limitations_recorded": True,
+                "uncertainty_recorded": True,
+                "no_synthesis_language": True,
+                "ready_for_secondary_review": False,
+            },
+            "review_notes": "Prototype manual record awaiting secondary review.",
             "claim_text": "Semaglutide provided evidence of greater weight reduction.",
             "evidence_direction": "supports",
             "outcome": "Percent body weight change.",
