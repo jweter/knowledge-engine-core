@@ -650,3 +650,19 @@ The review status appears in `ke evidence`, `ke answer --evidence`, and
 This milestone improves scientific trust workflow visibility. It does not add
 synthesis, consensus, confidence scoring, automated extraction, schema changes,
 or parser changes.
+
+## VS-13 Evidence Validation
+
+VS-13 adds a focused validation command:
+
+```text
+ke evidence-validate data/corpora/glp1_weight_loss/evidence_records.jsonl
+```
+
+The command checks JSONL validity, required fields, duplicate evidence IDs, DOI
+presence, allowed review statuses, review checklist shape, and empty-file
+failures. It reports review-status counts for valid files.
+
+This milestone improves safety for manual evidence records before the corpus
+grows. It does not validate scientific correctness, verify source spans,
+synthesize evidence, calculate consensus, or score confidence.

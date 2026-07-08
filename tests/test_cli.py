@@ -491,6 +491,102 @@ def test_evidence_report_fails_for_invalid_evidence_jsonl(
     assert "Invalid JSON on line 1" in result.output
 
 
+def test_evidence_validate_passes_valid_jsonl(tmp_path: Path) -> None:
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"review_status": "draft"}, {"review_status": "reviewed"}],
+    )
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code == 0
+    assert "Evidence validation passed." in result.output
+    assert "Records: 2" in result.output
+    assert "Draft: 1" in result.output
+    assert "Reviewed: 1" in result.output
+    assert "Needs revision: 0" in result.output
+    assert "Rejected: 0" in result.output
+
+
+def test_evidence_validate_fails_for_missing_file(tmp_path: Path) -> None:
+    result = CliRunner().invoke(app, ["evidence-validate", str(tmp_path / "missing.jsonl")])
+
+    assert result.exit_code != 0
+    assert "Evidence validation failed." in result.output
+    assert "Evidence records file does not exist" in result.output
+
+
+def test_evidence_validate_fails_for_empty_file(tmp_path: Path) -> None:
+    records_path = tmp_path / "evidence_records.jsonl"
+    records_path.write_text("\n", encoding="utf-8")
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "contains no evidence records" in result.output
+
+
+def test_evidence_validate_fails_for_invalid_jsonl(tmp_path: Path) -> None:
+    records_path = tmp_path / "evidence_records.jsonl"
+    records_path.write_text("{not-json}\n", encoding="utf-8")
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "Line 1: invalid JSON." in result.output
+
+
+def test_evidence_validate_fails_for_duplicate_evidence_record_id(tmp_path: Path) -> None:
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"evidence_record_id": "duplicate"}, {"evidence_record_id": "duplicate"}],
+    )
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "duplicate evidence_record_id: duplicate" in result.output
+
+
+def test_evidence_validate_fails_for_missing_required_field(tmp_path: Path) -> None:
+    records_path = write_evidence_records(tmp_path, [{}])
+    record = json.loads(records_path.read_text(encoding="utf-8"))
+    del record["schema_version"]
+    records_path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "missing required field(s): schema_version" in result.output
+
+
+def test_evidence_validate_fails_for_missing_source_doi(tmp_path: Path) -> None:
+    records_path = write_evidence_records(tmp_path, [{"source_doi": ""}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "source_doi is required" in result.output
+
+
+def test_evidence_validate_fails_for_invalid_review_status(tmp_path: Path) -> None:
+    records_path = write_evidence_records(tmp_path, [{"review_status": "approved"}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "invalid review_status 'approved'" in result.output
+
+
+def test_evidence_validate_fails_for_malformed_review_checklist(tmp_path: Path) -> None:
+    records_path = write_evidence_records(tmp_path, [{"review_checklist": "yes"}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "review_checklist must be an object" in result.output
+
+
 def test_evidence_command_displays_manual_evidence_record(tmp_path: Path) -> None:
     records_path = tmp_path / "evidence_records.jsonl"
     records_path.write_text(
@@ -586,15 +682,20 @@ def test_evidence_command_fails_for_empty_jsonl(tmp_path: Path) -> None:
     assert "contains no evidence records" in result.output
 
 
-def write_evidence_records(tmp_path: Path, overrides: list[dict[str, str]]) -> Path:
+def write_evidence_records(tmp_path: Path, overrides: list[dict[str, object]]) -> Path:
     records_path = tmp_path / "evidence_records.jsonl"
     records = []
     for index, override in enumerate(overrides, start=1):
-        record = {
+        record: dict[str, object] = {
+            "schema_version": "0.1",
             "evidence_record_id": f"ev-{index}",
+            "extraction_method": "manual_human_review",
+            "extraction_status": "draft_manual_prototype",
             "source_doi": "10.1038/s41591-022-02026-4",
             "source_title": "STEP 5 trial",
+            "source_type": "paper",
             "study_type": "randomized_controlled_trial",
+            "research_question": "Do GLP-1 receptor agonists reduce body weight?",
             "review_status": "draft",
             "review_checklist": {
                 "source_verified": True,
@@ -609,13 +710,17 @@ def write_evidence_records(tmp_path: Path, overrides: list[dict[str, str]]) -> P
             "review_notes": "Prototype manual record awaiting secondary review.",
             "claim_text": "Semaglutide provided evidence of greater weight reduction.",
             "evidence_direction": "supports",
+            "population": "Adults with overweight or obesity without diabetes.",
+            "intervention": "Semaglutide 2.4 mg.",
+            "comparator": "Placebo.",
             "outcome": "Percent body weight change.",
             "result_summary": "Greater body-weight reduction with semaglutide.",
             "limitations": ["Manual extraction only."],
             "uncertainty_notes": "One paper only.",
             "confidence_note": "Source-linked manual record.",
             "source_span": {"page_number": 2, "section": "Results"},
-            "extraction_method": "manual_human_review",
+            "provenance": {"created_by": "manual review"},
+            "created_for_milestone": "test",
         }
         record.update(override)
         records.append(record)

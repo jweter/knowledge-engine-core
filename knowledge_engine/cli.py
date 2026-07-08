@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import unicodedata
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from json import JSONDecodeError
@@ -73,6 +74,32 @@ ForceOutputOption = Annotated[
     bool,
     typer.Option("--force", help="Overwrite an existing output file."),
 ]
+ALLOWED_REVIEW_STATUSES = {"draft", "reviewed", "needs_revision", "rejected"}
+REQUIRED_EVIDENCE_FIELDS = {
+    "schema_version",
+    "evidence_record_id",
+    "extraction_method",
+    "extraction_status",
+    "source_doi",
+    "source_title",
+    "source_type",
+    "study_type",
+    "research_question",
+    "claim_text",
+    "evidence_direction",
+    "population",
+    "intervention",
+    "comparator",
+    "outcome",
+    "result_summary",
+    "source_span",
+    "limitations",
+    "uncertainty_notes",
+    "confidence_note",
+    "provenance",
+    "created_for_milestone",
+}
+REVIEW_EVIDENCE_FIELDS = {"review_status", "review_checklist", "review_notes"}
 
 
 @dataclass(frozen=True)
@@ -86,6 +113,14 @@ class CorpusSourceMetadata:
     doi: str
     source_url: str
     license_type: str
+
+
+@dataclass(frozen=True)
+class EvidenceValidationResult:
+    """Result of validating an evidence records JSONL file."""
+
+    records: list[dict[str, Any]]
+    errors: list[str]
 
 
 def _database() -> Database:
@@ -247,6 +282,26 @@ def evidence(records_path: EvidenceRecordsArgument) -> None:
     console.print()
     console.print("[bold]This is manually extracted evidence.[/bold]")
     console.print("[bold]No scientific synthesis has been performed.[/bold]")
+
+
+@app.command("evidence-validate")
+def evidence_validate(records_path: EvidenceRecordsArgument) -> None:
+    """Validate manual evidence records in a JSONL file."""
+
+    result = _validate_evidence_records(records_path)
+    if result.errors:
+        console.print("[red]Evidence validation failed.[/red]")
+        for error in result.errors:
+            console.print(f"- {error}")
+        raise typer.Exit(1)
+
+    status_counts = Counter(_review_status(record) for record in result.records)
+    console.print("[green]Evidence validation passed.[/green]")
+    console.print(f"Records: {len(result.records)}")
+    console.print(f"Draft: {status_counts['draft']}")
+    console.print(f"Reviewed: {status_counts['reviewed']}")
+    console.print(f"Needs revision: {status_counts['needs_revision']}")
+    console.print(f"Rejected: {status_counts['rejected']}")
 
 
 @app.command("evidence-report")
@@ -434,6 +489,104 @@ def _load_evidence_records(path: Path) -> list[dict[str, Any]]:
     if not records:
         raise typer.BadParameter("Evidence records file contains no evidence records.")
     return records
+
+
+def _validate_evidence_records(path: Path) -> EvidenceValidationResult:
+    """Validate evidence records for the vertical slice prototype."""
+
+    errors: list[str] = []
+    records: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+
+    if not path.exists():
+        return EvidenceValidationResult(
+            records=[],
+            errors=[f"Evidence records file does not exist: {path}"],
+        )
+
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if not any(line.strip() for line in lines):
+        return EvidenceValidationResult(
+            records=[],
+            errors=["Evidence records file contains no evidence records."],
+        )
+
+    for line_number, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        try:
+            record = json.loads(stripped)
+        except JSONDecodeError:
+            errors.append(f"Line {line_number}: invalid JSON.")
+            continue
+
+        if not isinstance(record, dict):
+            errors.append(f"Line {line_number}: evidence record must be a JSON object.")
+            continue
+
+        records.append(record)
+        _validate_evidence_record(record, line_number, seen_ids, errors)
+
+    return EvidenceValidationResult(records=records, errors=errors)
+
+
+def _validate_evidence_record(
+    record: dict[str, Any],
+    line_number: int,
+    seen_ids: set[str],
+    errors: list[str],
+) -> None:
+    """Validate one evidence record and append errors."""
+
+    missing_fields = sorted(REQUIRED_EVIDENCE_FIELDS.union(REVIEW_EVIDENCE_FIELDS) - record.keys())
+    if missing_fields:
+        missing = ", ".join(missing_fields)
+        errors.append(f"Line {line_number}: missing required field(s): {missing}.")
+
+    evidence_id = record.get("evidence_record_id")
+    if not isinstance(evidence_id, str) or not evidence_id.strip():
+        errors.append(f"Line {line_number}: evidence_record_id is required.")
+    elif evidence_id in seen_ids:
+        errors.append(f"Line {line_number}: duplicate evidence_record_id: {evidence_id}.")
+    else:
+        seen_ids.add(evidence_id)
+
+    for field in (
+        "source_doi",
+        "source_title",
+        "research_question",
+        "claim_text",
+        "evidence_direction",
+        "result_summary",
+        "extraction_method",
+    ):
+        value = record.get(field)
+        if not isinstance(value, str) or not value.strip():
+            errors.append(f"Line {line_number}: {field} is required.")
+
+    provenance = record.get("provenance")
+    if not isinstance(provenance, dict) or not provenance:
+        errors.append(f"Line {line_number}: provenance must be a non-empty object.")
+
+    review_status = record.get("review_status")
+    if not isinstance(review_status, str) or not review_status.strip():
+        errors.append(f"Line {line_number}: review_status is required.")
+    elif review_status not in ALLOWED_REVIEW_STATUSES:
+        allowed = ", ".join(sorted(ALLOWED_REVIEW_STATUSES))
+        errors.append(
+            f"Line {line_number}: invalid review_status '{review_status}'. "
+            f"Allowed values: {allowed}."
+        )
+
+    review_checklist = record.get("review_checklist")
+    if not isinstance(review_checklist, dict):
+        errors.append(f"Line {line_number}: review_checklist must be an object.")
+
+    review_notes = record.get("review_notes")
+    if not isinstance(review_notes, str):
+        errors.append(f"Line {line_number}: review_notes must be a string.")
 
 
 def _load_evidence_records_by_doi(path: Path) -> dict[str, list[dict[str, Any]]]:
