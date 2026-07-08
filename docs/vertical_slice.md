@@ -616,3 +616,18 @@ retrieval-only disclaimers into a durable human-review artifact.
 This milestone is reporting-only. It does not add scientific synthesis,
 automated extraction, consensus calculation, confidence scoring, parser changes,
 database schema changes, or new paper imports.
+
+## VS-11 Second Manual Evidence Record
+
+VS-11 adds a second manual evidence record for Gao et al. 2022, a systematic
+review and meta-analysis of semaglutide randomized trials in adults with obesity
+or overweight without diabetes.
+
+This milestone verifies that the Markdown evidence report can display multiple
+manual evidence records from different source papers and study types. The report
+shows reviewed evidence available for Gao et al. and STEP 5, while keeping
+papers without manual evidence clearly labeled as not available.
+
+VS-11 remains manual and display-focused. It does not synthesize the records,
+calculate consensus, score confidence, automate extraction, modify schemas, or
+import additional papers.

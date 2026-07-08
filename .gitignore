@@ -29,4 +29,5 @@ data/*.db
 data/*.db-*
 papers/*.pdf
 papers/**/*.pdf
+data/corpora/**/reports/*.md
 *.log
