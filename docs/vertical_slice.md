@@ -666,3 +666,23 @@ failures. It reports review-status counts for valid files.
 This milestone improves safety for manual evidence records before the corpus
 grows. It does not validate scientific correctness, verify source spans,
 synthesize evidence, calculate consensus, or score confidence.
+
+## VS-14 Shared Evidence Validation
+
+VS-14 integrates shared evidence validation into every command that reads manual
+evidence records:
+
+- `ke evidence`
+- `ke answer --evidence`
+- `ke evidence-report`
+- `ke evidence-validate`
+
+Malformed evidence files now fail before display, retrieval attachment, or
+report generation. Display commands preserve compatibility for older otherwise
+valid records missing review fields by showing `Review status: unspecified`,
+while `ke evidence-validate` remains strict for the current evidence-file
+standard.
+
+This milestone improves evidence workflow safety. It does not add synthesis,
+automated extraction, consensus calculation, confidence scoring, parser changes,
+or schema changes.

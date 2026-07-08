@@ -288,7 +288,7 @@ def evidence(records_path: EvidenceRecordsArgument) -> None:
 def evidence_validate(records_path: EvidenceRecordsArgument) -> None:
     """Validate manual evidence records in a JSONL file."""
 
-    result = _validate_evidence_records(records_path)
+    result = _validate_evidence_records(records_path, require_review_fields=True)
     if result.errors:
         console.print("[red]Evidence validation failed.[/red]")
         for error in result.errors:
@@ -465,33 +465,24 @@ def _normalize_doi(doi: str) -> str:
 def _load_evidence_records(path: Path) -> list[dict[str, Any]]:
     """Load manual evidence records from a JSONL file."""
 
-    if not path.exists():
-        raise typer.BadParameter(f"Evidence records file does not exist: {path}")
-
-    records: list[dict[str, Any]] = []
-    with path.open(encoding="utf-8") as records_file:
-        for line_number, line in enumerate(records_file, start=1):
-            stripped = line.strip()
-            if not stripped:
-                continue
-            try:
-                record = json.loads(stripped)
-            except JSONDecodeError as exc:
-                raise typer.BadParameter(
-                    f"Invalid JSON on line {line_number} of evidence records file."
-                ) from exc
-            if not isinstance(record, dict):
-                raise typer.BadParameter(
-                    f"Evidence record on line {line_number} must be a JSON object."
-                )
-            records.append(record)
-
-    if not records:
-        raise typer.BadParameter("Evidence records file contains no evidence records.")
-    return records
+    return _load_valid_evidence_records(path, require_review_fields=False)
 
 
-def _validate_evidence_records(path: Path) -> EvidenceValidationResult:
+def _load_valid_evidence_records(
+    path: Path, *, require_review_fields: bool
+) -> list[dict[str, Any]]:
+    """Load evidence records after shared structural validation."""
+
+    result = _validate_evidence_records(path, require_review_fields=require_review_fields)
+    if result.errors:
+        message = "Evidence validation failed.\n" + "\n".join(result.errors)
+        raise typer.BadParameter(message)
+    return result.records
+
+
+def _validate_evidence_records(
+    path: Path, *, require_review_fields: bool
+) -> EvidenceValidationResult:
     """Validate evidence records for the vertical slice prototype."""
 
     errors: list[str] = []
@@ -527,7 +518,13 @@ def _validate_evidence_records(path: Path) -> EvidenceValidationResult:
             continue
 
         records.append(record)
-        _validate_evidence_record(record, line_number, seen_ids, errors)
+        _validate_evidence_record(
+            record,
+            line_number,
+            seen_ids,
+            errors,
+            require_review_fields=require_review_fields,
+        )
 
     return EvidenceValidationResult(records=records, errors=errors)
 
@@ -537,10 +534,15 @@ def _validate_evidence_record(
     line_number: int,
     seen_ids: set[str],
     errors: list[str],
+    *,
+    require_review_fields: bool,
 ) -> None:
     """Validate one evidence record and append errors."""
 
-    missing_fields = sorted(REQUIRED_EVIDENCE_FIELDS.union(REVIEW_EVIDENCE_FIELDS) - record.keys())
+    required_fields = REQUIRED_EVIDENCE_FIELDS.copy()
+    if require_review_fields:
+        required_fields.update(REVIEW_EVIDENCE_FIELDS)
+    missing_fields = sorted(required_fields - record.keys())
     if missing_fields:
         missing = ", ".join(missing_fields)
         errors.append(f"Line {line_number}: missing required field(s): {missing}.")
@@ -571,9 +573,13 @@ def _validate_evidence_record(
         errors.append(f"Line {line_number}: provenance must be a non-empty object.")
 
     review_status = record.get("review_status")
-    if not isinstance(review_status, str) or not review_status.strip():
+    if require_review_fields and (not isinstance(review_status, str) or not review_status.strip()):
         errors.append(f"Line {line_number}: review_status is required.")
-    elif review_status not in ALLOWED_REVIEW_STATUSES:
+    elif (
+        isinstance(review_status, str)
+        and review_status
+        and review_status not in ALLOWED_REVIEW_STATUSES
+    ):
         allowed = ", ".join(sorted(ALLOWED_REVIEW_STATUSES))
         errors.append(
             f"Line {line_number}: invalid review_status '{review_status}'. "
@@ -581,11 +587,13 @@ def _validate_evidence_record(
         )
 
     review_checklist = record.get("review_checklist")
-    if not isinstance(review_checklist, dict):
+    if (require_review_fields or review_checklist is not None) and not isinstance(
+        review_checklist, dict
+    ):
         errors.append(f"Line {line_number}: review_checklist must be an object.")
 
     review_notes = record.get("review_notes")
-    if not isinstance(review_notes, str):
+    if (require_review_fields or review_notes is not None) and not isinstance(review_notes, str):
         errors.append(f"Line {line_number}: review_notes must be a string.")
 
 

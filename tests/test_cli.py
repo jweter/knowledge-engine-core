@@ -207,7 +207,7 @@ def test_answer_command_marks_retrieved_paper_without_manual_evidence(
     assert "This is retrieval only." in result.output
 
 
-def test_answer_command_ignores_evidence_records_without_doi(
+def test_answer_command_rejects_evidence_records_without_doi(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     database = build_cli_database(tmp_path, doi="10.1234/answer")
@@ -224,8 +224,9 @@ def test_answer_command_ignores_evidence_records_without_doi(
         ],
     )
 
-    assert result.exit_code == 0
-    assert "Reviewed evidence: not available" in result.output
+    assert result.exit_code != 0
+    assert "Evidence validation failed." in result.output
+    assert "source_doi is required" in result.output
 
 
 def test_answer_command_fails_for_missing_evidence_file(
@@ -267,7 +268,8 @@ def test_answer_command_fails_for_invalid_evidence_jsonl(
     )
 
     assert result.exit_code != 0
-    assert "Invalid JSON on line 1" in result.output
+    assert "Evidence validation failed." in result.output
+    assert "Line 1: invalid JSON." in result.output
 
 
 def test_answer_command_fails_for_empty_evidence_jsonl(
@@ -488,7 +490,8 @@ def test_evidence_report_fails_for_invalid_evidence_jsonl(
     )
 
     assert result.exit_code != 0
-    assert "Invalid JSON on line 1" in result.output
+    assert "Evidence validation failed." in result.output
+    assert "Line 1: invalid JSON." in result.output
 
 
 def test_evidence_validate_passes_valid_jsonl(tmp_path: Path) -> None:
@@ -587,14 +590,77 @@ def test_evidence_validate_fails_for_malformed_review_checklist(tmp_path: Path) 
     assert "review_checklist must be an object" in result.output
 
 
+@pytest.mark.parametrize("command_name", ["evidence", "answer", "evidence-report"])
+def test_evidence_consuming_commands_reject_duplicate_evidence_ids(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command_name: str
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"evidence_record_id": "duplicate"}, {"evidence_record_id": "duplicate"}],
+    )
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        evidence_consumer_args(command_name, tmp_path, sources_csv, records_path),
+    )
+
+    assert result.exit_code != 0
+    assert "Evidence validation failed." in result.output
+    assert "duplicate evidence_record_id: duplicate" in result.output
+
+
+@pytest.mark.parametrize("command_name", ["evidence", "answer", "evidence-report"])
+def test_evidence_consuming_commands_reject_invalid_review_status(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command_name: str
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(tmp_path, [{"review_status": "approved"}])
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        evidence_consumer_args(command_name, tmp_path, sources_csv, records_path),
+    )
+
+    assert result.exit_code != 0
+    assert "Evidence validation failed." in result.output
+    assert "invalid review_status 'approved'" in result.output
+
+
+@pytest.mark.parametrize("command_name", ["evidence", "answer", "evidence-report"])
+def test_evidence_consuming_commands_reject_malformed_review_checklist(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command_name: str
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(tmp_path, [{"review_checklist": "yes"}])
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        evidence_consumer_args(command_name, tmp_path, sources_csv, records_path),
+    )
+
+    assert result.exit_code != 0
+    assert "Evidence validation failed." in result.output
+    assert "review_checklist must be an object" in result.output
+
+
 def test_evidence_command_displays_manual_evidence_record(tmp_path: Path) -> None:
     records_path = tmp_path / "evidence_records.jsonl"
     records_path.write_text(
         (
             '{"evidence_record_id":"ev-1",'
+            '"schema_version":"0.1",'
+            '"extraction_status":"draft_manual_prototype",'
             '"research_question":"Do GLP-1 receptor agonists reduce body weight?",'
             '"source_title":"STEP 5 trial",'
             '"source_doi":"10.1038/s41591-022-02026-4",'
+            '"source_type":"paper",'
             '"study_type":"randomized_controlled_trial",'
             '"review_status":"draft",'
             '"review_checklist":{'
@@ -619,6 +685,7 @@ def test_evidence_command_displays_manual_evidence_record(tmp_path: Path) -> Non
             '"confidence_note":"Source-linked manual record.",'
             '"source_span":{"page_number":2,"section":"Results"},'
             '"provenance":{"created_by":"manual review"},'
+            '"created_for_milestone":"test",'
             '"extraction_method":"manual_human_review"}\n'
         ),
         encoding="utf-8",
@@ -637,15 +704,9 @@ def test_evidence_command_displays_manual_evidence_record(tmp_path: Path) -> Non
 
 
 def test_evidence_command_falls_back_when_review_status_missing(tmp_path: Path) -> None:
-    records_path = tmp_path / "evidence_records.jsonl"
-    records_path.write_text(
-        (
-            '{"evidence_record_id":"ev-1",'
-            '"source_title":"STEP 5 trial",'
-            '"source_doi":"10.1038/s41591-022-02026-4",'
-            '"study_type":"randomized_controlled_trial"}\n'
-        ),
-        encoding="utf-8",
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"review_status": None, "review_checklist": None, "review_notes": None}],
     )
 
     result = CliRunner().invoke(app, ["evidence", str(records_path)])
@@ -669,7 +730,8 @@ def test_evidence_command_fails_for_invalid_jsonl(tmp_path: Path) -> None:
     result = CliRunner().invoke(app, ["evidence", str(records_path)])
 
     assert result.exit_code != 0
-    assert "Invalid JSON on line 1" in result.output
+    assert "Evidence validation failed." in result.output
+    assert "Line 1: invalid JSON." in result.output
 
 
 def test_evidence_command_fails_for_empty_jsonl(tmp_path: Path) -> None:
@@ -746,3 +808,32 @@ def write_sources_csv(
         encoding="utf-8",
     )
     return sources_csv
+
+
+def evidence_consumer_args(
+    command_name: str,
+    tmp_path: Path,
+    sources_csv: Path,
+    records_path: Path,
+) -> list[str]:
+    if command_name == "evidence":
+        return ["evidence", str(records_path)]
+    if command_name == "answer":
+        return [
+            "answer",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+        ]
+    return [
+        "evidence-report",
+        "Do GLP-1 receptor agonists reduce body weight?",
+        "--sources",
+        str(sources_csv),
+        "--evidence",
+        str(records_path),
+        "--output",
+        str(tmp_path / "report.md"),
+    ]
