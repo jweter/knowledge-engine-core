@@ -557,3 +557,13 @@ This is still retrieval-only. It does not add scientific synthesis, claim
 extraction, evidence records, AI, embeddings, parser changes, or schema changes.
 Its purpose is to decide whether the current retrieval output is good enough to
 support a manual evidence-record prototype.
+
+## VS-7 Manual Evidence Record
+
+VS-7 creates the first manual Evidence Layer prototype as a JSONL record. The
+first record is manually extracted from the STEP 5 trial and captures one
+source-linked result relevant to the GLP-1 weight-loss research question.
+
+This milestone remains manual and provenance-first. It does not automate claim
+or evidence extraction, synthesize across papers, modify the database schema, or
+change parser behavior.
