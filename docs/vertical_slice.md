@@ -545,3 +545,15 @@ source URL, and license type when available.
 This is intentionally not metadata enrichment. It does not modify parser output,
 database records, the database schema, or search ranking. Curated metadata is
 used only for display and is labeled as coming from the corpus source file.
+
+## VS-6 Retrieval Evaluation
+
+VS-6 adds a lightweight human review step for retrieval results. The evaluation
+records each retrieved paper's rank, relevance, snippet usefulness, metadata
+overlay status, likely evidence type, and whether it should proceed to future
+evidence extraction.
+
+This is still retrieval-only. It does not add scientific synthesis, claim
+extraction, evidence records, AI, embeddings, parser changes, or schema changes.
+Its purpose is to decide whether the current retrieval output is good enough to
+support a manual evidence-record prototype.
