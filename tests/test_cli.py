@@ -149,3 +149,66 @@ def test_answer_command_rejects_invalid_sources_csv(
 
     assert result.exit_code != 0
     assert "sources CSV is missing required column" in result.output
+
+
+def test_evidence_command_displays_manual_evidence_record(tmp_path: Path) -> None:
+    records_path = tmp_path / "evidence_records.jsonl"
+    records_path.write_text(
+        (
+            '{"evidence_record_id":"ev-1",'
+            '"research_question":"Do GLP-1 receptor agonists reduce body weight?",'
+            '"source_title":"STEP 5 trial",'
+            '"source_doi":"10.1038/s41591-022-02026-4",'
+            '"study_type":"randomized_controlled_trial",'
+            '"claim_text":"Semaglutide provided evidence of greater weight reduction.",'
+            '"evidence_direction":"supports",'
+            '"population":"Adults with overweight or obesity without diabetes.",'
+            '"intervention":"Semaglutide 2.4 mg.",'
+            '"comparator":"Placebo.",'
+            '"outcome":"Percent body weight change.",'
+            '"result_summary":"Greater body-weight reduction with semaglutide.",'
+            '"limitations":["Manual extraction only."],'
+            '"uncertainty_notes":"One paper only.",'
+            '"confidence_note":"Source-linked manual record.",'
+            '"source_span":{"page_number":2,"section":"Results"},'
+            '"provenance":{"created_by":"manual review"},'
+            '"extraction_method":"manual_human_review"}\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["evidence", str(records_path)])
+
+    assert result.exit_code == 0
+    assert "Evidence record: ev-1" in result.output
+    assert "STEP 5 trial" in result.output
+    assert "Extraction method: manual_human_review (manual)" in result.output
+    assert "This is manually extracted evidence." in result.output
+    assert "No scientific synthesis has been performed." in result.output
+
+
+def test_evidence_command_fails_for_missing_file(tmp_path: Path) -> None:
+    result = CliRunner().invoke(app, ["evidence", str(tmp_path / "missing.jsonl")])
+
+    assert result.exit_code != 0
+    assert "Evidence records file does not exist" in result.output
+
+
+def test_evidence_command_fails_for_invalid_jsonl(tmp_path: Path) -> None:
+    records_path = tmp_path / "evidence_records.jsonl"
+    records_path.write_text("{not-json}\n", encoding="utf-8")
+
+    result = CliRunner().invoke(app, ["evidence", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "Invalid JSON on line 1" in result.output
+
+
+def test_evidence_command_fails_for_empty_jsonl(tmp_path: Path) -> None:
+    records_path = tmp_path / "evidence_records.jsonl"
+    records_path.write_text("\n", encoding="utf-8")
+
+    result = CliRunner().invoke(app, ["evidence", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "contains no evidence records" in result.output

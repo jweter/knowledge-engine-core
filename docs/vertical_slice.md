@@ -567,3 +567,19 @@ source-linked result relevant to the GLP-1 weight-loss research question.
 This milestone remains manual and provenance-first. It does not automate claim
 or evidence extraction, synthesize across papers, modify the database schema, or
 change parser behavior.
+
+## VS-8 Evidence Display
+
+VS-8 adds a small CLI reader for manual evidence records:
+
+```text
+ke evidence data/corpora/glp1_weight_loss/evidence_records.jsonl
+```
+
+The command displays JSONL evidence records in a human-readable format with
+source, claim, population, intervention, comparator, outcome, result summary,
+limitations, uncertainty, provenance, and extraction method.
+
+This milestone is display-only. It does not synthesize evidence, validate source
+spans, automate extraction, modify the database schema, or connect evidence
+records back to retrieval results.

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import csv
+import json
 import unicodedata
 from dataclasses import dataclass
+from json import JSONDecodeError
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
@@ -26,6 +28,10 @@ KeywordOption = Annotated[
 ]
 SearchQueryArgument = Annotated[str, typer.Argument(help="Keyword or quoted phrase query.")]
 QuestionArgument = Annotated[str, typer.Argument(help="Natural-language scientific question.")]
+EvidenceRecordsArgument = Annotated[
+    Path,
+    typer.Argument(help="JSONL file containing manual evidence records."),
+]
 SearchLimitOption = Annotated[int, typer.Option("--limit", "-n", min=1, max=100)]
 SourcesCsvOption = Annotated[
     Path | None,
@@ -161,6 +167,48 @@ def answer(
     _print_retrieval_disclaimer()
 
 
+@app.command()
+def evidence(records_path: EvidenceRecordsArgument) -> None:
+    """Display manual evidence records from a JSONL file."""
+
+    records = _load_evidence_records(records_path)
+    console.print(f"[bold]Evidence records:[/bold] {_safe_text(str(records_path))}")
+
+    for index, record in enumerate(records, start=1):
+        record_id = _safe_text(_record_value(record, "evidence_record_id"))
+        console.print()
+        console.print(f"[bold]{index}. Evidence record: {record_id}[/bold]")
+        console.print(
+            f"Research question: {_safe_text(_record_value(record, 'research_question'))}"
+        )
+        console.print(f"Source title: {_safe_text(_record_value(record, 'source_title'))}")
+        console.print(f"DOI: {_safe_text(_record_value(record, 'source_doi'))}")
+        console.print(f"Study type: {_safe_text(_record_value(record, 'study_type'))}")
+        console.print(f"Claim text: {_safe_text(_record_value(record, 'claim_text'))}")
+        console.print(
+            f"Evidence direction: {_safe_text(_record_value(record, 'evidence_direction'))}"
+        )
+        console.print(f"Population: {_safe_text(_record_value(record, 'population'))}")
+        console.print(f"Intervention: {_safe_text(_record_value(record, 'intervention'))}")
+        console.print(f"Comparator: {_safe_text(_record_value(record, 'comparator'))}")
+        console.print(f"Outcome: {_safe_text(_record_value(record, 'outcome'))}")
+        console.print(f"Result summary: {_safe_text(_record_value(record, 'result_summary'))}")
+        console.print(f"Limitations: {_safe_text(_format_record_value(record.get('limitations')))}")
+        console.print(
+            f"Uncertainty notes: {_safe_text(_record_value(record, 'uncertainty_notes'))}"
+        )
+        console.print(f"Confidence note: {_safe_text(_record_value(record, 'confidence_note'))}")
+        console.print(f"Source span: {_safe_text(_format_record_value(record.get('source_span')))}")
+        console.print(f"Provenance: {_safe_text(_format_record_value(record.get('provenance')))}")
+        console.print(
+            f"Extraction method: {_safe_text(_record_value(record, 'extraction_method'))} (manual)"
+        )
+
+    console.print()
+    console.print("[bold]This is manually extracted evidence.[/bold]")
+    console.print("[bold]No scientific synthesis has been performed.[/bold]")
+
+
 @app.command("list")
 def list_papers() -> None:
     """List imported papers."""
@@ -274,6 +322,54 @@ def _normalize_doi(doi: str) -> str:
     """Normalize a DOI for metadata overlay matching."""
 
     return doi.strip().lower().removeprefix("https://doi.org/").removeprefix("doi:")
+
+
+def _load_evidence_records(path: Path) -> list[dict[str, Any]]:
+    """Load manual evidence records from a JSONL file."""
+
+    if not path.exists():
+        raise typer.BadParameter(f"Evidence records file does not exist: {path}")
+
+    records: list[dict[str, Any]] = []
+    with path.open(encoding="utf-8") as records_file:
+        for line_number, line in enumerate(records_file, start=1):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                record = json.loads(stripped)
+            except JSONDecodeError as exc:
+                raise typer.BadParameter(
+                    f"Invalid JSON on line {line_number} of evidence records file."
+                ) from exc
+            if not isinstance(record, dict):
+                raise typer.BadParameter(
+                    f"Evidence record on line {line_number} must be a JSON object."
+                )
+            records.append(record)
+
+    if not records:
+        raise typer.BadParameter("Evidence records file contains no evidence records.")
+    return records
+
+
+def _record_value(record: dict[str, Any], key: str) -> str:
+    """Return a string value from an evidence record."""
+
+    return _format_record_value(record.get(key))
+
+
+def _format_record_value(value: Any) -> str:
+    """Format evidence record values for CLI display."""
+
+    if value is None or value == "":
+        return "Unknown"
+    if isinstance(value, list):
+        return "; ".join(_format_record_value(item) for item in value)
+    if isinstance(value, dict):
+        parts = [f"{key}: {_format_record_value(item)}" for key, item in value.items()]
+        return "; ".join(parts)
+    return str(value)
 
 
 def _truncate(value: str, max_length: int) -> str:
