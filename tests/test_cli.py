@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -151,6 +152,144 @@ def test_answer_command_rejects_invalid_sources_csv(
     assert "sources CSV is missing required column" in result.output
 
 
+def test_answer_command_displays_doi_matched_manual_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"source_doi": "https://doi.org/10.1038/s41591-022-02026-4"}],
+    )
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "answer",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--evidence",
+            str(records_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Reviewed evidence: available" in result.output
+    assert "Evidence record ID: ev-1" in result.output
+    assert "Extraction method: manual" in result.output
+    assert "Evidence direction: supports" in result.output
+    assert "Semaglutide provided evidence" in result.output
+    assert "Percent body weight change." in result.output
+    assert "No scientific synthesis has been performed." in result.output
+
+
+def test_answer_command_marks_retrieved_paper_without_manual_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1234/answer")
+    records_path = write_evidence_records(tmp_path, [{"source_doi": "10.9999/nonmatch"}])
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "answer",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--evidence",
+            str(records_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Reviewed evidence: not available" in result.output
+    assert "Evidence record ID: ev-1" not in result.output
+    assert "This is retrieval only." in result.output
+
+
+def test_answer_command_ignores_evidence_records_without_doi(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1234/answer")
+    records_path = write_evidence_records(tmp_path, [{"source_doi": ""}])
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "answer",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--evidence",
+            str(records_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Reviewed evidence: not available" in result.output
+
+
+def test_answer_command_fails_for_missing_evidence_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path)
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "answer",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--evidence",
+            str(tmp_path / "missing.jsonl"),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Evidence records file does not exist" in result.output
+
+
+def test_answer_command_fails_for_invalid_evidence_jsonl(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path)
+    records_path = tmp_path / "evidence_records.jsonl"
+    records_path.write_text("{not-json}\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "answer",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--evidence",
+            str(records_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Invalid JSON on line 1" in result.output
+
+
+def test_answer_command_fails_for_empty_evidence_jsonl(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path)
+    records_path = tmp_path / "evidence_records.jsonl"
+    records_path.write_text("\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "answer",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--evidence",
+            str(records_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "contains no evidence records" in result.output
+
+
 def test_evidence_command_displays_manual_evidence_record(tmp_path: Path) -> None:
     records_path = tmp_path / "evidence_records.jsonl"
     records_path.write_text(
@@ -212,3 +351,32 @@ def test_evidence_command_fails_for_empty_jsonl(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "contains no evidence records" in result.output
+
+
+def write_evidence_records(tmp_path: Path, overrides: list[dict[str, str]]) -> Path:
+    records_path = tmp_path / "evidence_records.jsonl"
+    records = []
+    for index, override in enumerate(overrides, start=1):
+        record = {
+            "evidence_record_id": f"ev-{index}",
+            "source_doi": "10.1038/s41591-022-02026-4",
+            "source_title": "STEP 5 trial",
+            "study_type": "randomized_controlled_trial",
+            "claim_text": "Semaglutide provided evidence of greater weight reduction.",
+            "evidence_direction": "supports",
+            "outcome": "Percent body weight change.",
+            "result_summary": "Greater body-weight reduction with semaglutide.",
+            "limitations": ["Manual extraction only."],
+            "uncertainty_notes": "One paper only.",
+            "confidence_note": "Source-linked manual record.",
+            "source_span": {"page_number": 2, "section": "Results"},
+            "extraction_method": "manual_human_review",
+        }
+        record.update(override)
+        records.append(record)
+
+    records_path.write_text(
+        "\n".join(json.dumps(record) for record in records) + "\n",
+        encoding="utf-8",
+    )
+    return records_path

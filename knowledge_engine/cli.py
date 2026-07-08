@@ -43,6 +43,13 @@ SourcesCsvOption = Annotated[
         readable=True,
     ),
 ]
+EvidenceRecordsOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--evidence",
+        help="Optional manual evidence JSONL records to preview by DOI.",
+    ),
+]
 
 
 @dataclass(frozen=True)
@@ -127,6 +134,7 @@ def answer(
     question: QuestionArgument,
     limit: SearchLimitOption = 5,
     sources: SourcesCsvOption = None,
+    evidence: EvidenceRecordsOption = None,
 ) -> None:
     """Retrieve papers relevant to a scientific question."""
 
@@ -134,6 +142,7 @@ def answer(
     database.initialize()
     fts_query = build_natural_language_fts_query(question)
     metadata_overlay = _load_sources_overlay(sources) if sources else {}
+    evidence_by_doi = _load_evidence_records_by_doi(evidence) if evidence else {}
 
     with database.session() as session:
         results = SearchService(session).answer_retrieval(question, limit=limit)
@@ -163,6 +172,9 @@ def answer(
         console.print(f"Matching abstract/snippet: {_safe_text(_best_snippet(result))}")
         console.print(f"Why it matched: {_safe_text(_why_matched(result))}")
         console.print(f"Citation: {_safe_text(_citation(result, curated))}")
+        if evidence:
+            matched_evidence = _find_evidence_records(result, evidence_by_doi)
+            _print_evidence_preview(matched_evidence)
 
     _print_retrieval_disclaimer()
 
@@ -351,6 +363,57 @@ def _load_evidence_records(path: Path) -> list[dict[str, Any]]:
     if not records:
         raise typer.BadParameter("Evidence records file contains no evidence records.")
     return records
+
+
+def _load_evidence_records_by_doi(path: Path) -> dict[str, list[dict[str, Any]]]:
+    """Load manual evidence records keyed by normalized source DOI."""
+
+    records_by_doi: dict[str, list[dict[str, Any]]] = {}
+    for record in _load_evidence_records(path):
+        doi = _record_value(record, "source_doi")
+        if doi == "Unknown":
+            continue
+        records_by_doi.setdefault(_normalize_doi(doi), []).append(record)
+    return records_by_doi
+
+
+def _find_evidence_records(
+    result: SearchResult, records_by_doi: dict[str, list[dict[str, Any]]]
+) -> list[dict[str, Any]]:
+    """Find manual evidence records for a search result by DOI."""
+
+    if not result.doi:
+        return []
+    return records_by_doi.get(_normalize_doi(result.doi), [])
+
+
+def _print_evidence_preview(records: list[dict[str, Any]]) -> None:
+    """Print compact manual evidence previews for an answer result."""
+
+    if not records:
+        console.print("Reviewed evidence: not available")
+        return
+
+    console.print("Reviewed evidence: available")
+    for record in records:
+        console.print(
+            f"  Evidence record ID: {_safe_text(_record_value(record, 'evidence_record_id'))}"
+        )
+        console.print("  Extraction method: manual")
+        console.print(
+            f"  Evidence direction: {_safe_text(_record_value(record, 'evidence_direction'))}"
+        )
+        console.print(f"  Claim text: {_safe_text(_record_value(record, 'claim_text'))}")
+        console.print(f"  Outcome: {_safe_text(_record_value(record, 'outcome'))}")
+        console.print(f"  Result summary: {_safe_text(_record_value(record, 'result_summary'))}")
+        limitations = _safe_text(_format_record_value(record.get("limitations")))
+        console.print(f"  Limitations: {limitations}")
+        console.print(
+            f"  Uncertainty notes: {_safe_text(_record_value(record, 'uncertainty_notes'))}"
+        )
+        console.print(f"  Confidence note: {_safe_text(_record_value(record, 'confidence_note'))}")
+        source_span = _safe_text(_format_record_value(record.get("source_span")))
+        console.print(f"  Source span: {source_span}")
 
 
 def _record_value(record: dict[str, Any], key: str) -> str:

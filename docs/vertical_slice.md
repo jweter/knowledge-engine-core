@@ -583,3 +583,20 @@ limitations, uncertainty, provenance, and extraction method.
 This milestone is display-only. It does not synthesize evidence, validate source
 spans, automate extraction, modify the database schema, or connect evidence
 records back to retrieval results.
+
+## VS-9 Answer With Evidence Preview
+
+VS-9 connects retrieval results to available manual evidence records by DOI:
+
+```text
+ke answer "Do GLP-1 receptor agonists reduce body weight in adults with overweight or obesity?" --sources data/corpora/glp1_weight_loss/sources.csv --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl
+```
+
+When `--evidence` is provided, `ke answer` loads manual JSONL evidence records,
+matches them to retrieved papers by normalized DOI, and displays a compact
+reviewed-evidence preview under each matching retrieval result.
+
+This is still retrieval-only. The command shows whether manual evidence is
+available and preserves the no-synthesis disclaimer. It does not add automated
+evidence extraction, AI, embeddings, ranking changes, parser changes, or schema
+changes.
