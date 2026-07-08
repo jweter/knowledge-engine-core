@@ -173,6 +173,10 @@ def test_answer_command_displays_doi_matched_manual_evidence(
     )
 
     assert result.exit_code == 0
+    assert "Evidence Review Status Summary" in result.output
+    assert "Evidence records: 1" in result.output
+    assert "Draft: 1" in result.output
+    assert "Evidence readiness: draft only; secondary review needed." in result.output
     assert "Reviewed evidence: available" in result.output
     assert "Evidence record ID: ev-1" in result.output
     assert "Extraction method: manual" in result.output
@@ -320,6 +324,9 @@ def test_evidence_report_prints_markdown_without_output(
     assert result.exit_code == 0
     assert "# Knowledge Engine Evidence Report" in result.output
     assert "## Research Question" in result.output
+    assert "## Evidence Review Status Summary" in result.output
+    assert "Evidence records: 1" in result.output
+    assert "Evidence readiness: draft only; secondary review needed." in result.output
     assert "Do GLP-1 receptor agonists reduce body weight?" in result.output
     assert "Curated STEP 5 Trial" in result.output
     assert "Reviewed evidence: available" in result.output
@@ -358,6 +365,9 @@ def test_evidence_report_writes_markdown_output(
     assert "Wrote evidence report" in result.output
     report = output_path.read_text(encoding="utf-8")
     assert "Curated STEP 5 Trial" in report
+    assert "## Evidence Review Status Summary" in report
+    assert "Evidence records: 1" in report
+    assert "Evidence readiness: draft only; secondary review needed." in report
     assert "Greater body-weight reduction with semaglutide." in report
     assert "Metadata source: corpus sources.csv" in report
     assert "Review status: draft" in report
@@ -504,11 +514,49 @@ def test_evidence_validate_passes_valid_jsonl(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "Evidence validation passed." in result.output
-    assert "Records: 2" in result.output
+    assert "Evidence Review Status Summary" in result.output
+    assert "Evidence records: 2" in result.output
     assert "Draft: 1" in result.output
     assert "Reviewed: 1" in result.output
     assert "Needs revision: 0" in result.output
     assert "Rejected: 0" in result.output
+    assert "Evidence readiness: mixed review status." in result.output
+
+
+def test_evidence_status_summary_counts_all_statuses() -> None:
+    summary = cli._evidence_status_summary(
+        [
+            {"review_status": "draft"},
+            {"review_status": "reviewed"},
+            {"review_status": "needs_revision"},
+            {"review_status": "rejected"},
+            {},
+        ]
+    )
+
+    assert summary.total == 5
+    assert summary.draft == 1
+    assert summary.reviewed == 1
+    assert summary.needs_revision == 1
+    assert summary.rejected == 1
+    assert summary.unspecified == 1
+    assert summary.readiness_note == "revision needed before use."
+
+
+def test_evidence_status_summary_all_reviewed_readiness() -> None:
+    summary = cli._evidence_status_summary(
+        [{"review_status": "reviewed"}, {"review_status": "reviewed"}]
+    )
+
+    assert summary.readiness_note == "reviewed evidence available."
+
+
+def test_evidence_status_summary_rejected_readiness() -> None:
+    summary = cli._evidence_status_summary(
+        [{"review_status": "reviewed"}, {"review_status": "rejected"}]
+    )
+
+    assert summary.readiness_note == "contains rejected records; review before reporting."
 
 
 def test_evidence_validate_fails_for_missing_file(tmp_path: Path) -> None:
@@ -695,6 +743,9 @@ def test_evidence_command_displays_manual_evidence_record(tmp_path: Path) -> Non
 
     assert result.exit_code == 0
     assert "Evidence record: ev-1" in result.output
+    assert "Evidence Review Status Summary" in result.output
+    assert "Evidence records: 1" in result.output
+    assert "Evidence readiness: draft only; secondary review needed." in result.output
     assert "STEP 5 trial" in result.output
     assert "Review status: draft" in result.output
     assert "Review notes: Prototype record awaiting secondary review." in result.output

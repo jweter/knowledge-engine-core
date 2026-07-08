@@ -686,3 +686,20 @@ standard.
 This milestone improves evidence workflow safety. It does not add synthesis,
 automated extraction, consensus calculation, confidence scoring, parser changes,
 or schema changes.
+
+## VS-15 Evidence Status Summary
+
+VS-15 adds a shared evidence review status summary to:
+
+- `ke evidence`
+- `ke answer --evidence`
+- `ke evidence-report`
+- `ke evidence-validate`
+
+The summary reports total evidence records and counts for draft, reviewed,
+needs-revision, rejected, and unspecified records. It also displays a simple
+review-readiness note such as `draft only; secondary review needed.`
+
+This milestone makes evidence-record readiness visible at a glance. It does not
+synthesize evidence, calculate consensus, score scientific confidence, automate
+extraction, modify schemas, or change parser behavior.

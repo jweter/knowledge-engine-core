@@ -123,6 +123,19 @@ class EvidenceValidationResult:
     errors: list[str]
 
 
+@dataclass(frozen=True)
+class EvidenceStatusSummary:
+    """Review status counts for an evidence records file."""
+
+    total: int
+    draft: int
+    reviewed: int
+    needs_revision: int
+    rejected: int
+    unspecified: int
+    readiness_note: str
+
+
 def _database() -> Database:
     settings = build_settings(Path.cwd())
     return Database(settings)
@@ -200,7 +213,9 @@ def answer(
     database.initialize()
     fts_query = build_natural_language_fts_query(question)
     metadata_overlay = _load_sources_overlay(sources) if sources else {}
-    evidence_by_doi = _load_evidence_records_by_doi(evidence) if evidence else {}
+    evidence_records = _load_evidence_records(evidence) if evidence else []
+    evidence_by_doi = _index_evidence_records_by_doi(evidence_records)
+    evidence_summary = _evidence_status_summary(evidence_records) if evidence else None
 
     with database.session() as session:
         results = SearchService(session).answer_retrieval(question, limit=limit)
@@ -213,6 +228,10 @@ def answer(
         console.print("[yellow]No relevant papers found in the indexed corpus.[/yellow]")
         _print_retrieval_disclaimer()
         return
+
+    if evidence_summary:
+        console.print()
+        _print_evidence_status_summary(evidence_summary)
 
     console.print()
     console.print("[bold]Relevant papers[/bold]")
@@ -243,6 +262,7 @@ def evidence(records_path: EvidenceRecordsArgument) -> None:
 
     records = _load_evidence_records(records_path)
     console.print(f"[bold]Evidence records:[/bold] {_safe_text(str(records_path))}")
+    _print_evidence_status_summary(_evidence_status_summary(records))
 
     for index, record in enumerate(records, start=1):
         record_id = _safe_text(_record_value(record, "evidence_record_id"))
@@ -295,13 +315,9 @@ def evidence_validate(records_path: EvidenceRecordsArgument) -> None:
             console.print(f"- {error}")
         raise typer.Exit(1)
 
-    status_counts = Counter(_review_status(record) for record in result.records)
+    summary = _evidence_status_summary(result.records)
     console.print("[green]Evidence validation passed.[/green]")
-    console.print(f"Records: {len(result.records)}")
-    console.print(f"Draft: {status_counts['draft']}")
-    console.print(f"Reviewed: {status_counts['reviewed']}")
-    console.print(f"Needs revision: {status_counts['needs_revision']}")
-    console.print(f"Rejected: {status_counts['rejected']}")
+    _print_evidence_status_summary(summary)
 
 
 @app.command("evidence-report")
@@ -321,7 +337,9 @@ def evidence_report(
     database = _database()
     database.initialize()
     metadata_overlay = _load_sources_overlay(sources)
-    evidence_by_doi = _load_evidence_records_by_doi(evidence)
+    evidence_records = _load_evidence_records(evidence)
+    evidence_by_doi = _index_evidence_records_by_doi(evidence_records)
+    evidence_summary = _evidence_status_summary(evidence_records)
 
     with database.session() as session:
         results = SearchService(session).answer_retrieval(question, limit=limit)
@@ -334,6 +352,7 @@ def evidence_report(
         results=results,
         metadata_overlay=metadata_overlay,
         evidence_by_doi=evidence_by_doi,
+        evidence_summary=evidence_summary,
         sources_path=sources,
         evidence_path=evidence,
     )
@@ -597,16 +616,61 @@ def _validate_evidence_record(
         errors.append(f"Line {line_number}: review_notes must be a string.")
 
 
-def _load_evidence_records_by_doi(path: Path) -> dict[str, list[dict[str, Any]]]:
-    """Load manual evidence records keyed by normalized source DOI."""
+def _index_evidence_records_by_doi(
+    records: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    """Index manual evidence records by normalized source DOI."""
 
     records_by_doi: dict[str, list[dict[str, Any]]] = {}
-    for record in _load_evidence_records(path):
+    for record in records:
         doi = _record_value(record, "source_doi")
         if doi == "Unknown":
             continue
         records_by_doi.setdefault(_normalize_doi(doi), []).append(record)
     return records_by_doi
+
+
+def _evidence_status_summary(records: list[dict[str, Any]]) -> EvidenceStatusSummary:
+    """Summarize review status counts for validated evidence records."""
+
+    status_counts = Counter(_review_status(record) for record in records)
+    summary = EvidenceStatusSummary(
+        total=len(records),
+        draft=status_counts["draft"],
+        reviewed=status_counts["reviewed"],
+        needs_revision=status_counts["needs_revision"],
+        rejected=status_counts["rejected"],
+        unspecified=status_counts["unspecified"],
+        readiness_note=_evidence_readiness_note(status_counts, len(records)),
+    )
+    return summary
+
+
+def _evidence_readiness_note(status_counts: Counter[str], total: int) -> str:
+    """Return a careful readiness note from review status counts."""
+
+    if total > 0 and status_counts["draft"] == total:
+        return "draft only; secondary review needed."
+    if status_counts["needs_revision"]:
+        return "revision needed before use."
+    if status_counts["rejected"]:
+        return "contains rejected records; review before reporting."
+    if total > 0 and status_counts["reviewed"] == total:
+        return "reviewed evidence available."
+    return "mixed review status."
+
+
+def _print_evidence_status_summary(summary: EvidenceStatusSummary) -> None:
+    """Print review status counts for an evidence records file."""
+
+    console.print("[bold]Evidence Review Status Summary[/bold]")
+    console.print(f"Evidence records: {summary.total}")
+    console.print(f"Draft: {summary.draft}")
+    console.print(f"Reviewed: {summary.reviewed}")
+    console.print(f"Needs revision: {summary.needs_revision}")
+    console.print(f"Rejected: {summary.rejected}")
+    console.print(f"Unspecified: {summary.unspecified}")
+    console.print(f"Evidence readiness: {summary.readiness_note}")
 
 
 def _find_evidence_records(
@@ -659,6 +723,7 @@ def _build_evidence_report(
     results: list[SearchResult],
     metadata_overlay: dict[str, CorpusSourceMetadata],
     evidence_by_doi: dict[str, list[dict[str, Any]]],
+    evidence_summary: EvidenceStatusSummary,
     sources_path: Path,
     evidence_path: Path,
 ) -> str:
@@ -686,6 +751,16 @@ def _build_evidence_report(
         "",
         "This is retrieval plus manually extracted evidence only.",
         "No scientific synthesis has been performed.",
+        "",
+        "## Evidence Review Status Summary",
+        "",
+        f"- Evidence records: {evidence_summary.total}",
+        f"- Draft: {evidence_summary.draft}",
+        f"- Reviewed: {evidence_summary.reviewed}",
+        f"- Needs revision: {evidence_summary.needs_revision}",
+        f"- Rejected: {evidence_summary.rejected}",
+        f"- Unspecified: {evidence_summary.unspecified}",
+        f"- Evidence readiness: {evidence_summary.readiness_note}",
         "",
         "## Retrieved Papers",
         "",
