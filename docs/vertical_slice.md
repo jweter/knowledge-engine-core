@@ -600,3 +600,19 @@ This is still retrieval-only. The command shows whether manual evidence is
 available and preserves the no-synthesis disclaimer. It does not add automated
 evidence extraction, AI, embeddings, ranking changes, parser changes, or schema
 changes.
+
+## VS-10 Markdown Evidence Report
+
+VS-10 adds a Markdown report command:
+
+```text
+ke evidence-report "Do GLP-1 receptor agonists reduce body weight in adults with overweight or obesity?" --sources data/corpora/glp1_weight_loss/sources.csv --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl --output data/corpora/glp1_weight_loss/reports/glp1_weight_loss_evidence_report.md
+```
+
+The command combines retrieval results, curated corpus metadata, matched manual
+evidence records, provenance, limitations, uncertainty notes, and explicit
+retrieval-only disclaimers into a durable human-review artifact.
+
+This milestone is reporting-only. It does not add scientific synthesis,
+automated extraction, consensus calculation, confidence scoring, parser changes,
+database schema changes, or new paper imports.

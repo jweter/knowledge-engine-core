@@ -290,6 +290,203 @@ def test_answer_command_fails_for_empty_evidence_jsonl(
     assert "contains no evidence records" in result.output
 
 
+def test_evidence_report_prints_markdown_without_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"source_doi": "10.1038/s41591-022-02026-4"}],
+    )
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "# Knowledge Engine Evidence Report" in result.output
+    assert "## Research Question" in result.output
+    assert "Do GLP-1 receptor agonists reduce body weight?" in result.output
+    assert "Curated STEP 5 Trial" in result.output
+    assert "Reviewed evidence: available" in result.output
+    assert "Evidence record ID: ev-1" in result.output
+    assert "No scientific synthesis has been performed." in result.output
+
+
+def test_evidence_report_writes_markdown_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"source_doi": "10.1038/s41591-022-02026-4"}],
+    )
+    output_path = tmp_path / "reports" / "report.md"
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Wrote evidence report" in result.output
+    report = output_path.read_text(encoding="utf-8")
+    assert "Curated STEP 5 Trial" in report
+    assert "Greater body-weight reduction with semaglutide." in report
+    assert "Metadata source: corpus sources.csv" in report
+
+
+def test_evidence_report_marks_paper_without_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1234/answer")
+    sources_csv = write_sources_csv(tmp_path, doi="10.1234/answer")
+    records_path = write_evidence_records(tmp_path, [{"source_doi": "10.9999/nonmatch"}])
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Reviewed evidence: not available" in result.output
+
+
+def test_evidence_report_fails_when_output_exists_without_force(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(tmp_path, [{"source_doi": "10.9999/nonmatch"}])
+    output_path = tmp_path / "report.md"
+    output_path.write_text("existing", encoding="utf-8")
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Output file already exists" in result.output
+    assert output_path.read_text(encoding="utf-8") == "existing"
+
+
+def test_evidence_report_overwrites_output_with_force(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(tmp_path, [{"source_doi": "10.9999/nonmatch"}])
+    output_path = tmp_path / "report.md"
+    output_path.write_text("existing", encoding="utf-8")
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+            "--output",
+            str(output_path),
+            "--force",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "# Knowledge Engine Evidence Report" in output_path.read_text(encoding="utf-8")
+
+
+def test_evidence_report_fails_for_missing_evidence_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path)
+    sources_csv = write_sources_csv(tmp_path)
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(tmp_path / "missing.jsonl"),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Evidence records file does not exist" in result.output
+
+
+def test_evidence_report_fails_for_invalid_evidence_jsonl(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path)
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = tmp_path / "evidence_records.jsonl"
+    records_path.write_text("{not-json}\n", encoding="utf-8")
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Invalid JSON on line 1" in result.output
+
+
 def test_evidence_command_displays_manual_evidence_record(tmp_path: Path) -> None:
     records_path = tmp_path / "evidence_records.jsonl"
     records_path.write_text(
@@ -380,3 +577,19 @@ def write_evidence_records(tmp_path: Path, overrides: list[dict[str, str]]) -> P
         encoding="utf-8",
     )
     return records_path
+
+
+def write_sources_csv(
+    tmp_path: Path,
+    *,
+    doi: str = "10.1038/s41591-022-02026-4",
+) -> Path:
+    sources_csv = tmp_path / "sources.csv"
+    sources_csv.write_text(
+        "source_id,title,authors,year,venue,doi,source_url,license_type\n"
+        "source-1,Curated STEP 5 Trial,"
+        "Garvey; Batterham,2022,Nature Medicine,"
+        f"{doi},https://example.test/step-5,CC-BY\n",
+        encoding="utf-8",
+    )
+    return sources_csv

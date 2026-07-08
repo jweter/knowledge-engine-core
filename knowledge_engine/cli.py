@@ -6,6 +6,7 @@ import csv
 import json
 import unicodedata
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Annotated, Any
@@ -49,6 +50,28 @@ EvidenceRecordsOption = Annotated[
         "--evidence",
         help="Optional manual evidence JSONL records to preview by DOI.",
     ),
+]
+RequiredSourcesCsvOption = Annotated[
+    Path,
+    typer.Option(
+        "--sources",
+        help="Corpus sources.csv metadata overlay.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+RequiredEvidenceRecordsOption = Annotated[
+    Path,
+    typer.Option("--evidence", help="Manual evidence JSONL records."),
+]
+OutputMarkdownOption = Annotated[
+    Path | None,
+    typer.Option("--output", help="Optional path for the generated Markdown report."),
+]
+ForceOutputOption = Annotated[
+    bool,
+    typer.Option("--force", help="Overwrite an existing output file."),
 ]
 
 
@@ -219,6 +242,49 @@ def evidence(records_path: EvidenceRecordsArgument) -> None:
     console.print()
     console.print("[bold]This is manually extracted evidence.[/bold]")
     console.print("[bold]No scientific synthesis has been performed.[/bold]")
+
+
+@app.command("evidence-report")
+def evidence_report(
+    question: QuestionArgument,
+    sources: RequiredSourcesCsvOption,
+    evidence: RequiredEvidenceRecordsOption,
+    output: OutputMarkdownOption = None,
+    force: ForceOutputOption = False,
+    limit: SearchLimitOption = 5,
+) -> None:
+    """Generate a Markdown retrieval and manual evidence report."""
+
+    if output and output.exists() and not force:
+        raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
+
+    database = _database()
+    database.initialize()
+    metadata_overlay = _load_sources_overlay(sources)
+    evidence_by_doi = _load_evidence_records_by_doi(evidence)
+
+    with database.session() as session:
+        results = SearchService(session).answer_retrieval(question, limit=limit)
+
+    if not results:
+        raise typer.BadParameter("No relevant papers found in the indexed corpus.")
+
+    report = _build_evidence_report(
+        question=question,
+        results=results,
+        metadata_overlay=metadata_overlay,
+        evidence_by_doi=evidence_by_doi,
+        sources_path=sources,
+        evidence_path=evidence,
+    )
+
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(report, encoding="utf-8")
+        console.print(f"[green]Wrote evidence report:[/green] {output}")
+        return
+
+    console.print(report, markup=False)
 
 
 @app.command("list")
@@ -414,6 +480,155 @@ def _print_evidence_preview(records: list[dict[str, Any]]) -> None:
         console.print(f"  Confidence note: {_safe_text(_record_value(record, 'confidence_note'))}")
         source_span = _safe_text(_format_record_value(record.get("source_span")))
         console.print(f"  Source span: {source_span}")
+
+
+def _build_evidence_report(
+    *,
+    question: str,
+    results: list[SearchResult],
+    metadata_overlay: dict[str, CorpusSourceMetadata],
+    evidence_by_doi: dict[str, list[dict[str, Any]]],
+    sources_path: Path,
+    evidence_path: Path,
+) -> str:
+    """Build a Markdown report from retrieval results and manual evidence."""
+
+    generated_at = datetime.now(UTC).isoformat(timespec="seconds")
+    lines = [
+        "# Knowledge Engine Evidence Report",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "## Research Question",
+        "",
+        question,
+        "",
+        "## Inputs",
+        "",
+        f"- Corpus source file: `{sources_path}`",
+        f"- Evidence file: `{evidence_path}`",
+        "",
+        "## Scope",
+        "",
+        "This report combines retrieval results with curated corpus metadata and "
+        "manual evidence records. It is intended for human review.",
+        "",
+        "This is retrieval plus manually extracted evidence only.",
+        "No scientific synthesis has been performed.",
+        "",
+        "## Retrieved Papers",
+        "",
+    ]
+
+    for rank, result in enumerate(results, start=1):
+        curated = _find_curated_metadata(result, metadata_overlay)
+        records = _find_evidence_records(result, evidence_by_doi)
+        lines.extend(_report_paper_lines(rank, result, curated, records))
+
+    lines.extend(
+        [
+            "## Final Disclaimer",
+            "",
+            "This report is retrieval plus manually extracted evidence only.",
+            "No scientific synthesis has been performed.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _report_paper_lines(
+    rank: int,
+    result: SearchResult,
+    curated: CorpusSourceMetadata | None,
+    records: list[dict[str, Any]],
+) -> list[str]:
+    """Build Markdown lines for one retrieved paper."""
+
+    lines = [
+        f"### {rank}. {_report_text(_display_title(result, curated))}",
+        "",
+        f"- Rank: {rank}",
+        f"- Title: {_report_text(_display_title(result, curated))}",
+        f"- Authors: {_report_text(_report_authors(curated))}",
+        f"- Year: {_report_text(_display_year(result, curated))}",
+        f"- Journal: {_report_text(_report_journal(curated))}",
+        f"- DOI: {_report_text(_report_doi(result, curated))}",
+        f"- Source URL: {_report_text(_report_source_url(curated))}",
+        f"- License type: {_report_text(_report_license(curated))}",
+        f"- Metadata source: {_report_metadata_source(curated)}",
+        f"- Retrieval snippet: {_report_text(_best_snippet(result))}",
+        f"- Citation: {_report_text(_citation(result, curated))}",
+        f"- Reviewed evidence: {'available' if records else 'not available'}",
+        "",
+    ]
+
+    for record in records:
+        lines.extend(_report_evidence_lines(record))
+
+    return lines
+
+
+def _report_evidence_lines(record: dict[str, Any]) -> list[str]:
+    """Build Markdown lines for one manual evidence record."""
+
+    return [
+        "#### Manual Evidence Record",
+        "",
+        f"- Evidence record ID: {_report_record_value(record, 'evidence_record_id')}",
+        f"- Extraction method: {_report_record_value(record, 'extraction_method')} (manual)",
+        f"- Evidence direction: {_report_record_value(record, 'evidence_direction')}",
+        f"- Claim text: {_report_record_value(record, 'claim_text')}",
+        f"- Population: {_report_record_value(record, 'population')}",
+        f"- Intervention: {_report_record_value(record, 'intervention')}",
+        f"- Comparator: {_report_record_value(record, 'comparator')}",
+        f"- Outcome: {_report_record_value(record, 'outcome')}",
+        f"- Result summary: {_report_record_value(record, 'result_summary')}",
+        f"- Limitations: {_report_text(_format_record_value(record.get('limitations')))}",
+        f"- Uncertainty notes: {_report_record_value(record, 'uncertainty_notes')}",
+        f"- Confidence note: {_report_record_value(record, 'confidence_note')}",
+        f"- Source span: {_report_text(_format_record_value(record.get('source_span')))}",
+        f"- Provenance summary: {_report_text(_format_record_value(record.get('provenance')))}",
+        "",
+    ]
+
+
+def _report_text(value: str) -> str:
+    """Normalize text for Markdown report output."""
+
+    return _safe_text(value)
+
+
+def _report_record_value(record: dict[str, Any], key: str) -> str:
+    """Return a normalized evidence record value for Markdown report output."""
+
+    return _report_text(_record_value(record, key))
+
+
+def _report_authors(curated: CorpusSourceMetadata | None) -> str:
+    return curated.authors if curated and curated.authors else "Unknown"
+
+
+def _report_journal(curated: CorpusSourceMetadata | None) -> str:
+    return curated.journal if curated and curated.journal else "Unknown"
+
+
+def _report_doi(result: SearchResult, curated: CorpusSourceMetadata | None) -> str:
+    if curated and curated.doi:
+        return curated.doi
+    return result.doi or "Unknown"
+
+
+def _report_source_url(curated: CorpusSourceMetadata | None) -> str:
+    return curated.source_url if curated and curated.source_url else "Unknown"
+
+
+def _report_license(curated: CorpusSourceMetadata | None) -> str:
+    return curated.license_type if curated and curated.license_type else "Unknown"
+
+
+def _report_metadata_source(curated: CorpusSourceMetadata | None) -> str:
+    return "corpus sources.csv" if curated else "database record"
 
 
 def _record_value(record: dict[str, Any], key: str) -> str:
