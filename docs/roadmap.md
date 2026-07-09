@@ -23,6 +23,10 @@ This file is the roadmap index. Phase-specific notes live in `docs/roadmap/`.
 - Add a repeatable corpus ingestion workflow.
 - Use `docs/phase1_design.md` as the detailed design reference.
 
+The current GLP-1 vertical slice is a small retrieval and manual evidence-display
+prototype for Phase 1 preparation. See `docs/vertical_slice.md` and
+`docs/glp1_vertical_slice_demo_checklist.md`.
+
 ## Phase 2: Evidence Records
 
 - Extract claims, methods, results, limitations, and evidence quality markers.

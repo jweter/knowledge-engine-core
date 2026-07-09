@@ -718,3 +718,14 @@ and no-synthesis boundaries remain visible.
 Known gaps remain around parser-derived metadata, noisy PDF snippets, report
 density, and documentation polish. VS-17 should be cleanup and PR preparation,
 not a new feature milestone.
+
+## VS-17 PR Readiness
+
+VS-17 prepares the vertical slice branch for pull request review. It adds a
+repeatable GLP-1 demo checklist and a PR readiness document, then performs final
+validation and artifact checks.
+
+This milestone is cleanup and review preparation only. It does not add new
+product features, synthesis, AI, embeddings, automated extraction, consensus,
+confidence scoring, parser changes, database schema changes, new imports, or PDF
+downloads.

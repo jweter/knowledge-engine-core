@@ -16,6 +16,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - pytest, ruff, black, and mypy configuration.
 - Repository governance files, issue templates, PR template, and CI workflow.
 - Pain-point tracking for known developer and product issues.
+- GLP-1 vertical slice demo for retrieval, corpus metadata overlays, manual
+  evidence display, evidence validation, and local Markdown evidence reports.
 
 ## [0.1.0] - 2026-07-06
 

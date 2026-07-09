@@ -124,6 +124,15 @@ Show collection statistics:
 poetry run ke stats
 ```
 
+Run the GLP-1 vertical slice demo checklist:
+
+```text
+docs/glp1_vertical_slice_demo_checklist.md
+```
+
+The demo is retrieval and manual evidence display only. It does not perform
+scientific synthesis.
+
 By default, the SQLite database is created at:
 
 ```text
@@ -232,6 +241,10 @@ Crossref adapters.
 
 See [docs/roadmap.md](docs/roadmap.md) and `docs/roadmap/` for the longer
 roadmap.
+
+The current vertical slice demo is documented in
+[docs/vertical_slice.md](docs/vertical_slice.md) and
+[docs/glp1_vertical_slice_demo_checklist.md](docs/glp1_vertical_slice_demo_checklist.md).
 
 ## Known Issues
 
