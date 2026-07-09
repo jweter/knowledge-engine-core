@@ -3,35 +3,64 @@
 This document defines the first end-to-end architectural prototype for Knowledge
 Engine Core. It is not Phase 1 implementation. It is a small proof that one
 scientific question can move through the conceptual architecture from source
-documents to a traceable answer.
+documents to traceable retrieval and manual evidence display.
 
 The prototype should be intentionally small, local, and understandable. It
 should prove that the architecture works before the project optimizes for scale,
 automation, or performance.
 
+Important boundary:
+The implemented GLP-1 vertical slice does not perform scientific synthesis,
+consensus calculation, confidence scoring, AI reasoning, automated extraction,
+or truth determination. It retrieves source material, overlays curated corpus
+metadata, displays manually created evidence records, validates those records,
+and generates a local evidence-review report.
+
 ## Scope
 
-The vertical slice should support approximately 10 legally usable scientific
-papers focused on one narrow research question.
-
-The complete path is:
+The current implemented vertical slice supports a small legally usable GLP-1
+demo corpus focused on one narrow research question:
 
 ```text
-PDF
+Do GLP-1 receptor agonists reduce body weight in adults with overweight or
+obesity?
+```
+
+The implemented path is:
+
+```text
+Scientific question
+  -> retrieval
+  -> corpus metadata overlay
+  -> manual evidence records
+  -> validation
+  -> evidence display/report
+  -> no synthesis
+```
+
+Earlier planning sketches described a broader future vertical slice that could
+eventually include claim extraction, relationships, and synthesis. Those
+concepts remain part of the long-term roadmap, but they are not implemented in
+this branch.
+
+The original aspirational path was:
+
+```text
+PDFs
   -> Parser
   -> Metadata
-  -> Claim extraction
-  -> Evidence records
-  -> Relationships
+  -> Future claim extraction
+  -> Manual or future evidence records
+  -> Future relationships
   -> Scientific question
-  -> Evidence retrieval
-  -> Simple evidence synthesis
-  -> Human-readable answer
+  -> Evidence retrieval/display
+  -> Future synthesis
+  -> Future human-readable answer
   -> Source citations
 ```
 
-The prototype should answer one question well enough to demonstrate traceable
-scientific reasoning. It does not need to generalize across domains yet.
+The current prototype should demonstrate traceable retrieval and evidence
+review. It must not imply that the system has answered the scientific question.
 
 ## Non-Goals
 
@@ -44,6 +73,8 @@ scientific reasoning. It does not need to generalize across domains yet.
 - Web interface.
 - Multi-user workflows.
 - Performance optimization.
+- Scientific synthesis in the implemented demo.
+- Consensus calculation or confidence scoring.
 - Automated scientific truth determination.
 
 ## Architecture
@@ -66,14 +97,18 @@ Relationship Layer
   typed support, contradiction, qualification, citation, and concept links
 
 Reasoning Layer
-  one scientific question, retrieved evidence, simple synthesis, answer, and
-  source citations
+  future layer for synthesis, consensus, confidence, uncertainty, and
+  research-facing answers
 ```
 
 The vertical slice should use the simplest durable representation that keeps
 these layers visible. Early implementation may use local files or small SQLite
 tables, but the design should not depend on any one storage technology as the
 definition of knowledge.
+
+In the implemented GLP-1 demo, the Reasoning Layer is intentionally absent. The
+closest current behavior is retrieval plus manual evidence display with explicit
+no-synthesis disclaimers.
 
 ## Components
 
@@ -205,10 +240,10 @@ Prototype simplification:
 Manual question-to-evidence links are acceptable. Keyword search can supplement
 manual links but should not be the only source of relevance.
 
-### Evidence Synthesis
+### Future Evidence Synthesis
 
 Purpose:
-Create a transparent answer from retrieved evidence.
+Create a transparent answer from retrieved evidence in a later milestone.
 
 Minimum behavior:
 - Summarize the main supported answer.
@@ -222,10 +257,14 @@ Prototype simplification:
 Synthesis can use deterministic templates or manually written summaries. No LLM
 is required.
 
-### Human-Readable Answer
+Implemented status:
+Not implemented in this branch. Current outputs must remain retrieval and
+manual evidence display only.
+
+### Future Human-Readable Answer
 
 Purpose:
-Show that the system can produce a useful research-facing output.
+Show that the system can eventually produce a useful research-facing output.
 
 Minimum behavior:
 - Display the scientific question.
@@ -237,11 +276,15 @@ Minimum behavior:
 Prototype simplification:
 A CLI command or Markdown report is enough. A web UI is unnecessary.
 
+Implemented status:
+Not implemented as a scientific answer. Current CLI output and Markdown reports
+are evidence-review artifacts and must keep the no-synthesis boundary visible.
+
 ## Manual Steps
 
 Manual work is acceptable in this prototype when it makes provenance clearer.
 
-Allowed manual steps:
+Allowed manual steps in the current and planned prototype:
 - Selecting the 10 papers.
 - Confirming metadata.
 - Writing or correcting claims.
@@ -249,14 +292,26 @@ Allowed manual steps:
 - Assigning evidence direction.
 - Adding concept tags.
 - Linking evidence to the scientific question.
-- Writing the first synthesis template or answer notes.
+- Writing future synthesis templates or answer notes after the project has a
+  reviewed evidence model.
 
 Manual steps must be explicit. The prototype should never hide manual judgment as
 automated extraction or automated reasoning.
 
 ## Success Criteria
 
-The vertical slice succeeds when:
+The implemented GLP-1 vertical slice succeeds when:
+
+- A narrow scientific question can be used to retrieve relevant imported papers.
+- Curated corpus metadata can be displayed without overwriting database records.
+- Manual evidence records can be displayed, validated, and attached to matching
+  retrieval results by DOI.
+- Evidence-review status is visible.
+- A local Markdown evidence report can be generated and kept out of Git.
+- PDFs, SQLite databases, and generated reports remain ignored.
+- Every output clearly states that no scientific synthesis has been performed.
+
+The original broader design sketch would eventually succeed when:
 
 - Approximately 10 PDFs can be represented as sources and documents.
 - Text can be extracted or failures can be recorded.
@@ -268,17 +323,18 @@ The vertical slice succeeds when:
   and provenance.
 - Relationships can represent support, contradiction, and qualification.
 - A retrieval step returns evidence relevant to the question.
-- A synthesis step produces a human-readable answer.
-- The answer includes source citations and visible uncertainty.
-- A reviewer can trace every answer statement back to evidence and source
+- A future synthesis step produces a human-readable answer.
+- The future answer includes source citations and visible uncertainty.
+- A reviewer can trace every future answer statement back to evidence and source
   material.
 
 ## Failure Criteria
 
 The vertical slice fails if:
 
-- The answer cannot be traced back to source documents.
-- Metadata, claims, evidence, and synthesis are mixed together without clear
+- Retrieval or evidence-display output cannot be traced back to source
+  documents.
+- Metadata, claims, evidence, and future synthesis are mixed together without clear
   boundaries.
 - Manual judgments are presented as automated conclusions.
 - Contradictory or qualifying evidence cannot be represented.
@@ -288,7 +344,13 @@ The vertical slice fails if:
 - The implementation optimizes performance before proving the conceptual flow.
 - The output gives the impression that the system has decided scientific truth.
 
-## Milestones
+## Original Design Sketch Milestones
+
+The following milestone sequence is the original architectural sketch. It is
+preserved for historical context, but it is not the implemented GLP-1 milestone
+sequence in this branch. The implemented work narrowed the slice to retrieval,
+corpus metadata overlay, manual evidence records, validation, evidence display,
+and reporting.
 
 ### VS-0: Select the Prototype Question and Source Set
 
@@ -302,7 +364,8 @@ Complexity:
 Low.
 
 Risk:
-Choosing a question that is too broad will make synthesis vague.
+Choosing a question that is too broad will make retrieval evaluation vague and
+future synthesis unsafe.
 
 ### VS-1: Represent Sources, Documents, and Metadata
 
@@ -398,29 +461,35 @@ Risk:
 Pure keyword retrieval may miss relevant evidence, so manual links should be
 allowed in the first slice.
 
-### VS-7: Synthesize a Human-Readable Answer
+### Original VS-7 Planning Sketch: Future Human-Readable Answer
 
 Goal:
-Generate a concise answer that separates support, contradiction, qualification,
-confidence, and uncertainty.
+Eventually generate a concise answer that separates support, contradiction,
+qualification, confidence, and uncertainty.
 
 Testable outcome:
-The answer can be reviewed against its evidence records and source citations.
+A future answer can be reviewed against its evidence records and source
+citations.
 
 Complexity:
 Medium.
 
 Risk:
-The synthesis may sound more certain than the evidence permits.
+Future synthesis may sound more certain than the evidence permits.
+
+Implemented status:
+Superseded for the current branch. The GLP-1 vertical slice stops at retrieval,
+manual evidence display, validation, and reporting.
 
 ### VS-8: End-to-End Review
 
 Goal:
-Validate that the entire chain works from PDF to cited answer.
+Validate that the entire chain works from PDF to cited retrieval and evidence
+review output.
 
 Testable outcome:
-A reviewer can start from the final answer and trace backward to evidence,
-claims, source spans, metadata, and PDFs.
+A reviewer can start from retrieval or report output and trace backward to
+manual evidence records, metadata, and PDFs.
 
 Complexity:
 Low to medium.
@@ -429,7 +498,7 @@ Risk:
 Small inconsistencies between object names, files, commands, or reports can make
 the architecture feel more complete than it really is.
 
-## Recommended Implementation Order
+## Original Recommended Implementation Order
 
 1. VS-0: Select the prototype question and source set.
 2. VS-1: Represent sources, documents, and metadata.
@@ -438,12 +507,13 @@ the architecture feel more complete than it really is.
 5. VS-4: Create evidence records.
 6. VS-5: Add relationships and concepts.
 7. VS-6: Retrieve evidence for the question.
-8. VS-7: Synthesize a human-readable answer.
+8. Original VS-7: future human-readable answer, not implemented in this branch.
 9. VS-8: Perform end-to-end review.
 
 This order keeps each step independently testable while preserving the main
-architectural flow. It also avoids building later reasoning behavior before the
-source, claim, evidence, and provenance boundaries are visible.
+architectural flow. For the implemented GLP-1 demo, this plan was narrowed to
+retrieval plus manual evidence display so later reasoning behavior is not built
+before source, evidence, review-status, and provenance boundaries are visible.
 
 ## Design Guidance
 
@@ -523,7 +593,7 @@ traceable source material from the indexed corpus. It does not yet prove the
 Evidence Layer or Reasoning Layer. The output is intentionally framed as
 retrieval because no scientific synthesis has been performed.
 
-### Next Slice
+### Historical Next Slice Note
 
 VS-2 should add a tiny curated source set and end-to-end demo data so the command
 can be exercised against approximately one to ten real or generated prototype
