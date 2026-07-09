@@ -21,6 +21,11 @@ This file is the roadmap index. Phase-specific notes live in `docs/roadmap/`.
 - Add deduplication reports and import manifests.
 - Define legal corpus inclusion rules and source provenance requirements.
 - Add a repeatable corpus ingestion workflow.
+- Use `docs/phase1_design.md` as the detailed design reference.
+
+The current GLP-1 vertical slice is a small retrieval and manual evidence-display
+prototype for Phase 1 preparation. See `docs/vertical_slice.md` and
+`docs/glp1_vertical_slice_demo_checklist.md`.
 
 ## Phase 2: Evidence Records
 
@@ -59,6 +64,7 @@ This file is the roadmap index. Phase-specific notes live in `docs/roadmap/`.
 
 ## Detailed Roadmaps
 
+- `docs/phase1_design.md`
 - `docs/roadmap/phase0.md`
 - `docs/roadmap/phase1.md`
 - `docs/roadmap/phase2.md`

@@ -3,7 +3,7 @@ from pathlib import Path
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.parser import ParsedPaper
-from knowledge_engine.search import SearchService
+from knowledge_engine.search import SearchService, build_natural_language_fts_query
 
 
 def build_database(tmp_path: Path) -> Database:
@@ -64,3 +64,40 @@ def test_search_returns_ranked_matches(tmp_path: Path) -> None:
     assert len(results) == 1
     assert results[0].title == "Alzheimer Disease and Metabolic Signaling"
     assert "metabolic" in results[0].snippet.lower()
+
+
+def test_answer_retrieval_accepts_natural_language_questions(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+    parsed = ParsedPaper(
+        source_path=tmp_path / "glp1.pdf",
+        content_hash="b" * 64,
+        title="GLP-1 Receptor Agonists and Body Weight",
+        authors=["Jane Researcher"],
+        abstract="GLP-1 receptor agonists reduce body weight in adults with obesity.",
+        doi="10.1234/glp1",
+        page_count=4,
+        word_count=24,
+        raw_text="Participants receiving GLP-1 receptor agonists had reduced body weight.",
+        body_text="GLP-1 receptor agonists reduce body weight compared with placebo.",
+    )
+
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(parsed)
+        paper.publication_year = 2024
+
+    with database.session() as session:
+        results = SearchService(session).answer_retrieval(
+            "Do GLP-1 receptor agonists reduce body weight?"
+        )
+
+    assert len(results) == 1
+    assert results[0].title == "GLP-1 Receptor Agonists and Body Weight"
+    assert results[0].publication_year == 2024
+    assert results[0].doi == "10.1234/glp1"
+    assert "body" in results[0].matched_query
+
+
+def test_natural_language_query_removes_punctuation_and_stopwords() -> None:
+    query = build_natural_language_fts_query("Do GLP-1 receptor agonists reduce body weight?")
+
+    assert query == "glp OR receptor OR agonists OR reduce OR body OR weight"

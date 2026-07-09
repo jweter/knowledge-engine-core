@@ -10,6 +10,20 @@ evaluate, and apply scientific knowledge with traceable evidence and visible
 uncertainty. This repository does not build the AI layer yet. It builds the
 reliable core that future AI, graph, API, and web systems can trust.
 
+## Project Vision
+
+Knowledge Engine is an open-source effort to organize, connect, and accelerate
+scientific knowledge.
+
+The long-term objective is to build a transparent, reproducible, AI-assisted
+platform that helps researchers discover connections across disciplines while
+preserving evidence, citations, and scientific rigor.
+
+The project begins with reliable document ingestion and search, then gradually
+expands toward metadata enrichment, knowledge graphs, semantic search, and
+AI-assisted reasoning. Every stage is designed to remain open, modular, and
+community-driven.
+
 ## Status
 
 Phase 0 is implemented:
@@ -109,6 +123,15 @@ Show collection statistics:
 ```bash
 poetry run ke stats
 ```
+
+Run the GLP-1 vertical slice demo checklist:
+
+```text
+docs/glp1_vertical_slice_demo_checklist.md
+```
+
+The demo is retrieval and manual evidence display only. It does not perform
+scientific synthesis.
 
 By default, the SQLite database is created at:
 
@@ -218,6 +241,10 @@ Crossref adapters.
 
 See [docs/roadmap.md](docs/roadmap.md) and `docs/roadmap/` for the longer
 roadmap.
+
+The current vertical slice demo is documented in
+[docs/vertical_slice.md](docs/vertical_slice.md) and
+[docs/glp1_vertical_slice_demo_checklist.md](docs/glp1_vertical_slice_demo_checklist.md).
 
 ## Known Issues
 
