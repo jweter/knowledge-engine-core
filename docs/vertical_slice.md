@@ -703,3 +703,18 @@ review-readiness note such as `draft only; secondary review needed.`
 This milestone makes evidence-record readiness visible at a glance. It does not
 synthesize evidence, calculate consensus, score scientific confidence, automate
 extraction, modify schemas, or change parser behavior.
+
+## VS-16 End-to-End Demo Review
+
+VS-16 runs the complete GLP-1 vertical slice workflow from local corpus state to
+retrieval, metadata overlay, manual evidence display, evidence validation,
+evidence-attached retrieval, and generated Markdown report.
+
+The review found that the vertical slice works end to end and is ready for
+cleanup and PR preparation. The strongest path uses `--sources` and `--evidence`
+so curated metadata, validation, draft review status, provenance, limitations,
+and no-synthesis boundaries remain visible.
+
+Known gaps remain around parser-derived metadata, noisy PDF snippets, report
+density, and documentation polish. VS-17 should be cleanup and PR preparation,
+not a new feature milestone.
