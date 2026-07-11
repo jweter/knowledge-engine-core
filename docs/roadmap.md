@@ -27,9 +27,10 @@ The current GLP-1 vertical slice is a small retrieval and manual evidence-displa
 prototype for Phase 1 preparation. See `docs/vertical_slice.md` and
 `docs/glp1_vertical_slice_demo_checklist.md`.
 
-The next planning milestone is M6: define the Phase 1 corpus ingestion
-architecture before implementation. See
-`docs/m6_phase1_corpus_ingestion_plan.md`.
+M6 defined the Phase 1 corpus ingestion architecture. M7 implements the manifest
+validation foundation with `ke corpus-validate <corpus.json> [--check-files]`.
+See `docs/m6_phase1_corpus_ingestion_plan.md` and
+`docs/m7_manifest_validation_foundation.md`.
 
 ## Phase 2: Evidence Records
 
@@ -72,6 +73,7 @@ architecture before implementation. See
 
 - `docs/phase1_design.md`
 - `docs/m6_phase1_corpus_ingestion_plan.md`
+- `docs/m7_manifest_validation_foundation.md`
 - `docs/roadmap/phase0.md`
 - `docs/roadmap/phase1.md`
 - `docs/roadmap/phase2.md`

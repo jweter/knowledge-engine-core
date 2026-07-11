@@ -43,10 +43,91 @@ def test_cli_help() -> None:
 
     assert result.exit_code == 0
     assert "Offline scientific paper ingestion and search" in result.output
+    assert "corpus-validate" in result.output
 
 
 def test_safe_text_normalizes_pdf_ligatures() -> None:
     assert cli._safe_text("Efﬁcacy") == "Efficacy"
+
+
+def test_corpus_validate_command_passes_valid_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(app, ["corpus-validate", str(corpus_path)])
+
+    assert result.exit_code == 0
+    assert "Corpus validation" in result.output
+    assert "Manifest validity: valid" in result.output
+    assert "Import readiness: not evaluated" in result.output
+    assert "No papers were imported." in result.output
+    assert "No database writes were performed." in result.output
+    assert "Validation does not constitute legal approval or scientific review." in result.output
+    assert not (tmp_path / "data" / "knowledge_engine.sqlite3").exists()
+
+
+def test_corpus_validate_command_reports_import_blocked_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(tmp_path, usage_status="needs_legal_review")
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(app, ["corpus-validate", str(corpus_path)])
+
+    assert result.exit_code == 0
+    assert "Manifest validity: valid" in result.output
+    assert "Import readiness: blocked" in result.output
+    assert "usage_status_not_importable" in result.output
+
+
+def test_corpus_validate_command_fails_invalid_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(tmp_path, corpus_id="Bad ID")
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(app, ["corpus-validate", str(corpus_path)])
+
+    assert result.exit_code == 1
+    assert "Corpus validation failed" in result.output
+    assert "Manifest validity: invalid" in result.output
+    assert "invalid_corpus_id" in result.output
+    assert "^[a-z0-9][a-z0-9_-]*$" in result.output
+
+
+def test_corpus_validate_command_orders_issues_deterministically(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(
+        tmp_path,
+        rows=[
+            "b-source,,approved_open_access,included",
+            "a-source,,approved_open_access,included",
+        ],
+    )
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(app, ["corpus-validate", str(corpus_path)])
+
+    assert result.exit_code == 1
+    assert result.output.index("line 2") < result.output.index("line 3")
+
+
+def test_corpus_validate_command_check_files_blocks_missing_pdf(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(app, ["corpus-validate", str(corpus_path), "--check-files"])
+
+    assert result.exit_code == 0
+    assert "Manifest validity: valid" in result.output
+    assert "Import readiness: blocked" in result.output
+    assert "local_file_missing" in result.output
+    assert "Missing: 1" in result.output
 
 
 def test_answer_command_returns_retrieval_only_results(
@@ -793,6 +874,48 @@ def test_evidence_command_fails_for_empty_jsonl(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "contains no evidence records" in result.output
+
+
+def write_cli_corpus(
+    tmp_path: Path,
+    *,
+    corpus_id: str = "cli_corpus",
+    usage_status: str = "approved_open_access",
+    rows: list[str] | None = None,
+) -> Path:
+    (tmp_path / "knowledge_engine").mkdir()
+    (tmp_path / "pyproject.toml").write_text("[tool.poetry]\nname='test'\n", encoding="utf-8")
+    corpus_dir = tmp_path / "data" / "corpora" / "cli_corpus"
+    corpus_dir.mkdir(parents=True)
+    (corpus_dir / "license_policy.md").write_text("# License\n", encoding="utf-8")
+    (tmp_path / "papers" / "corpora" / "cli_corpus").mkdir(parents=True)
+    corpus = {
+        "manifest_version": 1,
+        "corpus_id": corpus_id,
+        "name": "CLI Corpus",
+        "description": "A CLI test corpus.",
+        "scientific_domain": "test science",
+        "research_question": {"question_id": "q_cli", "text": "Does the CLI validate?"},
+        "created_at": "2026-07-11",
+        "updated_at": "2026-07-11",
+        "license_policy": "license_policy.md",
+        "source_manifest": "sources.csv",
+        "default_local_papers_directory": "papers/corpora/cli_corpus",
+    }
+    (corpus_dir / "corpus.json").write_text(json.dumps(corpus), encoding="utf-8")
+    source_rows = rows or [f"source-1,Valid Paper,{usage_status},included"]
+    (corpus_dir / "sources.csv").write_text(
+        "source_id,title,usage_status,inclusion_status,source_url,access_date,"
+        "inclusion_reason,license_type,license_url,local_path\n"
+        + "\n".join(
+            f"{row},https://example.test/paper,2026-07-11,Relevant,CC-BY,"
+            "https://creativecommons.org/licenses/by/4.0/,paper.pdf"
+            for row in source_rows
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return corpus_dir / "corpus.json"
 
 
 def write_evidence_records(tmp_path: Path, overrides: list[dict[str, object]]) -> Path:

@@ -1,36 +1,17 @@
 {
-  "schema_version": "0.1",
+  "manifest_version": 1,
   "corpus_id": "glp1_weight_loss",
   "name": "GLP-1 Weight Loss Prototype Corpus",
-  "milestone": "VS-0",
-  "status": "defined_not_imported",
-  "purpose": "Prototype one end-to-end scientific question through the Knowledge Engine architecture.",
-  "scientific_question": {
+  "description": "Small legally traceable GLP-1 corpus used to exercise Knowledge Engine corpus validation and retrieval workflows.",
+  "scientific_domain": "obesity and metabolic disease",
+  "research_question": {
     "question_id": "q_glp1_weight_loss_adults",
-    "text": "Do GLP-1 receptor agonists reduce body weight in adults with overweight or obesity?",
-    "question_type": "intervention_effect",
-    "population": "Adults with overweight or obesity",
-    "intervention": "GLP-1 receptor agonists",
-    "comparison": "Placebo, usual care, lifestyle intervention, or other comparator described by each source",
-    "outcome": "Body weight, BMI, or percent body weight change",
-    "time_scope": "Any clearly reported treatment duration"
+    "text": "Do GLP-1 receptor agonists reduce body weight in adults with overweight or obesity?"
   },
-  "target_source_count": 10,
-  "source_document_policy": {
-    "commit_pdfs_to_repository": false,
-    "local_pdf_directory": "papers/corpora/glp1_weight_loss/",
-    "source_list_template": "data/corpora/glp1_weight_loss/sources.csv"
-  },
-  "criteria": {
-    "inclusion_criteria": "data/corpora/glp1_weight_loss/inclusion_criteria.md",
-    "exclusion_criteria": "data/corpora/glp1_weight_loss/exclusion_criteria.md",
-    "license_policy": "data/corpora/glp1_weight_loss/license_policy.md"
-  },
-  "prototype_boundaries": {
-    "import_papers": false,
-    "parse_pdfs": false,
-    "modify_database_schema": false,
-    "metadata_enrichment": false,
-    "evidence_extraction": false
-  }
+  "created_at": "2026-07-07",
+  "updated_at": "2026-07-11",
+  "license_policy": "license_policy.md",
+  "source_manifest": "sources.csv",
+  "default_local_papers_directory": "papers/corpora/glp1_weight_loss",
+  "notes": "This corpus metadata is committed for reproducibility. Local PDFs remain ignored and are not part of the repository."
 }

@@ -27,3 +27,9 @@ def normalize_whitespace(text: str) -> str:
     lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
     compact_lines = [line for line in lines if line]
     return "\n\n".join(compact_lines)
+
+
+def normalize_doi(doi: str) -> str:
+    """Normalize a DOI for deterministic comparison."""
+
+    return doi.strip().lower().removeprefix("https://doi.org/").removeprefix("doi:")
