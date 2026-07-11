@@ -1,5 +1,12 @@
 # Phase 1 Design: Focused Corpus Ingestion
 
+Status:
+This document is the original Phase 1 design sketch. The implementation-ready
+M6 ingestion architecture refines it with a smaller pilot-first sequence,
+explicit manifest validation, import-run identity, duplicate outcomes, metadata
+precedence, and legal/provenance gating. See
+`docs/m6_phase1_corpus_ingestion_plan.md`.
+
 ## Mission
 
 Phase 1 turns Knowledge Engine Core from a single-paper local source vault into
