@@ -180,7 +180,7 @@ The trust boundaries are clear enough for a prototype:
 - The status summary says secondary review is needed.
 - Confidence notes avoid scientific confidence scoring.
 - The output repeatedly states that no scientific synthesis has been performed.
-- SELECT remains clearly marked as having no reviewed evidence available.
+- SELECT remains clearly marked as having no manual evidence available.
 
 The system does not claim that the research question has been answered.
 

@@ -664,7 +664,7 @@ ke answer "Do GLP-1 receptor agonists reduce body weight in adults with overweig
 
 When `--evidence` is provided, `ke answer` loads manual JSONL evidence records,
 matches them to retrieved papers by normalized DOI, and displays a compact
-reviewed-evidence preview under each matching retrieval result.
+manual-evidence preview under each matching retrieval result.
 
 This is still retrieval-only. The command shows whether manual evidence is
 available and preserves the no-synthesis disclaimer. It does not add automated
@@ -695,8 +695,8 @@ or overweight without diabetes.
 
 This milestone verifies that the Markdown evidence report can display multiple
 manual evidence records from different source papers and study types. The report
-shows reviewed evidence available for Gao et al. and STEP 5, while keeping
-papers without manual evidence clearly labeled as not available.
+shows manual evidence available for Gao et al. and STEP 5, while keeping papers
+without manual evidence clearly labeled as not available.
 
 VS-11 remains manual and display-focused. It does not synthesize the records,
 calculate consensus, score confidence, automate extraction, modify schemas, or

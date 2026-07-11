@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "knowledge-engine-core"
-version = "0.1.0"
+version = "0.2.0a1"
 description = "Offline scientific paper ingestion, storage, and search for the Knowledge Engine project."
 authors = ["Knowledge Engine Contributors"]
 license = "MIT"

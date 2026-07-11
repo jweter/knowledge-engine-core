@@ -7,17 +7,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0-alpha.1] - 2026-07-11
+
 ### Added
 
-- Phase 0 local PDF ingestion, SQLite persistence, and FTS5 search.
-- Typer CLI commands: `init`, `import`, `search`, `list`, and `stats`.
-- SQLAlchemy models for papers, authors, journals, keywords, and extracted text.
-- PyMuPDF parser with best-effort metadata extraction.
-- pytest, ruff, black, and mypy configuration.
-- Repository governance files, issue templates, PR template, and CI workflow.
-- Pain-point tracking for known developer and product issues.
-- GLP-1 vertical slice demo for retrieval, corpus metadata overlays, manual
-  evidence display, evidence validation, and local Markdown evidence reports.
+- Added natural-language scientific-question retrieval with `ke answer`.
+- Added curated `sources.csv` metadata overlays for retrieval results.
+- Added manual JSONL evidence records with review status and checklists.
+- Added structural evidence validation with `ke evidence-validate` and shared
+  validation across evidence-consuming commands.
+- Added DOI-matched evidence previews, evidence review status summaries, and
+  local Markdown evidence reports.
+- Added the GLP-1 demo corpus metadata and reproducible demo checklist.
+- Documented explicit retrieval, manual-evidence, and no-synthesis boundaries.
 
 ## [0.1.0] - 2026-07-06
 

@@ -54,6 +54,8 @@ prototype for Phase 1 preparation. See `docs/vertical_slice.md` and
 - `v0.1.0`: Phase 0 local source vault, CLI, tests, docs, and repository
   hygiene.
 - `v0.1.1`: Bug fixes and setup improvements.
+- `v0.2.0-alpha.1`: GLP-1 retrieval and manual evidence vertical-slice
+  prerelease.
 - `v0.2.0`: Bulk corpus ingestion and import manifests.
 - `v0.3.0`: Metadata enrichment and citation capture.
 - `v0.4.0`: Knowledge graph foundation.

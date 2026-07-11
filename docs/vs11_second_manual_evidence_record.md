@@ -76,9 +76,9 @@ ke evidence-report "Do GLP-1 receptor agonists reduce body weight in adults with
 
 The generated report showed:
 
-- reviewed evidence available for Gao et al.;
-- reviewed evidence available for STEP 5;
-- reviewed evidence not available for SELECT;
+- manual evidence available for Gao et al.;
+- manual evidence available for STEP 5;
+- manual evidence not available for SELECT;
 - separate evidence previews under the matching retrieved papers;
 - the required no-synthesis disclaimer.
 
@@ -113,7 +113,7 @@ VS-11 proves that the vertical slice can represent and display multiple manual
 evidence records for the same research question across different source papers
 and study types.
 
-It also proves that the report can show reviewed evidence availability by source
+It also proves that the report can show manual evidence availability by source
 without claiming that the question has been answered.
 
 ## What This Does Not Prove
