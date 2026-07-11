@@ -32,6 +32,7 @@ Phase 0 is implemented:
 - SQLite persistence with SQLAlchemy
 - Tables for papers, authors, journals, keywords, and extracted text
 - SQLite FTS5 keyword and phrase search
+- Version 1 corpus manifest validation with no import side effects
 - Typer CLI with Rich terminal output
 - pytest coverage for parser, persistence/search, and CLI behavior
 - ruff, black, and mypy configuration
@@ -124,6 +125,18 @@ Show collection statistics:
 poetry run ke stats
 ```
 
+Validate a corpus manifest without importing papers:
+
+```bash
+poetry run ke corpus-validate data/corpora/glp1_weight_loss/corpus.json
+```
+
+Check local PDF readiness for included full-text rows:
+
+```bash
+poetry run ke corpus-validate data/corpora/glp1_weight_loss/corpus.json --check-files
+```
+
 Run the GLP-1 vertical slice demo checklist:
 
 ```text
@@ -179,6 +192,7 @@ knowledge-engine-core/
   knowledge_engine/
     cli.py          # Typer command line interface
     config.py       # Pydantic settings
+    corpus/         # Corpus manifest validation models and service
     database.py     # SQLAlchemy engine/session/repository logic
     models.py       # SQLAlchemy ORM models
     parser.py       # PDF parsing interface and PyMuPDF implementation
@@ -205,6 +219,7 @@ Knowledge Engine Core uses a small layered architecture:
 - `knowledge_engine.models` defines durable relational tables.
 - `knowledge_engine.database` owns initialization and repository writes.
 - `knowledge_engine.search` provides FTS5-backed keyword and phrase search.
+- `knowledge_engine.corpus` validates versioned corpus manifests before import.
 - `knowledge_engine.cli` adapts user commands to application services.
 
 The CLI does not contain parsing, storage, or ranking logic. That keeps the

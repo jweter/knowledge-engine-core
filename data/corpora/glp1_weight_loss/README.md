@@ -1,63 +1,64 @@
 # GLP-1 Weight Loss Prototype Corpus
 
-This directory defines the VS-0 prototype corpus for the Knowledge Engine
-vertical slice.
+This directory defines the GLP-1 demonstration corpus for Knowledge Engine
+Core.
 
-The corpus is intentionally small. Its purpose is to prove that one scientific
-question can travel through the Knowledge Engine architecture from source
-documents to claims, evidence records, relationships, retrieval, synthesis, and
-source citations.
-
-No papers have been imported yet. No PDFs should be committed to the repository.
+The corpus is intentionally small. It is used to exercise corpus metadata,
+legal provenance, retrieval, manual evidence display, and manifest validation.
+It does not represent a complete scientific corpus and does not provide a
+scientific conclusion.
 
 ## Scientific Question
 
 Do GLP-1 receptor agonists reduce body weight in adults with overweight or
 obesity?
 
-## Corpus Scope
-
-The prototype corpus should contain approximately 10 legally usable scientific
-papers about GLP-1 receptor agonists and body weight outcomes in adults with
-overweight or obesity.
-
-The first source set should prefer:
-
-- Randomized controlled trials.
-- Systematic reviews or meta-analyses.
-- Papers with clear body weight, BMI, or percent weight change outcomes.
-- Papers with accessible abstracts, methods, and results sections.
-- Sources with clear licensing or usage notes.
-
 ## Files
 
-- `corpus.json`: machine-readable corpus definition.
+- `corpus.json`: version 1 corpus definition.
+- `sources.csv`: version 1 source manifest with curated metadata, legal-use
+  status, provenance, and local file names.
 - `scientific_question.md`: human-readable question definition and rationale.
-- `sources.csv`: source list template for approximately 10 papers.
 - `inclusion_criteria.md`: criteria for adding papers.
 - `exclusion_criteria.md`: criteria for excluding papers.
 - `license_policy.md`: policy for legal and reproducible use of source
   documents.
+- `evidence_records.jsonl`: draft manual evidence records for the vertical
+  slice demonstration.
 
-## Source List Fields
+## Manifest Validation
 
-`sources.csv` records source metadata, local file references, inclusion status,
-and legal provenance. The VS-3 fields `pdf_url`, `license_type`, and
-`license_url` identify the exact publisher PDF and license evidence used for a
-local import.
+Validate the committed corpus metadata without checking local PDFs:
 
-## Local PDF Location
-
-When VS-1 or later milestones begin, local PDFs should be placed under:
-
-```text
-papers/corpora/glp1_weight_loss/
+```bash
+ke corpus-validate data/corpora/glp1_weight_loss/corpus.json
 ```
 
-PDF files are ignored by Git. The source list should record enough provenance to
-reconstruct the corpus without committing copyrighted documents.
+If the local ignored PDFs are present, check file readiness:
+
+```bash
+ke corpus-validate data/corpora/glp1_weight_loss/corpus.json --check-files
+```
+
+Validation does not import papers, parse PDFs, write to SQLite, provide legal
+approval, perform scientific review, or produce scientific synthesis.
+
+## Path Contract
+
+The corpus uses the Phase 1 version 1 path contract:
+
+- `source_manifest` and `license_policy` are relative to this directory.
+- `default_local_papers_directory` is relative to the project root.
+- Source-row `local_path` values are filenames relative to
+  `papers/corpora/glp1_weight_loss`.
+
+PDF files are ignored by Git. The source list records enough provenance to
+reconstruct the corpus without committing copyrighted or licensed full-text
+documents.
 
 ## Current Status
 
-VS-0 only. The corpus has been defined, but no papers have been imported,
-parsed, enriched, or converted into evidence records.
+The committed manifest contains three legally traceable open-access sources.
+Local PDFs may exist on a contributor's machine for demonstration, but they are
+not committed. The evidence records are draft manual records and need secondary
+review before scientific use.

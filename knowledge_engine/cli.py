@@ -14,12 +14,15 @@ from typing import Annotated, Any
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from knowledge_engine.config import build_settings
+from knowledge_engine.corpus import CorpusValidationResult, Issue, validate_corpus_manifest
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.parser import PyMuPDFParser
 from knowledge_engine.search import SearchResult, SearchService, build_natural_language_fts_query
+from knowledge_engine.utils import normalize_doi
 
 app = typer.Typer(help="Offline scientific paper ingestion and search.")
 console = Console()
@@ -73,6 +76,14 @@ OutputMarkdownOption = Annotated[
 ForceOutputOption = Annotated[
     bool,
     typer.Option("--force", help="Overwrite an existing output file."),
+]
+CorpusJsonArgument = Annotated[
+    Path,
+    typer.Argument(help="Version 1 corpus.json file to validate."),
+]
+CheckFilesOption = Annotated[
+    bool,
+    typer.Option("--check-files", help="Evaluate local PDF file readiness."),
 ]
 ALLOWED_REVIEW_STATUSES = {"draft", "reviewed", "needs_revision", "rejected"}
 REQUIRED_EVIDENCE_FIELDS = {
@@ -366,6 +377,19 @@ def evidence_report(
     console.print(report, markup=False)
 
 
+@app.command("corpus-validate")
+def corpus_validate(
+    corpus_json: CorpusJsonArgument,
+    check_files: CheckFilesOption = False,
+) -> None:
+    """Validate a version 1 corpus manifest without importing papers."""
+
+    result = validate_corpus_manifest(corpus_json, check_files=check_files)
+    _print_corpus_validation_result(result)
+    if result.structural_errors:
+        raise typer.Exit(1)
+
+
 @app.command("list")
 def list_papers() -> None:
     """List imported papers."""
@@ -453,10 +477,10 @@ def _load_sources_overlay(path: Path) -> dict[str, CorpusSourceMetadata]:
             doi = (row.get("doi") or "").strip()
             if not doi:
                 continue
-            overlay[_normalize_doi(doi)] = CorpusSourceMetadata(
+            overlay[normalize_doi(doi)] = CorpusSourceMetadata(
                 title=(row.get("title") or "").strip(),
                 authors=(row.get("authors") or "").strip(),
-                year=(row.get("year") or "").strip(),
+                year=(row.get("publication_year") or row.get("year") or "").strip(),
                 journal=(row.get("venue") or "").strip(),
                 doi=doi,
                 source_url=(row.get("source_url") or "").strip(),
@@ -472,13 +496,7 @@ def _find_curated_metadata(
 
     if not result.doi:
         return None
-    return metadata_overlay.get(_normalize_doi(result.doi))
-
-
-def _normalize_doi(doi: str) -> str:
-    """Normalize a DOI for metadata overlay matching."""
-
-    return doi.strip().lower().removeprefix("https://doi.org/").removeprefix("doi:")
+    return metadata_overlay.get(normalize_doi(result.doi))
 
 
 def _load_evidence_records(path: Path) -> list[dict[str, Any]]:
@@ -626,7 +644,7 @@ def _index_evidence_records_by_doi(
         doi = _record_value(record, "source_doi")
         if doi == "Unknown":
             continue
-        records_by_doi.setdefault(_normalize_doi(doi), []).append(record)
+        records_by_doi.setdefault(normalize_doi(doi), []).append(record)
     return records_by_doi
 
 
@@ -680,7 +698,7 @@ def _find_evidence_records(
 
     if not result.doi:
         return []
-    return records_by_doi.get(_normalize_doi(result.doi), [])
+    return records_by_doi.get(normalize_doi(result.doi), [])
 
 
 def _print_evidence_preview(records: list[dict[str, Any]]) -> None:
@@ -781,6 +799,76 @@ def _build_evidence_report(
         ]
     )
     return "\n".join(lines)
+
+
+def _print_corpus_validation_result(result: CorpusValidationResult) -> None:
+    """Render corpus validation output for humans."""
+
+    heading = "Corpus validation failed" if result.structural_errors else "Corpus validation"
+    console.print(f"[bold]{heading}[/bold]")
+    console.print()
+    console.print(f"Corpus: {_display_cli_text(result.corpus_name or 'Unknown')}")
+    console.print(f"Corpus ID: {_display_cli_text(result.corpus_id or 'Unknown')}")
+    console.print(f"Manifest version: {result.manifest_version or 'Unknown'}")
+    console.print(f"Source manifest: {_display_cli_text(result.source_manifest_path or 'Unknown')}")
+    console.print()
+    console.print(f"Sources: {result.total_source_rows}")
+    console.print(f"Valid source rows: {result.valid_source_rows}")
+    console.print(f"Manifest validity: {result.manifest_validity.value}")
+    console.print(f"Import readiness: {result.import_readiness.value}")
+    console.print()
+    console.print(f"Blocking structural errors: {result.structural_error_count}")
+    _print_issues(result.structural_errors)
+    console.print(f"Import-blocking policy/legal/file issues: {result.import_blocker_count}")
+    _print_issues(result.import_blockers)
+    console.print(f"Non-blocking warnings: {result.warning_count}")
+    _print_issues(result.warnings)
+    console.print()
+    _print_counter("Legal-use status", result.usage_status_counts)
+    _print_counter("Inclusion status", result.inclusion_status_counts)
+    console.print()
+    console.print("[bold]Local files[/bold]")
+    console.print(f"Present: {result.file_counts.present}")
+    console.print(f"Missing: {result.file_counts.missing}")
+    console.print(f"Invalid: {result.file_counts.invalid}")
+    console.print(f"Not checked: {result.file_counts.not_checked}")
+    console.print()
+    console.print("No papers were imported.")
+    console.print("No database writes were performed.")
+    console.print("Validation does not constitute legal approval or scientific review.")
+    console.print("Exit status is nonzero only when manifest validity is invalid.")
+
+
+def _print_issues(issues: list[Issue]) -> None:
+    """Print deterministic issue details."""
+
+    for issue in issues:
+        context: list[str] = []
+        if issue.line_number:
+            context.append(f"line {issue.line_number}")
+        if issue.source_id:
+            context.append(f"source_id={issue.source_id}")
+        if issue.field:
+            context.append(f"field={issue.field}")
+        context_text = f" ({', '.join(context)})" if context else ""
+        console.print(f"- {issue.code}{context_text}: {_display_cli_text(issue.message)}")
+
+
+def _print_counter(title: str, counts: Counter[str]) -> None:
+    """Print a stable counter section."""
+
+    console.print(f"[bold]{title}[/bold]")
+    if not counts:
+        console.print("- none")
+        return
+    for key in sorted(counts):
+        console.print(f"{_display_cli_text(key)}: {counts[key]}")
+
+
+def _display_cli_text(value: str) -> str:
+    """Normalize and escape text embedded in Rich markup output."""
+
+    return escape(_safe_text(value))
 
 
 def _report_paper_lines(
