@@ -20,6 +20,8 @@ from rich.table import Table
 from knowledge_engine.config import build_settings
 from knowledge_engine.corpus import CorpusValidationResult, Issue, validate_corpus_manifest
 from knowledge_engine.database import Database, PaperRepository
+from knowledge_engine.import_runs import ImportRunService
+from knowledge_engine.models import ImportRun
 from knowledge_engine.parser import PyMuPDFParser
 from knowledge_engine.search import SearchResult, SearchService, build_natural_language_fts_query
 from knowledge_engine.utils import normalize_doi
@@ -80,6 +82,10 @@ ForceOutputOption = Annotated[
 CorpusJsonArgument = Annotated[
     Path,
     typer.Argument(help="Version 1 corpus.json file to validate."),
+]
+ImportRunIdArgument = Annotated[
+    str,
+    typer.Argument(help="Import run UUID to inspect."),
 ]
 CheckFilesOption = Annotated[
     bool,
@@ -388,6 +394,53 @@ def corpus_validate(
     _print_corpus_validation_result(result)
     if result.structural_errors:
         raise typer.Exit(1)
+
+
+@app.command("corpus-run-create")
+def corpus_run_create(
+    corpus_json: CorpusJsonArgument,
+    check_files: CheckFilesOption = False,
+) -> None:
+    """Persist a corpus validation attempt as an import run."""
+
+    database = _database()
+    database.initialize()
+    try:
+        with database.session() as session:
+            service = ImportRunService(session, project_root=database.settings.project_root)
+            persisted = service.create_run(corpus_json, check_files=check_files)
+    except Exception as exc:
+        raise typer.BadParameter(f"Import run was not recorded: {exc}") from exc
+
+    console.print("[bold]Import run recorded[/bold]")
+    with database.session() as session:
+        run = ImportRunService(session, project_root=database.settings.project_root).get_run(
+            persisted.import_run_id
+        )
+    if run is None:
+        raise typer.BadParameter("Import run was recorded but could not be read back.")
+
+    _print_import_run(run, include_persistence_outcome=True)
+    if run.manifest_validity == "invalid":
+        raise typer.Exit(1)
+
+
+@app.command("corpus-run-show")
+def corpus_run_show(import_run_id: ImportRunIdArgument) -> None:
+    """Show a persisted import run."""
+
+    database = _database()
+    database.initialize()
+    with database.session() as session:
+        run = ImportRunService(session, project_root=database.settings.project_root).get_run(
+            import_run_id
+        )
+
+    if run is None:
+        console.print(f"[red]Unknown import run:[/red] {_display_cli_text(import_run_id)}")
+        raise typer.Exit(1)
+
+    _print_import_run(run)
 
 
 @app.command("list")
@@ -801,7 +854,11 @@ def _build_evidence_report(
     return "\n".join(lines)
 
 
-def _print_corpus_validation_result(result: CorpusValidationResult) -> None:
+def _print_corpus_validation_result(
+    result: CorpusValidationResult,
+    *,
+    database_writes_performed: bool = False,
+) -> None:
     """Render corpus validation output for humans."""
 
     heading = "Corpus validation failed" if result.structural_errors else "Corpus validation"
@@ -834,9 +891,79 @@ def _print_corpus_validation_result(result: CorpusValidationResult) -> None:
     console.print(f"Not checked: {result.file_counts.not_checked}")
     console.print()
     console.print("No papers were imported.")
-    console.print("No database writes were performed.")
+    if database_writes_performed:
+        console.print("Validation run metadata was written to the database.")
+        console.print("No paper or FTS records were written.")
+    else:
+        console.print("No database writes were performed.")
     console.print("Validation does not constitute legal approval or scientific review.")
     console.print("Exit status is nonzero only when manifest validity is invalid.")
+
+
+def _print_import_run(run: ImportRun, *, include_persistence_outcome: bool = False) -> None:
+    """Render a persisted import run."""
+
+    console.print("[bold]Persisted import run[/bold]")
+    console.print(f"Import run ID: {_display_cli_text(run.import_run_id)}")
+    console.print(f"Run status: {_display_cli_text(run.run_status)}")
+    console.print(f"Validation mode: {_display_cli_text(run.validation_mode)}")
+    console.print(f"Corpus: {_display_cli_text(run.corpus_name or 'Unknown')}")
+    console.print(f"Corpus ID: {_display_cli_text(run.corpus_id or 'Unknown')}")
+    console.print(f"Manifest version: {run.manifest_version or 'Unknown'}")
+    console.print(f"Manifest validity: {_display_cli_text(run.manifest_validity)}")
+    console.print(f"Import readiness: {_display_cli_text(run.import_readiness)}")
+    console.print(f"Created: {_display_cli_text(run.created_at)}")
+    console.print(f"Completed: {_display_cli_text(run.completed_at)}")
+    console.print(f"Corpus path: {_display_cli_text(run.corpus_path)}")
+    console.print(f"Source manifest: {_display_cli_text(run.source_manifest_path or 'Unknown')}")
+    console.print(f"License policy: {_display_cli_text(run.license_policy_path or 'Unknown')}")
+    console.print(f"Manifest snapshot ID: {_display_cli_text(run.manifest_snapshot_id)}")
+    console.print(
+        f"Combined snapshot hash: {_display_cli_text(run.manifest_snapshot.combined_sha256)}"
+    )
+    console.print()
+    console.print(f"Sources: {run.total_source_rows}")
+    console.print(f"Valid source rows: {run.valid_source_rows}")
+    console.print(f"Warnings: {run.warning_count}")
+    console.print(f"Structural errors: {run.structural_error_count}")
+    console.print(f"Import blockers: {run.import_blocker_count}")
+    console.print()
+    console.print("[bold]Issues[/bold]")
+    if not run.issues:
+        console.print("- none")
+    for issue in sorted(run.issues, key=lambda item: item.sequence):
+        context = []
+        if issue.csv_line_number:
+            context.append(f"line {issue.csv_line_number}")
+        if issue.source_id:
+            context.append(f"source_id={_display_cli_text(issue.source_id)}")
+        if issue.field:
+            context.append(f"field={_display_cli_text(issue.field)}")
+        suffix = f" ({', '.join(context)})" if context else ""
+        console.print(
+            f"- {issue.sequence}. {_display_cli_text(issue.code)}{suffix}: "
+            f"{_display_cli_text(issue.message)}"
+        )
+    console.print()
+    console.print("[bold]Items[/bold]")
+    if not run.items:
+        console.print("- none")
+    for item in sorted(run.items, key=lambda row: row.csv_line_number or 0):
+        console.print(
+            f"- line {item.csv_line_number or 'n/a'} "
+            f"source_id={_display_cli_text(item.source_id or 'Unknown')} "
+            f"status={_display_cli_text(item.item_status)} "
+            f"warnings={item.warning_count} "
+            f"structural_errors={item.structural_error_count} "
+            f"import_blockers={item.import_blocker_count}"
+        )
+    console.print()
+    if include_persistence_outcome:
+        console.print("Validation run metadata was written to the database.")
+    console.print("No papers were imported.")
+    console.print("No database writes to paper or FTS records were performed.")
+    console.print("No PDFs were parsed or hashed.")
+    console.print("Validation does not constitute legal approval or scientific review.")
 
 
 def _print_issues(issues: list[Issue]) -> None:

@@ -44,3 +44,11 @@ build on traceable source data rather than becoming the foundation.
 
 The project is intended to last. Future contributors need to know why decisions
 were made, not only what the current code does.
+
+### Use lightweight schema versioning for early SQLite migrations
+
+M8 introduces import-run persistence before the project needs a full migration
+framework. A small `schema_versions` table gives the local SQLite app explicit
+additive migration behavior while preserving room to adopt Alembic later.
+
+See: `docs/architecture/adr/0003-use-lightweight-schema-versioning-for-import-runs.md`

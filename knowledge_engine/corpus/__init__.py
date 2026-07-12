@@ -1,6 +1,7 @@
 """Corpus manifest validation for Knowledge Engine Core."""
 
 from knowledge_engine.corpus.models import (
+    CorpusSourceRow,
     CorpusValidationResult,
     FileCounts,
     Issue,
@@ -11,6 +12,7 @@ from knowledge_engine.corpus.models import (
 from knowledge_engine.corpus.validation import validate_corpus_manifest
 
 __all__ = [
+    "CorpusSourceRow",
     "CorpusValidationResult",
     "FileCounts",
     "Issue",

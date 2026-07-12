@@ -11,7 +11,12 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
-from knowledge_engine.corpus.models import CorpusValidationResult, Issue, IssueSeverity
+from knowledge_engine.corpus.models import (
+    CorpusSourceRow,
+    CorpusValidationResult,
+    Issue,
+    IssueSeverity,
+)
 from knowledge_engine.utils import normalize_doi
 
 MANIFEST_VERSION = 1
@@ -267,6 +272,8 @@ def _metadata_path(
         return None
     if field == "source_manifest":
         result.source_manifest_path = raw
+    if field == "license_policy":
+        result.license_policy_path = raw
     if must_exist and not resolved.is_file():
         _add_manifest_error(
             result,
@@ -411,8 +418,21 @@ def _validate_rows(
         _validate_local_file(row, result, papers_dir, root, check_files, source_id, line_number)
 
         doi = _row_text(row, "doi")
+        normalized_doi = normalize_doi(doi) if doi else ""
         if doi:
-            dois_by_normalized[normalize_doi(doi)].append((source_id or "unknown", line_number))
+            dois_by_normalized[normalized_doi].append((source_id or "unknown", line_number))
+        result.source_rows.append(
+            CorpusSourceRow(
+                line_number=line_number,
+                source_id=source_id,
+                title=_row_text(row, "title"),
+                doi=doi,
+                normalized_doi=normalized_doi,
+                inclusion_status=inclusion_status,
+                usage_status=usage_status,
+                local_path=_row_text(row, "local_path"),
+            )
+        )
 
     for normalized_doi in sorted(dois_by_normalized):
         matches = dois_by_normalized[normalized_doi]

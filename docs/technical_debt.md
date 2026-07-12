@@ -24,17 +24,20 @@ Eventual fix: diagnose Poetry certificate/proxy behavior on Windows, document
 the resolution, and keep CI as an independent confirmation that Poetry works in a
 clean environment.
 
-### No import manifest or ingestion audit trail
+### Ingestion audit trail is not connected to real imports yet
 
-The repository can import individual PDFs, but it does not yet record import
-runs, skipped files, failures, duplicates, or source provenance beyond stored
-paper fields.
+The repository can validate corpus manifests and persist import-run, item,
+issue, and manifest-snapshot records. It still does not import corpus PDFs
+through that run state, record parser outcomes per item, or connect duplicate
+decisions to stored papers.
 
 Why it matters: Phase 1 corpus ingestion needs reproducibility. Without import
-manifests, large imports are difficult to audit, resume, or debug.
+results tied to persisted run state, large imports are difficult to audit,
+resume, or debug.
 
-Eventual fix: add import run models, manifest files, duplicate reports, and
-structured failure logs.
+Eventual fix: M9 should connect approved local PDFs to persisted import items,
+write paper/search records, and preserve parser failures without aborting the
+entire run.
 
 ## Medium
 
@@ -49,15 +52,19 @@ common without stronger extraction and metadata enrichment.
 Eventual fix: add PubMed/Crossref enrichment, source text spans, parser fixtures,
 and structured parser failure issues.
 
-### No database migrations
+### Lightweight migrations only
 
-Phase 0 creates tables directly from SQLAlchemy metadata.
+M8 adds an explicit `schema_versions` table and additive migration behavior for
+the pre-1.0 local SQLite application, but this is still intentionally lighter
+than a full migration framework.
 
-Why it matters: Direct schema creation is fine before a public release, but
-schema evolution will become risky once users have local databases.
+Why it matters: Lightweight migrations are proportionate now, but schema
+evolution will become harder once users have larger local databases or once the
+project supports PostgreSQL.
 
-Eventual fix: introduce Alembic or a lightweight migration strategy before
-making incompatible schema changes.
+Eventual fix: keep future changes additive while the project is pre-1.0, and
+revisit Alembic or another formal migration framework before complex schema
+changes or multi-database support.
 
 ### FTS index synchronization is write-only
 

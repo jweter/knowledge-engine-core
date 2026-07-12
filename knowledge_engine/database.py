@@ -5,8 +5,10 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
-from sqlalchemy import Engine, create_engine, select, text
+from sqlalchemy import Engine, create_engine, event, select, text
+from sqlalchemy.engine import Connection
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
@@ -22,6 +24,8 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
+CURRENT_SCHEMA_VERSION = 1
+
 
 class Database:
     """Owns the SQLAlchemy engine and schema lifecycle."""
@@ -29,6 +33,7 @@ class Database:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.engine = create_engine(settings.resolved_database_url, future=True)
+        event.listen(self.engine, "connect", _enable_sqlite_foreign_keys)
         self.session_factory = sessionmaker(self.engine, expire_on_commit=False, future=True)
 
     @contextmanager
@@ -49,8 +54,77 @@ class Database:
         """Create application directories, relational tables, and FTS indexes."""
 
         self.settings.resolved_data_dir.mkdir(parents=True, exist_ok=True)
-        Base.metadata.create_all(self.engine)
+        migrate_schema(self.engine)
         create_fts_tables(self.engine)
+
+
+def _enable_sqlite_foreign_keys(dbapi_connection: Any, connection_record: object) -> None:
+    """Enable SQLite foreign-key enforcement for every connection."""
+
+    del connection_record
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
+def migrate_schema(engine: Engine) -> None:
+    """Apply additive local SQLite schema migrations."""
+
+    with engine.begin() as connection:
+        existing_version = _current_schema_version(connection)
+        if existing_version > CURRENT_SCHEMA_VERSION:
+            msg = (
+                f"Database schema version {existing_version} is newer than this application "
+                f"supports ({CURRENT_SCHEMA_VERSION})."
+            )
+            raise RuntimeError(msg)
+        if existing_version == CURRENT_SCHEMA_VERSION:
+            _verify_schema_complete(connection)
+            return
+
+        Base.metadata.create_all(connection)
+        _verify_schema_complete(connection)
+        connection.execute(
+            text("INSERT INTO schema_versions(version, applied_at) VALUES (:version, :applied_at)"),
+            {"version": CURRENT_SCHEMA_VERSION, "applied_at": _utc_now_iso()},
+        )
+
+
+def _current_schema_version(connection: Connection) -> int:
+    table_exists = connection.execute(
+        text(
+            "SELECT 1 FROM sqlite_master "
+            "WHERE type = 'table' AND name = 'schema_versions' LIMIT 1"
+        )
+    ).scalar()
+    if not table_exists:
+        return 0
+    duplicate_versions = connection.execute(
+        text("SELECT version FROM schema_versions " "GROUP BY version HAVING count(*) > 1 LIMIT 1")
+    ).scalar()
+    if duplicate_versions is not None:
+        msg = f"Database schema version {duplicate_versions} is recorded more than once."
+        raise RuntimeError(msg)
+    version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar()
+    return int(version or 0)
+
+
+def _verify_schema_complete(connection: Connection) -> None:
+    expected_tables = set(Base.metadata.tables)
+    existing_tables = set(
+        connection.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).scalars()
+    )
+    missing_tables = sorted(expected_tables - existing_tables)
+    if missing_tables:
+        missing = ", ".join(missing_tables)
+        msg = f"Database schema version {CURRENT_SCHEMA_VERSION} is incomplete; missing: {missing}."
+        raise RuntimeError(msg)
+
+
+def _utc_now_iso() -> str:
+    from datetime import UTC, datetime
+
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def create_fts_tables(engine: Engine) -> None:
