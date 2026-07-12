@@ -124,9 +124,9 @@ metadata, or perform scientific synthesis.
   matches the existing GLP-1 corpus structure.
 - Metadata enrichment should not be part of the first ingestion implementation.
   Manifest validation and legal gating should come first.
-- Import-run tables should not be the first step. They need a migration
-  decision and table design. M7 can produce dry-run summaries without schema
-  changes.
+- Import-run tables should follow validation-only manifest work. M8 resolves the
+  migration decision and adds persistence after M7 has a stable validation
+  contract.
 - Exact hash and DOI duplicates should not always be automatic skips without
   preserving duplicate evidence. The system needs an explicit duplicate outcome
   model.
@@ -1438,20 +1438,19 @@ Cons:
 Recommendation:
 - Use the hybrid approach, but phase it in.
 - M7: validation-only, no persistence and no schema changes.
-- M8: introduce minimal SQLite tables for import runs, import items, warnings,
-  errors, duplicate candidates, and manifest snapshots.
+- M8: introduce minimal SQLite tables for import runs, import items, validation
+  issues, and manifest snapshots.
 - M9 and later: generate JSON or Markdown run reports from persisted state.
 
 Smallest durable M8 tables should likely be:
 
 - `import_runs`
 - `import_items`
-- `import_events` or separate `import_warnings` and `import_errors`
-- `duplicate_candidates`
+- `import_issues`
 - `manifest_snapshots`
 
-Metadata provenance may be a separate M11 concern unless needed earlier for
-conflict visibility.
+Duplicate candidates and metadata provenance remain separate later concerns
+unless needed earlier for conflict visibility.
 
 ## CLI Recommendation
 
@@ -2016,7 +2015,9 @@ Before M7:
 No. M7 can validate without persistence.
 
 Current recommendation:
-Resolve before M8, likely hybrid.
+Resolved in M8: persist import runs, items, issues, and manifest snapshots in
+SQLite. Human-readable and machine-readable reports can be generated later from
+that persisted state.
 
 ### Manifest Snapshot Strategy
 
@@ -2033,7 +2034,9 @@ Before M7:
 No.
 
 Current recommendation:
-Resolve before M8.
+Resolved in M8: `manifest_snapshots` is the authoritative stored manifest input
+for an import run, with normalized inspection text plus hashes of the raw
+manifest bytes.
 
 ### Duplicate Hierarchy
 
@@ -2152,7 +2155,9 @@ Before M7:
 No.
 
 Current recommendation:
-Resolve before M8.
+Resolved in M8 for the current SQLite application: use a lightweight
+`schema_versions` table with additive pre-1.0 migrations. Revisit Alembic if
+schema evolution becomes more complex.
 
 ## Exact Recommended M7 Scope
 

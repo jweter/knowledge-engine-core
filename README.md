@@ -33,6 +33,7 @@ Phase 0 is implemented:
 - Tables for papers, authors, journals, keywords, and extracted text
 - SQLite FTS5 keyword and phrase search
 - Version 1 corpus manifest validation with no import side effects
+- Durable import-run records for persisted corpus validation attempts
 - Typer CLI with Rich terminal output
 - pytest coverage for parser, persistence/search, and CLI behavior
 - ruff, black, and mypy configuration
@@ -137,6 +138,18 @@ Check local PDF readiness for included full-text rows:
 poetry run ke corpus-validate data/corpora/glp1_weight_loss/corpus.json --check-files
 ```
 
+Record a corpus validation attempt as an import run:
+
+```bash
+poetry run ke corpus-run-create data/corpora/glp1_weight_loss/corpus.json
+```
+
+Inspect a persisted import run:
+
+```bash
+poetry run ke corpus-run-show <import-run-id>
+```
+
 Run the GLP-1 vertical slice demo checklist:
 
 ```text
@@ -194,6 +207,7 @@ knowledge-engine-core/
     config.py       # Pydantic settings
     corpus/         # Corpus manifest validation models and service
     database.py     # SQLAlchemy engine/session/repository logic
+    import_runs/    # Import-run persistence service and repository
     models.py       # SQLAlchemy ORM models
     parser.py       # PDF parsing interface and PyMuPDF implementation
     search.py       # SQLite FTS5 search service
@@ -218,6 +232,7 @@ Knowledge Engine Core uses a small layered architecture:
 - `knowledge_engine.parser` extracts text and best-effort metadata from PDFs.
 - `knowledge_engine.models` defines durable relational tables.
 - `knowledge_engine.database` owns initialization and repository writes.
+- `knowledge_engine.import_runs` persists corpus validation attempts.
 - `knowledge_engine.search` provides FTS5-backed keyword and phrase search.
 - `knowledge_engine.corpus` validates versioned corpus manifests before import.
 - `knowledge_engine.cli` adapts user commands to application services.
@@ -242,6 +257,8 @@ Phase 0 creates these core tables:
 - `keywords`: normalized topic labels.
 - `paper_texts`: raw and body text extracted from each paper.
 - `paper_authors` and `paper_keywords`: relationship tables.
+- `manifest_snapshots`, `import_runs`, `import_items`, and `import_issues`:
+  durable validation-attempt state for Phase 1 corpus ingestion.
 
 SQLite FTS5 powers local search through a separate `paper_search` virtual table.
 This keeps lexical search fast without coupling canonical data to a single
@@ -270,7 +287,7 @@ Known issues and future fixes are tracked in
 - Poetry dependency resolution fails on this machine due to PyPI certificate
   verification, while pip-based installation works.
 - Metadata extraction is best-effort and needs real-corpus hardening.
-- Bulk import manifests and duplicate reports are not implemented yet.
+- Bulk PDF ingestion and duplicate reports are not implemented yet.
 
 ## Contributing
 

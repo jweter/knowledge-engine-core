@@ -54,6 +54,20 @@ class FileCounts:
     not_checked: int = 0
 
 
+@dataclass(frozen=True)
+class CorpusSourceRow:
+    """Parsed source-manifest row context for later persistence."""
+
+    line_number: int
+    source_id: str
+    title: str
+    doi: str
+    normalized_doi: str
+    inclusion_status: str
+    usage_status: str
+    local_path: str
+
+
 @dataclass
 class CorpusValidationResult:
     """Complete corpus validation result for CLI display and tests."""
@@ -62,12 +76,14 @@ class CorpusValidationResult:
     corpus_id: str | None = None
     manifest_version: int | None = None
     source_manifest_path: str | None = None
+    license_policy_path: str | None = None
     total_source_rows: int = 0
     valid_source_rows: int = 0
     usage_status_counts: Counter[str] = field(default_factory=Counter)
     inclusion_status_counts: Counter[str] = field(default_factory=Counter)
     file_counts: FileCounts = field(default_factory=FileCounts)
     issues: list[Issue] = field(default_factory=list)
+    source_rows: list[CorpusSourceRow] = field(default_factory=list)
     check_files: bool = False
 
     @property

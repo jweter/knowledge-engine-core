@@ -8,7 +8,10 @@ precedence, and legal/provenance gating. See
 `docs/m6_phase1_corpus_ingestion_plan.md`. M7 implements the first piece of
 that plan: validation-only corpus manifests through
 `ke corpus-validate <corpus.json> [--check-files]`. See
-`docs/m7_manifest_validation_foundation.md`.
+`docs/m7_manifest_validation_foundation.md`. M8 adds import-run and import-item
+persistence for validation attempts through `ke corpus-run-create` and
+`ke corpus-run-show` without importing papers. See
+`docs/m8_import_run_persistence.md`.
 
 ## Mission
 
@@ -77,9 +80,9 @@ Likely new tables:
 - `external_identifiers`: DOI, PubMed ID, arXiv ID, patent ID, or other stable
   identifiers.
 
-Before adding tables, introduce a migration strategy. Alembic is the likely
-choice, but the project should evaluate whether a lightweight migration layer is
-sufficient for early pre-1.0 releases.
+M8 introduces a lightweight schema-version table and additive migration strategy
+for early pre-1.0 SQLite releases. Alembic remains a future option if migration
+complexity grows.
 
 ## Import Pipeline
 
@@ -217,7 +220,8 @@ frameworks before they are needed.
 ## Open Questions
 
 - Should the first manifest format be CSV or JSONL?
-- Should import runs live in the same SQLite database as papers?
+- How long should the lightweight SQLite migration strategy remain sufficient
+  before the project adopts a fuller migration framework?
 - How should license metadata be represented?
 - Which metadata source should be preferred when PubMed and Crossref disagree?
 - Should failed imports be retried by default?
