@@ -4,21 +4,22 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
-from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
+from knowledge_engine.corpus.path_safety import (
+    has_traversal,
+    is_relative_to,
+    looks_absolute,
+    resolve_under,
+)
 from knowledge_engine.corpus.validation import (
     APPROVED_FULL_TEXT_STATUSES,
-    _has_traversal,
-    _is_relative_to,
-    _looks_absolute,
-    _resolve_under,
     discover_project_root,
 )
 from knowledge_engine.database import PaperRepository
+from knowledge_engine.import_runs._helpers import new_uuid, utc_now
 from knowledge_engine.import_runs.repository import ImportRunRepository
 from knowledge_engine.import_runs.service import ImportRunService
 from knowledge_engine.models import ImportIssue, ImportItem, ImportRun, ManifestSnapshot
@@ -73,7 +74,7 @@ class CorpusIngestionService:
             raise RuntimeError(msg)
 
         if run.manifest_validity != "valid" or run.import_readiness != "ready":
-            run.completed_at = _utc_now()
+            run.completed_at = utc_now()
             self.session.flush()
             return ImportedCorpusRun(
                 import_run_id=run.import_run_id,
@@ -97,7 +98,7 @@ class CorpusIngestionService:
                 ),
             )
             run.run_status = "failed"
-            run.completed_at = _utc_now()
+            run.completed_at = utc_now()
             self.session.flush()
             return ImportedCorpusRun(
                 import_run_id=run.import_run_id,
@@ -111,7 +112,7 @@ class CorpusIngestionService:
         skipped_count = 0
 
         for item in run.items:
-            item.completed_at = _utc_now()
+            item.completed_at = utc_now()
             if not _should_import_item(item):
                 item.item_status = "skipped"
                 skipped_count += 1
@@ -211,7 +212,7 @@ class CorpusIngestionService:
             item.item_status = "imported"
 
         run.run_status = _final_run_status(imported_count, failed_count)
-        run.completed_at = _utc_now()
+        run.completed_at = utc_now()
         self.session.flush()
         return ImportedCorpusRun(
             import_run_id=run.import_run_id,
@@ -229,7 +230,7 @@ class CorpusIngestionService:
         template: _IssueTemplate,
     ) -> int:
         issue = ImportIssue(
-            issue_id=_new_uuid(),
+            issue_id=new_uuid(),
             import_run_id=run.import_run_id,
             import_item_id=item.import_item_id,
             code=template.code,
@@ -242,7 +243,7 @@ class CorpusIngestionService:
             blocks_manifest=False,
             blocks_import=True,
             sequence=sequence,
-            created_at=_utc_now(),
+            created_at=utc_now(),
         )
         self.repository.add_issues([issue])
         item.import_blocker_count += 1
@@ -256,7 +257,7 @@ class CorpusIngestionService:
         template: _IssueTemplate,
     ) -> int:
         issue = ImportIssue(
-            issue_id=_new_uuid(),
+            issue_id=new_uuid(),
             import_run_id=run.import_run_id,
             import_item_id=None,
             code=template.code,
@@ -269,7 +270,7 @@ class CorpusIngestionService:
             blocks_manifest=False,
             blocks_import=True,
             sequence=sequence,
-            created_at=_utc_now(),
+            created_at=utc_now(),
         )
         self.repository.add_issues([issue])
         run.import_blocker_count += 1
@@ -299,16 +300,16 @@ def _papers_directory(snapshot: ManifestSnapshot, project_root: Path) -> Path:
         msg = "Persisted corpus snapshot is missing default_local_papers_directory."
         raise _PapersDirectoryError(msg)
     path = Path(raw.strip())
-    if _looks_absolute(path) or _has_traversal(path):
+    if looks_absolute(path) or has_traversal(path):
         msg = "Persisted default_local_papers_directory is not import-safe."
         raise _PapersDirectoryError(msg)
     try:
-        resolved = _resolve_under(project_root, path)
+        resolved = resolve_under(project_root, path)
     except OSError as exc:
         raise _PapersDirectoryError(
             "Persisted default_local_papers_directory could not be resolved."
         ) from exc
-    if not _is_relative_to(resolved, project_root):
+    if not is_relative_to(resolved, project_root):
         msg = "Persisted default_local_papers_directory escapes the project root."
         raise _PapersDirectoryError(msg)
     return resolved
@@ -316,11 +317,11 @@ def _papers_directory(snapshot: ManifestSnapshot, project_root: Path) -> Path:
 
 def _resolve_item_path(papers_dir: Path, local_path: str) -> Path:
     path = Path(local_path)
-    if _looks_absolute(path) or _has_traversal(path):
+    if looks_absolute(path) or has_traversal(path):
         msg = "Persisted local_path is not import-safe."
         raise ValueError(msg)
-    resolved = _resolve_under(papers_dir, path)
-    if not _is_relative_to(resolved, papers_dir.resolve(strict=False)):
+    resolved = resolve_under(papers_dir, path)
+    if not is_relative_to(resolved, papers_dir.resolve(strict=False)):
         msg = "Persisted local_path escapes the papers directory."
         raise ValueError(msg)
     return resolved
@@ -332,11 +333,3 @@ def _final_run_status(imported_count: int, failed_count: int) -> str:
     if failed_count:
         return "failed"
     return "succeeded"
-
-
-def _new_uuid() -> str:
-    return str(uuid4())
-
-
-def _utc_now() -> str:
-    return datetime.now(UTC).isoformat(timespec="seconds")

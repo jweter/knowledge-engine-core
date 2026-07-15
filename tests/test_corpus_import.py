@@ -5,24 +5,17 @@ import pytest
 from sqlalchemy import text
 
 import knowledge_engine.import_runs.ingestion as ingestion_module
-from knowledge_engine.config import Settings
-from knowledge_engine.database import Database, PaperRepository
-from knowledge_engine.import_runs import ImportRunService
+from knowledge_engine.database import PaperRepository
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService
-from knowledge_engine.models import ImportRun, Paper
+from knowledge_engine.models import Paper
 from knowledge_engine.parser import DocumentParser, ParsedPaper
-
-
-def make_database(tmp_path: Path) -> Database:
-    database = Database(
-        Settings(
-            project_root=tmp_path,
-            data_dir=tmp_path / "data",
-            database_url=f"sqlite:///{tmp_path / 'knowledge.sqlite3'}",
-        )
-    )
-    database.initialize()
-    return database
+from tests.corpus_fixtures import (
+    get_run,
+    make_database,
+    prepare_corpus_layout,
+    write_corpus_manifest,
+    write_sources,
+)
 
 
 def make_corpus(
@@ -31,13 +24,7 @@ def make_corpus(
     rows: list[dict[str, str]] | None = None,
     header: list[str] | None = None,
 ) -> Path:
-    (tmp_path / "knowledge_engine").mkdir(exist_ok=True)
-    (tmp_path / "pyproject.toml").write_text("[tool.poetry]\nname='test'\n", encoding="utf-8")
-    corpus_dir = tmp_path / "data" / "corpora" / "test_corpus"
-    corpus_dir.mkdir(parents=True, exist_ok=True)
-    papers_dir = tmp_path / "papers" / "corpora" / "test_corpus"
-    papers_dir.mkdir(parents=True, exist_ok=True)
-    (corpus_dir / "license_policy.md").write_text("# License\n", encoding="utf-8")
+    corpus_dir, _ = prepare_corpus_layout(tmp_path)
     corpus = {
         "manifest_version": 1,
         "corpus_id": "test_corpus",
@@ -52,35 +39,9 @@ def make_corpus(
         "default_local_papers_directory": "papers/corpora/test_corpus",
     }
     corpus_path = corpus_dir / "corpus.json"
-    corpus_path.write_text(json.dumps(corpus), encoding="utf-8")
+    write_corpus_manifest(corpus_path, corpus)
     write_sources(corpus_dir / "sources.csv", rows or [source_row()], header=header)
     return corpus_path
-
-
-def write_sources(
-    path: Path,
-    rows: list[dict[str, str]],
-    *,
-    header: list[str] | None = None,
-) -> None:
-    columns = header or [
-        "source_id",
-        "title",
-        "publication_year",
-        "doi",
-        "usage_status",
-        "inclusion_status",
-        "source_url",
-        "access_date",
-        "inclusion_reason",
-        "license_type",
-        "license_url",
-        "local_path",
-    ]
-    lines = [",".join(columns)]
-    for row in rows:
-        lines.append(",".join(row.get(name, "") for name in columns))
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def source_row(**overrides: str) -> dict[str, str]:
@@ -121,13 +82,6 @@ def parsed_paper(path: Path, *, title: str, doi: str, content_hash: str) -> Pars
         raw_text="Raw text for indexing.",
         body_text="Body text for indexing.",
     )
-
-
-def get_run(database: Database, run_id: str, tmp_path: Path) -> ImportRun:
-    with database.session() as session:
-        run = ImportRunService(session, project_root=tmp_path).get_run(run_id)
-        assert run is not None
-        return run
 
 
 class StubParser(DocumentParser):

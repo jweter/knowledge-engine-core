@@ -1,4 +1,3 @@
-import json
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, cast
@@ -16,7 +15,6 @@ from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.models import (
     Author,
     Base,
-    ImportRun,
     Journal,
     Keyword,
     Paper,
@@ -24,18 +22,13 @@ from knowledge_engine.models import (
     PaperKeyword,
     PaperText,
 )
-
-
-def make_database(tmp_path: Path) -> Database:
-    database = Database(
-        Settings(
-            project_root=tmp_path,
-            data_dir=tmp_path / "data",
-            database_url=f"sqlite:///{tmp_path / 'knowledge.sqlite3'}",
-        )
-    )
-    database.initialize()
-    return database
+from tests.corpus_fixtures import (
+    get_run,
+    make_database,
+    prepare_corpus_layout,
+    write_corpus_manifest,
+    write_sources,
+)
 
 
 def make_corpus(
@@ -48,14 +41,11 @@ def make_corpus(
     create_source_manifest: bool = True,
     create_license: bool = True,
 ) -> Path:
-    (tmp_path / "knowledge_engine").mkdir(exist_ok=True)
-    (tmp_path / "pyproject.toml").write_text("[tool.poetry]\nname='test'\n", encoding="utf-8")
-    corpus_dir = tmp_path / "data" / "corpora" / corpus_id
-    corpus_dir.mkdir(parents=True, exist_ok=True)
-    papers_dir = tmp_path / "papers" / "corpora" / corpus_id
-    papers_dir.mkdir(parents=True, exist_ok=True)
-    if create_license:
-        (corpus_dir / "license_policy.md").write_text("# License\n", encoding="utf-8")
+    corpus_dir, _ = prepare_corpus_layout(
+        tmp_path,
+        corpus_id=corpus_id,
+        create_license=create_license,
+    )
     corpus = {
         "manifest_version": 1,
         "corpus_id": corpus_id,
@@ -72,31 +62,10 @@ def make_corpus(
     if corpus_overrides:
         corpus.update(corpus_overrides)
     corpus_path = corpus_dir / "corpus.json"
-    corpus_path.write_text(json.dumps(corpus), encoding="utf-8")
+    write_corpus_manifest(corpus_path, corpus)
     if create_source_manifest:
         write_sources(corpus_dir / source_manifest, rows or [source_row()])
     return corpus_path
-
-
-def write_sources(path: Path, rows: list[dict[str, str]]) -> None:
-    header = [
-        "source_id",
-        "title",
-        "publication_year",
-        "doi",
-        "usage_status",
-        "inclusion_status",
-        "source_url",
-        "access_date",
-        "inclusion_reason",
-        "license_type",
-        "license_url",
-        "local_path",
-    ]
-    lines = [",".join(header)]
-    for row in rows:
-        lines.append(",".join(row.get(name, "") for name in header))
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def source_row(**overrides: str) -> dict[str, str]:
@@ -146,13 +115,6 @@ def create_run(
         )
         run_id = persisted.import_run_id
     return database, run_id
-
-
-def get_run(database: Database, run_id: str) -> ImportRun:
-    with database.session() as session:
-        run = ImportRunService(session, project_root=database.settings.project_root).get_run(run_id)
-        assert run is not None
-        return run
 
 
 def test_fresh_database_creates_m8_schema(tmp_path: Path) -> None:
@@ -320,7 +282,7 @@ def test_partial_migration_failure_does_not_record_schema_version_and_can_retry(
 def test_valid_manifest_without_file_checks_persists_validated_run(tmp_path: Path) -> None:
     database, run_id = create_run(tmp_path)
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
 
     assert run.run_status == "validated"
     assert run.validation_mode == "metadata_only"
@@ -334,7 +296,7 @@ def test_valid_manifest_without_file_checks_persists_validated_run(tmp_path: Pat
 def test_ready_manifest_with_file_checks_persists_validated_run(tmp_path: Path) -> None:
     database, run_id = create_run(tmp_path, check_files=True)
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
 
     assert run.run_status == "validated"
     assert run.import_readiness == "ready"
@@ -344,7 +306,7 @@ def test_ready_manifest_with_file_checks_persists_validated_run(tmp_path: Path) 
 def test_import_blocked_manifest_persists_blocked_run(tmp_path: Path) -> None:
     database, run_id = create_run(tmp_path, rows=[source_row(usage_status="needs_legal_review")])
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
 
     assert run.run_status == "import_blocked"
     assert run.manifest_validity == "valid"
@@ -364,9 +326,17 @@ def test_run_status_invariants_match_validity_and_readiness(tmp_path: Path) -> N
         corpus_overrides={"corpus_id": "Bad ID"},
     )
 
-    valid_run = get_run(valid_database, valid_run_id)
-    blocked_run = get_run(blocked_database, blocked_run_id)
-    invalid_run = get_run(invalid_database, invalid_run_id)
+    valid_run = get_run(valid_database, valid_run_id, valid_database.settings.project_root)
+    blocked_run = get_run(
+        blocked_database,
+        blocked_run_id,
+        blocked_database.settings.project_root,
+    )
+    invalid_run = get_run(
+        invalid_database,
+        invalid_run_id,
+        invalid_database.settings.project_root,
+    )
 
     assert (valid_run.run_status, valid_run.manifest_validity) == ("validated", "valid")
     assert (blocked_run.run_status, blocked_run.manifest_validity) == (
@@ -383,7 +353,7 @@ def test_run_status_invariants_match_validity_and_readiness(tmp_path: Path) -> N
 def test_structurally_invalid_manifest_is_persisted(tmp_path: Path) -> None:
     database, run_id = create_run(tmp_path, corpus_overrides={"corpus_id": "Bad ID"})
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
 
     assert run.run_status == "validation_failed"
     assert run.manifest_validity == "invalid"
@@ -400,7 +370,7 @@ def test_malformed_json_is_persisted_without_items(tmp_path: Path) -> None:
         persisted = ImportRunService(session, project_root=tmp_path).create_run(corpus_path)
         run_id = persisted.import_run_id
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
     assert run.run_status == "validation_failed"
     assert run.manifest_validity == "invalid"
     assert run.manifest_snapshot.source_csv_text is None
@@ -411,7 +381,7 @@ def test_malformed_json_is_persisted_without_items(tmp_path: Path) -> None:
 def test_missing_source_csv_and_license_policy_are_persisted(tmp_path: Path) -> None:
     database, run_id = create_run(tmp_path, create_source_manifest=False, create_license=False)
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
     codes = [issue.code for issue in run.issues]
     assert run.run_status == "validation_failed"
     assert "source_manifest_missing" in codes
@@ -425,7 +395,7 @@ def test_duplicate_source_id_and_doi_warning_are_persisted_in_order(tmp_path: Pa
     ]
     database, run_id = create_run(tmp_path, rows=rows)
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
     assert [issue.sequence for issue in run.issues] == [1, 2]
     assert [issue.code for issue in run.issues] == [
         "duplicate_normalized_doi",
@@ -450,7 +420,7 @@ def test_legacy_year_warning_is_persisted(tmp_path: Path) -> None:
         persisted = ImportRunService(session, project_root=tmp_path).create_run(corpus_path)
         run_id = persisted.import_run_id
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
     assert run.issues[0].code == "deprecated_year_column"
     assert run.warning_count == 1
 
@@ -458,7 +428,7 @@ def test_legacy_year_warning_is_persisted(tmp_path: Path) -> None:
 def test_snapshot_hashes_and_bytes_round_trip(tmp_path: Path) -> None:
     database, run_id = create_run(tmp_path)
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
 
     corpus_bytes = run.manifest_snapshot.corpus_json_bytes
     source_bytes = run.manifest_snapshot.source_csv_bytes
@@ -491,7 +461,7 @@ def test_snapshot_preserves_bom_hash_identity(tmp_path: Path) -> None:
             ImportRunService(session, project_root=tmp_path).create_run(corpus_path).import_run_id
         )
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
     assert run.manifest_snapshot.corpus_json_bytes.startswith(b"\xef\xbb\xbf")
     assert not run.manifest_snapshot.corpus_json_text.startswith("\ufeff")
     assert (
@@ -510,7 +480,7 @@ def test_snapshot_does_not_capture_non_csv_source_manifest(tmp_path: Path) -> No
             ImportRunService(session, project_root=tmp_path).create_run(corpus_path).import_run_id
         )
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
     assert run.run_status == "validation_failed"
     assert run.manifest_snapshot.source_csv_bytes is None
     assert run.manifest_snapshot.source_csv_text is None
@@ -535,7 +505,7 @@ def test_oversized_manifest_input_fails_before_persistence(
 def test_item_and_issue_counts_match_persisted_records(tmp_path: Path) -> None:
     database, run_id = create_run(tmp_path, rows=[source_row(source_id="")])
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
 
     assert run.total_source_rows == len(run.items)
     assert run.warning_count == sum(1 for issue in run.issues if issue.severity == "warning")
@@ -554,7 +524,7 @@ def test_uuid_identifiers_are_unique_and_printable(tmp_path: Path) -> None:
         rows=[source_row(source_id="source-1"), source_row(source_id="source-2")],
     )
 
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
     item_ids = [item.import_item_id for item in run.items]
     assert len(item_ids) == len(set(item_ids))
     assert len(run.import_run_id) == 36
@@ -563,7 +533,7 @@ def test_uuid_identifiers_are_unique_and_printable(tmp_path: Path) -> None:
 
 def test_timestamps_use_utc_iso_policy(tmp_path: Path) -> None:
     database, run_id = create_run(tmp_path)
-    run = get_run(database, run_id)
+    run = get_run(database, run_id, database.settings.project_root)
 
     assert run.created_at.endswith("+00:00")
     assert run.completed_at.endswith("+00:00")
