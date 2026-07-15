@@ -456,7 +456,7 @@ def corpus_import(corpus_json: CorpusJsonArgument) -> None:
                 session, project_root=database.settings.project_root
             ).import_corpus(corpus_json)
     except Exception as exc:
-        raise typer.BadParameter(f"Corpus import did not complete: {exc}") from exc
+        raise typer.BadParameter("Corpus import did not complete due to an internal error.") from exc
 
     console.print("[bold]Corpus import finished[/bold]")
     with database.session() as session:
@@ -998,6 +998,7 @@ def _print_import_run(
     if import_result is not None:
         console.print("Eligible local PDFs were parsed for import.")
         console.print("Paper and FTS records may have been written for successful items.")
+        console.print("No URLs were followed and no documents were downloaded.")
         console.print(
             "Validation and import do not constitute legal approval or scientific review."
         )

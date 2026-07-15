@@ -158,6 +158,34 @@ def test_import_blocked_manifest_preserves_blocked_run_status(tmp_path: Path) ->
     assert run.items[0].item_status == "import_blocked"
 
 
+def test_import_blocked_manifest_marks_other_valid_items_skipped(tmp_path: Path) -> None:
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(
+        tmp_path,
+        rows=[
+            source_row(source_id="source-1", usage_status="needs_legal_review"),
+            source_row(
+                source_id="source-2",
+                title="Would Have Imported",
+                doi="10.1234/source-2",
+                local_path="good.pdf",
+                source_url="https://example.test/source-2",
+            ),
+        ],
+    )
+    declare_pdf(tmp_path, "good.pdf")
+
+    with database.session() as session:
+        result = CorpusIngestionService(session, project_root=tmp_path).import_corpus(corpus_path)
+
+    run = get_run(database, result.import_run_id)
+    item_statuses = {item.source_id: item.item_status for item in run.items}
+
+    assert result.run_status == "import_blocked"
+    assert result.skipped_count == 2
+    assert item_statuses == {"source-1": "import_blocked", "source-2": "skipped"}
+
+
 def test_structurally_invalid_manifest_preserves_validation_failed_status(tmp_path: Path) -> None:
     database = make_database(tmp_path)
     corpus_path = make_corpus(tmp_path)
@@ -175,6 +203,43 @@ def test_structurally_invalid_manifest_preserves_validation_failed_status(tmp_pa
     assert result.skipped_count == 1
     assert run.run_status == "validation_failed"
     assert run.items[0].item_status == "import_blocked"
+
+
+def test_run_level_ingestion_failure_marks_valid_items_skipped(tmp_path: Path) -> None:
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(
+        tmp_path,
+        rows=[
+            source_row(source_id="source-1"),
+            source_row(
+                source_id="source-2",
+                title="Second Importable Row",
+                doi="10.1234/source-2",
+                local_path="second.pdf",
+                source_url="https://example.test/source-2",
+            ),
+        ],
+    )
+    declare_pdf(tmp_path, "paper.pdf")
+    declare_pdf(tmp_path, "second.pdf")
+
+    original_papers_directory = ingestion_module._papers_directory
+
+    def fail_once(*args: object, **kwargs: object) -> Path:
+        raise ingestion_module._PapersDirectoryError("sensitive filesystem detail")
+
+    ingestion_module._papers_directory = fail_once
+    try:
+        with database.session() as session:
+            result = CorpusIngestionService(session, project_root=tmp_path).import_corpus(corpus_path)
+    finally:
+        ingestion_module._papers_directory = original_papers_directory
+
+    run = get_run(database, result.import_run_id)
+
+    assert result.run_status == "failed"
+    assert result.skipped_count == 2
+    assert [item.item_status for item in run.items] == ["skipped", "skipped"]
 
 
 def test_parse_failure_is_sanitized_and_later_items_continue(tmp_path: Path) -> None:

@@ -74,6 +74,7 @@ class CorpusIngestionService:
             raise RuntimeError(msg)
 
         if run.manifest_validity != "valid" or run.import_readiness != "ready":
+            skipped_count = _mark_unimported_items_skipped(run)
             run.completed_at = utc_now()
             self.session.flush()
             return ImportedCorpusRun(
@@ -81,13 +82,14 @@ class CorpusIngestionService:
                 run_status=run.run_status,
                 imported_count=0,
                 failed_count=0,
-                skipped_count=len(run.items),
+                skipped_count=skipped_count,
             )
 
         next_sequence = max((issue.sequence for issue in run.issues), default=0) + 1
         try:
             papers_dir = _papers_directory(run.manifest_snapshot, self.project_root)
         except _PapersDirectoryError:
+            skipped_count = _mark_unimported_items_skipped(run)
             self._record_run_issue(
                 run,
                 next_sequence,
@@ -105,7 +107,7 @@ class CorpusIngestionService:
                 run_status=run.run_status,
                 imported_count=0,
                 failed_count=0,
-                skipped_count=len(run.items),
+                skipped_count=skipped_count,
             )
         imported_count = 0
         failed_count = 0
@@ -285,6 +287,17 @@ def _should_import_item(item: ImportItem) -> bool:
         and item.usage_status in APPROVED_FULL_TEXT_STATUSES
         and bool(item.local_path)
     )
+
+
+def _mark_unimported_items_skipped(run: ImportRun) -> int:
+    skipped_count = 0
+    for item in run.items:
+        item.completed_at = utc_now()
+        if item.item_status == "valid":
+            item.item_status = "skipped"
+        if item.item_status != "imported":
+            skipped_count += 1
+    return skipped_count
 
 
 def _papers_directory(snapshot: ManifestSnapshot, project_root: Path) -> Path:

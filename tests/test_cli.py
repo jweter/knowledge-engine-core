@@ -176,6 +176,7 @@ def test_corpus_import_command_reports_successful_import(
     assert "Skipped items: 0" in result.output
     assert "status=imported" in result.output
     assert "Paper and FTS records may have been written for successful items." in result.output
+    assert "No URLs were followed and no documents were downloaded." in result.output
 
 
 def test_corpus_import_command_fails_for_import_blocked_manifest(
@@ -207,6 +208,29 @@ def test_corpus_import_command_fails_for_invalid_manifest(
     assert "Corpus import finished" in result.output
     assert "Run status: validation_failed" in result.output
     assert "invalid_corpus_id" in result.output
+
+
+def test_corpus_import_command_sanitizes_internal_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    class StubCorpusIngestionService:
+        def __init__(self, session: Session, *, project_root: Path | None = None) -> None:
+            self.session = session
+            self.project_root = project_root or tmp_path
+
+        def import_corpus(self, path: Path) -> ImportedCorpusRun:
+            raise RuntimeError("sensitive absolute path /private/tmp/example.pdf")
+
+    monkeypatch.setattr(cli, "CorpusIngestionService", StubCorpusIngestionService)
+
+    result = CliRunner().invoke(app, ["corpus-import", str(corpus_path)])
+
+    assert result.exit_code == 2
+    assert "Corpus import did not complete due to an internal error." in result.output
+    assert "sensitive absolute path" not in result.output
 
 
 def test_answer_command_returns_retrieval_only_results(

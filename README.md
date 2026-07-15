@@ -156,6 +156,9 @@ Persist and import a local corpus:
 poetry run ke corpus-import data/corpora/glp1_weight_loss/corpus.json
 ```
 
+`ke corpus-import` reads only manifest-declared local files. No URLs were
+followed and no documents were downloaded.
+
 Run the GLP-1 vertical slice demo checklist:
 
 ```text

@@ -65,6 +65,8 @@ Behavior:
   files, parser failures, and paper persistence failures;
 - prints the final run summary, item statuses, and persisted issues after the run
   completes.
+- follows no URLs and performs no document downloads; the CLI states:
+  `No URLs were followed and no documents were downloaded.`
 
 Successful items may write `papers`, `paper_texts`, and full-text search records.
 Skipped or failed items remain visible through the persisted import-run data so
