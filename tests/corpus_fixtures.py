@@ -67,8 +67,8 @@ def write_corpus_manifest(path: Path, manifest: dict[str, object]) -> Path:
     return path
 
 
-def get_run(database: Database, run_id: str, project_root: Path) -> ImportRun:
+def get_run(database: Database, run_id: str) -> ImportRun:
     with database.session() as session:
-        run = ImportRunService(session, project_root=project_root).get_run(run_id)
+        run = ImportRunService(session, project_root=database.settings.project_root).get_run(run_id)
         assert run is not None
         return run

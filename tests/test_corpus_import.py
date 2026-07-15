@@ -130,7 +130,7 @@ def test_warning_only_import_finishes_succeeded(tmp_path: Path) -> None:
             session, project_root=tmp_path, parser=parser
         ).import_corpus(corpus_path)
 
-    run = get_run(database, result.import_run_id, tmp_path)
+    run = get_run(database, result.import_run_id)
     assert result.run_status == "succeeded"
     assert result.imported_count == 1
     assert result.failed_count == 0
@@ -149,7 +149,7 @@ def test_import_blocked_manifest_preserves_blocked_run_status(tmp_path: Path) ->
     with database.session() as session:
         result = CorpusIngestionService(session, project_root=tmp_path).import_corpus(corpus_path)
 
-    run = get_run(database, result.import_run_id, tmp_path)
+    run = get_run(database, result.import_run_id)
     assert result.run_status == "import_blocked"
     assert result.imported_count == 0
     assert result.failed_count == 0
@@ -168,7 +168,7 @@ def test_structurally_invalid_manifest_preserves_validation_failed_status(tmp_pa
     with database.session() as session:
         result = CorpusIngestionService(session, project_root=tmp_path).import_corpus(corpus_path)
 
-    run = get_run(database, result.import_run_id, tmp_path)
+    run = get_run(database, result.import_run_id)
     assert result.run_status == "validation_failed"
     assert result.imported_count == 0
     assert result.failed_count == 0
@@ -208,7 +208,7 @@ def test_parse_failure_is_sanitized_and_later_items_continue(tmp_path: Path) -> 
             session, project_root=tmp_path, parser=parser
         ).import_corpus(corpus_path)
 
-    run = get_run(database, result.import_run_id, tmp_path)
+    run = get_run(database, result.import_run_id)
     item_statuses = {item.source_id: item.item_status for item in run.items}
     ingestion_issue = next(issue for issue in run.issues if issue.category == "ingestion")
     assert result.run_status == "partially_succeeded"
@@ -239,7 +239,7 @@ def test_papers_directory_failure_preserves_failed_run_with_sanitized_issue(
     with database.session() as session:
         result = CorpusIngestionService(session, project_root=tmp_path).import_corpus(corpus_path)
 
-    run = get_run(database, result.import_run_id, tmp_path)
+    run = get_run(database, result.import_run_id)
     issue = next(issue for issue in run.issues if issue.category == "ingestion")
 
     assert result.run_status == "failed"
@@ -266,7 +266,7 @@ def test_missing_local_file_during_import_is_sanitized(tmp_path: Path) -> None:
             session, project_root=tmp_path, parser=parser
         ).import_corpus(corpus_path)
 
-    run = get_run(database, result.import_run_id, tmp_path)
+    run = get_run(database, result.import_run_id)
     issue = next(issue for issue in run.issues if issue.category == "ingestion")
 
     assert result.run_status == "failed"
@@ -288,7 +288,7 @@ def test_unreadable_local_file_during_import_is_sanitized(tmp_path: Path) -> Non
             session, project_root=tmp_path, parser=parser
         ).import_corpus(corpus_path)
 
-    run = get_run(database, result.import_run_id, tmp_path)
+    run = get_run(database, result.import_run_id)
     issue = next(issue for issue in run.issues if issue.category == "ingestion")
 
     assert result.run_status == "failed"
@@ -314,7 +314,7 @@ def test_all_skipped_items_finish_run_succeeded(tmp_path: Path) -> None:
     with database.session() as session:
         result = CorpusIngestionService(session, project_root=tmp_path).import_corpus(corpus_path)
 
-    run = get_run(database, result.import_run_id, tmp_path)
+    run = get_run(database, result.import_run_id)
 
     assert result.run_status == "succeeded"
     assert result.imported_count == 0
@@ -347,7 +347,7 @@ def test_ingestion_updates_run_import_blocker_count(tmp_path: Path) -> None:
             session, project_root=tmp_path, parser=parser
         ).import_corpus(corpus_path)
 
-    run = get_run(database, result.import_run_id, tmp_path)
+    run = get_run(database, result.import_run_id)
 
     assert result.run_status == "failed"
     assert result.failed_count == 2
@@ -400,7 +400,7 @@ def test_persistence_failure_rolls_back_failed_paper_completely(
             session, project_root=tmp_path, parser=parser
         ).import_corpus(corpus_path)
 
-    run = get_run(database, result.import_run_id, tmp_path)
+    run = get_run(database, result.import_run_id)
     with database.engine.connect() as connection:
         paper_count = connection.execute(text("SELECT count(*) FROM papers")).scalar()
         text_count = connection.execute(text("SELECT count(*) FROM paper_texts")).scalar()
@@ -427,7 +427,7 @@ def test_all_item_failures_finish_failed(tmp_path: Path) -> None:
             session, project_root=tmp_path, parser=parser
         ).import_corpus(corpus_path)
 
-    run = get_run(database, result.import_run_id, tmp_path)
+    run = get_run(database, result.import_run_id)
     with database.engine.connect() as connection:
         paper_count = connection.execute(text("SELECT count(*) FROM papers")).scalar()
         text_count = connection.execute(text("SELECT count(*) FROM paper_texts")).scalar()
