@@ -998,7 +998,9 @@ def _print_import_run(
     if import_result is not None:
         console.print("Eligible local PDFs were parsed for import.")
         console.print("Paper and FTS records may have been written for successful items.")
-        console.print("Validation and import do not constitute legal approval or scientific review.")
+        console.print(
+            "Validation and import do not constitute legal approval or scientific review."
+        )
         return
     if include_persistence_outcome:
         console.print("Validation run metadata was written to the database.")

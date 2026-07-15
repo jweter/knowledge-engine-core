@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
+from sqlalchemy.orm import Session
 from typer.testing import CliRunner
 
 import knowledge_engine.cli as cli
@@ -140,14 +141,14 @@ def test_corpus_import_command_reports_successful_import(
     monkeypatch.chdir(tmp_path)
 
     class StubCorpusIngestionService:
-        def __init__(self, session: object, *, project_root: Path | None = None) -> None:
+        def __init__(self, session: Session, *, project_root: Path | None = None) -> None:
             self.session = session
             self.project_root = project_root or tmp_path
 
         def import_corpus(self, path: Path) -> ImportedCorpusRun:
-            persisted = ImportRunService(
-                self.session, project_root=self.project_root
-            ).create_run(path, check_files=True)
+            persisted = ImportRunService(self.session, project_root=self.project_root).create_run(
+                path, check_files=True
+            )
             run = ImportRunService(self.session, project_root=self.project_root).get_run(
                 persisted.import_run_id
             )
