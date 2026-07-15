@@ -2,12 +2,15 @@ import json
 from pathlib import Path
 
 import pytest
+from sqlalchemy.orm import Session
 from typer.testing import CliRunner
 
 import knowledge_engine.cli as cli
 from knowledge_engine.cli import app
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
+from knowledge_engine.import_runs import ImportRunService
+from knowledge_engine.import_runs.ingestion import ImportedCorpusRun
 from knowledge_engine.parser import ParsedPaper
 
 
@@ -44,6 +47,7 @@ def test_cli_help() -> None:
     assert result.exit_code == 0
     assert "Offline scientific paper ingestion and search" in result.output
     assert "corpus-validate" in result.output
+    assert "corpus-import" in result.output
 
 
 def test_safe_text_normalizes_pdf_ligatures() -> None:
@@ -128,6 +132,131 @@ def test_corpus_validate_command_check_files_blocks_missing_pdf(
     assert "Import readiness: blocked" in result.output
     assert "local_file_missing" in result.output
     assert "Missing: 1" in result.output
+
+
+def test_corpus_import_command_reports_successful_import(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    class StubCorpusIngestionService:
+        def __init__(self, session: Session, *, project_root: Path | None = None) -> None:
+            self.session = session
+            self.project_root = project_root or tmp_path
+
+        def import_corpus(self, path: Path) -> ImportedCorpusRun:
+            persisted = ImportRunService(self.session, project_root=self.project_root).create_run(
+                path, check_files=True
+            )
+            run = ImportRunService(self.session, project_root=self.project_root).get_run(
+                persisted.import_run_id
+            )
+            assert run is not None
+            run.run_status = "succeeded"
+            run.items[0].item_status = "imported"
+            self.session.flush()
+            return ImportedCorpusRun(
+                import_run_id=run.import_run_id,
+                run_status=run.run_status,
+                imported_count=1,
+                failed_count=0,
+                skipped_count=0,
+            )
+
+    monkeypatch.setattr(cli, "CorpusIngestionService", StubCorpusIngestionService)
+
+    result = CliRunner().invoke(app, ["corpus-import", str(corpus_path)])
+
+    assert result.exit_code == 0
+    assert "Corpus import finished" in result.output
+    assert "Run status: succeeded" in result.output
+    assert "Imported papers: 1" in result.output
+    assert "Failed items: 0" in result.output
+    assert "Skipped items: 0" in result.output
+    assert "status=imported" in result.output
+    assert "Paper and FTS records may have been written for successful items." in result.output
+    assert "No URLs were followed and no documents were downloaded." in result.output
+
+
+def test_corpus_import_command_fails_for_import_blocked_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(tmp_path, usage_status="needs_legal_review")
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(app, ["corpus-import", str(corpus_path)])
+
+    assert result.exit_code == 1
+    assert "Corpus import finished" in result.output
+    assert "Run status: import_blocked" in result.output
+    assert "Imported papers: 0" in result.output
+    assert "Failed items: 0" in result.output
+    assert "Skipped items: 1" in result.output
+    assert "usage_status_not_importable" in result.output
+
+
+def test_corpus_import_command_fails_for_invalid_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(tmp_path, corpus_id="Bad ID")
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(app, ["corpus-import", str(corpus_path)])
+
+    assert result.exit_code == 1
+    assert "Corpus import finished" in result.output
+    assert "Run status: validation_failed" in result.output
+    assert "invalid_corpus_id" in result.output
+
+
+def test_corpus_import_command_sanitizes_internal_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    class StubCorpusIngestionService:
+        def __init__(self, session: Session, *, project_root: Path | None = None) -> None:
+            self.session = session
+            self.project_root = project_root or tmp_path
+
+        def import_corpus(self, path: Path) -> ImportedCorpusRun:
+            raise RuntimeError("sensitive absolute path /private/tmp/example.pdf")
+
+    monkeypatch.setattr(cli, "CorpusIngestionService", StubCorpusIngestionService)
+
+    result = CliRunner().invoke(app, ["corpus-import", str(corpus_path)])
+
+    assert result.exit_code == 2
+    assert "Corpus import did not complete due to an internal error." in result.output
+    assert "sensitive absolute path" not in result.output
+
+
+def test_corpus_import_command_sanitizes_other_sensitive_internal_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    class StubCorpusIngestionService:
+        def __init__(self, session: Session, *, project_root: Path | None = None) -> None:
+            self.session = session
+            self.project_root = project_root or tmp_path
+
+        def import_corpus(self, path: Path) -> ImportedCorpusRun:
+            raise RuntimeError(
+                'postgresql://user:secret-token@example.test/ke'
+            )
+
+    monkeypatch.setattr(cli, "CorpusIngestionService", StubCorpusIngestionService)
+
+    result = CliRunner().invoke(app, ["corpus-import", str(corpus_path)])
+
+    assert result.exit_code == 2
+    assert "Corpus import did not complete due to an internal error." in result.output
+    assert "secret-token" not in result.output
+    assert "postgresql://" not in result.output
 
 
 def test_answer_command_returns_retrieval_only_results(

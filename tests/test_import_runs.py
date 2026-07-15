@@ -1,4 +1,3 @@
-import json
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, cast
@@ -16,7 +15,6 @@ from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.models import (
     Author,
     Base,
-    ImportRun,
     Journal,
     Keyword,
     Paper,
@@ -24,18 +22,13 @@ from knowledge_engine.models import (
     PaperKeyword,
     PaperText,
 )
-
-
-def make_database(tmp_path: Path) -> Database:
-    database = Database(
-        Settings(
-            project_root=tmp_path,
-            data_dir=tmp_path / "data",
-            database_url=f"sqlite:///{tmp_path / 'knowledge.sqlite3'}",
-        )
-    )
-    database.initialize()
-    return database
+from tests.corpus_fixtures import (
+    get_run,
+    make_database,
+    prepare_corpus_layout,
+    write_corpus_manifest,
+    write_sources,
+)
 
 
 def make_corpus(
@@ -48,14 +41,11 @@ def make_corpus(
     create_source_manifest: bool = True,
     create_license: bool = True,
 ) -> Path:
-    (tmp_path / "knowledge_engine").mkdir(exist_ok=True)
-    (tmp_path / "pyproject.toml").write_text("[tool.poetry]\nname='test'\n", encoding="utf-8")
-    corpus_dir = tmp_path / "data" / "corpora" / corpus_id
-    corpus_dir.mkdir(parents=True, exist_ok=True)
-    papers_dir = tmp_path / "papers" / "corpora" / corpus_id
-    papers_dir.mkdir(parents=True, exist_ok=True)
-    if create_license:
-        (corpus_dir / "license_policy.md").write_text("# License\n", encoding="utf-8")
+    corpus_dir, _ = prepare_corpus_layout(
+        tmp_path,
+        corpus_id=corpus_id,
+        create_license=create_license,
+    )
     corpus = {
         "manifest_version": 1,
         "corpus_id": corpus_id,
@@ -72,31 +62,10 @@ def make_corpus(
     if corpus_overrides:
         corpus.update(corpus_overrides)
     corpus_path = corpus_dir / "corpus.json"
-    corpus_path.write_text(json.dumps(corpus), encoding="utf-8")
+    write_corpus_manifest(corpus_path, corpus)
     if create_source_manifest:
         write_sources(corpus_dir / source_manifest, rows or [source_row()])
     return corpus_path
-
-
-def write_sources(path: Path, rows: list[dict[str, str]]) -> None:
-    header = [
-        "source_id",
-        "title",
-        "publication_year",
-        "doi",
-        "usage_status",
-        "inclusion_status",
-        "source_url",
-        "access_date",
-        "inclusion_reason",
-        "license_type",
-        "license_url",
-        "local_path",
-    ]
-    lines = [",".join(header)]
-    for row in rows:
-        lines.append(",".join(row.get(name, "") for name in header))
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def source_row(**overrides: str) -> dict[str, str]:
@@ -146,13 +115,6 @@ def create_run(
         )
         run_id = persisted.import_run_id
     return database, run_id
-
-
-def get_run(database: Database, run_id: str) -> ImportRun:
-    with database.session() as session:
-        run = ImportRunService(session, project_root=database.settings.project_root).get_run(run_id)
-        assert run is not None
-        return run
 
 
 def test_fresh_database_creates_m8_schema(tmp_path: Path) -> None:

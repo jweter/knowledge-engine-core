@@ -4,15 +4,14 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
-from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
 from knowledge_engine.corpus import CorpusValidationResult, Issue, validate_corpus_manifest
 from knowledge_engine.corpus.validation import discover_project_root
+from knowledge_engine.import_runs._helpers import new_uuid, utc_now
 from knowledge_engine.import_runs.repository import ImportRunRepository
 from knowledge_engine.models import ImportIssue, ImportItem, ImportRun, ManifestSnapshot
 
@@ -39,7 +38,7 @@ class ImportRunService:
     def create_run(self, corpus_path: Path, *, check_files: bool = False) -> PersistedImportRun:
         """Validate a corpus manifest and persist the run, items, issues, and snapshot."""
 
-        created_at = _utc_now()
+        created_at = utc_now()
         validation_mode = "check_files" if check_files else "metadata_only"
         safe_corpus_path = _safe_relative_path(corpus_path, self.project_root)
         snapshot_inputs = _snapshot_inputs(corpus_path, self.project_root)
@@ -49,8 +48,8 @@ class ImportRunService:
             project_root=self.project_root,
         )
         run_status = _run_status(validation_result)
-        import_run_id = _new_uuid()
-        snapshot_id = _new_uuid()
+        import_run_id = new_uuid()
+        snapshot_id = new_uuid()
         snapshot = ManifestSnapshot(
             snapshot_id=snapshot_id,
             corpus_path=safe_corpus_path,
@@ -91,7 +90,7 @@ class ImportRunService:
             structural_error_count=validation_result.structural_error_count,
             import_blocker_count=validation_result.import_blocker_count,
             created_at=created_at,
-            completed_at=_utc_now(),
+            completed_at=utc_now(),
             source_manifest_path=validation_result.source_manifest_path,
             license_policy_path=validation_result.license_policy_path,
             corpus_path=safe_corpus_path,
@@ -272,7 +271,7 @@ def _build_items(
             status = "import_blocked"
         items.append(
             ImportItem(
-                import_item_id=_new_uuid(),
+                import_item_id=new_uuid(),
                 import_run_id=import_run_id,
                 source_id=row.source_id or None,
                 csv_line_number=row.line_number,
@@ -306,7 +305,7 @@ def _build_issues(
         item_id = items_by_line.get(issue.line_number)
         persisted.append(
             ImportIssue(
-                issue_id=_new_uuid(),
+                issue_id=new_uuid(),
                 import_run_id=import_run_id,
                 import_item_id=item_id,
                 code=issue.code,
@@ -331,11 +330,3 @@ def _safe_relative_path(path: Path, project_root: Path) -> str:
         return resolved.relative_to(project_root.resolve()).as_posix()
     except ValueError:
         return path.name
-
-
-def _new_uuid() -> str:
-    return str(uuid4())
-
-
-def _utc_now() -> str:
-    return datetime.now(UTC).isoformat(timespec="seconds")

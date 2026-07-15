@@ -17,6 +17,12 @@ from knowledge_engine.corpus.models import (
     Issue,
     IssueSeverity,
 )
+from knowledge_engine.corpus.path_safety import (
+    has_traversal,
+    is_relative_to,
+    looks_absolute,
+    resolve_under,
+)
 from knowledge_engine.utils import normalize_doi
 
 MANIFEST_VERSION = 1
@@ -253,16 +259,16 @@ def _metadata_path(
     if not raw:
         return None
     path = Path(raw)
-    if _looks_absolute(path):
+    if looks_absolute(path):
         _add_manifest_error(
             result, "absolute_path", f"{field} must be relative to corpus.json.", field
         )
         return None
-    if _has_traversal(path):
+    if has_traversal(path):
         _add_manifest_error(result, "path_traversal", f"{field} must not contain '..'.", field)
         return None
-    resolved = _resolve_under(corpus_dir, path)
-    if not _is_relative_to(resolved, corpus_dir.resolve()):
+    resolved = resolve_under(corpus_dir, path)
+    if not is_relative_to(resolved, corpus_dir.resolve()):
         _add_manifest_error(
             result,
             "path_escape",
@@ -290,7 +296,7 @@ def _papers_directory(value: Any, *, result: CorpusValidationResult, root: Path)
     if not raw:
         return None
     path = Path(raw)
-    if _looks_absolute(path):
+    if looks_absolute(path):
         _add_manifest_error(
             result,
             "absolute_path",
@@ -298,7 +304,7 @@ def _papers_directory(value: Any, *, result: CorpusValidationResult, root: Path)
             "default_local_papers_directory",
         )
         return None
-    if _has_traversal(path):
+    if has_traversal(path):
         _add_manifest_error(
             result,
             "path_traversal",
@@ -306,8 +312,8 @@ def _papers_directory(value: Any, *, result: CorpusValidationResult, root: Path)
             "default_local_papers_directory",
         )
         return None
-    resolved = _resolve_under(root, path)
-    if not _is_relative_to(resolved, root):
+    resolved = resolve_under(root, path)
+    if not is_relative_to(resolved, root):
         _add_manifest_error(
             result,
             "path_escape",
@@ -723,7 +729,7 @@ def _validate_local_file(
 
     path = Path(local_path)
     configured_prefix = _display_path(papers_dir, root) if papers_dir else ""
-    if _looks_absolute(path):
+    if looks_absolute(path):
         _add_row_error(
             result,
             "absolute_path",
@@ -734,7 +740,7 @@ def _validate_local_file(
         )
         result.file_counts.invalid += 1
         return
-    if _has_traversal(path):
+    if has_traversal(path):
         _add_row_error(
             result,
             "path_traversal",
@@ -762,8 +768,8 @@ def _validate_local_file(
         result.file_counts.invalid += 1
         return
 
-    resolved = _resolve_under(papers_dir, path)
-    if not _is_relative_to(resolved, papers_dir.resolve(strict=False)):
+    resolved = resolve_under(papers_dir, path)
+    if not is_relative_to(resolved, papers_dir.resolve(strict=False)):
         _add_row_error(
             result,
             "path_escape",
@@ -951,31 +957,6 @@ def _is_iso_date_or_datetime(value: str) -> bool:
         return False
     try:
         datetime.fromisoformat(candidate)
-    except ValueError:
-        return False
-    return True
-
-
-def _has_traversal(path: Path) -> bool:
-    return any(part == ".." for part in path.parts)
-
-
-def _looks_absolute(path: Path) -> bool:
-    raw = str(path)
-    return path.is_absolute() or raw.startswith(("/", "\\")) or bool(re.match(r"^[A-Za-z]:", raw))
-
-
-def _resolve_under(base: Path, path: Path) -> Path:
-    candidate = base / path
-    try:
-        return candidate.resolve(strict=True)
-    except FileNotFoundError:
-        return candidate.resolve(strict=False)
-
-
-def _is_relative_to(path: Path, base: Path) -> bool:
-    try:
-        path.relative_to(base)
     except ValueError:
         return False
     return True

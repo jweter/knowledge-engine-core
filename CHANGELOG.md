@@ -7,6 +7,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Added the `ke corpus-import` CLI command for persisted local corpus imports.
+
 ## [0.2.0-alpha.1] - 2026-07-11
 
 ### Added
