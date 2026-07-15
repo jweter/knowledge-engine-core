@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 
@@ -15,9 +16,7 @@ def looks_absolute(path: Path) -> bool:
     """Return whether the path should be treated as absolute."""
 
     raw = str(path)
-    return path.is_absolute() or raw.startswith(("/", "\\")) or (
-        len(raw) >= 2 and raw[0].isalpha() and raw[1] == ":"
-    )
+    return path.is_absolute() or raw.startswith(("/", "\\")) or bool(re.match(r"^[A-Za-z]:", raw))
 
 
 def resolve_under(base: Path, path: Path) -> Path:
