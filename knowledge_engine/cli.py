@@ -458,7 +458,7 @@ def corpus_import(corpus_json: CorpusJsonArgument) -> None:
     except Exception:
         raise typer.BadParameter(
             "Corpus import did not complete due to an internal error."
-        )
+        ) from None
 
     console.print("[bold]Corpus import finished[/bold]")
     with database.session() as session:
