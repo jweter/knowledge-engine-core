@@ -69,7 +69,6 @@ class CorpusIngestionService:
             raise RuntimeError(msg)
 
         if run.manifest_validity != "valid" or run.import_readiness != "ready":
-            run.run_status = "failed"
             run.completed_at = _utc_now()
             self.session.flush()
             return ImportedCorpusRun(

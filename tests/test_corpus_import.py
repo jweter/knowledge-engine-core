@@ -184,6 +184,44 @@ def test_warning_only_import_finishes_succeeded(tmp_path: Path) -> None:
     assert run.items[0].item_status == "imported"
 
 
+def test_import_blocked_manifest_preserves_blocked_run_status(tmp_path: Path) -> None:
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(
+        tmp_path,
+        rows=[source_row(usage_status="needs_legal_review")],
+    )
+
+    with database.session() as session:
+        result = CorpusIngestionService(session, project_root=tmp_path).import_corpus(corpus_path)
+
+    run = get_run(database, result.import_run_id, tmp_path)
+    assert result.run_status == "import_blocked"
+    assert result.imported_count == 0
+    assert result.failed_count == 0
+    assert result.skipped_count == 1
+    assert run.run_status == "import_blocked"
+    assert run.items[0].item_status == "import_blocked"
+
+
+def test_structurally_invalid_manifest_preserves_validation_failed_status(tmp_path: Path) -> None:
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(tmp_path)
+    corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
+    corpus["corpus_id"] = "Bad ID"
+    corpus_path.write_text(json.dumps(corpus), encoding="utf-8")
+
+    with database.session() as session:
+        result = CorpusIngestionService(session, project_root=tmp_path).import_corpus(corpus_path)
+
+    run = get_run(database, result.import_run_id, tmp_path)
+    assert result.run_status == "validation_failed"
+    assert result.imported_count == 0
+    assert result.failed_count == 0
+    assert result.skipped_count == 1
+    assert run.run_status == "validation_failed"
+    assert run.items[0].item_status == "import_blocked"
+
+
 def test_parse_failure_is_sanitized_and_later_items_continue(tmp_path: Path) -> None:
     database = make_database(tmp_path)
     corpus_path = make_corpus(
