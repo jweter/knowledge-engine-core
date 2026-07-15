@@ -180,6 +180,8 @@ class CorpusIngestionService:
 
             try:
                 with self.session.begin_nested():
+                    # Isolate one paper import so persistence/FTS failures roll back this
+                    # item completely without aborting the rest of the run.
                     PaperRepository(self.session).add_parsed_paper(parsed)
             except ValueError:
                 failed_count += 1

@@ -233,6 +233,32 @@ def test_corpus_import_command_sanitizes_internal_errors(
     assert "sensitive absolute path" not in result.output
 
 
+def test_corpus_import_command_sanitizes_other_sensitive_internal_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    class StubCorpusIngestionService:
+        def __init__(self, session: Session, *, project_root: Path | None = None) -> None:
+            self.session = session
+            self.project_root = project_root or tmp_path
+
+        def import_corpus(self, path: Path) -> ImportedCorpusRun:
+            raise RuntimeError(
+                'postgresql://user:secret-token@example.test/ke'
+            )
+
+    monkeypatch.setattr(cli, "CorpusIngestionService", StubCorpusIngestionService)
+
+    result = CliRunner().invoke(app, ["corpus-import", str(corpus_path)])
+
+    assert result.exit_code == 2
+    assert "Corpus import did not complete due to an internal error." in result.output
+    assert "secret-token" not in result.output
+    assert "postgresql://" not in result.output
+
+
 def test_answer_command_returns_retrieval_only_results(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
