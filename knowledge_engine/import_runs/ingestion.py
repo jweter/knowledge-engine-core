@@ -43,6 +43,10 @@ class _IssueTemplate:
     field: str | None = "local_path"
 
 
+class _PapersDirectoryError(ValueError):
+    """Persisted papers-directory metadata could not be resolved safely."""
+
+
 class CorpusIngestionService:
     """Import local corpus files after persisting an M8 import run."""
 
@@ -79,11 +83,32 @@ class CorpusIngestionService:
                 skipped_count=len(run.items),
             )
 
-        papers_dir = _papers_directory(run.manifest_snapshot, self.project_root)
+        next_sequence = max((issue.sequence for issue in run.issues), default=0) + 1
+        try:
+            papers_dir = _papers_directory(run.manifest_snapshot, self.project_root)
+        except _PapersDirectoryError:
+            self._record_run_issue(
+                run,
+                next_sequence,
+                _IssueTemplate(
+                    code="persisted_papers_directory_invalid",
+                    message="The persisted local papers directory could not be resolved safely.",
+                    field="default_local_papers_directory",
+                ),
+            )
+            run.run_status = "failed"
+            run.completed_at = _utc_now()
+            self.session.flush()
+            return ImportedCorpusRun(
+                import_run_id=run.import_run_id,
+                run_status=run.run_status,
+                imported_count=0,
+                failed_count=0,
+                skipped_count=len(run.items),
+            )
         imported_count = 0
         failed_count = 0
         skipped_count = 0
-        next_sequence = max((issue.sequence for issue in run.issues), default=0) + 1
 
         for item in run.items:
             item.completed_at = _utc_now()
@@ -224,6 +249,32 @@ class CorpusIngestionService:
         run.import_blocker_count += 1
         return sequence + 1
 
+    def _record_run_issue(
+        self,
+        run: ImportRun,
+        sequence: int,
+        template: _IssueTemplate,
+    ) -> int:
+        issue = ImportIssue(
+            issue_id=_new_uuid(),
+            import_run_id=run.import_run_id,
+            import_item_id=None,
+            code=template.code,
+            severity="error",
+            category="ingestion",
+            message=template.message,
+            source_id=None,
+            field=template.field,
+            csv_line_number=None,
+            blocks_manifest=False,
+            blocks_import=True,
+            sequence=sequence,
+            created_at=_utc_now(),
+        )
+        self.repository.add_issues([issue])
+        run.import_blocker_count += 1
+        return sequence + 1
+
 
 def _should_import_item(item: ImportItem) -> bool:
     return (
@@ -236,22 +287,30 @@ def _should_import_item(item: ImportItem) -> bool:
 
 
 def _papers_directory(snapshot: ManifestSnapshot, project_root: Path) -> Path:
-    loaded = json.loads(snapshot.corpus_json_text)
+    try:
+        loaded = json.loads(snapshot.corpus_json_text)
+    except json.JSONDecodeError as exc:
+        raise _PapersDirectoryError("Persisted corpus snapshot is not valid JSON.") from exc
     if not isinstance(loaded, dict):
         msg = "Persisted corpus snapshot is not a JSON object."
-        raise ValueError(msg)
+        raise _PapersDirectoryError(msg)
     raw = loaded.get("default_local_papers_directory")
     if not isinstance(raw, str) or not raw.strip():
         msg = "Persisted corpus snapshot is missing default_local_papers_directory."
-        raise ValueError(msg)
+        raise _PapersDirectoryError(msg)
     path = Path(raw.strip())
     if _looks_absolute(path) or _has_traversal(path):
         msg = "Persisted default_local_papers_directory is not import-safe."
-        raise ValueError(msg)
-    resolved = _resolve_under(project_root, path)
+        raise _PapersDirectoryError(msg)
+    try:
+        resolved = _resolve_under(project_root, path)
+    except OSError as exc:
+        raise _PapersDirectoryError(
+            "Persisted default_local_papers_directory could not be resolved."
+        ) from exc
     if not _is_relative_to(resolved, project_root):
         msg = "Persisted default_local_papers_directory escapes the project root."
-        raise ValueError(msg)
+        raise _PapersDirectoryError(msg)
     return resolved
 
 

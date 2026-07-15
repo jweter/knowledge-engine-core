@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import text
 
+import knowledge_engine.import_runs.ingestion as ingestion_module
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.import_runs import ImportRunService
@@ -266,6 +267,139 @@ def test_parse_failure_is_sanitized_and_later_items_continue(tmp_path: Path) -> 
         == "The declared local file could not be parsed as a supported paper."
     )
     assert "sensitive parse detail" not in ingestion_issue.message
+
+
+def test_papers_directory_failure_preserves_failed_run_with_sanitized_issue(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(tmp_path)
+    declare_pdf(tmp_path, "paper.pdf")
+
+    def fail_papers_directory(*_args: object, **_kwargs: object) -> Path:
+        raise ingestion_module._PapersDirectoryError("sensitive filesystem detail")
+
+    monkeypatch.setattr(ingestion_module, "_papers_directory", fail_papers_directory)
+
+    with database.session() as session:
+        result = CorpusIngestionService(session, project_root=tmp_path).import_corpus(corpus_path)
+
+    run = get_run(database, result.import_run_id, tmp_path)
+    issue = next(issue for issue in run.issues if issue.category == "ingestion")
+
+    assert result.run_status == "failed"
+    assert result.imported_count == 0
+    assert result.failed_count == 0
+    assert result.skipped_count == 1
+    assert run.run_status == "failed"
+    assert run.import_blocker_count == 1
+    assert issue.import_item_id is None
+    assert issue.code == "persisted_papers_directory_invalid"
+    assert issue.field == "default_local_papers_directory"
+    assert issue.message == "The persisted local papers directory could not be resolved safely."
+    assert "sensitive filesystem detail" not in issue.message
+
+
+def test_missing_local_file_during_import_is_sanitized(tmp_path: Path) -> None:
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(tmp_path)
+    declare_pdf(tmp_path, "paper.pdf")
+    parser = StubParser({"paper.pdf": FileNotFoundError("sensitive missing detail")})
+
+    with database.session() as session:
+        result = CorpusIngestionService(
+            session, project_root=tmp_path, parser=parser
+        ).import_corpus(corpus_path)
+
+    run = get_run(database, result.import_run_id, tmp_path)
+    issue = next(issue for issue in run.issues if issue.category == "ingestion")
+
+    assert result.run_status == "failed"
+    assert result.imported_count == 0
+    assert result.failed_count == 1
+    assert issue.code == "local_file_missing_during_import"
+    assert issue.message == "The declared local file was missing when import started."
+    assert "sensitive missing detail" not in issue.message
+
+
+def test_unreadable_local_file_during_import_is_sanitized(tmp_path: Path) -> None:
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(tmp_path)
+    declare_pdf(tmp_path, "paper.pdf")
+    parser = StubParser({"paper.pdf": OSError("sensitive unreadable detail")})
+
+    with database.session() as session:
+        result = CorpusIngestionService(
+            session, project_root=tmp_path, parser=parser
+        ).import_corpus(corpus_path)
+
+    run = get_run(database, result.import_run_id, tmp_path)
+    issue = next(issue for issue in run.issues if issue.category == "ingestion")
+
+    assert result.run_status == "failed"
+    assert result.imported_count == 0
+    assert result.failed_count == 1
+    assert issue.code == "local_file_unreadable"
+    assert issue.message == "The declared local file could not be read during import."
+    assert "sensitive unreadable detail" not in issue.message
+
+
+def test_all_skipped_items_finish_run_succeeded(tmp_path: Path) -> None:
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(
+        tmp_path,
+        rows=[
+            source_row(source_id="source-1", inclusion_status="excluded", local_path="skip-1.pdf"),
+            source_row(source_id="source-2", inclusion_status="excluded", local_path="skip-2.pdf"),
+        ],
+    )
+    declare_pdf(tmp_path, "skip-1.pdf")
+    declare_pdf(tmp_path, "skip-2.pdf")
+
+    with database.session() as session:
+        result = CorpusIngestionService(session, project_root=tmp_path).import_corpus(corpus_path)
+
+    run = get_run(database, result.import_run_id, tmp_path)
+
+    assert result.run_status == "succeeded"
+    assert result.imported_count == 0
+    assert result.failed_count == 0
+    assert result.skipped_count == 2
+    assert run.run_status == "succeeded"
+    assert [item.item_status for item in run.items] == ["skipped", "skipped"]
+
+
+def test_ingestion_updates_run_import_blocker_count(tmp_path: Path) -> None:
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(
+        tmp_path,
+        rows=[
+            source_row(source_id="source-1", local_path="missing.pdf"),
+            source_row(source_id="source-2", local_path="unreadable.pdf"),
+        ],
+    )
+    declare_pdf(tmp_path, "missing.pdf")
+    declare_pdf(tmp_path, "unreadable.pdf")
+    parser = StubParser(
+        {
+            "missing.pdf": FileNotFoundError("missing during import"),
+            "unreadable.pdf": OSError("unreadable during import"),
+        }
+    )
+
+    with database.session() as session:
+        result = CorpusIngestionService(
+            session, project_root=tmp_path, parser=parser
+        ).import_corpus(corpus_path)
+
+    run = get_run(database, result.import_run_id, tmp_path)
+
+    assert result.run_status == "failed"
+    assert result.failed_count == 2
+    assert run.import_blocker_count == 2
+    assert run.import_blocker_count == sum(1 for issue in run.issues if issue.blocks_import)
+    assert [item.import_blocker_count for item in run.items] == [1, 1]
 
 
 def test_persistence_failure_rolls_back_failed_paper_completely(
