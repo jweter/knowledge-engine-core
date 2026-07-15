@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
-
-_WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:")
 
 
 def has_traversal(path: Path) -> bool:
@@ -18,7 +15,9 @@ def looks_absolute(path: Path) -> bool:
     """Return whether the path should be treated as absolute."""
 
     raw = str(path)
-    return path.is_absolute() or raw.startswith(("/", "\\")) or bool(_WINDOWS_DRIVE_RE.match(raw))
+    return path.is_absolute() or raw.startswith(("/", "\\")) or (
+        len(raw) >= 2 and raw[:1].isalpha() and raw[1] == ":"
+    )
 
 
 def resolve_under(base: Path, path: Path) -> Path:
