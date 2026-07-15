@@ -231,7 +231,9 @@ def test_run_level_ingestion_failure_marks_valid_items_skipped(tmp_path: Path) -
     ingestion_module._papers_directory = fail_once
     try:
         with database.session() as session:
-            result = CorpusIngestionService(session, project_root=tmp_path).import_corpus(corpus_path)
+            result = CorpusIngestionService(
+                session, project_root=tmp_path
+            ).import_corpus(corpus_path)
     finally:
         ingestion_module._papers_directory = original_papers_directory
 

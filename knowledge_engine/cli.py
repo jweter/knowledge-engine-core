@@ -456,7 +456,9 @@ def corpus_import(corpus_json: CorpusJsonArgument) -> None:
                 session, project_root=database.settings.project_root
             ).import_corpus(corpus_json)
     except Exception as exc:
-        raise typer.BadParameter("Corpus import did not complete due to an internal error.") from exc
+        raise typer.BadParameter(
+            "Corpus import did not complete due to an internal error."
+        ) from exc
 
     console.print("[bold]Corpus import finished[/bold]")
     with database.session() as session:
