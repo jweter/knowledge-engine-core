@@ -150,6 +150,12 @@ Inspect a persisted import run:
 poetry run ke corpus-run-show <import-run-id>
 ```
 
+Persist and import a local corpus:
+
+```bash
+poetry run ke corpus-import data/corpora/glp1_weight_loss/corpus.json
+```
+
 Run the GLP-1 vertical slice demo checklist:
 
 ```text

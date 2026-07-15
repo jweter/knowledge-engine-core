@@ -21,6 +21,7 @@ from knowledge_engine.config import build_settings
 from knowledge_engine.corpus import CorpusValidationResult, Issue, validate_corpus_manifest
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.import_runs import ImportRunService
+from knowledge_engine.import_runs.ingestion import CorpusIngestionService, ImportedCorpusRun
 from knowledge_engine.models import ImportRun
 from knowledge_engine.parser import PyMuPDFParser
 from knowledge_engine.search import SearchResult, SearchService, build_natural_language_fts_query
@@ -441,6 +442,33 @@ def corpus_run_show(import_run_id: ImportRunIdArgument) -> None:
         raise typer.Exit(1)
 
     _print_import_run(run)
+
+
+@app.command("corpus-import")
+def corpus_import(corpus_json: CorpusJsonArgument) -> None:
+    """Persist and import a local corpus."""
+
+    database = _database()
+    database.initialize()
+    try:
+        with database.session() as session:
+            imported = CorpusIngestionService(
+                session, project_root=database.settings.project_root
+            ).import_corpus(corpus_json)
+    except Exception as exc:
+        raise typer.BadParameter(f"Corpus import did not complete: {exc}") from exc
+
+    console.print("[bold]Corpus import finished[/bold]")
+    with database.session() as session:
+        run = ImportRunService(session, project_root=database.settings.project_root).get_run(
+            imported.import_run_id
+        )
+    if run is None:
+        raise typer.BadParameter("Corpus import completed but could not be read back.")
+
+    _print_import_run(run, import_result=imported)
+    if run.run_status in {"validation_failed", "import_blocked", "failed"}:
+        raise typer.Exit(1)
 
 
 @app.command("list")
@@ -900,7 +928,12 @@ def _print_corpus_validation_result(
     console.print("Exit status is nonzero only when manifest validity is invalid.")
 
 
-def _print_import_run(run: ImportRun, *, include_persistence_outcome: bool = False) -> None:
+def _print_import_run(
+    run: ImportRun,
+    *,
+    include_persistence_outcome: bool = False,
+    import_result: ImportedCorpusRun | None = None,
+) -> None:
     """Render a persisted import run."""
 
     console.print("[bold]Persisted import run[/bold]")
@@ -927,6 +960,10 @@ def _print_import_run(run: ImportRun, *, include_persistence_outcome: bool = Fal
     console.print(f"Warnings: {run.warning_count}")
     console.print(f"Structural errors: {run.structural_error_count}")
     console.print(f"Import blockers: {run.import_blocker_count}")
+    if import_result is not None:
+        console.print(f"Imported papers: {import_result.imported_count}")
+        console.print(f"Failed items: {import_result.failed_count}")
+        console.print(f"Skipped items: {import_result.skipped_count}")
     console.print()
     console.print("[bold]Issues[/bold]")
     if not run.issues:
@@ -958,6 +995,11 @@ def _print_import_run(run: ImportRun, *, include_persistence_outcome: bool = Fal
             f"import_blockers={item.import_blocker_count}"
         )
     console.print()
+    if import_result is not None:
+        console.print("Eligible local PDFs were parsed for import.")
+        console.print("Paper and FTS records may have been written for successful items.")
+        console.print("Validation and import do not constitute legal approval or scientific review.")
+        return
     if include_persistence_outcome:
         console.print("Validation run metadata was written to the database.")
     console.print("No papers were imported.")
