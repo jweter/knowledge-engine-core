@@ -16,7 +16,7 @@ def looks_absolute(path: Path) -> bool:
 
     raw = str(path)
     return path.is_absolute() or raw.startswith(("/", "\\")) or (
-        len(raw) >= 2 and raw[:1].isalpha() and raw[1] == ":"
+        len(raw) >= 2 and raw[0].isalpha() and raw[1] == ":"
     )
 
 

@@ -62,9 +62,8 @@ def write_sources(
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def write_corpus_manifest(path: Path, manifest: dict[str, object]) -> Path:
+def write_corpus_manifest(path: Path, manifest: dict[str, object]) -> None:
     path.write_text(json.dumps(manifest), encoding="utf-8")
-    return path
 
 
 def get_run(database: Database, run_id: str) -> ImportRun:
