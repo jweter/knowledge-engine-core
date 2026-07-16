@@ -1,0 +1,14 @@
+........................................................................ [ 41%]
+........................................................................ [ 82%]
+F
+=================================== FAILURES ===================================
+________ test_current_schema_version_with_missing_tables_fails_clearly _________
+tests/test_import_runs.py:227: in test_current_schema_version_with_missing_tables_fails_clearly
+    with pytest.raises(RuntimeError, match="incomplete"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE RuntimeError
+=========================== short test summary info ============================
+FAILED tests/test_import_runs.py::test_current_schema_version_with_missing_tables_fails_clearly - Failed: DID NOT RAISE RuntimeError
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed, 144 passed in 14.75s
+exit_status=1
