@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pytest
 from sqlalchemy import text
 
 from knowledge_engine.config import Settings
@@ -32,6 +33,13 @@ def _index_names(database: Database) -> set[str]:
             connection.execute(
                 text("SELECT name FROM sqlite_master WHERE type='index' AND name IS NOT NULL")
             ).scalars()
+        )
+
+
+def _table_names(database: Database) -> set[str]:
+    with database.engine.connect() as connection:
+        return set(
+            connection.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).scalars()
         )
 
 
@@ -85,3 +93,54 @@ def test_schema_version_2_migration_is_retry_safe(tmp_path: Path) -> None:
     assert versions == [1, 2]
     assert "run_mode" in _column_names(database, "import_runs")
     assert "duplicate_evidence_json" in _column_names(database, "import_items")
+
+
+def test_current_version_missing_table_is_not_silently_repaired(tmp_path: Path) -> None:
+    database = _database(tmp_path)
+    database.initialize()
+
+    with database.engine.begin() as connection:
+        connection.execute(text("DROP TABLE import_items"))
+
+    with pytest.raises(RuntimeError, match="incomplete"):
+        database.initialize()
+
+    assert "import_items" not in _table_names(database)
+    with database.engine.connect() as connection:
+        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+    assert version == CURRENT_SCHEMA_VERSION
+
+
+def test_older_version_missing_table_is_not_silently_repaired(tmp_path: Path) -> None:
+    database = _database(tmp_path)
+    database.initialize()
+
+    with database.engine.begin() as connection:
+        connection.execute(text("UPDATE schema_versions SET version = 1 WHERE version = 2"))
+        connection.execute(text("DROP TABLE import_items"))
+
+    with pytest.raises(RuntimeError, match="incomplete"):
+        database.initialize()
+
+    assert "import_items" not in _table_names(database)
+    with database.engine.connect() as connection:
+        versions = list(
+            connection.execute(
+                text("SELECT version FROM schema_versions ORDER BY version")
+            ).scalars()
+        )
+    assert versions == [1]
+
+
+def test_current_version_missing_index_is_not_silently_repaired(tmp_path: Path) -> None:
+    database = _database(tmp_path)
+    database.initialize()
+    index_name = "ix_import_items_computed_content_hash"
+
+    with database.engine.begin() as connection:
+        connection.execute(text(f'DROP INDEX "{index_name}"'))
+
+    with pytest.raises(RuntimeError, match="missing indexes"):
+        database.initialize()
+
+    assert index_name not in _index_names(database)
