@@ -14,11 +14,13 @@ Implemented so far:
 - retry-safe additive SQLite migration for M10 columns;
 - required version-2 indexes;
 - schema verification for required version-2 columns and indexes;
-- focused fresh-database and retry-safety tests.
+- SQLAlchemy mappings for run mode, duplicate evidence, matched identities, and retry lineage;
+- focused fresh-database and retry-safety tests;
+- repository-wide formatting normalized with the Poetry-pinned Black version;
+- full Quality run #39 passed after formatting normalization.
 
 Still pending:
 
-- SQLAlchemy model mappings for the new fields;
 - populated version-1 upgrade-preservation tests;
 - duplicate query and decision services;
 - ingestion integration before persistence;
