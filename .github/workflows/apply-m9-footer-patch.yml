@@ -1,0 +1,40 @@
+name: Apply M9 footer patch
+
+on:
+  push:
+    branches:
+      - fix/m9-import-run-footer
+
+permissions:
+  contents: write
+
+jobs:
+  apply-patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply verified patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual_sha="$(sha256sum m9-footer-fix.patch | awk '{print $1}')"
+          expected_sha="3443870339dd955eef585d9e66215e3a7bb2463e20dfed4f0fe8d88f11d7a2bb"
+          test "$actual_sha" = "$expected_sha"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git am m9-footer-fix.patch
+
+      - name: Remove transfer artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm m9-footer-fix.patch
+          rm .github/workflows/apply-m9-footer-patch.yml
+          git add -A
+          git commit -m "chore: remove patch transfer artifacts"
+          git push origin HEAD:fix/m9-import-run-footer
