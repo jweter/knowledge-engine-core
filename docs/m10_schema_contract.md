@@ -209,3 +209,37 @@ The schema work package is complete only when:
 - existing M9 tests remain green;
 - Black, Ruff, mypy, pytest, and `git diff --check` pass;
 - no PDFs, databases, generated reports, or unrelated artifacts are committed.
+
+## Codex Execution Directive
+
+Implement this work package on `feature/m10-duplicate-detection-resumability`.
+Keep the first production commit limited to schema version 2 and focused tests.
+Do not combine duplicate-decision logic, resume planning, or CLI changes into
+that commit.
+
+Required sequence:
+
+1. Update `knowledge_engine/models.py` with `ImportRun.run_mode` and the six new
+   nullable `ImportItem` fields.
+2. Change `CURRENT_SCHEMA_VERSION` from 1 to 2 in
+   `knowledge_engine/database.py`.
+3. Add an explicit retry-safe version-1-to-2 migration. Do not rely on
+   `Base.metadata.create_all()` to alter existing tables.
+4. Extend schema verification to inspect required version-2 columns and indexes,
+   not only table existence.
+5. Add fresh-database, populated-upgrade, idempotence, partial-DDL retry, and
+   verification-failure tests.
+6. Preserve all current M7-M9 behavior and existing tests.
+
+Validation commands:
+
+```text
+poetry run black --check .
+poetry run ruff check .
+poetry run mypy knowledge_engine tests
+poetry run pytest -rs
+git diff --check
+```
+
+The commit must exclude `poetry.lock`, local databases, generated reports, PDFs,
+and unrelated refactoring.
