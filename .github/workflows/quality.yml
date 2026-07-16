@@ -33,7 +33,20 @@ jobs:
         run: poetry run ruff check .
 
       - name: Type check
-        run: poetry run mypy knowledge_engine tests
+        shell: bash
+        run: |
+          set +e
+          poetry run mypy knowledge_engine tests > mypy.log 2>&1
+          status=$?
+          cat mypy.log
+          exit "$status"
+
+      - name: Upload mypy failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mypy-failure
+          path: mypy.log
 
       - name: Test
         run: poetry run pytest
