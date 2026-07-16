@@ -159,20 +159,34 @@ def test_same_run_hash_lookup_returns_earliest_item_and_supports_exclusion() -> 
         _add_run(session, "run-1")
         session.add_all(
             [
-                _item("run-1", "item-2", 3, source_id="source-2", content_hash="a" * 64),
-                _item("run-1", "item-1", 2, source_id="source-1", content_hash="a" * 64),
+                _item(
+                    "run-1",
+                    "item-2",
+                    3,
+                    source_id="source-2",
+                    content_hash="a" * 64,
+                ),
+                _item(
+                    "run-1",
+                    "item-1",
+                    2,
+                    source_id="source-1",
+                    content_hash="a" * 64,
+                ),
             ]
         )
         session.flush()
         repository = DuplicateQueryRepository(session)
 
-        assert repository.same_run_item_by_content_hash("run-1", "a" * 64).import_item_id == "item-1"
-        assert (
-            repository.same_run_item_by_content_hash(
-                "run-1", "a" * 64, exclude_import_item_id="item-1"
-            ).import_item_id
-            == "item-2"
+        first_match = repository.same_run_item_by_content_hash("run-1", "a" * 64)
+        assert first_match is not None
+        assert first_match.import_item_id == "item-1"
+
+        second_match = repository.same_run_item_by_content_hash(
+            "run-1", "a" * 64, exclude_import_item_id="item-1"
         )
+        assert second_match is not None
+        assert second_match.import_item_id == "item-2"
 
 
 def test_same_run_doi_lookup_is_scoped_to_run() -> None:
