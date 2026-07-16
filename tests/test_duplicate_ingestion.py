@@ -166,7 +166,7 @@ def test_same_run_exact_hash_duplicate_references_first_item_without_second_writ
         ).import_corpus(corpus_path)
 
     run = get_run(database, result.import_run_id)
-    first, second = sorted(run.items, key=lambda item: item.csv_line_number)
+    first, second = sorted(run.items, key=lambda item: item.csv_line_number or 0)
 
     assert result.run_status == "succeeded"
     assert result.imported_count == 1
