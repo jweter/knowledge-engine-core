@@ -6,8 +6,9 @@ import json
 
 from sqlalchemy.orm import Session
 
-from knowledge_engine.duplicate_queries import DuplicateQueryRepository
+from knowledge_engine.duplicate_queries import DuplicateQueryRepository, normalize_title
 from knowledge_engine.duplicates import DuplicateCandidate, DuplicateDecision, decide_duplicate
+from knowledge_engine.import_runs.manifest_metadata import metadata_for_import_item
 from knowledge_engine.models import ImportItem, Paper
 from knowledge_engine.parser import ParsedPaper
 from knowledge_engine.utils import normalize_doi
@@ -27,6 +28,7 @@ def resolve_duplicate_before_persistence(
 
     repository = DuplicateQueryRepository(session)
     candidate_doi = normalize_doi(parsed.doi) if parsed.doi else item.normalized_doi
+    manifest_metadata = metadata_for_import_item(item)
 
     exact_item = repository.same_run_item_by_content_hash(
         item.import_run_id,
@@ -44,13 +46,23 @@ def resolve_duplicate_before_persistence(
         )
     doi_paper = repository.paper_by_normalized_doi(candidate_doi)
 
+    title_year_paper = None
+    if item.title and manifest_metadata.publication_year is not None:
+        title_year_candidates = repository.papers_by_normalized_title_year(
+            item.title,
+            manifest_metadata.publication_year,
+        )
+        title_year_paper = title_year_candidates[0] if title_year_candidates else None
+
     exact_match = _item_candidate(exact_item) or _paper_candidate(exact_paper)
     doi_match = _item_candidate(doi_item) or _paper_candidate(doi_paper)
+    title_year_match = _paper_candidate(title_year_paper)
     decision = decide_duplicate(
         candidate_content_hash=parsed.content_hash,
         candidate_normalized_doi=candidate_doi,
         exact_hash_match=exact_match,
         doi_match=doi_match,
+        title_year_match=title_year_match,
     )
 
     item.computed_content_hash = parsed.content_hash
@@ -62,6 +74,8 @@ def resolve_duplicate_before_persistence(
             "candidate": {
                 "content_hash": parsed.content_hash,
                 "normalized_doi": candidate_doi,
+                "normalized_title": normalize_title(item.title) if item.title else None,
+                "publication_year": manifest_metadata.publication_year,
             },
             "decision": {
                 "item_status": decision.item_status,
@@ -71,6 +85,7 @@ def resolve_duplicate_before_persistence(
             "matches": {
                 "exact_hash": _candidate_evidence(exact_match),
                 "doi": _candidate_evidence(doi_match),
+                "title_year": _candidate_evidence(title_year_match),
             },
         },
         sort_keys=True,
@@ -87,6 +102,8 @@ def _paper_candidate(paper: Paper | None) -> DuplicateCandidate | None:
         paper_id=paper.id,
         content_hash=paper.content_hash,
         normalized_doi=normalize_doi(paper.doi) if paper.doi else None,
+        normalized_title=normalize_title(paper.title),
+        publication_year=paper.publication_year,
     )
 
 
@@ -109,4 +126,6 @@ def _candidate_evidence(candidate: DuplicateCandidate | None) -> dict[str, objec
         "import_item_id": candidate.import_item_id,
         "content_hash": candidate.content_hash,
         "normalized_doi": candidate.normalized_doi,
+        "normalized_title": candidate.normalized_title,
+        "publication_year": candidate.publication_year,
     }
