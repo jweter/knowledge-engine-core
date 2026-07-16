@@ -19,14 +19,11 @@ from knowledge_engine.corpus.validation import (
     discover_project_root,
 )
 from knowledge_engine.database import PaperRepository
-from knowledge_engine.duplicate_queries import DuplicateQueryRepository
-from knowledge_engine.duplicates import DuplicateCandidate, DuplicateDecision, decide_duplicate
 from knowledge_engine.import_runs._helpers import new_uuid, utc_now
 from knowledge_engine.import_runs.repository import ImportRunRepository
 from knowledge_engine.import_runs.service import ImportRunService
-from knowledge_engine.models import ImportIssue, ImportItem, ImportRun, ManifestSnapshot, Paper
-from knowledge_engine.parser import DocumentParser, ParsedPaper, PyMuPDFParser
-from knowledge_engine.utils import normalize_doi
+from knowledge_engine.models import ImportIssue, ImportItem, ImportRun, ManifestSnapshot
+from knowledge_engine.parser import DocumentParser, PyMuPDFParser
 
 
 @dataclass(frozen=True)
@@ -38,7 +35,6 @@ class ImportedCorpusRun:
     imported_count: int
     failed_count: int
     skipped_count: int
-    needs_review_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -66,7 +62,6 @@ class CorpusIngestionService:
         self.project_root = (project_root or discover_project_root()).resolve()
         self.parser = parser or PyMuPDFParser()
         self.repository = ImportRunRepository(session)
-        self.duplicate_queries = DuplicateQueryRepository(session)
         self.run_service = ImportRunService(session, project_root=self.project_root)
 
     def import_corpus(self, corpus_path: Path) -> ImportedCorpusRun:
@@ -114,11 +109,9 @@ class CorpusIngestionService:
                 failed_count=0,
                 skipped_count=skipped_count,
             )
-
         imported_count = 0
         failed_count = 0
         skipped_count = 0
-        needs_review_count = 0
 
         for item in run.items:
             item.completed_at = utc_now()
@@ -185,18 +178,11 @@ class CorpusIngestionService:
                 )
                 continue
 
-            decision = self._duplicate_decision(run, item, parsed)
-            _persist_duplicate_decision(item, parsed, decision)
-            if decision.item_status == "skipped":
-                skipped_count += 1
-                continue
-            if decision.item_status == "needs_review":
-                needs_review_count += 1
-                continue
-
             try:
                 with self.session.begin_nested():
-                    paper = PaperRepository(self.session).add_parsed_paper(parsed)
+                    # Isolate one paper import so persistence/FTS failures roll back this
+                    # item completely without aborting the rest of the run.
+                    PaperRepository(self.session).add_parsed_paper(parsed)
             except ValueError:
                 failed_count += 1
                 item.item_status = "failed"
@@ -206,7 +192,9 @@ class CorpusIngestionService:
                     next_sequence,
                     _IssueTemplate(
                         code="paper_already_imported",
-                        message="A paper with the same path, DOI, or content hash already exists.",
+                        message=(
+                            "A paper with the same path, DOI, or content hash already exists."
+                        ),
                     ),
                 )
                 continue
@@ -226,9 +214,8 @@ class CorpusIngestionService:
 
             imported_count += 1
             item.item_status = "imported"
-            item.matched_paper_id = paper.id
 
-        run.run_status = _final_run_status(imported_count, failed_count, needs_review_count)
+        run.run_status = _final_run_status(imported_count, failed_count)
         run.completed_at = utc_now()
         self.session.flush()
         return ImportedCorpusRun(
@@ -237,41 +224,6 @@ class CorpusIngestionService:
             imported_count=imported_count,
             failed_count=failed_count,
             skipped_count=skipped_count,
-            needs_review_count=needs_review_count,
-        )
-
-    def _duplicate_decision(
-        self,
-        run: ImportRun,
-        item: ImportItem,
-        parsed: ParsedPaper,
-    ) -> DuplicateDecision:
-        normalized_doi = normalize_doi(parsed.doi) if parsed.doi else item.normalized_doi
-        paper_hash_match = self.duplicate_queries.paper_by_content_hash(parsed.content_hash)
-        item_hash_match = self.duplicate_queries.same_run_item_by_content_hash(
-            run.import_run_id,
-            parsed.content_hash,
-            exclude_import_item_id=item.import_item_id,
-        )
-        exact_hash_match = _paper_candidate(paper_hash_match) or _item_candidate(item_hash_match)
-
-        paper_doi_match = self.duplicate_queries.paper_by_normalized_doi(normalized_doi)
-        item_doi_match = (
-            self.duplicate_queries.same_run_item_by_normalized_doi(
-                run.import_run_id,
-                normalized_doi,
-                exclude_import_item_id=item.import_item_id,
-            )
-            if normalized_doi
-            else None
-        )
-        doi_match = _paper_candidate(paper_doi_match) or _item_candidate(item_doi_match)
-
-        return decide_duplicate(
-            candidate_content_hash=parsed.content_hash,
-            candidate_normalized_doi=normalized_doi,
-            exact_hash_match=exact_hash_match,
-            doi_match=doi_match,
         )
 
     def _record_issue(
@@ -327,51 +279,6 @@ class CorpusIngestionService:
         self.repository.add_issues([issue])
         run.import_blocker_count += 1
         return sequence + 1
-
-
-def _paper_candidate(paper: Paper | None) -> DuplicateCandidate | None:
-    if paper is None:
-        return None
-    return DuplicateCandidate(
-        paper_id=paper.id,
-        content_hash=paper.content_hash,
-        normalized_doi=normalize_doi(paper.doi) if paper.doi else None,
-    )
-
-
-def _item_candidate(item: ImportItem | None) -> DuplicateCandidate | None:
-    if item is None:
-        return None
-    return DuplicateCandidate(
-        paper_id=item.matched_paper_id,
-        import_item_id=item.import_item_id,
-        content_hash=item.computed_content_hash,
-        normalized_doi=item.normalized_doi,
-    )
-
-
-def _persist_duplicate_decision(
-    item: ImportItem,
-    parsed: ParsedPaper,
-    decision: DuplicateDecision,
-) -> None:
-    item.computed_content_hash = parsed.content_hash
-    item.normalized_doi = normalize_doi(parsed.doi) if parsed.doi else item.normalized_doi
-    item.duplicate_outcome = decision.duplicate_outcome
-    item.matched_paper_id = decision.matched_paper_id
-    item.matched_import_item_id = decision.matched_import_item_id
-    item.duplicate_evidence_json = json.dumps(
-        {
-            "reason_code": decision.reason_code,
-            "candidate_content_hash": parsed.content_hash,
-            "candidate_normalized_doi": item.normalized_doi,
-            "matched_paper_id": decision.matched_paper_id,
-            "matched_import_item_id": decision.matched_import_item_id,
-        },
-        sort_keys=True,
-        separators=(",", ":"),
-    )
-    item.item_status = decision.item_status
 
 
 def _should_import_item(item: ImportItem) -> bool:
@@ -435,11 +342,9 @@ def _resolve_item_path(papers_dir: Path, local_path: str) -> Path:
     return resolved
 
 
-def _final_run_status(imported_count: int, failed_count: int, needs_review_count: int = 0) -> str:
+def _final_run_status(imported_count: int, failed_count: int) -> str:
     if failed_count and imported_count:
         return "partially_succeeded"
     if failed_count:
         return "failed"
-    if needs_review_count:
-        return "needs_review"
     return "succeeded"
