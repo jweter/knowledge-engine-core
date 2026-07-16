@@ -33,11 +33,7 @@ def metadata_for_import_item(item: ImportItem) -> ManifestItemMetadata:
     if len(matches) != 1:
         return ManifestItemMetadata(publication_year=None)
 
-    raw_year = (
-        matches[0].get("publication_year")
-        or matches[0].get("year")
-        or ""
-    ).strip()
+    raw_year = (matches[0].get("publication_year") or matches[0].get("year") or "").strip()
     try:
         publication_year = int(raw_year)
     except ValueError:
