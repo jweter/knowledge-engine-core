@@ -21,7 +21,9 @@ from knowledge_engine.config import build_settings
 from knowledge_engine.corpus import CorpusValidationResult, Issue, validate_corpus_manifest
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.import_runs import ImportRunService
+from knowledge_engine.import_runs.cli_modes import resolve_corpus_import_mode
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService, ImportedCorpusRun
+from knowledge_engine.import_runs.linked_ingestion import LinkedCorpusIngestionService
 from knowledge_engine.models import ImportRun
 from knowledge_engine.parser import PyMuPDFParser
 from knowledge_engine.search import SearchResult, SearchService, build_natural_language_fts_query
@@ -91,6 +93,17 @@ ImportRunIdArgument = Annotated[
 CheckFilesOption = Annotated[
     bool,
     typer.Option("--check-files", help="Evaluate local PDF file readiness."),
+]
+ResumeFromOption = Annotated[
+    str | None,
+    typer.Option("--resume-from", help="Create an immutable resume run from this run UUID."),
+]
+RetryFailedFromOption = Annotated[
+    str | None,
+    typer.Option(
+        "--retry-failed-from",
+        help="Create an immutable retry run for failed items from this run UUID.",
+    ),
 ]
 ALLOWED_REVIEW_STATUSES = {"draft", "reviewed", "needs_revision", "rejected"}
 REQUIRED_EVIDENCE_FIELDS = {
@@ -445,16 +458,39 @@ def corpus_run_show(import_run_id: ImportRunIdArgument) -> None:
 
 
 @app.command("corpus-import")
-def corpus_import(corpus_json: CorpusJsonArgument) -> None:
-    """Persist and import a local corpus."""
+def corpus_import(
+    corpus_json: CorpusJsonArgument,
+    resume_from: ResumeFromOption = None,
+    retry_failed_from: RetryFailedFromOption = None,
+) -> None:
+    """Persist and import a fresh, resumed, or failed-item retry corpus run."""
+
+    try:
+        resolved_mode = resolve_corpus_import_mode(
+            resume_from=resume_from,
+            retry_failed_from=retry_failed_from,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
     database = _database()
     database.initialize()
     try:
         with database.session() as session:
-            imported = CorpusIngestionService(
-                session, project_root=database.settings.project_root
-            ).import_corpus(corpus_json)
+            if resolved_mode.is_linked:
+                assert resolved_mode.mode is not None
+                assert resolved_mode.parent_import_run_id is not None
+                imported = LinkedCorpusIngestionService(
+                    session, project_root=database.settings.project_root
+                ).import_linked_corpus(
+                    corpus_json,
+                    parent_import_run_id=resolved_mode.parent_import_run_id,
+                    mode=resolved_mode.mode,
+                )
+            else:
+                imported = CorpusIngestionService(
+                    session, project_root=database.settings.project_root
+                ).import_corpus(corpus_json)
     except Exception:
         raise typer.BadParameter(
             "Corpus import did not complete due to an internal error."
