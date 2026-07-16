@@ -53,6 +53,10 @@ knowledge-engine corpus-import corpus.json --retry-failed-from <run-id>
 
 The two parent-run options are mutually exclusive.
 
+## Verification requirement
+
+No reporting behavior is considered complete until the persisted-run output test and the full formatting, lint, strict typing, and pytest gates pass on the same committed head.
+
 ## Compatibility
 
 - Existing schema-version-1 databases are upgraded additively to schema version 2.
