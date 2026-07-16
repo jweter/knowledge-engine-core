@@ -1,3 +1,5 @@
+"""Integration tests for the duplicate decision boundary in corpus ingestion."""
+
 import json
 from pathlib import Path
 
