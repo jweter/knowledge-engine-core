@@ -43,11 +43,7 @@ def test_resume_does_not_reparse_prior_success(tmp_path: Path) -> None:
             session,
             project_root=tmp_path,
             parser=StubParser(
-                {
-                    "paper.pdf": AssertionError(
-                        "prior success must not be parsed during resume"
-                    )
-                }
+                {"paper.pdf": AssertionError("prior success must not be parsed during resume")}
             ),
         ).import_linked_corpus(
             corpus_path,
@@ -117,9 +113,7 @@ def test_retry_failed_processes_only_failed_parent_item(tmp_path: Path) -> None:
                         doi="10.1234/failed",
                         content_hash="c" * 64,
                     ),
-                    "success.pdf": AssertionError(
-                        "prior success must not be parsed during retry"
-                    ),
+                    "success.pdf": AssertionError("prior success must not be parsed during retry"),
                 }
             ),
         ).import_linked_corpus(
