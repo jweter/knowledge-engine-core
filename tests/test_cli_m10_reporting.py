@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 import knowledge_engine.cli as cli
@@ -13,7 +14,7 @@ from tests.test_corpus_import import declare_pdf, make_corpus, parsed_paper, sou
 
 
 def test_corpus_run_show_reports_m10_lineage_and_review_fields(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     database = make_database(tmp_path)
     corpus_path = make_corpus(
