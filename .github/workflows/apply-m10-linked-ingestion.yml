@@ -1,3 +1,4 @@
+# One-use verified integration workflow.
 name: Apply M10 linked ingestion
 
 on:
