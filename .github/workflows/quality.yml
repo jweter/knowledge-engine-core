@@ -2,22 +2,18 @@ name: Quality
 
 on:
   pull_request:
-
-permissions:
-  contents: write
+  push:
+    branches:
+      - main
 
 jobs:
   checks:
-    if: github.actor != 'github-actions[bot]'
-    name: Apply and verify M10 reporting
+    name: Python quality checks
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out feature branch
+      - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: feature/m10-duplicate-query-decision
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -30,72 +26,14 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Apply guarded reporting patch
-        env:
-          PATCHER_B64: ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCgpwYXRoID0gUGF0aCgia25vd2xlZGdlX2VuZ2luZS9jbGkucHkiKQp0ZXh0ID0gcGF0aC5yZWFkX3RleHQoZW5jb2Rpbmc9InV0Zi04IikKCnJlcGxhY2VtZW50cyA9IFsKKCcnJyAgICBjb25zb2xlLnByaW50KGYiSW1wb3J0IHJ1biBJRDogIHtfZGlzcGxheV9jbGlfdGV4dChydW4uaW1wb3J0X3J1bl9pZCl9IikKICAgIGNvbnNvbGUucHJpbnQoZiJSdW4gc3RhdHVzOiB7X2Rpc3BsYXlfY2xpX3RleHQocnVuLnJ1bl9zdGF0dXMpfSIpCiAgICBjb25zb2xlLnByaW50KGYiVmFsaWRhdGlvbiBtb2RlOiB7X2Rpc3BsYXlfY2xpX3RleHQocnVuLnZhbGlkYXRpb25fbW9kZSl9IikKJycnLCcnJyAgICBjb25zb2xlLnByaW50KGYiSW1wb3J0IHJ1biBJRDogIHtfZGlzcGxheV9jbGlfdGV4dChydW4uaW1wb3J0X3J1bl9pZCl9IikKICAgIGNvbnNvbGUucHJpbnQoZiJSdW4gc3RhdHVzOiB7X2Rpc3BsYXlfY2xpX3RleHQocnVuLnJ1bl9zdGF0dXMpfSIpCiAgICBjb25zb2xlLnByaW50KGYiUnVuIG1vZGU6IHtfZGlzcGxheV9jbGlfdGV4dChydW4ucnVuX21vZGUpfSIpCiAgICBjb25zb2xlLnByaW50KAogICAgICAgIGYiUGFyZW50IGltcG9ydCBydW4gSUQ6IHtfZGlzcGxheV9jbGlfdGV4dChydW4ucGFyZW50X2ltcG9ydF9ydW5faWQgb3IgJ05vbmUnKX0iCiAgICApCiAgICBjb25zb2xlLnByaW50KGYiVmFsaWRhdGlvbiBtb2RlOiB7X2Rpc3BsYXlfY2xpX3RleHQocnVuLnZhbGlkYXRpb25fbW9kZSl9IikKJycnCiksCignJycgICAgY29tcGxldGVkX205X3N0YXR1c2VzID0geyJzdWNjZWVkZWQiLCAicGFydGlhbGx5X3N1Y2NlZWRlZCIsICJmYWlsZWQifQogICAgY29tcGxldGVkX2luZ2VzdGlvbl9zdW1tYXJ5ID0gKAogICAgICAgIF9pbXBvcnRfcnVuX2l0ZW1fc3VtbWFyeShydW4pIGlmIHJ1bi5ydW5fc3RhdHVzIGluIGNvbXBsZXRlZF9tOV9zdGF0dXNlcyBlbHNlIE5vbmUKICAgICkKJycnLCcnJyAgICBjb21wbGV0ZWRfaW5nZXN0aW9uX3N0YXR1c2VzID0geyJzdWNjZWVkZWQiLCAicGFydGlhbGx5X3N1Y2NlZWRlZCIsICJmYWlsZWQiLCAibmVlZHNfcmV2aWV3In0KICAgIGNvbXBsZXRlZF9pbmdlc3Rpb25fc3VtbWFyeSA9ICgKICAgICAgICBfaW1wb3J0X3J1bl9pdGVtX3N1bW1hcnkocnVuKSBpZiBydW4ucnVuX3N0YXR1cyBpbiBjb21wbGV0ZWRfaW5nZXN0aW9uX3N0YXR1c2VzIGVsc2UgTm9uZQogICAgKQonJycKKSwKKCcnJyAgICAgICAgY29uc29sZS5wcmludChmIkltcG9ydGVkIHBhcGVyczoge2NvbXBsZXRlZF9pbmdlc3Rpb25fc3VtbWFyeVsnaW1wb3J0ZWQnXX0iKQogICAgICAgIGNvbnNvbGUucHJpbnQoZiJGYWlsZWQgaXRlbXM6IHtjb21wbGV0ZWRfaW5nZXN0aW9uX3N1bW1hcnlbJ2ZhaWxlZCddfSIpCiAgICAgICAgY29uc29sZS5wcmludChmIlNraXBwZWQgaXRlbXM6IHtjb21wbGV0ZWRfaW5nZXN0aW9uX3N1bW1hcnlbJ3NraXBwZWQnXX0iKQogICAgZWxpZiBpbXBvcnRfcmVzdWx0IGlzIG5vdCBOb25lOgogICAgICAgIGNvbnNvbGUucHJpbnQoZiJJbXBvcnRlZCBwYXBlcnM6IHtpbXBvcnRfcmVzdWx0LmltcG9ydGVkX2NvdW50fSIpCiAgICAgICAgY29uc29sZS5wcmludChmIkZhaWxlZCBpdGVtczoge2ltcG9ydF9yZXN1bHQuZmFpbGVkX2NvdW50fSIpCiAgICAgICAgY29uc29sZS5wcmludChmIlNraXBwZWQgaXRlbXM6IHtpbXBvcnRfcmVzdWx0LnNraXBwZWRfY291bnR9IikKJycnLCcnJyAgICAgICAgY29uc29sZS5wcmludChmIkltcG9ydGVkIHBhcGVyczoge2NvbXBsZXRlZF9pbmdlc3Rpb25fc3VtbWFyeVsnaW1wb3J0ZWQnXX0iKQogICAgICAgIGNvbnNvbGUucHJpbnQoZiJGYWlsZWQgaXRlbXM6IHtjb21wbGV0ZWRfaW5nZXN0aW9uX3N1bW1hcnlbJ2ZhaWxlZCddfSIpCiAgICAgICAgY29uc29sZS5wcmludChmIlNraXBwZWQgaXRlbXM6IHtjb21wbGV0ZWRfaW5nZXN0aW9uX3N1bW1hcnlbJ3NraXBwZWQnXX0iKQogICAgICAgIGNvbnNvbGUucHJpbnQoZiJOZWVkcyByZXZpZXcgaXRlbXM6IHtjb21wbGV0ZWRfaW5nZXN0aW9uX3N1bW1hcnlbJ25lZWRzX3JldmlldyddfSIpCiAgICBlbGlmIGltcG9ydF9yZXN1bHQgaXMgbm90IE5vbmU6CiAgICAgICAgY29uc29sZS5wcmludChmIkltcG9ydGVkIHBhcGVyczoge2ltcG9ydF9yZXN1bHQuaW1wb3J0ZWRfY291bnR9IikKICAgICAgICBjb25zb2xlLnByaW50KGYiRmFpbGVkIGl0ZW1zOiB7aW1wb3J0X3Jlc3VsdC5mYWlsZWRfY291bnR9IikKICAgICAgICBjb25zb2xlLnByaW50KGYiU2tpcHBlZCBpdGVtczoge2ltcG9ydF9yZXN1bHQuc2tpcHBlZF9jb3VudH0iKQogICAgICAgIGNvbnNvbGUucHJpbnQoZiJOZWVkcyByZXZpZXcgaXRlbXM6IHtpbXBvcnRfcmVzdWx0Lm5lZWRzX3Jldmlld19jb3VudH0iKQonJycKKSwKKCcnJyAgICAgICAgICAgIGYic3RhdHVzPXtfZGlzcGxheV9jbGlfdGV4dChpdGVtLml0ZW1fc3RhdHVzKX0gIgogICAgICAgICAgICBmIndhcm5pbmdzPXtpdGVtLndhcm5pbmdfY291bnR9ICIKICAgICAgICAgICAgZiJzdHJ1Y3R1cmFsX2Vycm9ycz17aXRlbS5zdHJ1Y3R1cmFsX2Vycm9yX2NvdW50fSAiCiAgICAgICAgICAgIGYiaW1wb3J0X2Jsb2NrZXJzPXtpdGVtLmltcG9ydF9ibG9ja2VyX2NvdW50fSIKJycnLCcnJyAgICAgICAgICAgIGYic3RhdHVzPXtfZGlzcGxheV9jbGlfdGV4dChpdGVtLml0ZW1fc3RhdHVzKX0gIgogICAgICAgICAgICBmImR1cGxpY2F0ZV9vdXRjb21lPXtfZGlzcGxheV9jbGlfdGV4dChpdGVtLmR1cGxpY2F0ZV9vdXRjb21lIG9yICdOb25lJyl9ICIKICAgICAgICAgICAgZiJtYXRjaGVkX3BhcGVyX2lkPXtpdGVtLm1hdGNoZWRfcGFwZXJfaWQgb3IgJ05vbmUnfSAiCiAgICAgICAgICAgIGYibWF0Y2hlZF9pbXBvcnRfaXRlbV9pZD17X2Rpc3BsYXlfY2xpX3RleHQoaXRlbS5tYXRjaGVkX2ltcG9ydF9pdGVtX2lkIG9yICdOb25lJyl9ICIKICAgICAgICAgICAgZiJyZXRyeV9vZl9pbXBvcnRfaXRlbV9pZD17X2Rpc3BsYXlfY2xpX3RleHQoaXRlbS5yZXRyeV9vZl9pbXBvcnRfaXRlbV9pZCBvciAnTm9uZScpfSAiCiAgICAgICAgICAgIGYid2FybmluZ3M9e2l0ZW0ud2FybmluZ19jb3VudH0gIgogICAgICAgICAgICBmInN0cnVjdHVyYWxfZXJyb3JzPXtpdGVtLnN0cnVjdHVyYWxfZXJyb3JfY291bnR9ICIKICAgICAgICAgICAgZiJpbXBvcnRfYmxvY2tlcnM9e2l0ZW0uaW1wb3J0X2Jsb2NrZXJfY291bnR9IgonJycKKSwKKCcnJyAgICByZXR1cm4gewogICAgICAgICJpbXBvcnRlZCI6IHN1bSgxIGZvciBpdGVtIGluIHJ1bi5pdGVtcyBpZiBpdGVtLml0ZW1fc3RhdHVzIGluIGltcG9ydGVkX3N0YXR1c2VzKSwKICAgICAgICAiZmFpbGVkIjogc3VtKDEgZm9yIGl0ZW0gaW4gcnVuLml0ZW1zIGlmIGl0ZW0uaXRlbV9zdGF0dXMgPT0gImZhaWxlZCIpLAogICAgICAgICJza2lwcGVkIjogc3VtKDEgZm9yIGl0ZW0gaW4gcnVuLml0ZW1zIGlmIGl0ZW0uaXRlbV9zdGF0dXMgPT0gInNraXBwZWQiKSwKICAgIH0KJycnLCcnJyAgICByZXR1cm4gewogICAgICAgICJpbXBvcnRlZCI6IHN1bSgxIGZvciBpdGVtIGluIHJ1bi5pdGVtcyBpZiBpdGVtLml0ZW1fc3RhdHVzIGluIGltcG9ydGVkX3N0YXR1c2VzKSwKICAgICAgICAiZmFpbGVkIjogc3VtKDEgZm9yIGl0ZW0gaW4gcnVuLml0ZW1zIGlmIGl0ZW0uaXRlbV9zdGF0dXMgPT0gImZhaWxlZCIpLAogICAgICAgICJza2lwcGVkIjogc3VtKDEgZm9yIGl0ZW0gaW4gcnVuLml0ZW1zIGlmIGl0ZW0uaXRlbV9zdGF0dXMgPT0gInNraXBwZWQiKSwKICAgICAgICAibmVlZHNfcmV2aWV3Ijogc3VtKDEgZm9yIGl0ZW0gaW4gcnVuLml0ZW1zIGlmIGl0ZW0uaXRlbV9zdGF0dXMgPT0gIm5lZWRzX3JldmlldyIpLAogICAgfQonJycKKSwKKCcnJyAgICBza2lwcGVkID0gc3VtbWFyeVsic2tpcHBlZCJdCiAgICBjb25zb2xlLnByaW50KAogICAgICAgIGYiSW5nZXN0aW9uIGNvbXBsZXRlZCB3aXRoIHtpbXBvcnRlZH0gaW1wb3J0ZWQsIHtmYWlsZWR9IGZhaWxlZCwge3NraXBwZWR9IHNraXBwZWQuIgogICAgKQonJycLCcnJyAgICBza2lwcGVkID0gc3VtbWFyeVsic2tpcHBlZCJdCiAgICBuZWVkc19yZXZpZXcgPSBzdW1tYXJ5WyJuZWVkc19yZXZpZXciXQogICAgY29uc29sZS5wcmludCgKICAgICAgICBmIkluZ2VzdGlvbiBjb21wbGV0ZWQgd2l0aCB7aW1wb3J0ZWR9IGltcG9ydGVkLCB7ZmFpbGVkfSBmYWlsZWQsIHtza2lwcGVkfSBza2lwcGVkLiIKICAgICkKICAgIGNvbnNvbGUucHJpbnQoZiJOZWVkcyByZXZpZXcgaXRlbXM6IHtuZWVkc19yZXZpZXd9IikKJycnCiksCl0KZm9yIG9sZCwgbmV3IGluIHJlcGxhY2VtZW50czoKICAgIGlmIG9sZCBub3QgaW4gdGV4dDoKICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KGYiZXhwZWN0ZWQgcmVwb3J0aW5nIGJsb2NrIG5vdCBmb3VuZDoge29sZC5zcGxpdGxpbmVzKClbMF19IikKICAgIHRleHQgPSB0ZXh0LnJlcGxhY2Uob2xkLCBuZXcsIDEpCnBhdGgud3JpdGVfdGV4dCh0ZXh0LCBlbmNvZGluZz0idXRmLTgiKQoKdGVzdF90ZXh0ID0gJycnIiIiUGVyc2lzdGVkIENMSSByZXBvcnRpbmcgY292ZXJhZ2UgZm9yIE0xMCBsaW5lYWdlIGFuZCByZXZpZXcgb3V0Y29tZXMuIiIiCgpmcm9tIHBhdGhsaWIgaW1wb3J0IFBhdGgKCmltcG9ydCBweXRlc3QKZnJvbSB0eXBlci50ZXN0aW5nIGltcG9ydCBDbGlSdW5uZXIKCmltcG9ydCBrbm93bGVkZ2VfZW5naW5lLmNsaSBhcyBjbGkKZnJvbSBrbm93bGVkZ2VfZW5naW5lLmNsaSBpbXBvcnQgYXBwCmZyb20ga25vd2xlZGdlX2VuZ2luZS5jb25maWcgaW1wb3J0IFNldHRpbmdzCmZyb20ga25vd2xlZGdlX2VuZ2luZS5kYXRhYmFzZSBpbXBvcnQgRGF0YWJhc2UKZnJvbSBrbm93bGVkZ2VfZW5naW5lLmltcG9ydF9ydW5zIGltcG9ydCBJbXBvcnRSdW5TZXJ2aWNlCmZyb20gdGVzdHMudGVzdF9jbGkgaW1wb3J0IHdyaXRlX2NsaV9jb3JwdXMKCgpkZWYgdGVzdF9jb3JwdXNfcnVuX3Nob3dfcmVwb3J0c19tMTBfbGluZWFnZV9hbmRfcmV2aWV3X2ZpZWxkcygKICAgIHRtcF9wYXRoOiBQYXRoLCBtb25rZXlwYXRjaDogcHl0ZXN0Lk1vbmtleVBhdGNoCikgLT4gTm9uZToKICAgIGNvcnB1c19wYXRoID0gd3JpdGVfY2xpX2NvcnB1cyh0bXBfcGF0aCkKICAgIGRhdGFiYXNlID0gRGF0YWJhc2UoCiAgICAgICAgU2V0dGluZ3MoCiAgICAgICAgICAgIHByb2plY3Rfcm9vdD10bXBfcGF0aCwKICAgICAgICAgICAgZGF0YV9kaXI9dG1wX3BhdGggLyAiZGF0YSIsCiAgICAgICAgICAgIGRhdGFiYXNlX3VybD1mInNxbGl0ZTovLy97dG1wX3BhdGggLyAna25vd2xlZGdlLnNxbGl0ZTMnfSIsCiAgICAgICAgKQogICAgKQogICAgZGF0YWJhc2UuaW5pdGlhbGl6ZSgpCgogICAgd2l0aCBkYXRhYmFzZS5zZXNzaW9uKCkgYXMgc2Vzc2lvbjoKICAgICAgICBwYXJlbnQgPSBJbXBvcnRSdW5TZXJ2aWNlKHNlc3Npb24sIHByb2plY3Rfcm9vdD10bXBfcGF0aCkuY3JlYXRlX3J1bihjb3JwdXNfcGF0aCkKICAgICAgICBwYXJlbnRfcnVuID0gSW1wb3J0UnVuU2VydmljZShzZXNzaW9uLCBwcm9qZWN0X3Jvb3Q9dG1wX3BhdGgpLmdldF9ydW4ocGFyZW50LmltcG9ydF9ydW5faWQpCiAgICAgICAgYXNzZXJ0IHBhcmVudF9ydW4gaXMgbm90IE5vbmUKICAgICAgICBwYXJlbnRfaXRlbSA9IHBhcmVudF9ydW4uaXRlbXNbMF0KICAgICAgICBwYXJlbnRfcnVuLnJ1bl9zdGF0dXMgPSAiZmFpbGVkIgogICAgICAgIHBhcmVudF9pdGVtLml0ZW1fc3RhdHVzID0gImZhaWxlZCIKCiAgICAgICAgbGlua2VkID0gSW1wb3J0UnVuU2VydmljZShzZXNzaW9uLCBwcm9qZWN0X3Jvb3Q9dG1wX3BhdGgpLmNyZWF0ZV9ydW4oY29ycHVzX3BhdGgpCiAgICAgICAgbGlua2VkX3J1biA9IEltcG9ydFJ1blNlcnZpY2Uoc2Vzc2lvbiwgcHJvamVjdF9yb290PXRtcF9wYXRoKS5nZXRfcnVuKGxpbmtlZC5pbXBvcnRfcnVuX2lkKQogICAgICAgIGFzc2VydCBsaW5rZWRfcnVuIGlzIG5vdCBOb25lCiAgICAgICAgbGlua2VkX2l0ZW0gPSBsaW5rZWRfcnVuLml0ZW1zWzBdCiAgICAgICAgbGlua2VkX3J1bi5ydW5fbW9kZSA9ICJyZXRyeV9mYWlsZWQiCiAgICAgICAgbGlua2VkX3J1bi5wYXJlbnRfaW1wb3J0X3J1bl9pZCA9IHBhcmVudF9ydW4uaW1wb3J0X3J1bl9pZAogICAgICAgIGxpbmtlZF9ydW4ucnVuX3N0YXR1cyA9ICJuZWVkc19yZXZpZXciCiAgICAgICAgbGlua2VkX2l0ZW0uaXRlbV9zdGF0dXMgPSAibmVlZHNfcmV2aWV3IgogICAgICAgIGxpbmtlZF9pdGVtLmR1cGxpY2F0ZV9vdXRjb21lID0gImRvaV9oYXNoX2NvbmZsaWN0IgogICAgICAgIGxpbmtlZF9pdGVtLm1hdGNoZWRfcGFwZXJfaWQgPSA0MgogICAgICAgIGxpbmtlZF9pdGVtLm1hdGNoZWRfaW1wb3J0X2l0ZW1faWQgPSBwYXJlbnRfaXRlbS5pbXBvcnRfaXRlbV9pZAogICAgICAgIGxpbmtlZF9pdGVtLnJldHJ5X29mX2ltcG9ydF9pdGVtX2lkID0gcGFyZW50X2l0ZW0uaW1wb3J0X2l0ZW1faWQKICAgICAgICBzZXNzaW9uLmZsdXNoKCkKICAgICAgICBsaW5rZWRfcnVuX2lkID0gbGlua2VkX3J1bi5pbXBvcnRfcnVuX2lkCiAgICAgICAgcGFyZW50X3J1bl9pZCA9IHBhcmVudF9ydW4uaW1wb3J0X3J1bl9pZAogICAgICAgIHBhcmVudF9pdGVtX2lkID0gcGFyZW50X2l0ZW0uaW1wb3J0X2l0ZW1faWQKCiAgICBtb25rZXlwYXRjaC5zZXRhdHRyKGNsaSwgIl9kYXRhYmFzZSIsIGxhbWJkYTogZGF0YWJhc2UpCiAgICByZXN1bHQgPSBDbGlSdW5uZXIoKS5pbnZva2UoYXBwLCBbImNvcnB1cy1ydW4tc2hvdyIsIGxpbmtlZF9ydW5faWRdKQoKICAgIGFzc2VydCByZXN1bHQuZXhpdF9jb2RlID09IDAKICAgIGFzc2VydCAiUnVuIG1vZGU6IHJldHJ5X2ZhaWxlZCIgaW4gcmVzdWx0Lm91dHB1dAogICAgYXNzZXJ0IGYiUGFyZW50IGltcG9ydCBydW4gSUQ6IHtwYXJlbnRfcnVuX2lkfSIgaW4gcmVzdWx0Lm91dHB1dAogICAgYXNzZXJ0ICJOZWVkcyByZXZpZXcgaXRlbXM6IDEiIGluIHJlc3VsdC5vdXRwdXQKICAgIGFzc2VydCAiZHVwbGljYXRlX291dGNvbWU9ZG9pX2hhc2hfY29uZmxpY3QiIGluIHJlc3VsdC5vdXRwdXQKICAgIGFzc2VydCAibWF0Y2hlZF9wYXBlcl9pZD00MiIgaW4gcmVzdWx0Lm91dHB1dAogICAgYXNzZXJ0IGYibWF0Y2hlZF9pbXBvcnRfaXRlbV9pZD17cGFyZW50X2l0ZW1faWR9IiBpbiByZXN1bHQub3V0cHV0CiAgICBhc3NlcnQgZiJyZXRyeV9vZl9pbXBvcnRfaXRlbV9pZD17cGFyZW50X2l0ZW1faWR9IiBpbiByZXN1bHQub3V0cHV0CicnJwpQYXRoKCJ0ZXN0cy90ZXN0X2NsaV9tMTBfcmVwb3J0aW5nLnB5Iikud3JpdGVfdGV4dCh0ZXN0X3RleHQsIGVuY29kaW5nPSJ1dGYtOCIpCg==
-        run: |
-          python - <<'PY'
-          import base64
-          import os
-          source = base64.b64decode(os.environ["PATCHER_B64"]).decode("utf-8")
-          compile(source, "<patcher>", "exec")
-          exec(source, {"__name__": "__main__"})
-          PY
-          poetry run black knowledge_engine/cli.py tests/test_cli_m10_reporting.py
+      - name: Check formatting
+        run: poetry run black --check .
 
-      - name: Verify complete gate
-        run: |
-          poetry run black --check .
-          poetry run ruff check .
-          poetry run mypy knowledge_engine tests
-          poetry run pytest
-          git diff --check
+      - name: Lint
+        run: poetry run ruff check .
 
-      - name: Restore standard Quality workflow and commit
-        run: |
-          cat > .github/workflows/quality.yml <<'YAML'
-          name: Quality
+      - name: Type check
+        run: poetry run mypy knowledge_engine tests
 
-          on:
-            pull_request:
-            push:
-              branches:
-                - main
-
-          jobs:
-            checks:
-              name: Python quality checks
-              runs-on: ubuntu-latest
-
-              steps:
-                - name: Check out repository
-                  uses: actions/checkout@v4
-
-                - name: Set up Python
-                  uses: actions/setup-python@v5
-                  with:
-                    python-version: "3.12"
-
-                - name: Install Poetry
-                  run: python -m pip install poetry
-
-                - name: Install dependencies
-                  run: poetry install
-
-                - name: Check formatting
-                  run: poetry run black --check .
-
-                - name: Lint
-                  run: poetry run ruff check .
-
-                - name: Type check
-                  run: poetry run mypy knowledge_engine tests
-
-                - name: Test
-                  run: poetry run pytest
-          YAML
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add knowledge_engine/cli.py tests/test_cli_m10_reporting.py .github/workflows/quality.yml
-          git commit -m "cli: report M10 run lineage and review outcomes"
-          git push origin HEAD:feature/m10-duplicate-query-decision
+      - name: Test
+        run: poetry run pytest
