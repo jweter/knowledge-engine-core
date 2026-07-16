@@ -1,0 +1,43 @@
+name: Format duplicate resolution slice
+
+on:
+  push:
+    branches:
+      - feature/m10-duplicate-query-decision
+
+permissions:
+  contents: write
+
+jobs:
+  format-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/m10-duplicate-query-decision
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Install dependencies
+        run: poetry install
+      - name: Format slice
+        run: poetry run black knowledge_engine/duplicate_resolution.py tests/test_duplicate_resolution.py
+      - name: Verify quality
+        run: |
+          poetry run black --check .
+          poetry run ruff check .
+          poetry run mypy knowledge_engine tests
+          poetry run pytest -rs
+          git diff --check
+      - name: Commit formatted slice and remove workflow
+        run: |
+          rm .github/workflows/format-duplicate-resolution.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add knowledge_engine/duplicate_resolution.py tests/test_duplicate_resolution.py .github/workflows/format-duplicate-resolution.yml
+          git commit -m 'style: format duplicate resolution slice'
+          git push origin HEAD:feature/m10-duplicate-query-decision
