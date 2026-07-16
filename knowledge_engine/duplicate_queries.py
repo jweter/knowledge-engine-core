@@ -40,16 +40,12 @@ class DuplicateQueryRepository:
             None,
         )
 
-    def papers_by_normalized_title_year(
-        self, title: str, publication_year: int
-    ) -> list[Paper]:
+    def papers_by_normalized_title_year(self, title: str, publication_year: int) -> list[Paper]:
         """Return deterministic advisory title/year candidates."""
 
         target = normalize_title(title)
         statement = (
-            select(Paper)
-            .where(Paper.publication_year == publication_year)
-            .order_by(Paper.id)
+            select(Paper).where(Paper.publication_year == publication_year).order_by(Paper.id)
         )
         return [
             paper
