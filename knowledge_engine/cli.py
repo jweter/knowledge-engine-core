@@ -962,7 +962,15 @@ def _print_import_run(
     console.print(f"Warnings: {run.warning_count}")
     console.print(f"Structural errors: {run.structural_error_count}")
     console.print(f"Import blockers: {run.import_blocker_count}")
-    if import_result is not None:
+    completed_m9_statuses = {"succeeded", "partially_succeeded", "failed"}
+    completed_ingestion_summary = (
+        _import_run_item_summary(run) if run.run_status in completed_m9_statuses else None
+    )
+    if completed_ingestion_summary is not None:
+        console.print(f"Imported papers: {completed_ingestion_summary['imported']}")
+        console.print(f"Failed items: {completed_ingestion_summary['failed']}")
+        console.print(f"Skipped items: {completed_ingestion_summary['skipped']}")
+    elif import_result is not None:
         console.print(f"Imported papers: {import_result.imported_count}")
         console.print(f"Failed items: {import_result.failed_count}")
         console.print(f"Skipped items: {import_result.skipped_count}")
@@ -997,13 +1005,8 @@ def _print_import_run(
             f"import_blockers={item.import_blocker_count}"
         )
     console.print()
-    if import_result is not None:
-        console.print("Eligible local PDFs were parsed for import.")
-        console.print("Paper and FTS records may have been written for successful items.")
-        console.print("No URLs were followed and no documents were downloaded.")
-        console.print(
-            "Validation and import do not constitute legal approval or scientific review."
-        )
+    if completed_ingestion_summary is not None:
+        _print_completed_ingestion_footer(completed_ingestion_summary, run_status=run.run_status)
         return
     if include_persistence_outcome:
         console.print("Validation run metadata was written to the database.")
@@ -1011,6 +1014,39 @@ def _print_import_run(
     console.print("No database writes to paper or FTS records were performed.")
     console.print("No PDFs were parsed or hashed.")
     console.print("Validation does not constitute legal approval or scientific review.")
+
+
+def _import_run_item_summary(run: ImportRun) -> dict[str, int]:
+    """Return M9 footer counts derived only from persisted item statuses."""
+
+    imported_statuses = {"imported", "succeeded", "warning"}
+    return {
+        "imported": sum(1 for item in run.items if item.item_status in imported_statuses),
+        "failed": sum(1 for item in run.items if item.item_status == "failed"),
+        "skipped": sum(1 for item in run.items if item.item_status == "skipped"),
+    }
+
+
+def _print_completed_ingestion_footer(summary: dict[str, int], *, run_status: str) -> None:
+    """Render an accurate footer for completed M9 ingestion runs."""
+
+    imported = summary["imported"]
+    failed = summary["failed"]
+    skipped = summary["skipped"]
+    console.print(
+        f"Ingestion completed with {imported} imported, {failed} failed, {skipped} skipped."
+    )
+    if imported > 0:
+        console.print(f"Imported papers: {imported}")
+        console.print("Paper and FTS records were written for imported items.")
+        console.print("Parsing and persistence were attempted for eligible local PDFs.")
+    else:
+        console.print("No papers were imported.")
+        console.print("No paper or FTS records were written for imported items.")
+    if run_status == "succeeded" and imported == 0 and failed == 0 and skipped > 0:
+        console.print("No eligible local PDFs were imported.")
+    console.print("No URLs were followed and no documents were downloaded.")
+    console.print("Validation and import do not constitute legal approval or scientific review.")
 
 
 def _print_issues(issues: list[Issue]) -> None:

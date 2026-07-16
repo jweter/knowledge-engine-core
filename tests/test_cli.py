@@ -175,7 +175,9 @@ def test_corpus_import_command_reports_successful_import(
     assert "Failed items: 0" in result.output
     assert "Skipped items: 0" in result.output
     assert "status=imported" in result.output
-    assert "Paper and FTS records may have been written for successful items." in result.output
+    assert "Ingestion completed with 1 imported, 0 failed, 0 skipped." in result.output
+    assert "Paper and FTS records were written for imported items." in result.output
+    assert "Parsing and persistence were attempted for eligible local PDFs." in result.output
     assert "No URLs were followed and no documents were downloaded." in result.output
 
 
@@ -194,6 +196,9 @@ def test_corpus_import_command_fails_for_import_blocked_manifest(
     assert "Failed items: 0" in result.output
     assert "Skipped items: 1" in result.output
     assert "usage_status_not_importable" in result.output
+    assert "No database writes to paper or FTS records were performed." in result.output
+    assert "No PDFs were parsed or hashed." in result.output
+    assert "Ingestion completed with" not in result.output
 
 
 def test_corpus_import_command_fails_for_invalid_manifest(
@@ -208,6 +213,99 @@ def test_corpus_import_command_fails_for_invalid_manifest(
     assert "Corpus import finished" in result.output
     assert "Run status: validation_failed" in result.output
     assert "invalid_corpus_id" in result.output
+
+
+def test_corpus_run_show_preserves_m8_validation_only_footer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus_path = write_cli_corpus(tmp_path)
+    database = Database(
+        Settings(
+            project_root=tmp_path,
+            data_dir=tmp_path / "data",
+            database_url=f"sqlite:///{tmp_path / 'knowledge.sqlite3'}",
+        )
+    )
+    database.initialize()
+    monkeypatch.setattr(cli, "_database", lambda: database)
+    with database.session() as session:
+        persisted = ImportRunService(session, project_root=tmp_path).create_run(corpus_path)
+
+    result = CliRunner().invoke(app, ["corpus-run-show", persisted.import_run_id])
+
+    assert result.exit_code == 0
+    assert "Run status: validated" in result.output
+    assert "No papers were imported." in result.output
+    assert "No database writes to paper or FTS records were performed." in result.output
+    assert "No PDFs were parsed or hashed." in result.output
+    assert "Ingestion completed with" not in result.output
+
+
+def test_corpus_run_show_summarizes_successful_m9_import(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run_id, database = _persist_import_run_with_item_statuses(tmp_path, "succeeded", ["imported"])
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(app, ["corpus-run-show", run_id])
+
+    assert result.exit_code == 0
+    assert "Ingestion completed with 1 imported, 0 failed, 0 skipped." in result.output
+    assert "Imported papers: 1" in result.output
+    assert "Paper and FTS records were written for imported items." in result.output
+    assert "Parsing and persistence were attempted for eligible local PDFs." in result.output
+    assert "No database writes to paper or FTS records were performed." not in result.output
+    assert "No PDFs were parsed or hashed." not in result.output
+
+
+def test_corpus_run_show_summarizes_partial_success_m9_import(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run_id, database = _persist_import_run_with_item_statuses(
+        tmp_path, "partially_succeeded", ["imported", "failed", "skipped"]
+    )
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(app, ["corpus-run-show", run_id])
+
+    assert result.exit_code == 0
+    assert "Ingestion completed with 1 imported, 1 failed, 1 skipped." in result.output
+    assert "Paper and FTS records were written for imported items." in result.output
+    assert "No URLs were followed and no documents were downloaded." in result.output
+    assert (
+        "Validation and import do not constitute legal approval or scientific review."
+        in result.output
+    )
+
+
+def test_corpus_run_show_summarizes_failed_m9_import_with_zero_imports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run_id, database = _persist_import_run_with_item_statuses(tmp_path, "failed", ["failed"])
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(app, ["corpus-run-show", run_id])
+
+    assert result.exit_code == 0
+    assert "Ingestion completed with 0 imported, 1 failed, 0 skipped." in result.output
+    assert "No papers were imported." in result.output
+    assert "No paper or FTS records were written for imported items." in result.output
+    assert "No URLs were followed and no documents were downloaded." in result.output
+
+
+def test_corpus_run_show_summarizes_all_skipped_successful_m9_import(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run_id, database = _persist_import_run_with_item_statuses(tmp_path, "succeeded", ["skipped"])
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(app, ["corpus-run-show", run_id])
+
+    assert result.exit_code == 0
+    assert "Ingestion completed with 0 imported, 0 failed, 1 skipped." in result.output
+    assert "No papers were imported." in result.output
+    assert "No eligible local PDFs were imported." in result.output
+    assert "No paper or FTS records were written for imported items." in result.output
 
 
 def test_corpus_import_command_sanitizes_internal_errors(
@@ -245,9 +343,7 @@ def test_corpus_import_command_sanitizes_other_sensitive_internal_errors(
             self.project_root = project_root or tmp_path
 
         def import_corpus(self, path: Path) -> ImportedCorpusRun:
-            raise RuntimeError(
-                'postgresql://user:secret-token@example.test/ke'
-            )
+            raise RuntimeError("postgresql://user:secret-token@example.test/ke")
 
     monkeypatch.setattr(cli, "CorpusIngestionService", StubCorpusIngestionService)
 
@@ -1003,6 +1099,33 @@ def test_evidence_command_fails_for_empty_jsonl(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "contains no evidence records" in result.output
+
+
+def _persist_import_run_with_item_statuses(
+    tmp_path: Path, run_status: str, item_statuses: list[str]
+) -> tuple[str, Database]:
+    rows = [
+        f"source-{index},Valid Paper {index},approved_open_access,included"
+        for index in range(1, len(item_statuses) + 1)
+    ]
+    corpus_path = write_cli_corpus(tmp_path, rows=rows)
+    database = Database(
+        Settings(
+            project_root=tmp_path,
+            data_dir=tmp_path / "data",
+            database_url=f"sqlite:///{tmp_path / 'knowledge.sqlite3'}",
+        )
+    )
+    database.initialize()
+    with database.session() as session:
+        persisted = ImportRunService(session, project_root=tmp_path).create_run(corpus_path)
+        run = ImportRunService(session, project_root=tmp_path).get_run(persisted.import_run_id)
+        assert run is not None
+        run.run_status = run_status
+        for item, item_status in zip(run.items, item_statuses, strict=True):
+            item.item_status = item_status
+        session.flush()
+    return persisted.import_run_id, database
 
 
 def write_cli_corpus(
