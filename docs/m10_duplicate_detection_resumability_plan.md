@@ -2,11 +2,31 @@
 
 ## Status
 
-Implementation-ready planning document for Issue #7.
+Active implementation document for Issue #7.
 
 Branch: `feature/m10-duplicate-detection-resumability`
 
 Baseline: `9fa26dd7107f331ab1560e801f08144804c7f4af`
+
+Implemented so far:
+
+- schema version increased from 1 to 2;
+- retry-safe additive SQLite migration for M10 columns;
+- required version-2 indexes;
+- schema verification for required version-2 columns and indexes;
+- focused fresh-database and retry-safety tests.
+
+Still pending:
+
+- SQLAlchemy model mappings for the new fields;
+- populated version-1 upgrade-preservation tests;
+- duplicate query and decision services;
+- ingestion integration before persistence;
+- immutable resume/retry planning;
+- CLI options and reporting;
+- final regression validation and release documentation.
+
+No production slice is complete until its GitHub Actions quality run passes.
 
 ## Objective
 
@@ -14,30 +34,30 @@ Make corpus reruns safe, preserve immutable run history, and make duplicate outc
 
 ## Authoritative Scope
 
-The Issue #7 body and the reviewed implementation-contract comment define M10. This document translates that contract into repository work packages.
+The Issue #7 body and the reviewed implementation-contract comment define M10. This document translates that contract into repository work packages. `docs/m10_schema_contract.md` is the exact contract for the schema work package.
 
 ## Work Package 1 — Schema and Domain Vocabulary
 
 - Add one additive schema migration through `schema_versions`.
-- Add import-run lineage fields:
-  - `parent_import_run_id`
-  - `run_mode`
+- Retain the existing `import_runs.parent_import_run_id` field.
+- Add `import_runs.run_mode`.
+- Retain the existing `import_items.normalized_doi` field.
 - Add import-item duplicate/retry fields:
   - `duplicate_outcome`
   - `matched_paper_id`
   - `matched_import_item_id`
   - `computed_content_hash`
-  - `normalized_doi`
   - structured duplicate evidence
   - `retry_of_import_item_id`
 - Preserve all existing M8/M9 records.
-- Add fresh-schema and upgrade-path tests.
+- Add fresh-schema, populated-upgrade, and partial-migration retry tests.
 
 Exit criteria:
 
 - Existing databases upgrade without data loss.
 - New schema state is recorded only after verification succeeds.
-- Foreign keys and indexes are verified.
+- Required columns and indexes are verified.
+- ORM models expose every new field.
 
 ## Work Package 2 — Duplicate Query Layer
 
