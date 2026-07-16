@@ -36,18 +36,4 @@ jobs:
         run: poetry run mypy knowledge_engine tests
 
       - name: Test
-        id: pytest
-        shell: bash
-        run: |
-          set +e
-          poetry run pytest -x --tb=short > pytest.log 2>&1
-          status=$?
-          tail -n 80 pytest.log
-          exit "$status"
-
-      - name: Upload pytest failure
-        if: failure() && steps.pytest.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-failure
-          path: pytest.log
+        run: poetry run pytest
