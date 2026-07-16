@@ -24,7 +24,30 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2
+
+_SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
+    "import_runs": {
+        "run_mode": "VARCHAR(32) NOT NULL DEFAULT 'fresh'",
+    },
+    "import_items": {
+        "duplicate_outcome": "VARCHAR(64)",
+        "matched_paper_id": "INTEGER REFERENCES papers(id)",
+        "matched_import_item_id": "VARCHAR(36) REFERENCES import_items(import_item_id)",
+        "computed_content_hash": "VARCHAR(64)",
+        "duplicate_evidence_json": "TEXT",
+        "retry_of_import_item_id": "VARCHAR(36) REFERENCES import_items(import_item_id)",
+    },
+}
+
+_SCHEMA_V2_INDEXES: dict[str, tuple[str, str]] = {
+    "ix_import_runs_parent_import_run_id": ("import_runs", "parent_import_run_id"),
+    "ix_import_items_duplicate_outcome": ("import_items", "duplicate_outcome"),
+    "ix_import_items_matched_paper_id": ("import_items", "matched_paper_id"),
+    "ix_import_items_matched_import_item_id": ("import_items", "matched_import_item_id"),
+    "ix_import_items_computed_content_hash": ("import_items", "computed_content_hash"),
+    "ix_import_items_retry_of_import_item_id": ("import_items", "retry_of_import_item_id"),
+}
 
 
 class Database:
@@ -78,15 +101,42 @@ def migrate_schema(engine: Engine) -> None:
                 f"supports ({CURRENT_SCHEMA_VERSION})."
             )
             raise RuntimeError(msg)
-        if existing_version == CURRENT_SCHEMA_VERSION:
-            _verify_schema_complete(connection)
-            return
 
         Base.metadata.create_all(connection)
+
+        if existing_version < 2:
+            _migrate_schema_v2(connection)
+
         _verify_schema_complete(connection)
+
+        if existing_version < CURRENT_SCHEMA_VERSION:
+            connection.execute(
+                text(
+                    "INSERT INTO schema_versions(version, applied_at) "
+                    "VALUES (:version, :applied_at)"
+                ),
+                {"version": CURRENT_SCHEMA_VERSION, "applied_at": _utc_now_iso()},
+            )
+
+
+def _migrate_schema_v2(connection: Connection) -> None:
+    """Add M10 duplicate evidence and run-lineage schema fields."""
+
+    for table_name, columns in _SCHEMA_V2_COLUMNS.items():
+        existing_columns = _table_columns(connection, table_name)
+        for column_name, definition in columns.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(
+                text(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {definition}')
+            )
+
+    for index_name, (table_name, column_name) in _SCHEMA_V2_INDEXES.items():
         connection.execute(
-            text("INSERT INTO schema_versions(version, applied_at) VALUES (:version, :applied_at)"),
-            {"version": CURRENT_SCHEMA_VERSION, "applied_at": _utc_now_iso()},
+            text(
+                f'CREATE INDEX IF NOT EXISTS "{index_name}" '
+                f'ON "{table_name}" ("{column_name}")'
+            )
         )
 
 
@@ -100,7 +150,7 @@ def _current_schema_version(connection: Connection) -> int:
     if not table_exists:
         return 0
     duplicate_versions = connection.execute(
-        text("SELECT version FROM schema_versions " "GROUP BY version HAVING count(*) > 1 LIMIT 1")
+        text("SELECT version FROM schema_versions GROUP BY version HAVING count(*) > 1 LIMIT 1")
     ).scalar()
     if duplicate_versions is not None:
         msg = f"Database schema version {duplicate_versions} is recorded more than once."
@@ -119,6 +169,41 @@ def _verify_schema_complete(connection: Connection) -> None:
         missing = ", ".join(missing_tables)
         msg = f"Database schema version {CURRENT_SCHEMA_VERSION} is incomplete; missing: {missing}."
         raise RuntimeError(msg)
+
+    missing_columns: list[str] = []
+    for table_name, columns in _SCHEMA_V2_COLUMNS.items():
+        existing_columns = _table_columns(connection, table_name)
+        for column_name in columns:
+            if column_name not in existing_columns:
+                missing_columns.append(f"{table_name}.{column_name}")
+    if missing_columns:
+        missing = ", ".join(sorted(missing_columns))
+        msg = (
+            f"Database schema version {CURRENT_SCHEMA_VERSION} is incomplete; "
+            f"missing columns: {missing}."
+        )
+        raise RuntimeError(msg)
+
+    existing_indexes = set(
+        connection.execute(
+            text("SELECT name FROM sqlite_master WHERE type='index' AND name IS NOT NULL")
+        ).scalars()
+    )
+    missing_indexes = sorted(set(_SCHEMA_V2_INDEXES) - existing_indexes)
+    if missing_indexes:
+        missing = ", ".join(missing_indexes)
+        msg = (
+            f"Database schema version {CURRENT_SCHEMA_VERSION} is incomplete; "
+            f"missing indexes: {missing}."
+        )
+        raise RuntimeError(msg)
+
+
+def _table_columns(connection: Connection, table_name: str) -> set[str]:
+    return {
+        str(row[1])
+        for row in connection.execute(text(f'PRAGMA table_info("{table_name}")')).fetchall()
+    }
 
 
 def _utc_now_iso() -> str:
