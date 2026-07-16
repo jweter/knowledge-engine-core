@@ -102,7 +102,11 @@ def migrate_schema(engine: Engine) -> None:
             )
             raise RuntimeError(msg)
 
-        Base.metadata.create_all(connection)
+        if existing_version == 0:
+            Base.metadata.create_all(connection)
+        else:
+            _verify_expected_tables(connection)
+            Base.metadata.create_all(connection)
 
         if existing_version < 2:
             _migrate_schema_v2(connection)
@@ -158,7 +162,7 @@ def _current_schema_version(connection: Connection) -> int:
     return int(version or 0)
 
 
-def _verify_schema_complete(connection: Connection) -> None:
+def _verify_expected_tables(connection: Connection) -> None:
     expected_tables = set(Base.metadata.tables)
     existing_tables = set(
         connection.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).scalars()
@@ -168,6 +172,10 @@ def _verify_schema_complete(connection: Connection) -> None:
         missing = ", ".join(missing_tables)
         msg = f"Database schema version {CURRENT_SCHEMA_VERSION} is incomplete; missing: {missing}."
         raise RuntimeError(msg)
+
+
+def _verify_schema_complete(connection: Connection) -> None:
+    _verify_expected_tables(connection)
 
     missing_columns: list[str] = []
     for table_name, columns in _SCHEMA_V2_COLUMNS.items():

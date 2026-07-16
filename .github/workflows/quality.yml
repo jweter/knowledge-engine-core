@@ -36,4 +36,4 @@ jobs:
         run: poetry run mypy knowledge_engine tests
 
       - name: Test
-        run: poetry run pytest -x --tb=short
+        run: poetry run pytest
