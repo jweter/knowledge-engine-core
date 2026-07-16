@@ -19,6 +19,7 @@ from knowledge_engine.corpus.validation import (
     discover_project_root,
 )
 from knowledge_engine.database import PaperRepository
+from knowledge_engine.duplicate_resolution import resolve_duplicate_before_persistence
 from knowledge_engine.import_runs._helpers import new_uuid, utc_now
 from knowledge_engine.import_runs.repository import ImportRunRepository
 from knowledge_engine.import_runs.service import ImportRunService
@@ -35,6 +36,7 @@ class ImportedCorpusRun:
     imported_count: int
     failed_count: int
     skipped_count: int
+    needs_review_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -112,6 +114,7 @@ class CorpusIngestionService:
         imported_count = 0
         failed_count = 0
         skipped_count = 0
+        needs_review_count = 0
 
         for item in run.items:
             item.completed_at = utc_now()
@@ -179,10 +182,36 @@ class CorpusIngestionService:
                 continue
 
             try:
+                decision = resolve_duplicate_before_persistence(
+                    self.session, item=item, parsed=parsed
+                )
+            except Exception:
+                failed_count += 1
+                item.item_status = "failed"
+                next_sequence = self._record_issue(
+                    run,
+                    item,
+                    next_sequence,
+                    _IssueTemplate(
+                        code="duplicate_resolution_failed",
+                        message="Duplicate identity evidence could not be resolved safely.",
+                    ),
+                )
+                continue
+
+            item.item_status = decision.item_status
+            if decision.item_status == "skipped":
+                skipped_count += 1
+                continue
+            if decision.item_status == "needs_review":
+                needs_review_count += 1
+                continue
+
+            try:
                 with self.session.begin_nested():
                     # Isolate one paper import so persistence/FTS failures roll back this
                     # item completely without aborting the rest of the run.
-                    PaperRepository(self.session).add_parsed_paper(parsed)
+                    paper = PaperRepository(self.session).add_parsed_paper(parsed)
             except ValueError:
                 failed_count += 1
                 item.item_status = "failed"
@@ -214,8 +243,9 @@ class CorpusIngestionService:
 
             imported_count += 1
             item.item_status = "imported"
+            item.matched_paper_id = paper.id
 
-        run.run_status = _final_run_status(imported_count, failed_count)
+        run.run_status = _final_run_status(imported_count, failed_count, needs_review_count)
         run.completed_at = utc_now()
         self.session.flush()
         return ImportedCorpusRun(
@@ -224,6 +254,7 @@ class CorpusIngestionService:
             imported_count=imported_count,
             failed_count=failed_count,
             skipped_count=skipped_count,
+            needs_review_count=needs_review_count,
         )
 
     def _record_issue(
@@ -342,9 +373,11 @@ def _resolve_item_path(papers_dir: Path, local_path: str) -> Path:
     return resolved
 
 
-def _final_run_status(imported_count: int, failed_count: int) -> str:
+def _final_run_status(imported_count: int, failed_count: int, needs_review_count: int = 0) -> str:
     if failed_count and imported_count:
         return "partially_succeeded"
     if failed_count:
         return "failed"
+    if needs_review_count:
+        return "needs_review"
     return "succeeded"
