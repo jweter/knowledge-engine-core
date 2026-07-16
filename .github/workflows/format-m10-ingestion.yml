@@ -1,0 +1,39 @@
+name: Format M10 ingestion integration
+
+on:
+  push:
+    branches:
+      - feature/m10-duplicate-query-decision
+    paths:
+      - .github/workflows/format-m10-ingestion.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/m10-duplicate-query-decision
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install poetry
+      - run: poetry install
+      - run: poetry run black knowledge_engine/import_runs/ingestion.py tests/test_duplicate_ingestion.py
+      - run: poetry run black --check .
+      - run: poetry run ruff check .
+      - run: poetry run mypy knowledge_engine tests
+      - run: poetry run pytest -rs
+      - run: git diff --check
+      - name: Commit verified formatting and remove workflow
+        run: |
+          rm .github/workflows/format-m10-ingestion.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add knowledge_engine/import_runs/ingestion.py tests/test_duplicate_ingestion.py .github/workflows/format-m10-ingestion.yml
+          git commit -m "style: format M10 ingestion integration"
+          git push origin HEAD:feature/m10-duplicate-query-decision
