@@ -77,9 +77,7 @@ def test_manifest_title_year_match_requires_review_without_persistence(tmp_path:
     assert item.matched_paper_id == existing_id
     assert evidence["candidate"]["publication_year"] == 2024
     assert evidence["candidate"]["normalized_title"] == "shared curated title"
-    assert evidence["decision"]["reason_code"] == (
-        "matching_normalized_title_and_publication_year"
-    )
+    assert evidence["decision"]["reason_code"] == ("matching_normalized_title_and_publication_year")
     assert evidence["matches"]["title_year"]["paper_id"] == existing_id
     assert _counts(database) == before
 
