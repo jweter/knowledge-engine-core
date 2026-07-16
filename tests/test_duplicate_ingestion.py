@@ -26,6 +26,10 @@ def _seed_paper(database: Database, parsed: ParsedPaper) -> int:
 
 def test_exact_hash_duplicate_skips_without_paper_text_or_fts_write(tmp_path: Path) -> None:
     database = make_database(tmp_path)
+    corpus_path = make_corpus(
+        tmp_path,
+        rows=[source_row(local_path="candidate.pdf", doi="10.1234/candidate")],
+    )
     existing_path = declare_pdf(tmp_path, "existing.pdf")
     existing_id = _seed_paper(
         database,
@@ -38,10 +42,6 @@ def test_exact_hash_duplicate_skips_without_paper_text_or_fts_write(tmp_path: Pa
     )
     before = _counts(database)
 
-    corpus_path = make_corpus(
-        tmp_path,
-        rows=[source_row(local_path="candidate.pdf", doi="10.1234/candidate")],
-    )
     candidate_path = declare_pdf(tmp_path, "candidate.pdf")
     parser = StubParser(
         {
@@ -78,6 +78,10 @@ def test_exact_hash_duplicate_skips_without_paper_text_or_fts_write(tmp_path: Pa
 
 def test_doi_hash_conflict_requires_review_without_persistence_write(tmp_path: Path) -> None:
     database = make_database(tmp_path)
+    corpus_path = make_corpus(
+        tmp_path,
+        rows=[source_row(local_path="candidate.pdf", doi="10.1234/shared")],
+    )
     existing_path = declare_pdf(tmp_path, "existing.pdf")
     existing_id = _seed_paper(
         database,
@@ -90,10 +94,6 @@ def test_doi_hash_conflict_requires_review_without_persistence_write(tmp_path: P
     )
     before = _counts(database)
 
-    corpus_path = make_corpus(
-        tmp_path,
-        rows=[source_row(local_path="candidate.pdf", doi="10.1234/shared")],
-    )
     candidate_path = declare_pdf(tmp_path, "candidate.pdf")
     parser = StubParser(
         {
