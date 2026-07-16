@@ -215,9 +215,7 @@ def create_fts_tables(engine: Engine) -> None:
     """Create SQLite FTS5 tables used for local search."""
 
     with engine.begin() as connection:
-        connection.execute(
-            text(
-                """
+        connection.execute(text("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS paper_search
                 USING fts5(
                     title,
@@ -226,9 +224,7 @@ def create_fts_tables(engine: Engine) -> None:
                     raw_text,
                     tokenize='porter unicode61'
                 )
-                """
-            )
-        )
+                """))
 
 
 class PaperRepository:
@@ -278,12 +274,10 @@ class PaperRepository:
         """Insert paper text into the FTS index."""
 
         self.session.execute(
-            text(
-                """
+            text("""
                 INSERT INTO paper_search(rowid, title, abstract, body_text, raw_text)
                 VALUES (:rowid, :title, :abstract, :body_text, :raw_text)
-                """
-            ),
+                """),
             {
                 "rowid": paper.id,
                 "title": paper.title,
