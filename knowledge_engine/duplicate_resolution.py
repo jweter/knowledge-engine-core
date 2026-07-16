@@ -28,26 +28,24 @@ def resolve_duplicate_before_persistence(
     repository = DuplicateQueryRepository(session)
     candidate_doi = normalize_doi(parsed.doi) if parsed.doi else item.normalized_doi
 
+    exact_item = repository.same_run_item_by_content_hash(
+        item.import_run_id,
+        parsed.content_hash,
+        exclude_import_item_id=item.import_item_id,
+    )
     exact_paper = repository.paper_by_content_hash(parsed.content_hash)
-    exact_item = None
-    if exact_paper is None:
-        exact_item = repository.same_run_item_by_content_hash(
-            item.import_run_id,
-            parsed.content_hash,
-            exclude_import_item_id=item.import_item_id,
-        )
 
-    doi_paper = repository.paper_by_normalized_doi(candidate_doi)
     doi_item = None
-    if doi_paper is None and candidate_doi:
+    if candidate_doi:
         doi_item = repository.same_run_item_by_normalized_doi(
             item.import_run_id,
             candidate_doi,
             exclude_import_item_id=item.import_item_id,
         )
+    doi_paper = repository.paper_by_normalized_doi(candidate_doi)
 
-    exact_match = _paper_candidate(exact_paper) or _item_candidate(exact_item)
-    doi_match = _paper_candidate(doi_paper) or _item_candidate(doi_item)
+    exact_match = _item_candidate(exact_item) or _paper_candidate(exact_paper)
+    doi_match = _item_candidate(doi_item) or _paper_candidate(doi_paper)
     decision = decide_duplicate(
         candidate_content_hash=parsed.content_hash,
         candidate_normalized_doi=candidate_doi,
@@ -96,6 +94,7 @@ def _item_candidate(item: ImportItem | None) -> DuplicateCandidate | None:
     if item is None:
         return None
     return DuplicateCandidate(
+        paper_id=item.matched_paper_id,
         import_item_id=item.import_item_id,
         content_hash=item.computed_content_hash,
         normalized_doi=item.normalized_doi,
