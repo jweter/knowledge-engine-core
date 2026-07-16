@@ -18,7 +18,14 @@ M10 is implemented on draft pull request #11 and remains unmerged until the fina
 - immutable linked-run creation through `parent_import_run_id` and `run_mode`;
 - linked corpus ingestion that parses only planner-selected `valid` items;
 - CLI options `--resume-from` and `--retry-failed-from`;
-- separate imported, failed, skipped, and needs-review counts.
+- separate imported, failed, skipped, and needs-review counts;
+- a parameterized run-status truth table covering success, failure, partial success, and review precedence.
+
+## Tooling
+
+- Ruff is the sole formatter and linter.
+- CI runs `ruff format --check`, `ruff check`, strict mypy, and pytest.
+- Black is no longer a project dependency or configuration source.
 
 ## Safety behavior
 
