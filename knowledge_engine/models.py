@@ -66,6 +66,7 @@ class ImportRun(Base):
     corpus_name: Mapped[str | None] = mapped_column(String(512), nullable=True)
     manifest_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     validation_mode: Mapped[str] = mapped_column(String(32), nullable=False)
+    run_mode: Mapped[str] = mapped_column(String(32), nullable=False, default="fresh")
     run_status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     manifest_validity: Mapped[str] = mapped_column(String(32), nullable=False)
     import_readiness: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -79,7 +80,7 @@ class ImportRun(Base):
     source_manifest_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     license_policy_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     corpus_path: Mapped[str] = mapped_column(Text, nullable=False)
-    parent_import_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    parent_import_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     manifest_snapshot_id: Mapped[str] = mapped_column(
         ForeignKey("manifest_snapshots.snapshot_id"), nullable=False, index=True
     )
@@ -121,6 +122,18 @@ class ImportItem(Base):
     usage_status: Mapped[str | None] = mapped_column(String(64), nullable=True)
     local_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     item_status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    duplicate_outcome: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    matched_paper_id: Mapped[int | None] = mapped_column(
+        ForeignKey("papers.id"), nullable=True, index=True
+    )
+    matched_import_item_id: Mapped[str | None] = mapped_column(
+        ForeignKey("import_items.import_item_id"), nullable=True, index=True
+    )
+    computed_content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    duplicate_evidence_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    retry_of_import_item_id: Mapped[str | None] = mapped_column(
+        ForeignKey("import_items.import_item_id"), nullable=True, index=True
+    )
     blocks_manifest: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     blocks_import: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     warning_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
