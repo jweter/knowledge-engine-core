@@ -26,6 +26,19 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
+      - name: Format linked ingestion files
+        run: |
+          poetry run black knowledge_engine/import_runs/linked_ingestion.py tests/test_linked_ingestion.py
+          mkdir -p black-output/knowledge_engine/import_runs black-output/tests
+          cp knowledge_engine/import_runs/linked_ingestion.py black-output/knowledge_engine/import_runs/
+          cp tests/test_linked_ingestion.py black-output/tests/
+
+      - name: Upload exact Black output
+        uses: actions/upload-artifact@v4
+        with:
+          name: linked-ingestion-black-output
+          path: black-output
+
       - name: Check formatting
         run: poetry run black --check .
 
