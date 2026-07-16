@@ -20,16 +20,25 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Apply verified patch
+      - name: Normalize and apply verified patch
         shell: bash
         run: |
           set -euo pipefail
-          actual_sha="$(sha256sum m9-footer-fix.patch | awk '{print $1}')"
+          python - <<'PY'
+          from pathlib import Path
+          source = Path('m9-footer-fix.patch').read_text(encoding='utf-8')
+          normalized = source.replace('\u00a0', ' ').replace('\r\n', '\n')
+          Path('/tmp/m9-footer-fix.patch').write_text(normalized, encoding='utf-8', newline='\n')
+          PY
+          actual_sha="$(sha256sum /tmp/m9-footer-fix.patch | awk '{print $1}')"
           expected_sha="3443870339dd955eef585d9e66215e3a7bb2463e20dfed4f0fe8d88f11d7a2bb"
           test "$actual_sha" = "$expected_sha"
+          git apply --check /tmp/m9-footer-fix.patch
+          git apply /tmp/m9-footer-fix.patch
+          git add knowledge_engine/cli.py tests/test_cli.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git am m9-footer-fix.patch
+          git commit -m "fix: render accurate M9 import-run summaries"
 
       - name: Remove transfer artifacts
         shell: bash
