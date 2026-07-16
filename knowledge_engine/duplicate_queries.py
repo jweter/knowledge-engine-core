@@ -32,11 +32,17 @@ class DuplicateQueryRepository:
         target = normalize_doi(doi)
         statement = select(Paper).where(Paper.doi.is_not(None)).order_by(Paper.id)
         return next(
-            (paper for paper in self.session.scalars(statement) if normalize_doi(paper.doi or "") == target),
+            (
+                paper
+                for paper in self.session.scalars(statement)
+                if normalize_doi(paper.doi or "") == target
+            ),
             None,
         )
 
-    def papers_by_normalized_title_year(self, title: str, publication_year: int) -> list[Paper]:
+    def papers_by_normalized_title_year(
+        self, title: str, publication_year: int
+    ) -> list[Paper]:
         """Return deterministic advisory title/year candidates."""
 
         target = normalize_title(title)
@@ -45,7 +51,11 @@ class DuplicateQueryRepository:
             .where(Paper.publication_year == publication_year)
             .order_by(Paper.id)
         )
-        return [paper for paper in self.session.scalars(statement) if normalize_title(paper.title) == target]
+        return [
+            paper
+            for paper in self.session.scalars(statement)
+            if normalize_title(paper.title) == target
+        ]
 
     def same_run_item_by_content_hash(
         self,
