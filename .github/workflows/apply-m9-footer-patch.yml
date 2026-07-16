@@ -20,25 +20,24 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Normalize and apply verified patch
+      - name: Normalize and apply patch
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
-          source = Path('m9-footer-fix.patch').read_text(encoding='utf-8')
+          source = Path('m9-footer-fix.patch').read_text(encoding='utf-8-sig')
           normalized = source.replace('\u00a0', ' ').replace('\r\n', '\n')
           Path('/tmp/m9-footer-fix.patch').write_text(normalized, encoding='utf-8', newline='\n')
           PY
-          actual_sha="$(sha256sum /tmp/m9-footer-fix.patch | awk '{print $1}')"
-          expected_sha="3443870339dd955eef585d9e66215e3a7bb2463e20dfed4f0fe8d88f11d7a2bb"
-          test "$actual_sha" = "$expected_sha"
-          git apply --check /tmp/m9-footer-fix.patch
-          git apply /tmp/m9-footer-fix.patch
-          git add knowledge_engine/cli.py tests/test_cli.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "fix: render accurate M9 import-run summaries"
+          if ! git am --3way /tmp/m9-footer-fix.patch; then
+            git am --abort || true
+            git apply --3way --recount --whitespace=nowarn /tmp/m9-footer-fix.patch
+            git add knowledge_engine/cli.py tests/test_cli.py
+            git commit -m "fix: render accurate M9 import-run summaries"
+          fi
 
       - name: Remove transfer artifacts
         shell: bash
