@@ -2,7 +2,7 @@
 
 ## Status
 
-M10 is implemented on draft pull request #11 and remains unmerged until the final acceptance checklist is complete.
+M10 is implemented on draft pull request #11 and remains unmerged until the final acceptance checklist is complete. The final persisted-run reporting patch is prepared but must pass the complete Quality gate before it is included in this release.
 
 ## Added
 
