@@ -36,6 +36,9 @@ jobs:
       - name: Apply guarded reporting patch
         run: python .github/scripts/apply_m10_reporting.py
 
+      - name: Remove temporary patcher before checks
+        run: rm .github/scripts/apply_m10_reporting.py
+
       - name: Format
         run: poetry run ruff format .
 
@@ -97,9 +100,6 @@ jobs:
                 - name: Test
                   run: poetry run pytest
           YAML
-
-      - name: Remove temporary patcher
-        run: rm .github/scripts/apply_m10_reporting.py
 
       - name: Commit verified reporting
         run: |
