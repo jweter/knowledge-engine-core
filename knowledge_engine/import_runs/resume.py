@@ -63,18 +63,14 @@ def plan_linked_run(
     )
 
 
-def _items_by_source_id(
-    items: list[ImportItem], *, label: str
-) -> dict[str, ImportItem]:
+def _items_by_source_id(items: list[ImportItem], *, label: str) -> dict[str, ImportItem]:
     indexed: dict[str, ImportItem] = {}
     for item in items:
         source_id = (item.source_id or "").strip()
         if not source_id:
             raise ValueError(f"{label} import item is missing stable source_id")
         if source_id in indexed:
-            raise ValueError(
-                f"{label} import items contain duplicate source_id: {source_id}"
-            )
+            raise ValueError(f"{label} import items contain duplicate source_id: {source_id}")
         indexed[source_id] = item
     return indexed
 
@@ -89,10 +85,7 @@ def _plan_resume_item(source_id: str, prior: ImportItem | None) -> PlannedImport
             "prior_success",
             prior.import_item_id,
         )
-    if (
-        prior.item_status == "skipped"
-        and prior.duplicate_outcome in _SAFE_DUPLICATE_OUTCOMES
-    ):
+    if prior.item_status == "skipped" and prior.duplicate_outcome in _SAFE_DUPLICATE_OUTCOMES:
         return PlannedImportItem(
             source_id,
             "skip",
