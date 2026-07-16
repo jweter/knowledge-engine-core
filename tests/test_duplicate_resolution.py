@@ -128,7 +128,7 @@ def test_no_duplicate_is_importable_and_persists_auditable_evidence(tmp_path: Pa
         assert item.computed_content_hash == "a" * 64
         assert item.matched_paper_id is None
         assert item.matched_import_item_id is None
-        assert json.loads(item.duplicate_evidence_json or "{}")['decision']['reason_code'] == (
+        assert json.loads(item.duplicate_evidence_json or "{}")["decision"]["reason_code"] == (
             "no_duplicate_signal"
         )
         assert _counts(session) == before
