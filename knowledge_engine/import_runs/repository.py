@@ -5,15 +5,14 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from knowledge_engine.duplicate_queries import DuplicateQueryRepository
 from knowledge_engine.models import ImportIssue, ImportItem, ImportRun, ManifestSnapshot
 
 
-class ImportRunRepository(DuplicateQueryRepository):
+class ImportRunRepository:
     """Persist and read import-run records."""
 
     def __init__(self, session: Session) -> None:
-        super().__init__(session)
+        self.session = session
 
     def add_snapshot(self, snapshot: ManifestSnapshot) -> None:
         """Add a manifest snapshot."""
