@@ -36,4 +36,10 @@ jobs:
         run: poetry run mypy knowledge_engine tests
 
       - name: Test
-        run: poetry run pytest -x --tb=short
+        shell: bash
+        run: |
+          set +e
+          poetry run pytest -x --tb=short > pytest.log 2>&1
+          status=$?
+          tail -n 80 pytest.log
+          exit "$status"
