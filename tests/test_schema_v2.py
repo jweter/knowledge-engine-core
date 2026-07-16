@@ -77,7 +77,9 @@ def test_schema_version_2_migration_is_retry_safe(tmp_path: Path) -> None:
 
     with database.engine.connect() as connection:
         versions = list(
-            connection.execute(text("SELECT version FROM schema_versions ORDER BY version")).scalars()
+            connection.execute(
+                text("SELECT version FROM schema_versions ORDER BY version")
+            ).scalars()
         )
 
     assert versions == [1, 2]
