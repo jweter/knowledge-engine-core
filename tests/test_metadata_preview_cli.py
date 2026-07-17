@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.metadata_enrichment import (
+    MAX_QUERY_DOI_CHARACTERS,
     MetadataCandidate,
     MetadataProviderResult,
     MetadataQuery,
@@ -128,6 +129,29 @@ def test_metadata_preview_rejects_unknown_provider_before_network(
 
     assert result.exit_code != 0
     assert "Unsupported metadata provider" in result.output
+    assert "Network access:" not in result.output
+    assert called is False
+
+
+def test_metadata_preview_rejects_oversized_doi_before_network(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    called = False
+
+    def fail_if_called() -> FakeProvider:
+        nonlocal called
+        called = True
+        raise AssertionError("provider factory must not be called")
+
+    monkeypatch.setattr(entrypoint, "_crossref_provider", fail_if_called)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["metadata-preview", "--doi", "x" * (MAX_QUERY_DOI_CHARACTERS + 1)],
+    )
+
+    assert result.exit_code != 0
+    assert f"{MAX_QUERY_DOI_CHARACTERS}-character limit" in result.output
     assert "Network access:" not in result.output
     assert called is False
 
