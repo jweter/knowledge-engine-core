@@ -37,13 +37,15 @@ def metadata_preview(
     normalized_provider = provider.strip().casefold()
     if normalized_provider != "crossref":
         raise typer.BadParameter("Unsupported metadata provider. Expected: crossref.")
-    if not doi.strip():
-        raise typer.BadParameter("DOI must not be blank.")
+    try:
+        query = MetadataQuery(doi=doi)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
     console.print(
         "[yellow]Network access:[/yellow] querying Crossref over HTTPS for metadata candidates."
     )
-    result = _crossref_provider().lookup(MetadataQuery(doi=doi))
+    result = _crossref_provider().lookup(query)
 
     if result.candidates:
         table = Table(title="External metadata candidates")
