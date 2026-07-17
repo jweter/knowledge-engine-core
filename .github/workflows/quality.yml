@@ -68,7 +68,23 @@ jobs:
         run: poetry run mypy knowledge_engine tests
 
       - name: Test
-        run: poetry run pytest
+        id: tests
+        continue-on-error: true
+        run: poetry run pytest > pytest-review-status.txt 2>&1
+
+      - name: Upload pytest diagnostic
+        if: steps.tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-status-pytest-error
+          path: pytest-review-status.txt
+
+      - name: Stop after pytest failure
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
+
+      - name: Remove test diagnostic
+        run: rm pytest-review-status.txt
 
       - name: Check diff hygiene
         run: git diff --check
