@@ -21,7 +21,9 @@ from knowledge_engine.config import build_settings
 from knowledge_engine.corpus import CorpusValidationResult, Issue, validate_corpus_manifest
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.import_runs import ImportRunService
+from knowledge_engine.import_runs.cli_modes import resolve_corpus_import_mode
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService, ImportedCorpusRun
+from knowledge_engine.import_runs.linked_ingestion import LinkedCorpusIngestionService
 from knowledge_engine.models import ImportRun
 from knowledge_engine.parser import PyMuPDFParser
 from knowledge_engine.search import SearchResult, SearchService, build_natural_language_fts_query
@@ -91,6 +93,17 @@ ImportRunIdArgument = Annotated[
 CheckFilesOption = Annotated[
     bool,
     typer.Option("--check-files", help="Evaluate local PDF file readiness."),
+]
+ResumeFromOption = Annotated[
+    str | None,
+    typer.Option("--resume-from", help="Create an immutable resume run from this run UUID."),
+]
+RetryFailedFromOption = Annotated[
+    str | None,
+    typer.Option(
+        "--retry-failed-from",
+        help="Create an immutable retry run for failed items from this run UUID.",
+    ),
 ]
 ALLOWED_REVIEW_STATUSES = {"draft", "reviewed", "needs_revision", "rejected"}
 REQUIRED_EVIDENCE_FIELDS = {
@@ -445,16 +458,39 @@ def corpus_run_show(import_run_id: ImportRunIdArgument) -> None:
 
 
 @app.command("corpus-import")
-def corpus_import(corpus_json: CorpusJsonArgument) -> None:
-    """Persist and import a local corpus."""
+def corpus_import(
+    corpus_json: CorpusJsonArgument,
+    resume_from: ResumeFromOption = None,
+    retry_failed_from: RetryFailedFromOption = None,
+) -> None:
+    """Persist and import a fresh, resumed, or failed-item retry corpus run."""
+
+    try:
+        resolved_mode = resolve_corpus_import_mode(
+            resume_from=resume_from,
+            retry_failed_from=retry_failed_from,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
     database = _database()
     database.initialize()
     try:
         with database.session() as session:
-            imported = CorpusIngestionService(
-                session, project_root=database.settings.project_root
-            ).import_corpus(corpus_json)
+            if resolved_mode.is_linked:
+                assert resolved_mode.mode is not None
+                assert resolved_mode.parent_import_run_id is not None
+                imported = LinkedCorpusIngestionService(
+                    session, project_root=database.settings.project_root
+                ).import_linked_corpus(
+                    corpus_json,
+                    parent_import_run_id=resolved_mode.parent_import_run_id,
+                    mode=resolved_mode.mode,
+                )
+            else:
+                imported = CorpusIngestionService(
+                    session, project_root=database.settings.project_root
+                ).import_corpus(corpus_json)
     except Exception:
         raise typer.BadParameter(
             "Corpus import did not complete due to an internal error."
@@ -941,6 +977,9 @@ def _print_import_run(
     console.print("[bold]Persisted import run[/bold]")
     console.print(f"Import run ID: {_display_cli_text(run.import_run_id)}")
     console.print(f"Run status: {_display_cli_text(run.run_status)}")
+    console.print(f"Review status: {_display_cli_text(run.review_status)}")
+    console.print(f"Run mode: {_display_cli_text(run.run_mode)}")
+    console.print(f"Parent import run ID: {_display_cli_text(run.parent_import_run_id or 'None')}")
     console.print(f"Validation mode: {_display_cli_text(run.validation_mode)}")
     console.print(f"Corpus: {_display_cli_text(run.corpus_name or 'Unknown')}")
     console.print(f"Corpus ID: {_display_cli_text(run.corpus_id or 'Unknown')}")
@@ -970,10 +1009,12 @@ def _print_import_run(
         console.print(f"Imported papers: {completed_ingestion_summary['imported']}")
         console.print(f"Failed items: {completed_ingestion_summary['failed']}")
         console.print(f"Skipped items: {completed_ingestion_summary['skipped']}")
+        console.print(f"Needs review items: {completed_ingestion_summary['needs_review']}")
     elif import_result is not None:
         console.print(f"Imported papers: {import_result.imported_count}")
         console.print(f"Failed items: {import_result.failed_count}")
         console.print(f"Skipped items: {import_result.skipped_count}")
+        console.print(f"Needs review items: {import_result.needs_review_count}")
     console.print()
     console.print("[bold]Issues[/bold]")
     if not run.issues:
@@ -1000,6 +1041,12 @@ def _print_import_run(
             f"- line {item.csv_line_number or 'n/a'} "
             f"source_id={_display_cli_text(item.source_id or 'Unknown')} "
             f"status={_display_cli_text(item.item_status)} "
+            f"duplicate_outcome={_display_cli_text(item.duplicate_outcome or 'None')} "
+            f"matched_paper_id={item.matched_paper_id or 'None'} "
+            "matched_import_item_id="
+            f"{_display_cli_text(item.matched_import_item_id or 'None')} "
+            "retry_of_import_item_id="
+            f"{_display_cli_text(item.retry_of_import_item_id or 'None')} "
             f"warnings={item.warning_count} "
             f"structural_errors={item.structural_error_count} "
             f"import_blockers={item.import_blocker_count}"
@@ -1024,6 +1071,7 @@ def _import_run_item_summary(run: ImportRun) -> dict[str, int]:
         "imported": sum(1 for item in run.items if item.item_status in imported_statuses),
         "failed": sum(1 for item in run.items if item.item_status == "failed"),
         "skipped": sum(1 for item in run.items if item.item_status == "skipped"),
+        "needs_review": sum(1 for item in run.items if item.item_status == "needs_review"),
     }
 
 

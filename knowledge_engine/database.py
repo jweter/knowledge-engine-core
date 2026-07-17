@@ -24,7 +24,7 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
@@ -37,6 +37,12 @@ _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
         "computed_content_hash": "VARCHAR(64)",
         "duplicate_evidence_json": "TEXT",
         "retry_of_import_item_id": "VARCHAR(36) REFERENCES import_items(import_item_id)",
+    },
+}
+
+_SCHEMA_V3_COLUMNS: dict[str, dict[str, str]] = {
+    "import_runs": {
+        "review_status": "VARCHAR(32) NOT NULL DEFAULT 'clear'",
     },
 }
 
@@ -110,6 +116,8 @@ def migrate_schema(engine: Engine) -> None:
 
         if existing_version < 2:
             _migrate_schema_v2(connection)
+        if existing_version < 3:
+            _migrate_schema_v3(connection)
 
         _verify_schema_complete(connection)
 
@@ -137,17 +145,31 @@ def _migrate_schema_v2(connection: Connection) -> None:
 
     for index_name, (table_name, column_name) in _SCHEMA_V2_INDEXES.items():
         connection.execute(
-            text(
-                f'CREATE INDEX IF NOT EXISTS "{index_name}" ' f'ON "{table_name}" ("{column_name}")'
-            )
+            text(f'CREATE INDEX IF NOT EXISTS "{index_name}" ON "{table_name}" ("{column_name}")')
         )
+
+
+def _migrate_schema_v3(connection: Connection) -> None:
+    """Separate operational execution status from human-review disposition."""
+
+    existing_columns = _table_columns(connection, "import_runs")
+    for column_name, definition in _SCHEMA_V3_COLUMNS["import_runs"].items():
+        if column_name not in existing_columns:
+            connection.execute(
+                text(f'ALTER TABLE "import_runs" ADD COLUMN "{column_name}" {definition}')
+            )
+    connection.execute(
+        text(
+            "UPDATE import_runs SET review_status = 'needs_review', "
+            "run_status = 'succeeded' WHERE run_status = 'needs_review'"
+        )
+    )
 
 
 def _current_schema_version(connection: Connection) -> int:
     table_exists = connection.execute(
         text(
-            "SELECT 1 FROM sqlite_master "
-            "WHERE type = 'table' AND name = 'schema_versions' LIMIT 1"
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'schema_versions' LIMIT 1"
         )
     ).scalar()
     if not table_exists:
@@ -179,6 +201,11 @@ def _verify_schema_complete(connection: Connection) -> None:
 
     missing_columns: list[str] = []
     for table_name, columns in _SCHEMA_V2_COLUMNS.items():
+        existing_columns = _table_columns(connection, table_name)
+        for column_name in columns:
+            if column_name not in existing_columns:
+                missing_columns.append(f"{table_name}.{column_name}")
+    for table_name, columns in _SCHEMA_V3_COLUMNS.items():
         existing_columns = _table_columns(connection, table_name)
         for column_name in columns:
             if column_name not in existing_columns:
@@ -223,7 +250,8 @@ def create_fts_tables(engine: Engine) -> None:
     """Create SQLite FTS5 tables used for local search."""
 
     with engine.begin() as connection:
-        connection.execute(text("""
+        connection.execute(
+            text("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS paper_search
                 USING fts5(
                     title,
@@ -232,7 +260,8 @@ def create_fts_tables(engine: Engine) -> None:
                     raw_text,
                     tokenize='porter unicode61'
                 )
-                """))
+                """)
+        )
 
 
 class PaperRepository:

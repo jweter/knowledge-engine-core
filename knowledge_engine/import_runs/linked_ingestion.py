@@ -1,84 +1,60 @@
-"""Application service for importing a validated local corpus."""
+"""Execution of immutable linked resume and retry corpus runs."""
 
 from __future__ import annotations
 
-import json
-from dataclasses import dataclass
 from pathlib import Path
 
-from sqlalchemy.orm import Session
-
-from knowledge_engine.corpus.path_safety import (
-    has_traversal,
-    is_relative_to,
-    looks_absolute,
-    resolve_under,
-)
-from knowledge_engine.corpus.validation import (
-    APPROVED_FULL_TEXT_STATUSES,
-    discover_project_root,
-)
 from knowledge_engine.database import PaperRepository
 from knowledge_engine.duplicate_resolution import resolve_duplicate_before_persistence
-from knowledge_engine.import_runs._helpers import new_uuid, utc_now
-from knowledge_engine.import_runs.repository import ImportRunRepository
-from knowledge_engine.import_runs.service import ImportRunService
-from knowledge_engine.import_runs.statuses import derive_review_status, derive_run_status
-from knowledge_engine.models import ImportIssue, ImportItem, ImportRun, ManifestSnapshot
-from knowledge_engine.parser import DocumentParser, PyMuPDFParser
+from knowledge_engine.import_runs._helpers import utc_now
+from knowledge_engine.import_runs.ingestion import (
+    CorpusIngestionService,
+    ImportedCorpusRun,
+    _final_review_status,
+    _final_run_status,
+    _IssueTemplate,
+    _papers_directory,
+    _PapersDirectoryError,
+    _resolve_item_path,
+    _should_import_item,
+)
+from knowledge_engine.import_runs.linked import LinkedImportRunService
+from knowledge_engine.import_runs.resume import RunMode
 
 
-@dataclass(frozen=True)
-class ImportedCorpusRun:
-    """Service result for one corpus import attempt."""
+class LinkedCorpusIngestionService(CorpusIngestionService):
+    """Execute a new immutable run linked to one prior import attempt."""
 
-    import_run_id: str
-    run_status: str
-    imported_count: int
-    failed_count: int
-    skipped_count: int
-    needs_review_count: int = 0
-    review_status: str = "clear"
-
-
-@dataclass(frozen=True)
-class _IssueTemplate:
-    code: str
-    message: str
-    field: str | None = "local_path"
-
-
-class _PapersDirectoryError(ValueError):
-    """Persisted papers-directory metadata could not be resolved safely."""
-
-
-class CorpusIngestionService:
-    """Import local corpus files after persisting an M8 import run."""
-
-    def __init__(
+    def import_linked_corpus(
         self,
-        session: Session,
+        corpus_path: Path,
         *,
-        project_root: Path | None = None,
-        parser: DocumentParser | None = None,
-    ) -> None:
-        self.session = session
-        self.project_root = (project_root or discover_project_root()).resolve()
-        self.parser = parser or PyMuPDFParser()
-        self.repository = ImportRunRepository(session)
-        self.run_service = ImportRunService(session, project_root=self.project_root)
+        parent_import_run_id: str,
+        mode: RunMode,
+    ) -> ImportedCorpusRun:
+        """Create and execute one explicit resume or retry-failed run."""
 
-    def import_corpus(self, corpus_path: Path) -> ImportedCorpusRun:
-        """Validate, persist, and import a local corpus without downloading documents."""
-
-        persisted = self.run_service.create_run(corpus_path, check_files=True)
+        persisted = LinkedImportRunService(
+            self.session,
+            project_root=self.project_root,
+        ).create_linked_run(
+            corpus_path,
+            parent_import_run_id=parent_import_run_id,
+            mode=mode,
+            check_files=True,
+        )
         run = self.repository.get_run(persisted.import_run_id)
         if run is None:
-            msg = "Import run was not readable after validation persistence."
-            raise RuntimeError(msg)
+            raise RuntimeError("Linked import run was not readable after persistence.")
 
         if run.manifest_validity != "valid" or run.import_readiness != "ready":
-            skipped_count = _mark_unimported_items_skipped(run)
+            skipped_count = 0
+            for item in run.items:
+                item.completed_at = utc_now()
+                if item.item_status == "valid":
+                    item.item_status = "skipped"
+                if item.item_status != "imported":
+                    skipped_count += 1
             run.completed_at = utc_now()
             self.session.flush()
             return ImportedCorpusRun(
@@ -93,7 +69,13 @@ class CorpusIngestionService:
         try:
             papers_dir = _papers_directory(run.manifest_snapshot, self.project_root)
         except _PapersDirectoryError:
-            skipped_count = _mark_unimported_items_skipped(run)
+            skipped_count = 0
+            for item in run.items:
+                item.completed_at = utc_now()
+                if item.item_status == "valid":
+                    item.item_status = "skipped"
+                if item.item_status != "imported":
+                    skipped_count += 1
             self._record_run_issue(
                 run,
                 next_sequence,
@@ -113,6 +95,7 @@ class CorpusIngestionService:
                 failed_count=0,
                 skipped_count=skipped_count,
             )
+
         imported_count = 0
         failed_count = 0
         skipped_count = 0
@@ -120,6 +103,9 @@ class CorpusIngestionService:
 
         for item in run.items:
             item.completed_at = utc_now()
+            if item.item_status != "valid":
+                skipped_count += 1
+                continue
             if not _should_import_item(item):
                 item.item_status = "skipped"
                 skipped_count += 1
@@ -185,7 +171,9 @@ class CorpusIngestionService:
 
             try:
                 decision = resolve_duplicate_before_persistence(
-                    self.session, item=item, parsed=parsed
+                    self.session,
+                    item=item,
+                    parsed=parsed,
                 )
             except Exception:
                 failed_count += 1
@@ -211,8 +199,6 @@ class CorpusIngestionService:
 
             try:
                 with self.session.begin_nested():
-                    # Isolate one paper import so persistence/FTS failures roll back this
-                    # item completely without aborting the rest of the run.
                     paper = PaperRepository(self.session).add_parsed_paper(parsed)
             except ValueError:
                 failed_count += 1
@@ -260,127 +246,3 @@ class CorpusIngestionService:
             needs_review_count=needs_review_count,
             review_status=run.review_status,
         )
-
-    def _record_issue(
-        self,
-        run: ImportRun,
-        item: ImportItem,
-        sequence: int,
-        template: _IssueTemplate,
-    ) -> int:
-        issue = ImportIssue(
-            issue_id=new_uuid(),
-            import_run_id=run.import_run_id,
-            import_item_id=item.import_item_id,
-            code=template.code,
-            severity="error",
-            category="ingestion",
-            message=template.message,
-            source_id=item.source_id,
-            field=template.field,
-            csv_line_number=item.csv_line_number,
-            blocks_manifest=False,
-            blocks_import=True,
-            sequence=sequence,
-            created_at=utc_now(),
-        )
-        self.repository.add_issues([issue])
-        item.import_blocker_count += 1
-        run.import_blocker_count += 1
-        return sequence + 1
-
-    def _record_run_issue(
-        self,
-        run: ImportRun,
-        sequence: int,
-        template: _IssueTemplate,
-    ) -> int:
-        issue = ImportIssue(
-            issue_id=new_uuid(),
-            import_run_id=run.import_run_id,
-            import_item_id=None,
-            code=template.code,
-            severity="error",
-            category="ingestion",
-            message=template.message,
-            source_id=None,
-            field=template.field,
-            csv_line_number=None,
-            blocks_manifest=False,
-            blocks_import=True,
-            sequence=sequence,
-            created_at=utc_now(),
-        )
-        self.repository.add_issues([issue])
-        run.import_blocker_count += 1
-        return sequence + 1
-
-
-def _should_import_item(item: ImportItem) -> bool:
-    return (
-        not item.blocks_manifest
-        and not item.blocks_import
-        and item.inclusion_status == "included"
-        and item.usage_status in APPROVED_FULL_TEXT_STATUSES
-        and bool(item.local_path)
-    )
-
-
-def _mark_unimported_items_skipped(run: ImportRun) -> int:
-    skipped_count = 0
-    for item in run.items:
-        item.completed_at = utc_now()
-        if item.item_status == "valid":
-            item.item_status = "skipped"
-        if item.item_status != "imported":
-            skipped_count += 1
-    return skipped_count
-
-
-def _papers_directory(snapshot: ManifestSnapshot, project_root: Path) -> Path:
-    try:
-        loaded = json.loads(snapshot.corpus_json_text)
-    except json.JSONDecodeError as exc:
-        raise _PapersDirectoryError("Persisted corpus snapshot is not valid JSON.") from exc
-    if not isinstance(loaded, dict):
-        msg = "Persisted corpus snapshot is not a JSON object."
-        raise _PapersDirectoryError(msg)
-    raw = loaded.get("default_local_papers_directory")
-    if not isinstance(raw, str) or not raw.strip():
-        msg = "Persisted corpus snapshot is missing default_local_papers_directory."
-        raise _PapersDirectoryError(msg)
-    path = Path(raw.strip())
-    if looks_absolute(path) or has_traversal(path):
-        msg = "Persisted default_local_papers_directory is not import-safe."
-        raise _PapersDirectoryError(msg)
-    try:
-        resolved = resolve_under(project_root, path)
-    except OSError as exc:
-        raise _PapersDirectoryError(
-            "Persisted default_local_papers_directory could not be resolved."
-        ) from exc
-    if not is_relative_to(resolved, project_root):
-        msg = "Persisted default_local_papers_directory escapes the project root."
-        raise _PapersDirectoryError(msg)
-    return resolved
-
-
-def _resolve_item_path(papers_dir: Path, local_path: str) -> Path:
-    path = Path(local_path)
-    if looks_absolute(path) or has_traversal(path):
-        msg = "Persisted local_path is not import-safe."
-        raise ValueError(msg)
-    resolved = resolve_under(papers_dir, path)
-    if not is_relative_to(resolved, papers_dir.resolve(strict=False)):
-        msg = "Persisted local_path escapes the papers directory."
-        raise ValueError(msg)
-    return resolved
-
-
-def _final_run_status(imported_count: int, failed_count: int, needs_review_count: int = 0) -> str:
-    del needs_review_count
-    return derive_run_status(imported=imported_count, failed=failed_count).value
-
-
-def _final_review_status(needs_review_count: int) -> str:
-    return derive_review_status(needs_review=needs_review_count).value

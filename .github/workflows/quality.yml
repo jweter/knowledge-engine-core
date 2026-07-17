@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   checks:
     name: Python quality checks
@@ -27,7 +30,7 @@ jobs:
         run: poetry install
 
       - name: Check formatting
-        run: poetry run black --check .
+        run: poetry run ruff format --check .
 
       - name: Lint
         run: poetry run ruff check .
@@ -37,3 +40,15 @@ jobs:
 
       - name: Test
         run: poetry run pytest
+
+      - name: Check diff hygiene
+        run: git diff --check
+
+      - name: Reject temporary delivery artifacts
+        run: |
+          test ! -e .github/scripts/apply_review_status.py
+          test ! -e .github/scripts/normalize_review_status_guards.py
+          test ! -e .github/scripts/fix_review_status_tests.py
+          test ! -e review-status-delivery.txt
+          test ! -e pytest-review-status.txt
+          test ! -e review-status-error.txt
