@@ -80,6 +80,18 @@ Use one entry per distinct failure. Record the first failing command, the exact 
 - **Prevention / fast path:** Always run `poetry run ruff format --check .` from the repository root. When isolating a file, still invoke Ruff through Poetry from the root so `pyproject.toml` remains active.
 - **Status:** resolved
 
+## 2026-07-18 — Metadata preview fixture failed Ruff formatting
+
+- **Area:** formatting
+- **First failing command:** `poetry run ruff format --check .`
+- **Symptom:** Quality run `29619404604` / run number `220` stopped at `Check formatting` after the metadata preview slice was committed.
+- **Affected files:** `tests/test_metadata_preview.py`
+- **Root cause:** The first `_candidate(...)` fixture call was written as a single long list element. Under Ruff `0.15.20` with the repository's 100-character configuration, the list and function call require a canonical multiline layout.
+- **Fix:** Applied Ruff's exact multiline layout to the fixture call without changing test behavior.
+- **Validation:** Quality run `29619469062` / run number `221` passed formatting, lint, strict mypy, full pytest, diff hygiene, and temporary-artifact rejection on commit `b49c0e62f7d7f685da854bfc291a3cdce0e2cd60`.
+- **Prevention / fast path:** Before committing new tests, run `poetry run ruff format --check <new-test-file>` from the repository root. For nested list elements containing calls, let Ruff choose wrapping instead of manually estimating line length.
+- **Status:** resolved
+
 ## Operating rule
 
 When CI fails:
