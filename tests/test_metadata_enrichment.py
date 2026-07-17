@@ -80,9 +80,7 @@ def test_candidate_corroborates_protected_value() -> None:
 
 def test_candidate_fills_missing_value() -> None:
     assert (
-        classify_candidate(
-            field="journal", protected_value=None, candidate_value="Test Journal"
-        )
+        classify_candidate(field="journal", protected_value=None, candidate_value="Test Journal")
         == "fills_missing"
     )
 
