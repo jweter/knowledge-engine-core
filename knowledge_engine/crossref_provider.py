@@ -12,6 +12,7 @@ from urllib.parse import quote
 
 from knowledge_engine.crossref import parse_crossref_work
 from knowledge_engine.metadata_enrichment import (
+    DiagnosticCode,
     MetadataProviderResult,
     MetadataQuery,
     ProviderDiagnostic,
@@ -129,7 +130,7 @@ class CrossrefProvider:
 
 
 def _diagnostic(
-    code: str,
+    code: DiagnosticCode,
     message: str,
     *,
     retryable: bool = False,
@@ -138,7 +139,7 @@ def _diagnostic(
         diagnostics=(
             ProviderDiagnostic(
                 provider="crossref",
-                code=code,  # type: ignore[arg-type]
+                code=code,
                 message=message,
                 retryable=retryable,
             ),
