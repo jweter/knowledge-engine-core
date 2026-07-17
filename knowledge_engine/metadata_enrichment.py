@@ -32,6 +32,7 @@ DiagnosticCode = Literal[
     "malformed_response",
     "oversized_response",
 ]
+MAX_QUERY_DOI_CHARACTERS = 512
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,15 @@ class MetadataQuery:
     """Narrow external metadata lookup request."""
 
     doi: str
+
+    def __post_init__(self) -> None:
+        normalized = self.normalized_doi
+        if not normalized:
+            raise ValueError("Metadata query DOI must not be blank.")
+        if len(normalized) > MAX_QUERY_DOI_CHARACTERS:
+            raise ValueError(
+                f"Metadata query DOI exceeds the {MAX_QUERY_DOI_CHARACTERS}-character limit."
+            )
 
     @property
     def normalized_doi(self) -> str:
