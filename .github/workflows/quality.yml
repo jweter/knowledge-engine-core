@@ -34,7 +34,20 @@ jobs:
         run: poetry install
 
       - name: Apply guarded review-status patch
-        run: python .github/scripts/apply_review_status.py
+        id: patch
+        continue-on-error: true
+        run: python .github/scripts/apply_review_status.py 2> review-status-error.txt
+
+      - name: Upload guard diagnostic
+        if: steps.patch.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-status-guard-error
+          path: review-status-error.txt
+
+      - name: Stop after guard failure
+        if: steps.patch.outcome == 'failure'
+        run: exit 1
 
       - name: Remove temporary patcher before checks
         run: rm .github/scripts/apply_review_status.py
