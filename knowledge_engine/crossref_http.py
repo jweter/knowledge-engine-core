@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from http.client import HTTPResponse
+from email.message import Message
+from http.client import HTTPMessage
+from typing import IO, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -21,14 +23,21 @@ class ResponseTooLargeError(OSError):
     """Raised when a provider response exceeds the configured byte limit."""
 
 
+class _ReadableResponse(Protocol):
+    headers: Message
+
+    def read(self, amt: int = -1) -> bytes:
+        """Read at most ``amt`` response bytes."""
+
+
 class _NoRedirectHandler(HTTPRedirectHandler):
     def redirect_request(
         self,
         req: Request,
-        fp: HTTPResponse,
+        fp: IO[bytes],
         code: int,
         msg: str,
-        headers: Mapping[str, str],
+        headers: HTTPMessage,
         newurl: str,
     ) -> Request | None:
         raise RedirectBlockedError("Crossref redirects are not permitted.")
@@ -80,7 +89,7 @@ class UrllibCrossrefTransport:
 
 
 def _read_bounded(
-    response: HTTPResponse | HTTPError,
+    response: _ReadableResponse,
     *,
     max_response_bytes: int,
 ) -> bytes:
