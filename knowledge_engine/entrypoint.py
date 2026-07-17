@@ -58,7 +58,9 @@ def metadata_preview(
                 escape(candidate.provider_record_id or "-"),
             )
         console.print(table)
-        console.print("[bold]Candidates are evidence only; no metadata was persisted or promoted.[/bold]")
+        console.print(
+            "[bold]Candidates are evidence only; no metadata was persisted or promoted.[/bold]"
+        )
         return
 
     diagnostic = result.diagnostics[0] if result.diagnostics else None
@@ -71,7 +73,6 @@ def metadata_preview(
 
     retry_note = " Retry may succeed later." if diagnostic.retryable else ""
     console.print(
-        f"[red]Provider failure ({diagnostic.code}):[/red] "
-        f"{escape(diagnostic.message)}{retry_note}"
+        f"[red]Provider failure ({diagnostic.code}):[/red] {escape(diagnostic.message)}{retry_note}"
     )
     raise typer.Exit(1)
