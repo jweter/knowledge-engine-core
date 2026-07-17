@@ -10,7 +10,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from knowledge_engine.crossref_provider import ResponseTooLargeError, TransportResponse
+from knowledge_engine.crossref_provider import ResponseTooLargeError as ResponseTooLargeError
+from knowledge_engine.crossref_provider import TransportResponse
 
 CROSSREF_HOST = "api.crossref.org"
 
