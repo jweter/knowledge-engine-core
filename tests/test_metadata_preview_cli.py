@@ -49,7 +49,9 @@ def test_metadata_preview_displays_network_notice_before_candidates(
     )
 
     assert result.exit_code == 0
-    assert result.output.index("Network access:") < result.output.index("External metadata candidates")
+    assert result.output.index("Network access:") < result.output.index(
+        "External metadata candidates"
+    )
     assert "Example Paper" in result.output
     assert "no metadata was persisted or promoted" in result.output
     assert provider.queries[0].normalized_doi == "10.1000/example"
