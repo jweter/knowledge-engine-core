@@ -29,26 +29,8 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Generate canonical metadata formatting
-        run: poetry run ruff format knowledge_engine/metadata_enrichment.py
-
-      - name: Upload canonical metadata module
-        uses: actions/upload-artifact@v4
-        with:
-          name: canonical-metadata-module
-          path: knowledge_engine/metadata_enrichment.py
-
-      - name: Verify canonical metadata was committed
-        run: git diff --exit-code -- knowledge_engine/metadata_enrichment.py
-
-      - name: Check metadata tests formatting
-        run: poetry run ruff format --check tests/test_metadata_enrichment.py
-
-      - name: Check package formatting
-        run: poetry run ruff format --check knowledge_engine
-
-      - name: Check test formatting
-        run: poetry run ruff format --check tests
+      - name: Check formatting
+        run: poetry run ruff format --check .
 
       - name: Lint
         run: poetry run ruff check .
