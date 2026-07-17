@@ -24,6 +24,10 @@ DEFAULT_MAX_RESPONSE_BYTES = 1_000_000
 DEFAULT_USER_AGENT = "knowledge-engine-core/0.2 metadata-preview"
 
 
+class ResponseTooLargeError(OSError):
+    """Raised when a provider response exceeds the configured byte limit."""
+
+
 @dataclass(frozen=True)
 class TransportResponse:
     """Bounded HTTP response returned by an injected transport."""
@@ -90,6 +94,11 @@ class CrossrefProvider:
                 headers=headers,
                 timeout_seconds=self._timeout_seconds,
                 max_response_bytes=self._max_response_bytes,
+            )
+        except ResponseTooLargeError:
+            return _diagnostic(
+                "oversized_response",
+                "Crossref response exceeded the configured size limit.",
             )
         except TimeoutError:
             return _diagnostic("timeout", "Crossref request timed out.", retryable=True)
