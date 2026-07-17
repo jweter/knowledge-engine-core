@@ -36,22 +36,7 @@ jobs:
         run: poetry run ruff check .
 
       - name: Type check
-        id: mypy
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          poetry run mypy knowledge_engine tests 2>&1 | tee mypy-error.txt
-
-      - name: Upload mypy diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mypy-diagnostics
-          path: mypy-error.txt
-
-      - name: Fail after mypy diagnostics
-        if: steps.mypy.outcome == 'failure'
-        run: exit 1
+        run: poetry run mypy knowledge_engine tests
 
       - name: Test
         run: poetry run pytest
