@@ -105,7 +105,9 @@ def render_import_run_report(run: ImportRun) -> str:
         "",
         "### Duplicate outcomes",
         "",
-        *_count_lines(summary.duplicate_outcome_counts, empty_label="No duplicate outcomes recorded."),
+        *_count_lines(
+            summary.duplicate_outcome_counts, empty_label="No duplicate outcomes recorded."
+        ),
         "",
         "## Persisted issues",
         "",
