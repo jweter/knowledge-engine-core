@@ -62,70 +62,11 @@ jobs:
       - name: Check diff hygiene
         run: git diff --check
 
-      - name: Restore standard Quality workflow
-        run: |
-          cat > .github/workflows/quality.yml <<'YAML'
-          name: Quality
-
-          on:
-            pull_request:
-            push:
-              branches:
-                - main
-
-          jobs:
-            checks:
-              name: Python quality checks
-              runs-on: ubuntu-latest
-
-              steps:
-                - name: Check out repository
-                  uses: actions/checkout@v4
-
-                - name: Set up Python
-                  uses: actions/setup-python@v5
-                  with:
-                    python-version: "3.12"
-
-                - name: Install Poetry
-                  run: python -m pip install poetry
-
-                - name: Install dependencies
-                  run: poetry install
-
-                - name: Check formatting
-                  run: poetry run ruff format --check .
-
-                - name: Lint
-                  run: poetry run ruff check .
-
-                - name: Type check
-                  run: poetry run mypy knowledge_engine tests
-
-                - name: Test
-                  run: poetry run pytest
-          YAML
-
       - name: Commit and push verified review-status upgrade
-        id: delivery
-        continue-on-error: true
         run: |
-          {
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git status --short
-            git commit -m "feat(import): separate execution and review status"
-            git push origin HEAD:feature/m10-duplicate-query-decision
-          } > review-status-delivery.txt 2>&1
-
-      - name: Upload delivery diagnostic
-        if: steps.delivery.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: review-status-delivery-error
-          path: review-status-delivery.txt
-
-      - name: Stop after delivery failure
-        if: steps.delivery.outcome == 'failure'
-        run: exit 1
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f poetry.lock review-status-delivery.txt pytest-review-status.txt review-status-error.txt
+          git add knowledge_engine tests .github/scripts
+          git commit -m "feat(import): separate execution and review status"
+          git push origin HEAD:feature/m10-duplicate-query-decision
