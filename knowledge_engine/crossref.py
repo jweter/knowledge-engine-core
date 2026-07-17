@@ -13,6 +13,7 @@ from typing import cast
 
 from knowledge_engine.metadata_enrichment import (
     MetadataCandidate,
+    MetadataField,
     MetadataProviderResult,
     MetadataQuery,
     ProviderDiagnostic,
@@ -38,7 +39,7 @@ def parse_crossref_work(
         return _malformed("Crossref response is missing a work object.")
 
     provider_record_id = _text(message.get("DOI")) or query.normalized_doi
-    candidate_values: list[tuple[str, str]] = []
+    candidate_values: list[tuple[MetadataField, str]] = []
 
     doi = _text(message.get("DOI"))
     if doi:
@@ -67,9 +68,9 @@ def parse_crossref_work(
             provider="crossref",
             provider_record_id=provider_record_id,
             queried_identifier=query.normalized_doi,
-            field=cast("MetadataField", field),
+            field=field,
             value=value,
-            normalized_value=normalize_candidate_value(cast("MetadataField", field), value),
+            normalized_value=normalize_candidate_value(field, value),
             retrieved_at=retrieved_at,
         )
         for field, value in candidate_values
