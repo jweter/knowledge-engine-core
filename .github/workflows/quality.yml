@@ -29,12 +29,6 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Check Crossref module formatting
-        run: poetry run ruff format --check knowledge_engine/crossref.py
-
-      - name: Check Crossref tests formatting
-        run: poetry run ruff format --check tests/test_crossref.py
-
       - name: Check formatting
         run: poetry run ruff format --check .
 
