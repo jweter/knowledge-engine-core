@@ -2,33 +2,48 @@
 
 ## 2026-07-17 — Ruff formatting gate
 
-### Verified fix
+### Current verification status
 
-Applied Ruff's formatting output to:
+No formatting fix is verified on the current draft PR head.
+
+The earlier isolated result recorded below did not reproduce the repository CI environment. GitHub Actions Quality run `29604444958` still failed at `poetry run ruff format --check .` after formatting-only line-wrap adjustments were committed to the two M11 Python files.
+
+### Changes attempted in this run
+
+Formatting-only adjustments were committed to:
 
 - `knowledge_engine/metadata_enrichment.py`
 - `tests/test_metadata_enrichment.py`
 
-The change is formatting-only. Domain behavior, provider contracts, validation rules, and test assertions are unchanged.
+No domain behavior, provider contract, validation rule, test assertion, schema, network boundary, CLI behavior, or persistence behavior was intentionally changed.
 
-### Tests and checks run
+### Tests and checks actually observed
 
-- `ruff format --check knowledge_engine/metadata_enrichment.py tests/test_metadata_enrichment.py` — passed after formatting; both files already formatted.
-- `ruff check knowledge_engine/metadata_enrichment.py tests/test_metadata_enrichment.py` — passed.
-- `PYTHONPATH=<isolated checkout> python -m pytest -q tests/test_metadata_enrichment.py` — passed: `14 passed`.
-
-The targeted test reproduction used the repository's current `knowledge_engine/utils.py` implementation so DOI normalization behavior matched the PR branch.
+- GitHub Actions Quality run `29604444958`:
+  - dependency installation — passed;
+  - `poetry run ruff format --check .` — failed;
+  - Ruff lint — skipped;
+  - strict mypy — skipped;
+  - pytest — skipped;
+  - diff hygiene — skipped;
+  - temporary-artifact checks — skipped.
+- Local repository commands could not be run because this runtime could not resolve `github.com` to clone the branch and does not have Ruff `0.15.20` installed.
 
 ### Outcome
 
-The known formatting defect is fixed in the draft PR branch. GitHub Actions must still complete on the new PR head before the repository-wide quality gate can be considered verified.
+The substantive error remains open. The attempted formatting adjustment is not claimed as a verified fix. The PR must remain draft.
 
 ### Remaining risk
 
-- Full repository lint, strict mypy, full pytest, diff hygiene, and artifact checks were not locally reproduced in this run.
-- The PR remains an incomplete M11 slice: Crossref adapter, preview boundary, security controls, and persistence decision are still pending.
-- The PR should remain draft.
+- The exact Ruff `0.15.20` output is not yet captured.
+- Repository-wide lint, strict mypy, full pytest, diff hygiene, and artifact checks remain unexecuted because formatting stops the workflow.
+- Direct working-tree cleanliness cannot be verified through the GitHub connector.
+- M11 remains incomplete: the Crossref adapter, preview boundary, security controls, and persistence decision are outstanding.
 
 ### Exact continuation point
 
-Inspect the GitHub Actions Quality run triggered by the latest documentation commit. If formatting passes, handle only the first newly exposed failing step; otherwise compare the CI formatter version/configuration with the local Ruff reproduction.
+On branch `feature/m11-metadata-enrichment-adapters` at the latest PR #15 head, execute the committed Poetry environment locally and run:
+
+`poetry run ruff format knowledge_engine/metadata_enrichment.py tests/test_metadata_enrichment.py`
+
+Commit the exact formatter-produced diff, then inspect the resulting Quality run. Handle only the first newly exposed failure.
