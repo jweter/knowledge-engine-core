@@ -7,9 +7,10 @@ how those candidates are displayed or persisted.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal, Protocol, Sequence
+from typing import Literal, Protocol
 
 from knowledge_engine.utils import normalize_doi
 
