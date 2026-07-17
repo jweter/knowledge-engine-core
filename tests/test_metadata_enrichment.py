@@ -6,6 +6,7 @@ import pytest
 
 from knowledge_engine.metadata_enrichment import (
     MetadataCandidate,
+    MetadataField,
     MetadataProvider,
     MetadataProviderResult,
     MetadataQuery,
@@ -58,8 +59,12 @@ def test_fake_provider_satisfies_contract() -> None:
         ("issn", " 1234-5678 ", "1234-5678"),
     ],
 )
-def test_normalize_candidate_value(field: str, value: str, expected: str) -> None:
-    assert normalize_candidate_value(field, value) == expected  # type: ignore[arg-type]
+def test_normalize_candidate_value(
+    field: MetadataField,
+    value: str,
+    expected: str,
+) -> None:
+    assert normalize_candidate_value(field, value) == expected
 
 
 def test_candidate_corroborates_protected_value() -> None:
