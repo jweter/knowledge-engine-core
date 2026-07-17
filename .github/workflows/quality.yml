@@ -32,23 +32,8 @@ jobs:
       - name: Check formatting
         run: poetry run ruff format --check .
 
-      - name: Capture lint diagnostics
-        id: lint
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          poetry run ruff check . 2>&1 | tee ruff-lint.txt
-
-      - name: Upload lint diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ruff-lint-diagnostics
-          path: ruff-lint.txt
-
-      - name: Fail after lint diagnostics
-        if: steps.lint.outcome == 'failure'
-        run: exit 1
+      - name: Lint
+        run: poetry run ruff check .
 
       - name: Type check
         run: poetry run mypy knowledge_engine tests
