@@ -2,16 +2,21 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from knowledge_engine.metadata_enrichment import MetadataCandidate
+from knowledge_engine.metadata_enrichment import MetadataCandidate, MetadataField
 from knowledge_engine.metadata_preview import ProtectedMetadataValue, compare_candidates
 
 
-def _candidate(*, field: str, value: str, normalized_value: str) -> MetadataCandidate:
+def _candidate(
+    *,
+    field: MetadataField,
+    value: str,
+    normalized_value: str,
+) -> MetadataCandidate:
     return MetadataCandidate(
         provider="crossref",
         provider_record_id="10.1000/example",
         queried_identifier="10.1000/example",
-        field=field,  # type: ignore[arg-type]
+        field=field,
         value=value,
         normalized_value=normalized_value,
         retrieved_at=datetime(2026, 7, 18, tzinfo=UTC),
