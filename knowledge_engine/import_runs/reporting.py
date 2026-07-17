@@ -64,6 +64,7 @@ def render_import_run_report(run: ImportRun) -> str:
 
     summary = summarize_import_run(run)
     snapshot = run.manifest_snapshot
+    manifest_version = run.manifest_version if run.manifest_version is not None else "unknown"
     lines = [
         "# Corpus Import Run Report",
         "",
@@ -82,7 +83,7 @@ def render_import_run_report(run: ImportRun) -> str:
         "",
         f"- Corpus ID: `{_safe(run.corpus_id or 'unknown')}`",
         f"- Corpus name: {_safe(run.corpus_name or 'Unknown')}",
-        f"- Manifest version: `{run.manifest_version if run.manifest_version is not None else 'unknown'}`",
+        f"- Manifest version: `{manifest_version}`",
         f"- Manifest validity: `{_safe(run.manifest_validity)}`",
         f"- Import readiness: `{_safe(run.import_readiness)}`",
         f"- Manifest snapshot ID: `{_safe(run.manifest_snapshot_id)}`",
@@ -133,11 +134,26 @@ def render_import_run_report(run: ImportRun) -> str:
         "",
         "## Measurement boundaries",
         "",
-        "- Counts in this report are derived from persisted import-run, item, issue, and manifest-snapshot state.",
-        "- The current schema does not store high-resolution stage timing, CPU, memory, or disk telemetry.",
-        "- Wall-clock duration and environment measurements must be recorded separately by the rehearsal operator.",
-        "- M11 external metadata candidates and metadata-conflict counts are not persisted in the current schema.",
-        "- This report does not contain extracted full text and does not provide scientific validation or synthesis.",
+        (
+            "- Counts in this report are derived from persisted import-run, item, "
+            "issue, and manifest-snapshot state."
+        ),
+        (
+            "- The current schema does not store high-resolution stage timing, CPU, "
+            "memory, or disk telemetry."
+        ),
+        (
+            "- Wall-clock duration and environment measurements must be recorded "
+            "separately by the rehearsal operator."
+        ),
+        (
+            "- M11 external metadata candidates and metadata-conflict counts are not "
+            "persisted in the current schema."
+        ),
+        (
+            "- This report does not contain extracted full text and does not provide "
+            "scientific validation or synthesis."
+        ),
         "",
     ]
     return "\n".join(lines)
