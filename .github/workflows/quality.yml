@@ -39,8 +39,10 @@ jobs:
       - name: Apply guarded review-status patch
         id: patch
         continue-on-error: true
-        run: python .github/scripts/apply_review_status.py 2> review-status-error.txt
-
+        run: |
+          python .github/scripts/apply_review_status.py
+          python .github/scripts/fix_review_status_tests.py
+        
       - name: Upload guard diagnostic
         if: steps.patch.outcome == 'failure'
         uses: actions/upload-artifact@v4
@@ -53,7 +55,7 @@ jobs:
         run: exit 1
 
       - name: Remove temporary patchers before checks
-        run: rm .github/scripts/apply_review_status.py .github/scripts/normalize_review_status_guards.py
+        run: rm .github/scripts/apply_review_status.py .github/scripts/normalize_review_status_guards.py .github/scripts/fix_review_status_tests.py
 
       - name: Format
         run: poetry run ruff format .
@@ -68,23 +70,7 @@ jobs:
         run: poetry run mypy knowledge_engine tests
 
       - name: Test
-        id: tests
-        continue-on-error: true
-        run: poetry run pytest > pytest-review-status.txt 2>&1
-
-      - name: Upload pytest diagnostic
-        if: steps.tests.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: review-status-pytest-error
-          path: pytest-review-status.txt
-
-      - name: Stop after pytest failure
-        if: steps.tests.outcome == 'failure'
-        run: exit 1
-
-      - name: Remove test diagnostic
-        run: rm pytest-review-status.txt
+        run: poetry run pytest
 
       - name: Check diff hygiene
         run: git diff --check
