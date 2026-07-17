@@ -4,23 +4,19 @@ on:
   pull_request:
   push:
     branches:
-      - feature/m10-duplicate-query-decision
+      - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   checks:
-    if: github.actor != 'github-actions[bot]'
-    name: Apply and verify review-status upgrade
+    name: Python quality checks
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out feature branch
+      - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: feature/m10-duplicate-query-decision
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -32,20 +28,6 @@ jobs:
 
       - name: Install dependencies
         run: poetry install
-
-      - name: Normalize temporary test guards
-        run: python .github/scripts/normalize_review_status_guards.py
-
-      - name: Apply guarded review-status patch
-        run: |
-          python .github/scripts/apply_review_status.py
-          python .github/scripts/fix_review_status_tests.py
-
-      - name: Remove temporary patchers before checks
-        run: rm .github/scripts/apply_review_status.py .github/scripts/normalize_review_status_guards.py .github/scripts/fix_review_status_tests.py
-
-      - name: Format
-        run: poetry run ruff format .
 
       - name: Check formatting
         run: poetry run ruff format --check .
@@ -62,11 +44,11 @@ jobs:
       - name: Check diff hygiene
         run: git diff --check
 
-      - name: Commit and push verified review-status upgrade
+      - name: Reject temporary delivery artifacts
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm -f poetry.lock review-status-delivery.txt pytest-review-status.txt review-status-error.txt
-          git add knowledge_engine tests .github/scripts
-          git commit -m "feat(import): separate execution and review status"
-          git push origin HEAD:feature/m10-duplicate-query-decision
+          test ! -e .github/scripts/apply_review_status.py
+          test ! -e .github/scripts/normalize_review_status_guards.py
+          test ! -e .github/scripts/fix_review_status_tests.py
+          test ! -e review-status-delivery.txt
+          test ! -e pytest-review-status.txt
+          test ! -e review-status-error.txt
