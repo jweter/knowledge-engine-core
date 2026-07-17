@@ -10,17 +10,13 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from knowledge_engine.crossref_provider import TransportResponse
+from knowledge_engine.crossref_provider import ResponseTooLargeError, TransportResponse
 
 CROSSREF_HOST = "api.crossref.org"
 
 
 class RedirectBlockedError(OSError):
     """Raised when a provider response attempts an HTTP redirect."""
-
-
-class ResponseTooLargeError(OSError):
-    """Raised when a provider response exceeds the configured byte limit."""
 
 
 class _ReadableResponse(Protocol):
