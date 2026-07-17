@@ -152,6 +152,30 @@ Use one entry per distinct failure. Record the first failing command, the exact 
 - **Prevention / fast path:** For Rich or terminal-rendered output, normalize whitespace or assert semantic fragments unless line layout itself is the contract.
 - **Status:** resolved
 
+## 2026-07-18 — M12 report files failed Ruff formatting
+
+- **Area:** formatting
+- **First failing command:** `poetry run ruff format --check .`
+- **Symptom:** Quality run `29621610195` / run number `254` stopped at `Check formatting` after the M12 report builder and synthetic 100-item tests were added.
+- **Affected files:** `knowledge_engine/import_runs/reporting.py`, `tests/test_import_run_reporting.py`
+- **Root cause:** The duplicate-outcome `_count_lines(...)` call and one long test assertion used manually selected wrapping that did not match Ruff `0.15.20` under the repository's 100-character configuration.
+- **Fix:** Captured Ruff's exact diff through a temporary CI artifact, applied the canonical multiline layouts, and restored the normal workflow.
+- **Validation:** Quality run `29621869030` / run number `261` passed formatting, lint, strict mypy, full pytest, diff hygiene, and temporary-artifact rejection on commit `ffff745da005380c40f3a8e1403c31319531421f`.
+- **Prevention / fast path:** Format new report modules and tests through Poetry from the repository root before committing; do not estimate wrapping manually.
+- **Status:** resolved
+
+## 2026-07-18 — M12 report literals exceeded lint line length
+
+- **Area:** lint
+- **First failing command:** `poetry run ruff check .`
+- **Symptom:** Quality run `29621752827` / run number `258` passed formatting and then failed lint with six `E501` violations in the M12 report renderer.
+- **Affected files:** `knowledge_engine/import_runs/reporting.py`
+- **Root cause:** Ruff's formatter preserves long string literals because splitting them changes the source expression, while the lint configuration independently enforces a 100-character source-line maximum. One long inline manifest-version expression and five measurement-boundary literals therefore remained over the limit after formatting.
+- **Fix:** Factored manifest version into a local value and used adjacent string literals inside parentheses so rendered text remained unchanged while source lines stayed within the configured limit.
+- **Validation:** Quality run `29621869030` / run number `261` passed lint and every subsequent gate on commit `ffff745da005380c40f3a8e1403c31319531421f`.
+- **Prevention / fast path:** Remember that formatter success does not guarantee `E501` compliance for long string literals; split source literals explicitly without inserting unintended output whitespace or newlines.
+- **Status:** resolved
+
 ## Operating rule
 
 When CI fails:
