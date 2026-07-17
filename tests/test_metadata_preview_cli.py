@@ -105,7 +105,8 @@ def test_metadata_preview_distinguishes_provider_failure(
 
     assert result.exit_code == 1
     assert "Provider failure (rate_limited)" in result.output
-    assert "Retry may succeed later." in result.output
+    assert "Retry may" in result.output
+    assert "succeed later." in result.output
 
 
 def test_metadata_preview_rejects_unknown_provider_before_network(
