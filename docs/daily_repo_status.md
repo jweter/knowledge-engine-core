@@ -1,6 +1,6 @@
 # Daily Repository Status
 
-**Date:** 2026-07-17  
+**Date:** 2026-07-18  
 **Repository:** `jweter/knowledge-engine-core`  
 **Branch:** `feature/m11-metadata-enrichment-adapters`  
 **Draft PR:** [#15 — M11: metadata enrichment provider contract](https://github.com/jweter/knowledge-engine-core/pull/15)  
@@ -8,60 +8,51 @@
 
 ## Current state
 
-PR #15 is open, mergeable, and still correctly marked draft. The verified head before this report was `025ee1103284b15da1fa8021ce242092f4f8d030` (`test(metadata): keep strict typing explicit`). The PR contains three commits and two implementation files before this status document was added.
+PR #15 is open, mergeable, and remains draft. The branch contains the provider-neutral metadata contract, deterministic normalization/classification, bounded validation, and fake-provider tests. The PR description confirms that the Crossref adapter, preview boundary, security controls, and persistence decision remain incomplete.
+
+Remote connector access verifies committed branch state but cannot inspect an uncommitted local working tree; local `git status` is therefore unavailable in this runtime.
 
 ## Completed work
 
-- Added a provider-neutral `MetadataProvider` protocol.
-- Added typed query, candidate, diagnostic, and result domain models.
-- Added deterministic metadata normalization and candidate classification.
-- Added bounded candidate validation.
-- Added deterministic fake-provider and pure-domain tests.
-- Preserved the documented M11 guardrails: no live provider, database migration, ingestion coupling, automatic overwrite, or live-provider tests yet.
+- Inspected PR #15, its active branch, current head history, M11 issue scope, Quality workflow evidence, existing error/fix logs, and targeted tests.
+- Confirmed Quality run `29618333641` failed at `poetry run ruff format --check .`; all later quality steps were skipped.
+- Reproduced a non-canonical manual wrap in `tests/test_metadata_enrichment.py` using Ruff `0.15.20` with repository `line-length = 100`.
+- Applied the exact formatter output in commit `b3bc497b20dda3e067c28f69dac99aaa02060ed7` (`fix(tests): apply Ruff formatting`).
+- Updated `docs/codex_error_log.md` and `docs/codex_fixes.md` with verified evidence, root cause, tests, outcome, and residual risk.
 
 ## Tests and commands actually run
 
-GitHub Actions Quality run `29589993514` executed on the PR head.
+Focused isolated verification only; no broad suite was rerun locally.
 
-- `python -m pip install poetry` — passed.
-- `poetry install` — passed.
-- `poetry run ruff format --check .` — **failed**.
-- `poetry run ruff check .` — skipped after the formatting failure.
-- `poetry run mypy knowledge_engine tests` — skipped.
-- `poetry run pytest` — skipped.
-- `git diff --check` — skipped.
-- Temporary-delivery-artifact checks — skipped.
+- `ruff format --check knowledge_engine/metadata_enrichment.py tests/test_metadata_enrichment.py` — passed: `2 files already formatted`.
+- `ruff check knowledge_engine/metadata_enrichment.py tests/test_metadata_enrichment.py` — passed: `All checks passed!`.
+- `PYTHONPATH=/tmp/ke-test pytest -q tests/test_metadata_enrichment.py` — passed: `14 passed in 0.13s`.
 
-No broad test suite was rerun during this report-only review.
+Latest completed repository CI evidence before this report commit:
 
-## Failures and documented errors
+- Quality run `29618333641` — failed at the broad formatting check.
+- Ruff lint, strict mypy, full pytest, `git diff --check`, and temporary-artifact checks — skipped after that failure.
 
-- Current blocking failure: Ruff formatting check in GitHub Actions.
-- The available Actions step summary identifies the failed command but does not identify the exact file or formatting diff.
-- No `docs/codex_error_log.md` file was found on the branch.
-- No repository code-search result identified a separate Codex fixes/error record.
+## Failures and blockers
 
-## Blockers
-
-1. Run `poetry run ruff format .` on the PR branch and inspect the resulting diff.
-2. Re-run `poetry run ruff format --check .`.
-3. After formatting passes, allow or run the remaining required quality gate: Ruff lint, strict mypy, full pytest, `git diff --check`, and artifact checks.
-4. Local working-tree status could not be verified through the GitHub connector. A direct clone attempt from this runtime also failed because outbound DNS access to `github.com` was unavailable.
+- A new Quality run on the current branch head is required to verify whether the broad formatting gate now passes and to expose the next failure, if any.
+- Repository-wide lint, strict typing, full pytest, diff hygiene, and artifact checks are not yet verified on the latest head.
+- Direct local working-tree cleanliness cannot be inspected through the connected GitHub API.
 
 ## Risks
 
-- The PR has not reached the complete M11 quality gate because lint, typing, tests, and diff hygiene were skipped.
-- The current slice proves the domain contract only; the mocked Crossref adapter, preview boundary, security controls, and persistence decision remain incomplete.
-- Treating the PR as merge-ready before the remaining M11 success criteria are implemented would be premature.
+- The documentation commits following the formatting fix also trigger CI and must be included in the final quality result.
+- M11 is not acceptance-complete; implementing provider networking before the current contract passes the complete gate would increase diagnostic ambiguity.
+- The PR must remain draft and must not be merged.
 
 ## Exact continuation point
 
-At PR #15 on branch `feature/m11-metadata-enrichment-adapters`, fix the Ruff formatting failure on the current metadata-enrichment slice. Do not begin the Crossref adapter until formatting, lint, strict typing, and the targeted metadata-enrichment tests pass on the existing contract.
+Inspect the GitHub Actions Quality run for the latest PR #15 head after this status commit. Handle only the first failing step. Do not begin additional M11 implementation until formatting, lint, strict mypy, full pytest, diff hygiene, and artifact checks pass.
 
 ## Next smallest task
 
-Run Ruff formatter on the two current M11 implementation files, review the formatting-only diff, commit it to PR #15, and verify that the formatting check passes.
+If the complete Quality gate passes, add the smallest deterministic mocked Crossref success-response contract test and adapter skeleton, with no database writes, ingestion coupling, retries, or live network tests.
 
 ## Coding lesson
 
-A quality gate that stops at formatting prevents noisy style drift from obscuring later lint, typing, and behavioral failures; fix the earliest deterministic failure first.
+Formatter behavior depends on repository configuration as well as tool version; reproduce both before changing code.
