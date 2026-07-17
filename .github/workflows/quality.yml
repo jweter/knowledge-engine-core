@@ -29,8 +29,11 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Check M11 formatting
-        run: poetry run ruff format --check knowledge_engine/metadata_enrichment.py tests/test_metadata_enrichment.py
+      - name: Check metadata module formatting
+        run: poetry run ruff format --check knowledge_engine/metadata_enrichment.py
+
+      - name: Check metadata tests formatting
+        run: poetry run ruff format --check tests/test_metadata_enrichment.py
 
       - name: Check package formatting
         run: poetry run ruff format --check knowledge_engine
