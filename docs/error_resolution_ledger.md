@@ -104,6 +104,54 @@ Use one entry per distinct failure. Record the first failing command, the exact 
 - **Prevention / fast path:** At standard-library I/O boundaries, type against the smallest structural protocol the code actually consumes instead of a concrete implementation class. Match overridden callback signatures to typeshed exactly.
 - **Status:** resolved
 
+## 2026-07-18 — Oversized transport response was misclassified
+
+- **Area:** runtime / reliability
+- **First failing command:** Design review of the concrete transport-to-provider exception path.
+- **Symptom:** A response rejected during bounded streaming raised `ResponseTooLargeError`, which inherited from `OSError`; the provider's broad `except OSError` therefore returned `transport_error` instead of `oversized_response`.
+- **Affected files:** `knowledge_engine/crossref_provider.py`, `knowledge_engine/crossref_http.py`, `tests/test_crossref_provider.py`
+- **Root cause:** The concrete transport owned a domain-significant exception that the provider could not distinguish before its broad operating-system failure handler.
+- **Fix:** Defined the shared response-limit exception at the provider boundary, explicitly exported it from the transport module, caught it before `OSError`, and added a regression test for a transport-thrown oversized response.
+- **Validation:** Quality run `29620797390` / run number `241` passed formatting, lint, strict mypy, full pytest, diff hygiene, and temporary-artifact rejection on commit `b9e26cd62a8f0f305cb9e7b34706b8247d097598`.
+- **Prevention / fast path:** Catch specific domain transport exceptions before broad `OSError` or network exceptions. Test exception translation across the concrete transport and provider layers, not only direct oversized byte arrays.
+- **Status:** resolved
+
+## 2026-07-18 — Metadata preview CLI failed Ruff formatting
+
+- **Area:** formatting
+- **First failing command:** `poetry run ruff format --check .`
+- **Symptom:** Quality run `29620413596` / run number `232` stopped at `Check formatting` after the CLI entrypoint and tests were added.
+- **Affected files:** `knowledge_engine/entrypoint.py`, `tests/test_metadata_preview_cli.py`
+- **Root cause:** Manually wrapped Rich output and assertion expressions did not match Ruff `0.15.20` under the repository's 100-character configuration.
+- **Fix:** Applied Ruff's canonical wrapping without changing CLI or test behavior.
+- **Validation:** Quality run `29620797390` / run number `241` passed the complete gate on commit `b9e26cd62a8f0f305cb9e7b34706b8247d097598`.
+- **Prevention / fast path:** Format every newly created module and test through Poetry from the repository root before committing.
+- **Status:** resolved
+
+## 2026-07-18 — Transitive imports failed strict mypy exports
+
+- **Area:** typing
+- **First failing command:** `poetry run mypy knowledge_engine tests`
+- **Symptom:** The diagnostic artifact reported that `knowledge_engine.entrypoint` did not explicitly export `app` and `knowledge_engine.crossref_http` did not explicitly export `ResponseTooLargeError`.
+- **Affected files:** `knowledge_engine/entrypoint.py`, `knowledge_engine/crossref_http.py`
+- **Root cause:** Runtime imports made the names available, but strict mypy does not treat a plain transitive import as a declared public module API.
+- **Fix:** Re-exported each public symbol explicitly with `from ... import name as name`; no type suppression was added.
+- **Validation:** Quality run `29620797390` / run number `241` passed strict mypy and all subsequent checks on commit `b9e26cd62a8f0f305cb9e7b34706b8247d097598`.
+- **Prevention / fast path:** When tests or consumers intentionally import a symbol from an intermediary module, declare that re-export explicitly or import from the defining module.
+- **Status:** resolved
+
+## 2026-07-18 — Rich line wrapping made CLI test brittle
+
+- **Area:** tests
+- **First failing command:** `poetry run pytest`
+- **Symptom:** The provider-failure test expected the contiguous sentence `Retry may succeed later.`, but Rich wrapped the rendered terminal output between `may` and `succeed` at the test terminal width.
+- **Affected files:** `tests/test_metadata_preview_cli.py`
+- **Root cause:** The assertion tested physical terminal line layout rather than stable semantic content.
+- **Fix:** Asserted the stable fragments `Retry may` and `succeed later.` independently while preserving the behavior and wording under test.
+- **Validation:** Quality run `29620797390` / run number `241` passed full pytest and the complete quality gate on commit `b9e26cd62a8f0f305cb9e7b34706b8247d097598`.
+- **Prevention / fast path:** For Rich or terminal-rendered output, normalize whitespace or assert semantic fragments unless line layout itself is the contract.
+- **Status:** resolved
+
 ## Operating rule
 
 When CI fails:
