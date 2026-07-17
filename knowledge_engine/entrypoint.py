@@ -8,7 +8,8 @@ import typer
 from rich.markup import escape
 from rich.table import Table
 
-from knowledge_engine.cli import app, console
+from knowledge_engine.cli import app as app
+from knowledge_engine.cli import console
 from knowledge_engine.crossref_http import UrllibCrossrefTransport
 from knowledge_engine.crossref_provider import CrossrefProvider
 from knowledge_engine.metadata_enrichment import MetadataProvider, MetadataQuery
