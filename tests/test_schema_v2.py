@@ -1,4 +1,4 @@
-"""Focused tests for the M10 schema version 2 migration."""
+"""Focused tests for the M10 schema version 3 migration."""
 
 from pathlib import Path
 
@@ -43,7 +43,7 @@ def _table_names(database: Database) -> set[str]:
         )
 
 
-def test_fresh_database_initializes_at_schema_version_2(tmp_path: Path) -> None:
+def test_fresh_database_initializes_at_schema_version_3(tmp_path: Path) -> None:
     database = _database(tmp_path)
 
     database.initialize()
@@ -52,7 +52,8 @@ def test_fresh_database_initializes_at_schema_version_2(tmp_path: Path) -> None:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
         foreign_keys_enabled = connection.execute(text("PRAGMA foreign_keys")).scalar_one()
 
-    assert version == CURRENT_SCHEMA_VERSION == 2
+    assert version == CURRENT_SCHEMA_VERSION == 3
+    assert "review_status" in _column_names(database, "import_runs")
     assert foreign_keys_enabled == 1
     assert "run_mode" in _column_names(database, "import_runs")
     assert {
@@ -73,12 +74,12 @@ def test_fresh_database_initializes_at_schema_version_2(tmp_path: Path) -> None:
     } <= _index_names(database)
 
 
-def test_schema_version_2_migration_is_retry_safe(tmp_path: Path) -> None:
+def test_schema_version_3_migration_is_retry_safe(tmp_path: Path) -> None:
     database = _database(tmp_path)
     database.initialize()
 
     with database.engine.begin() as connection:
-        connection.execute(text("UPDATE schema_versions SET version = 1 WHERE version = 2"))
+        connection.execute(text("UPDATE schema_versions SET version = 2 WHERE version = 3"))
 
     database.initialize()
     database.initialize()
@@ -90,7 +91,7 @@ def test_schema_version_2_migration_is_retry_safe(tmp_path: Path) -> None:
             ).scalars()
         )
 
-    assert versions == [1, 2]
+    assert versions == [2, 3]
     assert "run_mode" in _column_names(database, "import_runs")
     assert "duplicate_evidence_json" in _column_names(database, "import_items")
 
@@ -116,7 +117,7 @@ def test_older_version_missing_table_is_not_silently_repaired(tmp_path: Path) ->
     database.initialize()
 
     with database.engine.begin() as connection:
-        connection.execute(text("UPDATE schema_versions SET version = 1 WHERE version = 2"))
+        connection.execute(text("UPDATE schema_versions SET version = 2 WHERE version = 3"))
         connection.execute(text("DROP TABLE import_items"))
 
     with pytest.raises(RuntimeError, match="incomplete"):
@@ -129,7 +130,7 @@ def test_older_version_missing_table_is_not_silently_repaired(tmp_path: Path) ->
                 text("SELECT version FROM schema_versions ORDER BY version")
             ).scalars()
         )
-    assert versions == [1]
+    assert versions == [2]
 
 
 def test_current_version_missing_index_is_not_silently_repaired(tmp_path: Path) -> None:

@@ -68,6 +68,9 @@ class ImportRun(Base):
     validation_mode: Mapped[str] = mapped_column(String(32), nullable=False)
     run_mode: Mapped[str] = mapped_column(String(32), nullable=False, default="fresh")
     run_status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    review_status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="clear", index=True
+    )
     manifest_validity: Mapped[str] = mapped_column(String(32), nullable=False)
     import_readiness: Mapped[str] = mapped_column(String(32), nullable=False)
     total_source_rows: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

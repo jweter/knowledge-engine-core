@@ -10,6 +10,7 @@ from knowledge_engine.import_runs._helpers import utc_now
 from knowledge_engine.import_runs.ingestion import (
     CorpusIngestionService,
     ImportedCorpusRun,
+    _final_review_status,
     _final_run_status,
     _IssueTemplate,
     _papers_directory,
@@ -232,11 +233,8 @@ class LinkedCorpusIngestionService(CorpusIngestionService):
             item.item_status = "imported"
             item.matched_paper_id = paper.id
 
-        run.run_status = _final_run_status(
-            imported_count,
-            failed_count,
-            needs_review_count,
-        )
+        run.run_status = _final_run_status(imported_count, failed_count)
+        run.review_status = _final_review_status(needs_review_count)
         run.completed_at = utc_now()
         self.session.flush()
         return ImportedCorpusRun(
@@ -246,4 +244,5 @@ class LinkedCorpusIngestionService(CorpusIngestionService):
             failed_count=failed_count,
             skipped_count=skipped_count,
             needs_review_count=needs_review_count,
+            review_status=run.review_status,
         )

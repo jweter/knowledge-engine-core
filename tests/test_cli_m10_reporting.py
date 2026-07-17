@@ -39,7 +39,8 @@ def test_corpus_run_show_reports_m10_lineage_and_review_fields(
         assert run is not None
         run.run_mode = "resume"
         run.parent_import_run_id = "11111111-1111-1111-1111-111111111111"
-        run.run_status = "needs_review"
+        run.run_status = "succeeded"
+        run.review_status = "needs_review"
         item = run.items[0]
         item.item_status = "needs_review"
         item.duplicate_outcome = "possible_title_year_duplicate"
@@ -54,9 +55,7 @@ def test_corpus_run_show_reports_m10_lineage_and_review_fields(
 
     assert result.exit_code == 0
     assert "Run mode: resume" in result.output
-    assert (
-        "Parent import run ID: 11111111-1111-1111-1111-111111111111" in result.output
-    )
+    assert "Parent import run ID: 11111111-1111-1111-1111-111111111111" in result.output
     assert "Needs review items: 1" in result.output
     assert "duplicate_outcome=possible_title_year_duplicate" in result.output
     assert f"matched_paper_id={matched_paper_id}" in result.output

@@ -67,7 +67,9 @@ def test_manifest_title_year_match_requires_review_without_persistence(tmp_path:
     item = run.items[0]
     evidence = json.loads(item.duplicate_evidence_json or "{}")
 
-    assert result.run_status == "needs_review"
+    assert result.run_status == "succeeded"
+    assert result.review_status == "needs_review"
+    assert run.review_status == "needs_review"
     assert result.imported_count == 0
     assert result.failed_count == 0
     assert result.skipped_count == 0

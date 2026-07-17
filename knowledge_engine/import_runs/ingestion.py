@@ -23,6 +23,7 @@ from knowledge_engine.duplicate_resolution import resolve_duplicate_before_persi
 from knowledge_engine.import_runs._helpers import new_uuid, utc_now
 from knowledge_engine.import_runs.repository import ImportRunRepository
 from knowledge_engine.import_runs.service import ImportRunService
+from knowledge_engine.import_runs.statuses import derive_review_status, derive_run_status
 from knowledge_engine.models import ImportIssue, ImportItem, ImportRun, ManifestSnapshot
 from knowledge_engine.parser import DocumentParser, PyMuPDFParser
 
@@ -37,6 +38,7 @@ class ImportedCorpusRun:
     failed_count: int
     skipped_count: int
     needs_review_count: int = 0
+    review_status: str = "clear"
 
 
 @dataclass(frozen=True)
@@ -245,7 +247,8 @@ class CorpusIngestionService:
             item.item_status = "imported"
             item.matched_paper_id = paper.id
 
-        run.run_status = _final_run_status(imported_count, failed_count, needs_review_count)
+        run.run_status = _final_run_status(imported_count, failed_count)
+        run.review_status = _final_review_status(needs_review_count)
         run.completed_at = utc_now()
         self.session.flush()
         return ImportedCorpusRun(
@@ -255,6 +258,7 @@ class CorpusIngestionService:
             failed_count=failed_count,
             skipped_count=skipped_count,
             needs_review_count=needs_review_count,
+            review_status=run.review_status,
         )
 
     def _record_issue(
@@ -374,10 +378,9 @@ def _resolve_item_path(papers_dir: Path, local_path: str) -> Path:
 
 
 def _final_run_status(imported_count: int, failed_count: int, needs_review_count: int = 0) -> str:
-    if failed_count and imported_count:
-        return "partially_succeeded"
-    if failed_count:
-        return "failed"
-    if needs_review_count:
-        return "needs_review"
-    return "succeeded"
+    del needs_review_count
+    return derive_run_status(imported=imported_count, failed=failed_count).value
+
+
+def _final_review_status(needs_review_count: int) -> str:
+    return derive_review_status(needs_review=needs_review_count).value
