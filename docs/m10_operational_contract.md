@@ -4,7 +4,7 @@
 
 M10 makes local corpus reruns safe without weakening provenance or silently collapsing distinct sources. It extends the trusted Source Vault foundation with explicit duplicate outcomes and immutable resume/retry lineage.
 
-This document describes the implemented behavior, the remaining command-line contract, and the final merge checklist for Issue #7 and draft PR #11.
+This document describes the implemented behavior and final acceptance contract for Issue #7 and pull request #11.
 
 ## Trust Boundaries
 
@@ -18,6 +18,15 @@ M10 does not:
 - treat database uniqueness errors as the primary duplicate policy.
 
 Uncertain identity remains visible and requires human review.
+
+## Status Domains
+
+Run execution and review disposition are separate persisted domains:
+
+- `run_status = succeeded | partially_succeeded | failed`;
+- `review_status = clear | needs_review`.
+
+Item outcomes remain `imported`, `failed`, `skipped`, or `needs_review`. A run may execute successfully while still requiring review; review-required evidence must not be encoded as an execution failure.
 
 ## Duplicate Evidence Hierarchy
 
@@ -122,7 +131,7 @@ This prevents a targeted retry from becoming an accidental broad reimport.
 
 ## Required Ingestion Guard
 
-Linked-run planning assigns skipped items before document parsing. The ingestion eligibility gate must therefore require:
+Linked-run planning assigns skipped items before document parsing. The ingestion eligibility gate requires:
 
 ```python
 item.item_status == "valid"
@@ -132,7 +141,7 @@ in addition to manifest, licensing, and path checks. Without this guard, a plann
 
 ## Command-Line Contract
 
-`corpus-import` will expose mutually exclusive options:
+`corpus-import` exposes mutually exclusive options:
 
 ```text
 --resume-from <import-run-id>
@@ -141,24 +150,28 @@ in addition to manifest, licensing, and path checks. Without this guard, a plann
 
 Providing both options is an error. Supplying neither creates a fresh run.
 
-CLI output must display:
+Persisted CLI output displays:
 
 - new import-run ID;
 - run mode;
 - parent run ID when linked;
 - imported, skipped, failed, and needs-review counts;
-- deterministic duplicate outcome and matched identity where safe;
+- deterministic duplicate outcome;
+- matched paper and import-item identity;
+- retry lineage;
 - the no-download/no-URL-following boundary;
 - the requirement for scientific and human review.
 
-Summaries must be derived from persisted item outcomes rather than transient counters alone.
+Summaries are derived from persisted item outcomes rather than transient counters alone.
 
 ## Final M10 Acceptance Checklist
 
-Before PR #11 can be marked ready and merged:
+Before pull request #11 is marked ready and merged:
 
-- [x] additive M10 schema and ORM mappings;
+- [x] additive schema-v3 migration, backfill, and ORM mappings;
 - [x] fail-closed schema verification and migration regression coverage;
+- [x] one authoritative run-status truth table;
+- [x] separate execution and review status domains;
 - [x] deterministic duplicate query layer;
 - [x] pure duplicate-decision hierarchy;
 - [x] pre-persistence resolution with no-write review behavior;
@@ -166,13 +179,13 @@ Before PR #11 can be marked ready and merged:
 - [x] fresh-rerun paper/text/FTS integrity coverage;
 - [x] pure resume/retry planner by stable `source_id`;
 - [x] immutable linked-run creation and parent-history tests;
-- [ ] linked-run execution wired into corpus ingestion;
-- [ ] title/year advisory resolution from authoritative publication-year evidence;
-- [ ] mutually exclusive CLI resume/retry options;
-- [ ] deterministic persisted-outcome reporting;
-- [ ] release notes and final architectural review;
-- [ ] final Black, Ruff, strict mypy, pytest, and `git diff --check` gate;
-- [ ] final diff audit for generated files, databases, local PDFs, caches, secrets, and unrelated changes.
+- [x] linked-run execution wired into corpus ingestion;
+- [x] title/year advisory resolution from authoritative publication-year evidence;
+- [x] mutually exclusive CLI resume/retry options;
+- [x] deterministic persisted-outcome CLI reporting;
+- [x] release notes and final architecture/security review;
+- [x] Ruff formatting, Ruff lint, strict mypy, full pytest, and `git diff --check` gate;
+- [x] diff audit for generated files, databases, local PDFs, caches, secrets, temporary patchers, and unrelated changes.
 
 ## Operational Principle
 
