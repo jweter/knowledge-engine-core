@@ -20,10 +20,10 @@ click = ">=8.0,<8.2"
 [tool.poetry.group.dev.dependencies]
 mypy = "^2.1.0"
 pytest = "^9.1.1"
-ruff = "^0.15.20"
+ruff = "0.15.20"
 
 [tool.poetry.scripts]
-ke = "knowledge_engine.cli:app"
+ke = "knowledge_engine.entrypoint:app"
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]
