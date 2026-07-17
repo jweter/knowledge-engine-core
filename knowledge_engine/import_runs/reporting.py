@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 
-from knowledge_engine.models import ImportIssue, ImportItem, ImportRun
+from knowledge_engine.models import ImportItem, ImportRun
 
 
 @dataclass(frozen=True)
@@ -85,8 +87,8 @@ def render_import_run_report(run: ImportRun) -> str:
         f"- Import readiness: `{_safe(run.import_readiness)}`",
         f"- Manifest snapshot ID: `{_safe(run.manifest_snapshot_id)}`",
         f"- Combined manifest SHA-256: `{_safe(snapshot.combined_sha256)}`",
-        f"- Corpus path: `{_safe(run.corpus_path)}`",
-        f"- Source manifest path: `{_safe(run.source_manifest_path or 'unknown')}`",
+        f"- Corpus path: `{_safe_path(run.corpus_path)}`",
+        f"- Source manifest path: `{_safe_path(run.source_manifest_path or 'unknown')}`",
         "",
         "## Reconciled outcomes",
         "",
@@ -156,7 +158,7 @@ def _validate_reconciliation(run: ImportRun, summary: ImportRunReportSummary) ->
         raise ValueError("Declared source rows do not reconcile with persisted import items.")
 
 
-def _sorted_counts(values: object) -> tuple[tuple[str, int], ...]:
+def _sorted_counts(values: Iterable[object]) -> tuple[tuple[str, int], ...]:
     counts = Counter(str(value) for value in values)
     return tuple(sorted(counts.items()))
 
@@ -187,6 +189,15 @@ def _item_line(item: ImportItem) -> str:
         f"retry_of=`{_safe(item.retry_of_import_item_id or 'none')}`",
     ]
     return "- " + "; ".join(parts)
+
+
+def _safe_path(value: str) -> str:
+    normalized = _safe(value)
+    if normalized.startswith(("/", "\\")) or re.match(r"^[A-Za-z]:[\\/]", normalized):
+        return "[redacted absolute path]"
+    if ".." in normalized.replace("\\", "/").split("/"):
+        return "[redacted unsafe path]"
+    return normalized
 
 
 def _safe(value: str) -> str:
