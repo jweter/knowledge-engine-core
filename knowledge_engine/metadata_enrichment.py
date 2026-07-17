@@ -137,9 +137,7 @@ def validate_candidates(
             raise ValueError("Candidate value must not be blank.")
         if len(candidate.value) > 4096:
             raise ValueError("Candidate value exceeds the 4096-character limit.")
-        expected_normalized = normalize_candidate_value(
-            candidate.field, candidate.value
-        )
+        expected_normalized = normalize_candidate_value(candidate.field, candidate.value)
         if candidate.normalized_value != expected_normalized:
             raise ValueError(
                 "Candidate normalized value does not match deterministic normalization."
