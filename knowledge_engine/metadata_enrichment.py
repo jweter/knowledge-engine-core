@@ -122,7 +122,9 @@ def classify_candidate(
     return "conflicts"
 
 
-def validate_candidates(candidates: Sequence[MetadataCandidate]) -> tuple[MetadataCandidate, ...]:
+def validate_candidates(
+    candidates: Sequence[MetadataCandidate],
+) -> tuple[MetadataCandidate, ...]:
     """Validate basic size and provenance invariants for provider output."""
 
     validated: list[MetadataCandidate] = []
@@ -135,8 +137,12 @@ def validate_candidates(candidates: Sequence[MetadataCandidate]) -> tuple[Metada
             raise ValueError("Candidate value must not be blank.")
         if len(candidate.value) > 4096:
             raise ValueError("Candidate value exceeds the 4096-character limit.")
-        expected_normalized = normalize_candidate_value(candidate.field, candidate.value)
+        expected_normalized = normalize_candidate_value(
+            candidate.field, candidate.value
+        )
         if candidate.normalized_value != expected_normalized:
-            raise ValueError("Candidate normalized value does not match deterministic normalization.")
+            raise ValueError(
+                "Candidate normalized value does not match deterministic normalization."
+            )
         validated.append(candidate)
     return tuple(validated)
