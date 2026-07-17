@@ -29,18 +29,6 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Generate canonical metadata test formatting
-        run: poetry run ruff format tests/test_metadata_enrichment.py
-
-      - name: Upload canonical metadata tests
-        uses: actions/upload-artifact@v4
-        with:
-          name: canonical-metadata-tests
-          path: tests/test_metadata_enrichment.py
-
-      - name: Verify canonical metadata tests were committed
-        run: git diff --exit-code -- tests/test_metadata_enrichment.py
-
       - name: Check formatting
         run: poetry run ruff format --check .
 
