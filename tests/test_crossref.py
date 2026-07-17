@@ -30,7 +30,9 @@ def test_parse_crossref_work_returns_bounded_candidates() -> None:
     )
 
     assert result.diagnostics == ()
-    assert [(candidate.field, candidate.normalized_value) for candidate in result.candidates] == [
+    assert [
+        (candidate.field, candidate.normalized_value) for candidate in result.candidates
+    ] == [
         ("doi", "10.1000/example"),
         ("title", "example paper"),
         ("journal", "journal of tests"),
@@ -41,7 +43,10 @@ def test_parse_crossref_work_returns_bounded_candidates() -> None:
         ("issn", "8765-4321"),
     ]
     assert all(candidate.provider == "crossref" for candidate in result.candidates)
-    assert all(candidate.provider_record_id == "10.1000/EXAMPLE" for candidate in result.candidates)
+    assert all(
+        candidate.provider_record_id == "10.1000/EXAMPLE"
+        for candidate in result.candidates
+    )
     assert all(candidate.retrieved_at == retrieved_at for candidate in result.candidates)
 
 
@@ -59,7 +64,11 @@ def test_parse_crossref_work_uses_date_fallback_order() -> None:
         retrieved_at=datetime(2026, 7, 18, tzinfo=UTC),
     )
 
-    years = [candidate.value for candidate in result.candidates if candidate.field == "publication_year"]
+    years = [
+        candidate.value
+        for candidate in result.candidates
+        if candidate.field == "publication_year"
+    ]
     assert years == ["2023"]
 
 
@@ -108,7 +117,9 @@ def test_parse_crossref_work_reports_missing_message() -> None:
 
     assert result.candidates == ()
     assert result.diagnostics[0].code == "malformed_response"
-    assert result.diagnostics[0].message == "Crossref response is missing a work object."
+    assert (
+        result.diagnostics[0].message == "Crossref response is missing a work object."
+    )
 
 
 def test_parse_crossref_work_bounds_repeated_values() -> None:
@@ -125,7 +136,9 @@ def test_parse_crossref_work_bounds_repeated_values() -> None:
         retrieved_at=datetime(2026, 7, 18, tzinfo=UTC),
     )
 
-    authors = [candidate for candidate in result.candidates if candidate.field == "author"]
+    authors = [
+        candidate for candidate in result.candidates if candidate.field == "author"
+    ]
     issns = [candidate for candidate in result.candidates if candidate.field == "issn"]
     assert len(authors) == 64
     assert len(issns) == 32
