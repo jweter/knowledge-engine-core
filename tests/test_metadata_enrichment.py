@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 import pytest
 
 from knowledge_engine.metadata_enrichment import (
+    MAX_QUERY_DOI_CHARACTERS,
     MetadataCandidate,
     MetadataField,
     MetadataProvider,
@@ -46,6 +47,17 @@ def test_fake_provider_satisfies_contract() -> None:
     assert provider.name == "fake"
     assert result.candidates[0].queried_identifier == "10.1000/abc"
     assert result.diagnostics == ()
+
+
+@pytest.mark.parametrize("doi", ["", "   ", "https://doi.org/"])
+def test_metadata_query_rejects_blank_normalized_doi(doi: str) -> None:
+    with pytest.raises(ValueError, match="must not be blank"):
+        MetadataQuery(doi=doi)
+
+
+def test_metadata_query_rejects_oversized_doi() -> None:
+    with pytest.raises(ValueError, match=f"{MAX_QUERY_DOI_CHARACTERS}-character"):
+        MetadataQuery(doi="x" * (MAX_QUERY_DOI_CHARACTERS + 1))
 
 
 @pytest.mark.parametrize(
