@@ -2,7 +2,7 @@
 
 ## Status
 
-M10 is implemented on draft pull request #11 and remains unmerged until the final acceptance checklist is complete. The final persisted-run reporting patch is prepared but must pass the complete Quality gate before it is included in this release.
+M10 is implemented on pull request #11. Persisted CLI reporting, the schema-v3 execution/review-status split, immutable linked ingestion, and the read-only Quality gate are included in the reviewed branch head.
 
 ## Added
 
@@ -10,7 +10,8 @@ M10 is implemented on draft pull request #11 and remains unmerged until the fina
 - exact content-hash duplicate detection;
 - normalized DOI duplicate and DOI/hash conflict handling;
 - advisory title/publication-year matching from immutable manifest snapshots;
-- explicit `skipped` and `needs_review` outcomes;
+- explicit `skipped` and `needs_review` item outcomes;
+- separate run execution status and review status domains;
 - item-level duplicate evidence, matched paper identity, and matched import-item lineage;
 - same-run duplicate detection;
 - immutable fresh reruns;
@@ -18,13 +19,14 @@ M10 is implemented on draft pull request #11 and remains unmerged until the fina
 - immutable linked-run creation through `parent_import_run_id` and `run_mode`;
 - linked corpus ingestion that parses only planner-selected `valid` items;
 - CLI options `--resume-from` and `--retry-failed-from`;
-- separate imported, failed, skipped, and needs-review counts;
-- a parameterized run-status truth table covering success, failure, partial success, and review precedence.
+- persisted CLI reporting for run mode, parent run, outcome counts, duplicate identity, and retry lineage;
+- a parameterized run-status truth table covering success, failure, and partial success independently from review status.
 
 ## Tooling
 
 - Ruff is the sole formatter and linter.
-- CI runs `ruff format --check`, `ruff check`, strict mypy, and pytest.
+- CI runs `ruff format --check`, `ruff check`, strict mypy, pytest, and `git diff --check`.
+- CI is read-only and rejects temporary review-status delivery artifacts.
 - Black is no longer a project dependency or configuration source.
 
 ## Safety behavior
@@ -37,6 +39,7 @@ M10 is implemented on draft pull request #11 and remains unmerged until the fina
 - Source reconciliation uses stable `source_id`, never CSV row order.
 - No URLs are followed and no documents are downloaded.
 - Database uniqueness constraints remain integrity backstops rather than the primary duplicate-decision mechanism.
+- Internal exceptions are converted to deterministic, sanitized persisted issue messages.
 
 ## CLI examples
 
@@ -60,22 +63,12 @@ knowledge-engine corpus-import corpus.json --retry-failed-from <run-id>
 
 The two parent-run options are mutually exclusive.
 
-## Verification requirement
-
-No reporting behavior is considered complete until the persisted-run output test and the full formatting, lint, strict typing, and pytest gates pass on the same committed head.
-
 ## Compatibility
 
-- Existing schema-version-1 databases are upgraded additively to schema version 2.
-- Existing M8 and M9 records are preserved.
+- Existing schema-version-1 and schema-version-2 databases are upgraded additively to schema version 3.
+- Existing M8 and M9 records are preserved and backfilled into the separated status domains.
 - Fresh corpus import behavior remains available through the existing command and service.
 
-## Remaining acceptance work
+## Verification
 
-Before PR #11 is marked ready and merged:
-
-1. Extend `corpus-run-show` reporting for run mode, parent run ID, needs-review count, duplicate outcome, matched paper and import-item identity, and retry lineage.
-2. Complete the final architectural and security-oriented diff review.
-3. Resolve any validated findings.
-4. Run the full Quality gate on the final non-bot branch head.
-5. Confirm the PR contains no temporary workflows, local databases, PDFs, generated artifacts, caches, secrets, or unrelated changes.
+PR #11 is eligible to merge only when the final committed head passes Ruff formatting, Ruff linting, strict mypy, the complete pytest suite, diff hygiene, temporary-artifact rejection, and the final architecture/security review.
