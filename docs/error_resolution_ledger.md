@@ -92,6 +92,18 @@ Use one entry per distinct failure. Record the first failing command, the exact 
 - **Prevention / fast path:** Before committing new tests, run `poetry run ruff format --check <new-test-file>` from the repository root. For nested list elements containing calls, let Ruff choose wrapping instead of manually estimating line length.
 - **Status:** resolved
 
+## 2026-07-18 — Crossref transport failed strict mypy
+
+- **Area:** typing
+- **First failing command:** `poetry run mypy knowledge_engine tests`
+- **Symptom:** Quality run `29619706444` / run number `224` passed formatting and lint, then stopped at `Type check` after the concrete urllib transport was added.
+- **Affected files:** `knowledge_engine/crossref_http.py`
+- **Root cause:** The initial implementation coupled `_read_bounded` and `redirect_request` to concrete response types whose standard-library and test-double signatures do not align cleanly under strict typeshed checking.
+- **Fix:** Introduced a narrow `_ReadableResponse` protocol containing only `headers` and `read`, and changed the redirect callback to the typeshed-compatible `IO[bytes]` and `HTTPMessage` signature. No mypy suppression was added.
+- **Validation:** Quality run `29619773182` / run number `225` passed formatting, lint, strict mypy, full pytest, diff hygiene, and temporary-artifact rejection on commit `db7c96cad4036b38c6d2c71fe7f352086efdb25f`.
+- **Prevention / fast path:** At standard-library I/O boundaries, type against the smallest structural protocol the code actually consumes instead of a concrete implementation class. Match overridden callback signatures to typeshed exactly.
+- **Status:** resolved
+
 ## Operating rule
 
 When CI fails:
