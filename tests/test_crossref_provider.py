@@ -5,7 +5,11 @@ from datetime import UTC, datetime
 
 import pytest
 
-from knowledge_engine.crossref_provider import CrossrefProvider, TransportResponse
+from knowledge_engine.crossref_provider import (
+    CrossrefProvider,
+    ResponseTooLargeError,
+    TransportResponse,
+)
 from knowledge_engine.metadata_enrichment import MetadataQuery
 
 
@@ -109,6 +113,17 @@ def test_crossref_provider_sanitizes_transport_failures(error: Exception, code: 
     assert result.diagnostics[0].code == code
     assert "secret transport details" not in result.diagnostics[0].message
     assert result.diagnostics[0].retryable is True
+
+
+def test_crossref_provider_classifies_transport_oversize() -> None:
+    provider, _ = _provider(ResponseTooLargeError("raw response details"))
+
+    result = provider.lookup(MetadataQuery(doi="10.1000/example"))
+
+    assert result.candidates == ()
+    assert result.diagnostics[0].code == "oversized_response"
+    assert "raw response details" not in result.diagnostics[0].message
+    assert result.diagnostics[0].retryable is False
 
 
 def test_crossref_provider_rejects_oversized_response() -> None:
