@@ -25,7 +25,9 @@ def test_reconciles_and_renders_synthetic_100_item_rehearsal() -> None:
     assert "Persisted import items: 100" in report
     assert "`imported`: 80" in report
     assert "`same_paper_same_file`: 10" in report
-    assert "M11 external metadata candidates and metadata-conflict counts are not persisted" in report
+    assert (
+        "M11 external metadata candidates and metadata-conflict counts are not persisted" in report
+    )
     assert "scientific validation or synthesis" in report
 
 
