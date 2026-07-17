@@ -25,7 +25,11 @@ def _candidate(
 
 def test_compare_candidates_marks_missing_local_field() -> None:
     comparisons = compare_candidates(
-        [_candidate(field="journal", value="Journal of Tests", normalized_value="journal of tests")],
+        [
+            _candidate(
+                field="journal", value="Journal of Tests", normalized_value="journal of tests"
+            )
+        ],
         [],
     )
 
