@@ -37,22 +37,9 @@ jobs:
         run: python .github/scripts/normalize_review_status_guards.py
 
       - name: Apply guarded review-status patch
-        id: patch
-        continue-on-error: true
         run: |
           python .github/scripts/apply_review_status.py
           python .github/scripts/fix_review_status_tests.py
-        
-      - name: Upload guard diagnostic
-        if: steps.patch.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: review-status-guard-error
-          path: review-status-error.txt
-
-      - name: Stop after guard failure
-        if: steps.patch.outcome == 'failure'
-        run: exit 1
 
       - name: Remove temporary patchers before checks
         run: rm .github/scripts/apply_review_status.py .github/scripts/normalize_review_status_guards.py .github/scripts/fix_review_status_tests.py
@@ -119,10 +106,26 @@ jobs:
                   run: poetry run pytest
           YAML
 
-      - name: Commit verified review-status upgrade
+      - name: Commit and push verified review-status upgrade
+        id: delivery
+        continue-on-error: true
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "feat(import): separate execution and review status"
-          git push origin HEAD:feature/m10-duplicate-query-decision
+          {
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git status --short
+            git commit -m "feat(import): separate execution and review status"
+            git push origin HEAD:feature/m10-duplicate-query-decision
+          } > review-status-delivery.txt 2>&1
+
+      - name: Upload delivery diagnostic
+        if: steps.delivery.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-status-delivery-error
+          path: review-status-delivery.txt
+
+      - name: Stop after delivery failure
+        if: steps.delivery.outcome == 'failure'
+        run: exit 1
