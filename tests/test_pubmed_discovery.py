@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 import pytest
+
 from knowledge_engine.pubmed_discovery import (
     GetTransport,
     NcbiDiscoveryError,
