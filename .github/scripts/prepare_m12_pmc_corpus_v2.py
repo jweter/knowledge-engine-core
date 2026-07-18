@@ -223,7 +223,8 @@ def main() -> None:
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--count", type=int, default=100)
     args = parser.parse_args()
-    runtime = args.workspace.resolve() / ".m12-runtime"
+    workspace = args.workspace.resolve()
+    runtime = workspace / ".m12-runtime"
     if runtime.exists():
         shutil.rmtree(runtime)
     (runtime / "papers").mkdir(parents=True)
@@ -251,8 +252,9 @@ def main() -> None:
         )
 
     corpus_path = _write_manifest(runtime, selected)
+    relative_corpus_path = corpus_path.relative_to(workspace)
     evidence = {
-        "corpus_path": str(corpus_path.relative_to(args.workspace.resolve())),
+        "corpus_path": str(relative_corpus_path),
         "selected_count": len(selected),
         "licenses": sorted({candidate.license_type for candidate in selected}),
         "selection_failures": dict(sorted(failures.items())),
@@ -261,7 +263,7 @@ def main() -> None:
     (runtime / "preparation-evidence.json").write_text(
         json.dumps(evidence, indent=2) + "\n", encoding="utf-8"
     )
-    print(corpus_path)
+    print(relative_corpus_path)
 
 
 if __name__ == "__main__":
