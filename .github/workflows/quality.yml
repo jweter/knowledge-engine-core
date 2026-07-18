@@ -29,8 +29,20 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Check formatting
-        run: poetry run ruff format --check .
+      - name: Capture formatting diagnostics
+        run: |
+          poetry run ruff format --diff . > ruff-m13-format.txt
+
+      - name: Upload formatting diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruff-m13-format
+          path: ruff-m13-format.txt
+          if-no-files-found: error
+
+      - name: Fail after formatting diagnostics
+        run: |
+          test ! -s ruff-m13-format.txt
 
       - name: Lint
         run: poetry run ruff check .
