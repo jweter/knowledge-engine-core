@@ -141,7 +141,7 @@ class PyMuPDFParser(DocumentParser):
         normalized = candidate.casefold().strip(" .:")
         if not 8 <= len(candidate) <= 300:
             return False
-        if not re.search(r"[A-Za-z]", candidate):
+        if not any(character.isalpha() for character in candidate):
             return False
         if DOI_PATTERN.search(candidate):
             return False
@@ -151,9 +151,7 @@ class PyMuPDFParser(DocumentParser):
             return False
         if re.match(r"^(?:pii|issn|isbn)\s*:", candidate, re.IGNORECASE):
             return False
-        if candidate.isupper() and len(candidate.split()) <= 6:
-            return False
-        return True
+        return not (candidate.isupper() and len(candidate.split()) <= 6)
 
     def _is_wrapped_title_continuation(self, candidate: str, next_line: str) -> bool:
         if not self._is_title_candidate(next_line):
