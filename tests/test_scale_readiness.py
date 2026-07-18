@@ -55,6 +55,36 @@ def test_reconciliation_failure_is_not_ready() -> None:
     assert assessment.correctness.status is DimensionStatus.FAIL
 
 
+def test_empty_measurement_set_is_not_ready() -> None:
+    assessment = assess_scale_readiness(
+        _m12_measurements(
+            declared_sources=0,
+            persisted_items=0,
+            imported_items=0,
+            papers_after_fresh=0,
+            papers_after_resume=0,
+            resume_items=0,
+            resume_linked_items=0,
+            fresh_elapsed_seconds=None,
+            resume_elapsed_seconds=None,
+        )
+    )
+
+    assert assessment.decision is Decision.NOT_READY
+    assert assessment.correctness.status is DimensionStatus.FAIL
+    assert assessment.reliability.status is DimensionStatus.FAIL
+
+
+def test_negative_measurement_count_is_not_ready() -> None:
+    assessment = assess_scale_readiness(
+        _m12_measurements(imported_items=101, failed_items=-1)
+    )
+
+    assert assessment.decision is Decision.NOT_READY
+    assert assessment.correctness.status is DimensionStatus.FAIL
+    assert assessment.reliability.status is DimensionStatus.FAIL
+
+
 def test_resume_reimport_is_not_ready() -> None:
     assessment = assess_scale_readiness(
         _m12_measurements(papers_after_resume=101, unexpected_resume_papers=1)
