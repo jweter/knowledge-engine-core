@@ -51,11 +51,23 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
                 b"""
                 <PubmedArticleSet>
                   <PubmedArticle>
-                    <MedlineCitation><PMID>222</PMID><Article><ArticleTitle>Second title</ArticleTitle></Article></MedlineCitation>
-                    <PubmedData><ArticleIdList><ArticleId IdType="doi">10.1000/second</ArticleId></ArticleIdList></PubmedData>
+                    <MedlineCitation>
+                      <PMID>222</PMID>
+                      <Article><ArticleTitle>Second title</ArticleTitle></Article>
+                    </MedlineCitation>
+                    <PubmedData>
+                      <ArticleIdList>
+                        <ArticleId IdType="doi">10.1000/second</ArticleId>
+                      </ArticleIdList>
+                    </PubmedData>
                   </PubmedArticle>
                   <PubmedArticle>
-                    <MedlineCitation><PMID>111</PMID><Article><ArticleTitle>First <i>trial</i></ArticleTitle></Article></MedlineCitation>
+                    <MedlineCitation>
+                      <PMID>111</PMID>
+                      <Article>
+                        <ArticleTitle>First <i>trial</i></ArticleTitle>
+                      </Article>
+                    </MedlineCitation>
                     <PubmedData><ArticleIdList /></PubmedData>
                   </PubmedArticle>
                 </PubmedArticleSet>
