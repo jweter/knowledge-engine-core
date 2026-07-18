@@ -37,3 +37,15 @@ This file supplements `docs/error_resolution_ledger.md` for M12 reporting work. 
 - **Validation:** Quality run `29631145907` / run number `275` passed the complete standard gate on commit `f1e3b8812904e7e6fd71a4ddc6ef06d74fe98a97`.
 - **Prevention / fast path:** Ensure replacement text files end with exactly one newline. When Ruff reports a file would be reformatted but visible structure appears unchanged, inspect the canonical diff for `No newline at end of file` before changing code.
 - **Status:** resolved
+
+## 2026-07-18 — Report output followed symbolic links and exposed filesystem errors
+
+- **Area:** security / privacy / reliability
+- **First failing command:** Full-diff review of the `corpus-run-report --output` boundary.
+- **Symptom:** `Path.write_text` followed symbolic-link outputs, including when `--force` was supplied, and raw `OSError` details could propagate through the CLI with private filesystem paths.
+- **Affected files:** `knowledge_engine/entrypoint.py`, `tests/test_corpus_run_report_cli.py`
+- **Root cause:** Output validation checked only `Path.exists()` and treated the user-supplied path as an ordinary file. Symbolic links are a distinct filesystem object, and write failures were not translated at the CLI boundary.
+- **Fix:** Reject symbolic-link output paths before database access, preserve existing-file overwrite protection, and translate filesystem write failures into a stable path-free CLI error. Added tests proving the symlink target remains unchanged and private error details are not rendered.
+- **Validation:** Quality run `29631373173` / run number `278` passed formatting, lint, strict mypy, full pytest, diff hygiene, and temporary-artifact rejection on commit `867f70b82dc262cffa2e2bb3192abec9509f0604`.
+- **Prevention / fast path:** Treat symlinks, regular files, and directories as different output-path states. Validate before loading expensive state, and translate low-level filesystem errors at the user-facing boundary without echoing private paths.
+- **Status:** resolved
