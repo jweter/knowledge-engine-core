@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import xml.etree.ElementTree as ET
-from collections import Counter
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import Protocol
