@@ -5,7 +5,10 @@ import pytest
 from sqlalchemy.orm import Session
 
 import knowledge_engine.import_runs.ingestion as ingestion_module
-from knowledge_engine.duplicate_resolution import DuplicateResolutionError
+from knowledge_engine.duplicate_resolution import (
+    DuplicateResolutionError,
+    resolve_duplicate_before_persistence,
+)
 from knowledge_engine.duplicates import DuplicateDecision
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService
 from knowledge_engine.models import ImportItem
@@ -108,7 +111,7 @@ def test_expected_duplicate_resolution_failure_is_sanitized_and_continues(
             ),
         }
     )
-    original = ingestion_module.resolve_duplicate_before_persistence
+    original = resolve_duplicate_before_persistence
     calls = 0
 
     def fail_first(session: Session, *, item: ImportItem, parsed: ParsedPaper) -> DuplicateDecision:
