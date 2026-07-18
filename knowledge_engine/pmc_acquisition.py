@@ -88,42 +88,51 @@ class PmcOaAcquisitionService:
         approvals_path: Path,
         output_directory: Path,
     ) -> AcquisitionReceipt:
-        """Validate approvals, acquire PDFs atomically, and return a receipt."""
+        """Validate approvals, stage every PDF, commit the batch, and return a receipt."""
 
         candidates = _load_candidates(candidates_path)
         approvals = _load_approvals(approvals_path)
         plans = _build_plans(candidates, approvals)
         _validate_output_directory(output_directory, plans)
 
-        acquired: list[AcquisitionReceiptItem] = []
         output_directory.mkdir(parents=True, exist_ok=True)
-        for plan in plans:
-            response = self._get_pdf(plan.pdf_url)
-            if not response.body.startswith(PDF_SIGNATURE):
-                raise AcquisitionError("PMC OA resource was not a PDF payload.")
-            destination = output_directory / plan.filename
-            temporary = output_directory / f".{plan.filename}.tmp"
-            try:
+        staged: list[tuple[_AcquisitionPlan, Path, AcquisitionReceiptItem]] = []
+        committed: list[Path] = []
+        try:
+            for plan in plans:
+                response = self._get_pdf(plan.pdf_url)
+                if not response.body.startswith(PDF_SIGNATURE):
+                    raise AcquisitionError("PMC OA resource was not a PDF payload.")
+                temporary = output_directory / f".{plan.filename}.tmp"
                 temporary.write_bytes(response.body)
-                os.replace(temporary, destination)
-            except OSError as exc:
-                temporary.unlink(missing_ok=True)
-                raise AcquisitionError("Approved PDF could not be written.") from exc
-            acquired.append(
-                AcquisitionReceiptItem(
-                    pmid=plan.pmid,
-                    pmcid=plan.pmcid,
-                    license=plan.license,
-                    filename=plan.filename,
-                    byte_count=len(response.body),
-                    sha256=hashlib.sha256(response.body).hexdigest(),
+                staged.append(
+                    (
+                        plan,
+                        temporary,
+                        AcquisitionReceiptItem(
+                            pmid=plan.pmid,
+                            pmcid=plan.pmcid,
+                            license=plan.license,
+                            filename=plan.filename,
+                            byte_count=len(response.body),
+                            sha256=hashlib.sha256(response.body).hexdigest(),
+                        ),
+                    )
                 )
-            )
-        return AcquisitionReceipt(
-            schema_version=1,
-            acquired_count=len(acquired),
-            items=tuple(acquired),
-        )
+
+            for plan, temporary, _ in staged:
+                destination = output_directory / plan.filename
+                os.replace(temporary, destination)
+                committed.append(destination)
+        except AcquisitionError:
+            _rollback_paths(staged=staged, committed=committed)
+            raise
+        except OSError as exc:
+            _rollback_paths(staged=staged, committed=committed)
+            raise AcquisitionError("Approved PDF batch could not be committed.") from exc
+
+        items = tuple(item for _, _, item in staged)
+        return AcquisitionReceipt(schema_version=1, acquired_count=len(items), items=items)
 
     def _get_pdf(self, url: str) -> TransportResponse:
         try:
@@ -147,6 +156,17 @@ class _AcquisitionPlan:
     license: str
     pdf_url: str
     filename: str
+
+
+def _rollback_paths(
+    *,
+    staged: list[tuple[_AcquisitionPlan, Path, AcquisitionReceiptItem]],
+    committed: list[Path],
+) -> None:
+    for path in committed:
+        path.unlink(missing_ok=True)
+    for _, temporary, _ in staged:
+        temporary.unlink(missing_ok=True)
 
 
 def _load_json_object(path: Path, *, label: str) -> dict[str, object]:
@@ -190,13 +210,15 @@ def _load_approvals(path: Path) -> list[dict[str, object]]:
 
 
 def _build_plans(
-    candidates: dict[str, dict[str, object]], approvals: list[dict[str, object]]
+    candidates: dict[str, dict[str, object]],
+    approvals: list[dict[str, object]],
 ) -> list[_AcquisitionPlan]:
     plans: list[_AcquisitionPlan] = []
     seen_pmids: set[str] = set()
     for approval in approvals:
         values = {
-            key: approval.get(key) for key in ("pmid", "pmcid", "license", "pdf_url", "filename")
+            key: approval.get(key)
+            for key in ("pmid", "pmcid", "license", "pdf_url", "filename")
         }
         if not all(isinstance(value, str) and value for value in values.values()):
             raise AcquisitionError("Approval file contains incomplete approval evidence.")
@@ -213,7 +235,9 @@ def _build_plans(
             )
         for key in ("pmcid", "license", "pdf_url"):
             if candidate.get(key) != values[key]:
-                raise AcquisitionError("Approval evidence does not match the discovered candidate.")
+                raise AcquisitionError(
+                    "Approval evidence does not match the discovered candidate."
+                )
         filename = str(values["filename"])
         if not SAFE_FILENAME.fullmatch(filename):
             raise AcquisitionError("Approval filename is not a safe PDF filename.")
@@ -226,7 +250,9 @@ def _build_plans(
             or parsed.password is not None
             or parsed.port not in (None, 443)
         ):
-            raise AcquisitionError("Approval PDF URL is not an allowlisted PMC OA HTTPS resource.")
+            raise AcquisitionError(
+                "Approval PDF URL is not an allowlisted PMC OA HTTPS resource."
+            )
         plans.append(
             _AcquisitionPlan(
                 pmid=pmid,
