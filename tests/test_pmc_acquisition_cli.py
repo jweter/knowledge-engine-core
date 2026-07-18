@@ -10,8 +10,9 @@ from knowledge_engine.pmc_acquisition import AcquisitionReceipt, AcquisitionRece
 
 
 class FakeService:
-    def __init__(self) -> None:
+    def __init__(self, *, create_pdf: bool = False) -> None:
         self.calls: list[tuple[Path, Path, Path]] = []
+        self.create_pdf = create_pdf
 
     def acquire(
         self,
@@ -21,6 +22,9 @@ class FakeService:
         output_directory: Path,
     ) -> AcquisitionReceipt:
         self.calls.append((candidates_path, approvals_path, output_directory))
+        if self.create_pdf:
+            output_directory.mkdir(parents=True, exist_ok=True)
+            (output_directory / "PMC999.pdf").write_bytes(b"%PDF-1.7\nbody")
         return AcquisitionReceipt(
             schema_version=1,
             acquired_count=1,
@@ -101,3 +105,33 @@ def test_existing_receipt_fails_before_service_creation(
     assert result.exit_code != 0
     assert "already exists" in result.output
     assert called is False
+
+
+def test_receipt_write_failure_rolls_back_acquired_pdfs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = FakeService(create_pdf=True)
+    monkeypatch.setattr(entrypoint, "_pmc_acquisition_service", lambda: service)
+    blocked_parent = tmp_path / "blocked"
+    blocked_parent.write_text("not a directory", encoding="utf-8")
+    papers = tmp_path / "papers"
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "pmc-oa-acquire",
+            "--candidates",
+            str(tmp_path / "candidates.json"),
+            "--approvals",
+            str(tmp_path / "approvals.json"),
+            "--papers-dir",
+            str(papers),
+            "--receipt",
+            str(blocked_parent / "receipt.json"),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "were rolled back" in result.output
+    assert not (papers / "PMC999.pdf").exists()
