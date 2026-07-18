@@ -12,6 +12,9 @@ def _assert_required_keys(instance: dict[str, Any], schema: dict[str, Any]) -> N
     for key in schema.get("required", []):
         assert key in instance
 
+    if schema.get("additionalProperties") is False:
+        assert set(instance) <= set(schema.get("properties", {}))
+
     properties = schema.get("properties", {})
     for key, value in instance.items():
         property_schema = properties.get(key)
@@ -24,6 +27,11 @@ def test_m14_stopped_state_example_has_required_structure() -> None:
     example = json.loads(EXAMPLE_PATH.read_text(encoding="utf-8"))
 
     _assert_required_keys(example, schema)
+    _assert_required_keys(example["fresh_import"], schema["$defs"]["run"])
+    _assert_required_keys(example["linked_resume"], schema["$defs"]["run"])
+    linked_extension = schema["properties"]["linked_resume"]["allOf"][1]
+    _assert_required_keys(example["linked_resume"], linked_extension)
+
     assert example["decision"] in schema["properties"]["decision"]["enum"]
     assert example["execution_state"] in schema["properties"]["execution_state"]["enum"]
     assert example["stop_condition"] is not None
