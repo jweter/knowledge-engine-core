@@ -4,27 +4,28 @@ from __future__ import annotations
 
 import json
 import xml.etree.ElementTree as ET
+from collections import Counter
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
+from typing import Protocol
 from urllib.parse import urlencode
 
 from knowledge_engine.ncbi_http import TransportResponse
 
 EUTILS_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 PMC_OA_URL = "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"
-DEFAULT_HEADERS = {"Accept": "application/json, application/xml", "User-Agent": "knowledge-engine-core/0.2"}
+DEFAULT_HEADERS = {
+    "Accept": "application/json, application/xml",
+    "User-Agent": "knowledge-engine-core/0.2",
+}
 
 
 class NcbiDiscoveryError(RuntimeError):
     """Sanitized provider or response failure."""
 
 
-class NcbiTransport(Mapping[str, object]):
-    """Type marker retained only for backwards-incompatible misuse prevention."""
-
-
-class GetTransport:
-    """Structural transport interface used by the service."""
+class GetTransport(Protocol):
+    """Structural transport interface used by the discovery service."""
 
     def get(
         self,
@@ -35,8 +36,6 @@ class GetTransport:
         max_response_bytes: int,
     ) -> TransportResponse:
         """Fetch one bounded HTTPS response."""
-
-        raise NotImplementedError
 
 
 @dataclass(frozen=True)
