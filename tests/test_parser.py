@@ -1,8 +1,9 @@
 from pathlib import Path
 
 import fitz
+import pytest
 
-from knowledge_engine.parser import PyMuPDFParser
+from knowledge_engine.parser import MalformedDocumentError, PyMuPDFParser
 
 
 def make_pdf(path: Path) -> None:
@@ -28,6 +29,18 @@ def make_pdf(path: Path) -> None:
     document.close()
 
 
+def make_encrypted_pdf(path: Path) -> None:
+    document = fitz.open()
+    document.new_page()
+    document.save(
+        path,
+        encryption=fitz.PDF_ENCRYPT_AES_256,
+        owner_pw="owner-password",
+        user_pw="user-password",
+    )
+    document.close()
+
+
 def test_parser_extracts_pdf_metadata(tmp_path: Path) -> None:
     pdf_path = tmp_path / "paper.pdf"
     make_pdf(pdf_path)
@@ -40,3 +53,11 @@ def test_parser_extracts_pdf_metadata(tmp_path: Path) -> None:
     assert parsed.page_count == 1
     assert parsed.word_count > 10
     assert "alzheimer biomarkers" in parsed.raw_text.lower()
+
+
+def test_parser_classifies_encrypted_pdf_as_expected_failure(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "encrypted.pdf"
+    make_encrypted_pdf(pdf_path)
+
+    with pytest.raises(MalformedDocumentError, match="encrypted"):
+        PyMuPDFParser().parse(pdf_path)
