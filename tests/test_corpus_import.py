@@ -514,9 +514,9 @@ def test_unexpected_repository_defect_propagates_and_rolls_back_outer_transactio
 
     with pytest.raises(TypeError, match="sensitive programming defect"):
         with database.session() as session:
-            CorpusIngestionService(
-                session, project_root=tmp_path, parser=parser
-            ).import_corpus(corpus_path)
+            CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
+                corpus_path
+            )
 
     with database.engine.connect() as connection:
         assert connection.execute(text("SELECT count(*) FROM papers")).scalar() == 0
