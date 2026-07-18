@@ -69,9 +69,7 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
                         "linksets": [
                             {
                                 "ids": ["222"],
-                                "linksetdbs": [
-                                    {"linkname": "pubmed_pmc", "links": ["999"]}
-                                ],
+                                "linksetdbs": [{"linkname": "pubmed_pmc", "links": ["999"]}],
                             },
                             {"ids": ["111"], "linksetdbs": []},
                         ]
