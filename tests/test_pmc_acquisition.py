@@ -73,6 +73,21 @@ def test_approval_mismatch_fails_before_network(tmp_path: Path) -> None:
     assert transport.urls == []
 
 
+def test_duplicate_filenames_fail_before_network(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path, count=2)
+    approvals = _write_approvals(tmp_path, count=2, duplicate_filename=True)
+    transport = FakeTransport([])
+
+    with pytest.raises(AcquisitionError, match="duplicate PDF filename"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=tmp_path / "papers",
+        )
+
+    assert transport.urls == []
+
+
 def test_non_pdf_payload_is_rejected_without_persisting_file(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path)
@@ -160,6 +175,7 @@ def _write_approvals(
     *,
     license_name: str = "CC BY",
     count: int = 1,
+    duplicate_filename: bool = False,
 ) -> Path:
     rows = [
         {
@@ -177,7 +193,7 @@ def _write_approvals(
                 "pmcid": "PMC1000",
                 "license": "CC BY",
                 "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/second.pdf",
-                "filename": "PMC1000.pdf",
+                "filename": "PMC999.pdf" if duplicate_filename else "PMC1000.pdf",
             }
         )
     path = tmp_path / "approvals.json"
