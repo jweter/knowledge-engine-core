@@ -29,19 +29,8 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Capture formatting diagnostics
-        run: |
-          poetry run ruff format .
-          git diff -- knowledge_engine/import_runs/reporting.py tests/test_import_run_reporting.py > ruff-format-m12.diff
-
-      - name: Upload formatting diagnostics
-        uses: actions/upload-artifact@v4
-        with:
-          name: ruff-format-m12-hardening
-          path: ruff-format-m12.diff
-
-      - name: Fail after formatting diagnostics
-        run: test ! -s ruff-format-m12.diff
+      - name: Check formatting
+        run: poetry run ruff format --check .
 
       - name: Lint
         run: poetry run ruff check .
