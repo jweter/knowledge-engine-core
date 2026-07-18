@@ -67,10 +67,7 @@ def test_expected_parser_failure_is_sanitized_and_continues(tmp_path: Path) -> N
     assert result.run_status == "partially_succeeded"
     assert result.imported_count == 1
     assert result.failed_count == 1
-    assert (
-        issue.message
-        == "The declared local file could not be parsed as a supported paper."
-    )
+    assert issue.message == "The declared local file could not be parsed as a supported paper."
     assert "raw parser secret" not in issue.message
 
 
@@ -82,13 +79,10 @@ def test_unexpected_parser_exception_propagates_without_output(
     declare_pdf(tmp_path, "paper.pdf")
     parser = StubParser({"paper.pdf": TypeError("raw parser defect")})
 
-    with (
-        pytest.raises(TypeError, match="raw parser defect"),
-        database.session() as session,
-    ):
-        CorpusIngestionService(
-            session, project_root=tmp_path, parser=parser
-        ).import_corpus(corpus_path)
+    with pytest.raises(TypeError, match="raw parser defect"), database.session() as session:
+        CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
+            corpus_path
+        )
 
     captured = capsys.readouterr()
     assert "raw parser defect" not in captured.out
@@ -120,18 +114,14 @@ def test_expected_duplicate_resolution_failure_is_sanitized_and_continues(
     original = resolve_duplicate_before_persistence
     calls = 0
 
-    def fail_first(
-        session: Session, *, item: ImportItem, parsed: ParsedPaper
-    ) -> DuplicateDecision:
+    def fail_first(session: Session, *, item: ImportItem, parsed: ParsedPaper) -> DuplicateDecision:
         nonlocal calls
         calls += 1
         if calls == 1:
             raise DuplicateResolutionError("raw duplicate secret")
         return original(session, item=item, parsed=parsed)
 
-    monkeypatch.setattr(
-        ingestion_module, "resolve_duplicate_before_persistence", fail_first
-    )
+    monkeypatch.setattr(ingestion_module, "resolve_duplicate_before_persistence", fail_first)
 
     with database.session() as session:
         result = CorpusIngestionService(
@@ -139,9 +129,7 @@ def test_expected_duplicate_resolution_failure_is_sanitized_and_continues(
         ).import_corpus(corpus_path)
 
     run = get_run(database, result.import_run_id)
-    issue = next(
-        issue for issue in run.issues if issue.code == "duplicate_resolution_failed"
-    )
+    issue = next(issue for issue in run.issues if issue.code == "duplicate_resolution_failed")
     assert result.run_status == "partially_succeeded"
     assert result.imported_count == 1
     assert result.failed_count == 1
@@ -168,23 +156,16 @@ def test_unexpected_duplicate_resolution_exception_propagates_without_output(
         }
     )
 
-    def fail_systemically(
-        _session: Session, *, item: ImportItem, parsed: ParsedPaper
-    ) -> NoReturn:
+    def fail_systemically(_session: Session, *, item: ImportItem, parsed: ParsedPaper) -> NoReturn:
         del item, parsed
         raise TypeError("raw duplicate defect")
 
-    monkeypatch.setattr(
-        ingestion_module, "resolve_duplicate_before_persistence", fail_systemically
-    )
+    monkeypatch.setattr(ingestion_module, "resolve_duplicate_before_persistence", fail_systemically)
 
-    with (
-        pytest.raises(TypeError, match="raw duplicate defect"),
-        database.session() as session,
-    ):
-        CorpusIngestionService(
-            session, project_root=tmp_path, parser=parser
-        ).import_corpus(corpus_path)
+    with pytest.raises(TypeError, match="raw duplicate defect"), database.session() as session:
+        CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
+            corpus_path
+        )
 
     captured = capsys.readouterr()
     assert "raw duplicate defect" not in captured.out
