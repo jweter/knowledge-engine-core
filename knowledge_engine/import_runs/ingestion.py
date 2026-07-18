@@ -380,7 +380,9 @@ def _papers_directory(snapshot: ManifestSnapshot, project_root: Path) -> Path:
     try:
         loaded = json.loads(snapshot.corpus_json_text)
     except json.JSONDecodeError as exc:
-        raise _PapersDirectoryError("Persisted corpus snapshot is not valid JSON.") from exc
+        raise _PapersDirectoryError(
+            "Persisted corpus snapshot is not valid JSON."
+        ) from exc
     if not isinstance(loaded, dict):
         msg = "Persisted corpus snapshot is not a JSON object."
         raise _PapersDirectoryError(msg)
