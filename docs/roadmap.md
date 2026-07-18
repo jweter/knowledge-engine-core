@@ -41,14 +41,17 @@ prototype. See `docs/vertical_slice.md` and
 - **M12** completed the controlled 100-paper rehearsal and sanitized reporting.
 - **M13** assessed scale readiness and conditionally authorized one controlled
   500-paper rehearsal with explicit measurement and stop conditions.
+- **Pre-M14 maintenance** reconciled repository state, made Ruff the authoritative
+  quality tool, and hardened fresh and linked ingestion error boundaries.
 
 ### Next bounded milestone
 
 The next milestone is **one controlled 500-paper rehearsal** under the M13 entry,
-measurement, stop, reconciliation, resume, and artifact-hygiene conditions. Before
-that rehearsal begins, repository documentation and expected-versus-unexpected
-ingestion exception contracts must be reconciled. The rehearsal must not introduce
-new architecture solely to collect one run's measurements.
+measurement, stop, reconciliation, resume, and artifact-hygiene conditions. Issue
+#21 is the authoritative rehearsal tracker. Persistence failure classification in
+issue #22 must be completed before repeated large-run failure evidence is treated as
+diagnostic. The rehearsal must not introduce new architecture solely to collect one
+run's measurements.
 
 Detailed milestone records include:
 
@@ -61,6 +64,7 @@ Detailed milestone records include:
 - `docs/m10_release_notes.md`
 - `docs/m12_100_paper_rehearsal.md`
 - `docs/m13_scale_readiness_decision.md`
+- `docs/audit_remediation_register.md`
 
 ## Phase 2: Evidence Records
 
