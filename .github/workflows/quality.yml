@@ -29,8 +29,23 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Check formatting
-        run: poetry run ruff format --check .
+      - name: Capture formatting diagnostics
+        id: formatting
+        continue-on-error: true
+        run: |
+          poetry run ruff format --diff . > ruff-m12-preparation.diff
+          test ! -s ruff-m12-preparation.diff
+
+      - name: Upload formatting diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruff-m12-preparation
+          path: ruff-m12-preparation.diff
+
+      - name: Fail after formatting diagnostics
+        if: steps.formatting.outcome == 'failure'
+        run: exit 1
 
       - name: Lint
         run: poetry run ruff check .
