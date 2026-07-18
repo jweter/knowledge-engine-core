@@ -48,7 +48,22 @@ jobs:
           exit 1
 
       - name: Lint
-        run: poetry run ruff check .
+        id: ruff
+        continue-on-error: true
+        run: poetry run ruff check . 2>&1 | tee ruff.log
+
+      - name: Upload lint diagnostics
+        if: steps.ruff.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruff-diagnostics
+          path: ruff.log
+
+      - name: Enforce lint result
+        if: steps.ruff.outcome == 'failure'
+        run: |
+          cat ruff.log
+          exit 1
 
       - name: Type check
         id: mypy
