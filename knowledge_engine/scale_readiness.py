@@ -124,7 +124,9 @@ def _counts_are_valid(measurements: ScaleMeasurements) -> bool:
     optional_counts_are_valid = all(
         value is None or value >= 0 for value in optional_counts
     )
-    return has_declared_sources and required_counts_are_valid and optional_counts_are_valid
+    return (
+        has_declared_sources and required_counts_are_valid and optional_counts_are_valid
+    )
 
 
 def assess_scale_readiness(
