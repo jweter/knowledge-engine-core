@@ -76,9 +76,7 @@ def test_empty_measurement_set_is_not_ready() -> None:
 
 
 def test_negative_measurement_count_is_not_ready() -> None:
-    assessment = assess_scale_readiness(
-        _m12_measurements(imported_items=101, failed_items=-1)
-    )
+    assessment = assess_scale_readiness(_m12_measurements(imported_items=101, failed_items=-1))
 
     assert assessment.decision is Decision.NOT_READY
     assert assessment.correctness.status is DimensionStatus.FAIL
