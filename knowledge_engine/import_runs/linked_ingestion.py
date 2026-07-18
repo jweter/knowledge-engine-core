@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from knowledge_engine.database import PaperRepository
 from knowledge_engine.duplicate_resolution import (
     DuplicateResolutionError,
     resolve_duplicate_before_persistence,
@@ -20,13 +19,16 @@ from knowledge_engine.import_runs.ingestion import (
     _mark_unimported_items_skipped,
     _papers_directory,
     _PapersDirectoryError,
+    _persistence_issue,
     _resolve_item_path,
     _result_from_run,
     _should_import_item,
 )
 from knowledge_engine.import_runs.linked import LinkedImportRunService
 from knowledge_engine.import_runs.resume import RunMode
+from knowledge_engine.paper_persistence import ClassifiedPaperRepository
 from knowledge_engine.parser import DocumentParseError
+from knowledge_engine.persistence_errors import PaperPersistenceError
 
 
 class LinkedCorpusIngestionService(CorpusIngestionService):
@@ -192,33 +194,15 @@ class LinkedCorpusIngestionService(CorpusIngestionService):
 
             try:
                 with self.session.begin_nested():
-                    paper = PaperRepository(self.session).add_parsed_paper(parsed)
-            except ValueError:
+                    paper = ClassifiedPaperRepository(self.session).add_parsed_paper(parsed)
+            except PaperPersistenceError as exc:
                 failed_count += 1
                 item.item_status = "failed"
                 next_sequence = self._record_issue(
                     run,
                     item,
                     next_sequence,
-                    _IssueTemplate(
-                        code="paper_already_imported",
-                        message=(
-                            "A paper with the same path, DOI, or content hash already exists."
-                        ),
-                    ),
-                )
-                continue
-            except Exception:
-                failed_count += 1
-                item.item_status = "failed"
-                next_sequence = self._record_issue(
-                    run,
-                    item,
-                    next_sequence,
-                    _IssueTemplate(
-                        code="paper_persistence_failed",
-                        message="The parsed paper could not be saved completely.",
-                    ),
+                    _persistence_issue(exc),
                 )
                 continue
 
