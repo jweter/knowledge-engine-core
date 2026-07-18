@@ -26,7 +26,12 @@ from knowledge_engine.duplicate_resolution import (
 from knowledge_engine.import_runs._helpers import new_uuid, utc_now
 from knowledge_engine.import_runs.repository import ImportRunRepository
 from knowledge_engine.import_runs.service import ImportRunService
-from knowledge_engine.import_runs.statuses import derive_review_status, derive_run_status
+from knowledge_engine.import_runs.statuses import (
+    ReviewStatus,
+    RunStatus,
+    derive_review_status,
+    derive_run_status,
+)
 from knowledge_engine.models import ImportIssue, ImportItem, ImportRun, ManifestSnapshot
 from knowledge_engine.parser import DocumentParseError, DocumentParser, PyMuPDFParser
 
@@ -36,12 +41,12 @@ class ImportedCorpusRun:
     """Service result for one corpus import attempt."""
 
     import_run_id: str
-    run_status: str
+    run_status: RunStatus
     imported_count: int
     failed_count: int
     skipped_count: int
-    needs_review_count: int = 0
-    review_status: str = "clear"
+    needs_review_count: int
+    review_status: ReviewStatus
 
 
 @dataclass(frozen=True)
@@ -53,6 +58,10 @@ class _IssueTemplate:
 
 class _PapersDirectoryError(ValueError):
     """Persisted papers-directory metadata could not be resolved safely."""
+
+
+class UnsafePersistedPathError(ValueError):
+    """A persisted item path cannot be resolved within the declared papers directory."""
 
 
 class CorpusIngestionService:
@@ -89,9 +98,8 @@ class CorpusIngestionService:
             skipped_count = _mark_unimported_items_skipped(run)
             run.completed_at = utc_now()
             self.session.flush()
-            return ImportedCorpusRun(
-                import_run_id=run.import_run_id,
-                run_status=run.run_status,
+            return _result_from_run(
+                run,
                 imported_count=0,
                 failed_count=0,
                 skipped_count=skipped_count,
@@ -111,16 +119,16 @@ class CorpusIngestionService:
                     field="default_local_papers_directory",
                 ),
             )
-            run.run_status = "failed"
+            run.run_status = RunStatus.FAILED.value
             run.completed_at = utc_now()
             self.session.flush()
-            return ImportedCorpusRun(
-                import_run_id=run.import_run_id,
-                run_status=run.run_status,
+            return _result_from_run(
+                run,
                 imported_count=0,
                 failed_count=0,
                 skipped_count=skipped_count,
             )
+
         imported_count = 0
         failed_count = 0
         skipped_count = 0
@@ -135,7 +143,7 @@ class CorpusIngestionService:
 
             try:
                 local_path = _resolve_item_path(papers_dir, item.local_path or "")
-            except ValueError:
+            except UnsafePersistedPathError:
                 failed_count += 1
                 item.item_status = "failed"
                 next_sequence = self._record_issue(
@@ -193,7 +201,9 @@ class CorpusIngestionService:
 
             try:
                 decision = resolve_duplicate_before_persistence(
-                    self.session, item=item, parsed=parsed
+                    self.session,
+                    item=item,
+                    parsed=parsed,
                 )
             except DuplicateResolutionError:
                 failed_count += 1
@@ -255,18 +265,20 @@ class CorpusIngestionService:
             item.item_status = "imported"
             item.matched_paper_id = paper.id
 
-        run.run_status = _final_run_status(imported_count, failed_count)
-        run.review_status = _final_review_status(needs_review_count)
+        final_run_status = _final_run_status(imported_count, failed_count)
+        final_review_status = _final_review_status(needs_review_count)
+        run.run_status = final_run_status.value
+        run.review_status = final_review_status.value
         run.completed_at = utc_now()
         self.session.flush()
         return ImportedCorpusRun(
             import_run_id=run.import_run_id,
-            run_status=run.run_status,
+            run_status=final_run_status,
             imported_count=imported_count,
             failed_count=failed_count,
             skipped_count=skipped_count,
             needs_review_count=needs_review_count,
-            review_status=run.review_status,
+            review_status=final_review_status,
         )
 
     def _record_issue(
@@ -345,6 +357,25 @@ def _mark_unimported_items_skipped(run: ImportRun) -> int:
     return skipped_count
 
 
+def _result_from_run(
+    run: ImportRun,
+    *,
+    imported_count: int,
+    failed_count: int,
+    skipped_count: int,
+) -> ImportedCorpusRun:
+    needs_review_count = sum(item.item_status == "needs_review" for item in run.items)
+    return ImportedCorpusRun(
+        import_run_id=run.import_run_id,
+        run_status=RunStatus(run.run_status),
+        imported_count=imported_count,
+        failed_count=failed_count,
+        skipped_count=skipped_count,
+        needs_review_count=needs_review_count,
+        review_status=ReviewStatus(run.review_status),
+    )
+
+
 def _papers_directory(snapshot: ManifestSnapshot, project_root: Path) -> Path:
     try:
         loaded = json.loads(snapshot.corpus_json_text)
@@ -377,18 +408,23 @@ def _resolve_item_path(papers_dir: Path, local_path: str) -> Path:
     path = Path(local_path)
     if looks_absolute(path) or has_traversal(path):
         msg = "Persisted local_path is not import-safe."
-        raise ValueError(msg)
-    resolved = resolve_under(papers_dir, path)
-    if not is_relative_to(resolved, papers_dir.resolve(strict=False)):
+        raise UnsafePersistedPathError(msg)
+    try:
+        resolved = resolve_under(papers_dir, path)
+        resolved_papers_dir = papers_dir.resolve(strict=False)
+    except OSError as exc:
+        raise UnsafePersistedPathError(
+            "Persisted local_path could not be resolved safely."
+        ) from exc
+    if not is_relative_to(resolved, resolved_papers_dir):
         msg = "Persisted local_path escapes the papers directory."
-        raise ValueError(msg)
+        raise UnsafePersistedPathError(msg)
     return resolved
 
 
-def _final_run_status(imported_count: int, failed_count: int, needs_review_count: int = 0) -> str:
-    del needs_review_count
-    return derive_run_status(imported=imported_count, failed=failed_count).value
+def _final_run_status(imported_count: int, failed_count: int) -> RunStatus:
+    return derive_run_status(imported=imported_count, failed=failed_count)
 
 
-def _final_review_status(needs_review_count: int) -> str:
-    return derive_review_status(needs_review=needs_review_count).value
+def _final_review_status(needs_review_count: int) -> ReviewStatus:
+    return derive_review_status(needs_review=needs_review_count)
