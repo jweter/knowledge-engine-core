@@ -195,7 +195,9 @@ def _build_plans(
     plans: list[_AcquisitionPlan] = []
     seen_pmids: set[str] = set()
     for approval in approvals:
-        values = {key: approval.get(key) for key in ("pmid", "pmcid", "license", "pdf_url", "filename")}
+        values = {
+            key: approval.get(key) for key in ("pmid", "pmcid", "license", "pdf_url", "filename")
+        }
         if not all(isinstance(value, str) and value for value in values.values()):
             raise AcquisitionError("Approval file contains incomplete approval evidence.")
         pmid = str(values["pmid"])
@@ -206,7 +208,9 @@ def _build_plans(
         if candidate is None:
             raise AcquisitionError("Approval references an unknown PMID.")
         if candidate.get("open_access") is not True or candidate.get("status") != "oa_verified":
-            raise AcquisitionError("Approval references a candidate without verified PMC OA evidence.")
+            raise AcquisitionError(
+                "Approval references a candidate without verified PMC OA evidence."
+            )
         for key in ("pmcid", "license", "pdf_url"):
             if candidate.get(key) != values[key]:
                 raise AcquisitionError("Approval evidence does not match the discovered candidate.")
@@ -243,5 +247,10 @@ def _validate_output_directory(output_directory: Path, plans: list[_AcquisitionP
     for plan in plans:
         destination = output_directory / plan.filename
         temporary = output_directory / f".{plan.filename}.tmp"
-        if destination.exists() or destination.is_symlink() or temporary.exists() or temporary.is_symlink():
+        if (
+            destination.exists()
+            or destination.is_symlink()
+            or temporary.exists()
+            or temporary.is_symlink()
+        ):
             raise AcquisitionError("Approved PDF output already exists.")
