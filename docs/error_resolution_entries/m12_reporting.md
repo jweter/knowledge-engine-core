@@ -1,6 +1,6 @@
 # M12 Reporting Error-Resolution Addendum
 
-This file supplements `docs/error_resolution_ledger.md` for M12 reporting work. It records verified failures and review findings that occurred after the consolidated ledger was created. These entries should be merged into the consolidated ledger during the final M12 documentation review.
+This file is the authoritative M12 supplement to `docs/error_resolution_ledger.md`. It records verified M12 failures and review findings that occurred after the consolidated ledger was created. Keep both files when investigating M12 history. Consolidate them only through a lossless patch-capable checkout; do not replace or manually reconstruct the historical ledger from truncated connector output.
 
 ## 2026-07-18 — Typer/Rich wrapping made reconciliation assertion brittle
 
