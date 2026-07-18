@@ -63,6 +63,25 @@ def _load_report_run(import_run_id: str) -> ImportRun | None:
         ).get_run(import_run_id)
 
 
+def _validate_report_output(output: Path, *, force: bool) -> None:
+    """Reject symbolic links and accidental overwrites before database access."""
+
+    if output.is_symlink():
+        raise typer.BadParameter("Report output must not be a symbolic link.")
+    if output.exists() and not force:
+        raise typer.BadParameter("Output file already exists. Use --force to overwrite.")
+
+
+def _write_report_output(output: Path, report: str) -> None:
+    """Write a report while keeping local filesystem details out of CLI errors."""
+
+    try:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(report, encoding="utf-8")
+    except OSError:
+        raise typer.BadParameter("Report output could not be written.") from None
+
+
 @app.command("metadata-preview")
 def metadata_preview(
     doi: DoiOption,
@@ -125,8 +144,8 @@ def corpus_run_report(
 ) -> None:
     """Render a sanitized Markdown report for a persisted import run."""
 
-    if output and output.exists() and not force:
-        raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
+    if output:
+        _validate_report_output(output, force=force)
 
     run = _load_report_run(import_run_id)
     if run is None:
@@ -139,8 +158,7 @@ def corpus_run_report(
         raise typer.BadParameter(f"Import run report reconciliation failed: {exc}") from exc
 
     if output:
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(report, encoding="utf-8")
+        _write_report_output(output, report)
         console.print(f"[green]Wrote corpus run report:[/green] {output}")
         return
 
