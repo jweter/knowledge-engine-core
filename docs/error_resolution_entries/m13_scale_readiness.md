@@ -54,6 +54,16 @@ Fix: create the authoritative files at lowercase canonical paths and remove all 
 
 Validation: the final PR changed-file list contains only the intended canonical paths.
 
+## Invalid measurement acceptance
+
+Empty or negative measurements could reconcile numerically and appear conditionally ready.
+
+Root cause: equality checks did not validate a nonempty corpus or nonnegative counts.
+
+Fix: require at least one declared source and reject negative measurement counts.
+
+Validation: regression tests cover empty and negative inputs.
+
 ## Current validation requirement
 
 The exact final PR head must pass formatting, lint, strict mypy, full pytest, diff hygiene, and temporary-artifact rejection before the PR is marked ready.
