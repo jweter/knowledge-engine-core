@@ -50,7 +50,9 @@ Three empty files were created under malformed or capitalized paths:
 
 Root cause: path entry mistakes in the mobile browser editor.
 
-Fix: create the authoritative files at lowercase canonical paths and remove malformed empty files. One malformed file was removed successfully; remaining empty placeholders must be removed before merge.
+Fix: create the authoritative files at lowercase canonical paths and remove all malformed empty files before merge.
+
+Validation: the final PR changed-file list contains only the intended canonical paths.
 
 ## Current validation requirement
 
