@@ -60,6 +60,34 @@ def test_corpus_run_report_protects_existing_output(
     assert called is False
 
 
+def test_corpus_run_report_rejects_symbolic_link_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = tmp_path / "target.md"
+    target.write_text("private", encoding="utf-8")
+    output = tmp_path / "report.md"
+    output.symlink_to(target)
+    called = False
+
+    def load_run(import_run_id: str) -> ImportRun:
+        nonlocal called
+        called = True
+        return _run()
+
+    monkeypatch.setattr(entrypoint, "_load_report_run", load_run)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["corpus-run-report", "run-1", "--output", str(output), "--force"],
+    )
+
+    assert result.exit_code != 0
+    assert "must not be a symbolic link" in result.output
+    assert target.read_text(encoding="utf-8") == "private"
+    assert called is False
+
+
 def test_corpus_run_report_force_overwrites_output(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -81,6 +109,29 @@ def test_corpus_run_report_force_overwrites_output(
     assert result.exit_code == 0
     assert "Wrote corpus run report:" in result.output
     assert output.read_text(encoding="utf-8").startswith("# Corpus Import Run Report")
+
+
+def test_corpus_run_report_sanitizes_filesystem_write_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output = tmp_path / "report.md"
+    monkeypatch.setattr(entrypoint, "_load_report_run", lambda import_run_id: _run())
+
+    def fail_write(self: Path, data: str, *, encoding: str) -> int:
+        raise OSError("/private/location/report.md: permission denied")
+
+    monkeypatch.setattr(Path, "write_text", fail_write)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["corpus-run-report", "run-1", "--output", str(output)],
+    )
+
+    assert result.exit_code != 0
+    assert "Report output could not be written" in result.output
+    assert "/private/location" not in result.output
+    assert "permission denied" not in result.output
 
 
 def test_corpus_run_report_surfaces_reconciliation_failure(
