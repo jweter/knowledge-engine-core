@@ -110,9 +110,7 @@ def assess_scale_readiness(
         + measurements.failed_items
         + measurements.review_required_items
     )
-    correctness_ok = (
-        measurements.declared_sources == measurements.persisted_items == outcome_total
-    )
+    correctness_ok = measurements.declared_sources == measurements.persisted_items == outcome_total
     correctness = DimensionResult(
         status=DimensionStatus.PASS if correctness_ok else DimensionStatus.FAIL,
         explanation=(
