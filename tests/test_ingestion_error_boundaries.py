@@ -64,7 +64,10 @@ def test_expected_parser_failure_is_sanitized_and_continues(tmp_path: Path) -> N
     assert result.run_status == "partially_succeeded"
     assert result.imported_count == 1
     assert result.failed_count == 1
-    assert issue.message == "The declared local file could not be parsed as a supported paper."
+    assert (
+        issue.message
+        == "The declared local file could not be parsed as a supported paper."
+    )
     assert "raw parser secret" not in issue.message
 
 
@@ -121,7 +124,9 @@ def test_expected_duplicate_resolution_failure_is_sanitized_and_continues(
             raise DuplicateResolutionError("raw duplicate secret")
         return original(session, item=item, parsed=parsed)
 
-    monkeypatch.setattr(ingestion_module, "resolve_duplicate_before_persistence", fail_first)
+    monkeypatch.setattr(
+        ingestion_module, "resolve_duplicate_before_persistence", fail_first
+    )
 
     with database.session() as session:
         result = CorpusIngestionService(
@@ -129,7 +134,9 @@ def test_expected_duplicate_resolution_failure_is_sanitized_and_continues(
         ).import_corpus(corpus_path)
 
     run = get_run(database, result.import_run_id)
-    issue = next(issue for issue in run.issues if issue.code == "duplicate_resolution_failed")
+    issue = next(
+        issue for issue in run.issues if issue.code == "duplicate_resolution_failed"
+    )
     assert result.run_status == "partially_succeeded"
     assert result.imported_count == 1
     assert result.failed_count == 1
