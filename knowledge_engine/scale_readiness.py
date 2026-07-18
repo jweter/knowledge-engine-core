@@ -119,11 +119,12 @@ def _counts_are_valid(measurements: ScaleMeasurements) -> bool:
         measurements.database_bytes_before,
         measurements.database_bytes_after,
     )
-    return (
-        measurements.declared_sources > 0
-        and all(value >= 0 for value in required_counts)
-        and all(value is None or value >= 0 for value in optional_counts)
+    has_declared_sources = measurements.declared_sources > 0
+    required_counts_are_valid = all(value >= 0 for value in required_counts)
+    optional_counts_are_valid = all(
+        value is None or value >= 0 for value in optional_counts
     )
+    return has_declared_sources and required_counts_are_valid and optional_counts_are_valid
 
 
 def assess_scale_readiness(
@@ -141,9 +142,8 @@ def assess_scale_readiness(
     counts_are_valid = _counts_are_valid(measurements)
     declared_matches_items = measurements.declared_sources == measurements.persisted_items
     item_count_matches_outcomes = measurements.persisted_items == outcome_total
-    correctness_ok = (
-        counts_are_valid and declared_matches_items and item_count_matches_outcomes
-    )
+    counts_reconcile = declared_matches_items and item_count_matches_outcomes
+    correctness_ok = counts_are_valid and counts_reconcile
     correctness = DimensionResult(
         status=DimensionStatus.PASS if correctness_ok else DimensionStatus.FAIL,
         explanation=(
