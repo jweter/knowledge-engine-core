@@ -1,43 +1,54 @@
 # Knowledge Engine Core
 
-Knowledge Engine Core is the Phase 0 foundation for an open scientific
-knowledge platform. It runs offline and provides the first durable source vault:
-import scientific PDFs, extract text, store metadata, and search a local
-collection.
+Knowledge Engine Core is the offline-first scientific source-vault foundation for
+the wider Knowledge Engine project. It imports local scientific PDFs, extracts text
+and best-effort metadata, stores traceable corpus/import state, and provides local
+lexical retrieval.
 
-The long-term Knowledge Engine mission is to help humanity preserve, connect,
-evaluate, and apply scientific knowledge with traceable evidence and visible
-uncertainty. This repository does not build the AI layer yet. It builds the
-reliable core that future AI, graph, API, and web systems can trust.
-
-## Project Vision
-
-Knowledge Engine is an open-source effort to organize, connect, and accelerate
-scientific knowledge.
-
-The long-term objective is to build a transparent, reproducible, AI-assisted
-platform that helps researchers discover connections across disciplines while
-preserving evidence, citations, and scientific rigor.
-
-The project begins with reliable document ingestion and search, then gradually
-expands toward metadata enrichment, knowledge graphs, semantic search, and
-AI-assisted reasoning. Every stage is designed to remain open, modular, and
-community-driven.
+The long-term mission is to help humanity preserve, connect, evaluate, and apply
+scientific knowledge with traceable evidence and visible uncertainty. This
+repository does not yet implement AI reasoning, a knowledge graph, vector search,
+a public API, or a web application. It builds the reliable core those later systems
+must be able to trust.
 
 ## Status
 
-Phase 0 is implemented:
+Current version: `0.2.0a1`
+
+Current phase: **Phase 1 — Focused Scientific Corpus**
+
+Completed capabilities include:
 
 - PDF ingestion with PyMuPDF
 - SQLite persistence with SQLAlchemy
-- Tables for papers, authors, journals, keywords, and extracted text
-- SQLite FTS5 keyword and phrase search
-- Version 1 corpus manifest validation with no import side effects
-- Durable import-run records for persisted corpus validation attempts
-- Typer CLI with Rich terminal output
-- pytest coverage for parser, persistence/search, and CLI behavior
-- ruff, black, and mypy configuration
-- Project governance files and GitHub templates
+- papers, authors, journals, keywords, extracted text, and FTS5 search
+- versioned corpus-manifest validation and local path-safety checks
+- persisted manifest snapshots, import runs, items, and issues
+- local-only corpus import with no URL following or document downloads
+- atomic per-item paper and FTS persistence with rollback on item failure
+- pre-persistence duplicate evidence decisions
+- exact-duplicate skipping and probable-match review outcomes
+- linked resume and retry behavior
+- separate execution and review status semantics
+- provenance-preserving metadata preview and Crossref enrichment boundaries
+- controlled 100-paper rehearsal reporting
+- deterministic M13 scale-readiness assessment
+- strict mypy, Ruff formatting/linting, and pytest coverage
+
+### Milestone history
+
+- **M9:** connected validated local PDFs to persisted import runs and paper/FTS
+  persistence.
+- **M10:** added duplicate handling, linked resume/retry, and explicit status
+  contracts.
+- **M11:** added metadata preview/enrichment with provenance-preserving boundaries.
+- **M12:** completed the controlled 100-paper rehearsal.
+- **M13:** conditionally authorized one controlled 500-paper rehearsal with explicit
+  measurement and stop conditions.
+
+The next bounded milestone is the controlled 500-paper rehearsal. It must follow the
+M13 entry, measurement, stop, reconciliation, resume, and artifact-hygiene contract.
+The rehearsal has not begun.
 
 ## Requirements
 
@@ -45,11 +56,10 @@ Phase 0 is implemented:
 - Poetry
 - Git
 
-Current local validation was performed with Python 3.14.6. Poetry is the
-intended dependency manager, but this machine currently has a Poetry certificate
-issue documented in [docs/pain_points.txt](docs/pain_points.txt). The pip-based
-fallback below is provided so contributors are not blocked while that environment
-issue is fixed.
+Current local validation was performed with Python 3.14.6. Poetry is the intended
+dependency manager. A machine-specific Poetry certificate issue remains documented
+in [docs/pain_points.txt](docs/pain_points.txt); the pip fallback below exists so
+contributors are not blocked by that local environment problem.
 
 ## Installation
 
@@ -59,9 +69,6 @@ Clone the repository:
 git clone https://github.com/<owner>/knowledge-engine-core.git
 cd knowledge-engine-core
 ```
-
-Replace `<owner>` with the GitHub account or organization that publishes the
-repository.
 
 Install with Poetry:
 
@@ -75,12 +82,12 @@ Fallback installation with `venv` and `pip`:
 ```bash
 python -m venv .venv
 .venv\Scripts\python -m pip install --upgrade pip
-.venv\Scripts\python -m pip install -e . pytest black ruff mypy
+.venv\Scripts\python -m pip install -e . pytest ruff mypy
 .venv\Scripts\ke init
 ```
 
-On macOS or Linux, replace `.venv\Scripts\python` with
-`.venv/bin/python` and `.venv\Scripts\ke` with `.venv/bin/ke`.
+On macOS or Linux, replace `.venv\Scripts\python` with `.venv/bin/python` and
+`.venv\Scripts\ke` with `.venv/bin/ke`.
 
 ## Quick Start
 
@@ -90,7 +97,7 @@ Initialize the local database:
 poetry run ke init
 ```
 
-Import a paper:
+Import one paper:
 
 ```bash
 poetry run ke import papers/example.pdf
@@ -102,27 +109,17 @@ Attach keywords during import:
 poetry run ke import papers/example.pdf --keyword alzheimer --keyword metabolism
 ```
 
-Search by keyword:
+Search by keyword or phrase:
 
 ```bash
 poetry run ke search alzheimer
-```
-
-Search by phrase:
-
-```bash
 poetry run ke search "\"metabolic signaling\""
 ```
 
-List imported papers:
+List imported papers and collection statistics:
 
 ```bash
 poetry run ke list
-```
-
-Show collection statistics:
-
-```bash
 poetry run ke stats
 ```
 
@@ -130,42 +127,28 @@ Validate a corpus manifest without importing papers:
 
 ```bash
 poetry run ke corpus-validate data/corpora/glp1_weight_loss/corpus.json
-```
-
-Check local PDF readiness for included full-text rows:
-
-```bash
 poetry run ke corpus-validate data/corpora/glp1_weight_loss/corpus.json --check-files
 ```
 
-Record a corpus validation attempt as an import run:
+Create and inspect a persisted validation run:
 
 ```bash
 poetry run ke corpus-run-create data/corpora/glp1_weight_loss/corpus.json
-```
-
-Inspect a persisted import run:
-
-```bash
 poetry run ke corpus-run-show <import-run-id>
 ```
 
-Persist and import a local corpus:
+Persist and import a declared local corpus:
 
 ```bash
 poetry run ke corpus-import data/corpora/glp1_weight_loss/corpus.json
 ```
 
-`ke corpus-import` reads only manifest-declared local files. No URLs were
-followed and no documents were downloaded.
+`ke corpus-import` reads only manifest-declared local files. It follows no URLs and
+downloads no documents.
 
-Run the GLP-1 vertical slice demo checklist:
-
-```text
-docs/glp1_vertical_slice_demo_checklist.md
-```
-
-The demo is retrieval and manual evidence display only. It does not perform
+The GLP-1 vertical-slice demo checklist is in
+[docs/glp1_vertical_slice_demo_checklist.md](docs/glp1_vertical_slice_demo_checklist.md).
+The demo performs retrieval and manual evidence display only; it does not perform
 scientific synthesis.
 
 By default, the SQLite database is created at:
@@ -183,109 +166,86 @@ KE_DATABASE_URL=sqlite:////absolute/path/ke.sqlite3 poetry run ke stats
 
 ## Developer Setup
 
-Run the complete local quality suite:
+Ruff is the single authoritative formatter and linter. The complete local quality
+suite matches `.github/workflows/quality.yml`:
 
 ```bash
-poetry run black --check .
+poetry run ruff format --check .
 poetry run ruff check .
 poetry run mypy knowledge_engine tests
 poetry run pytest
 ```
 
-Format code:
+Format and apply safe lint fixes:
 
 ```bash
-poetry run black .
+poetry run ruff format .
 poetry run ruff check . --fix
 ```
 
 Development conventions:
 
-- Work on feature branches, not directly on `main`, after the initial bootstrap.
+- Work on feature branches rather than directly on `main`.
 - Keep commits focused and use Conventional Commits.
 - Update `CHANGELOG.md` for user-visible changes.
-- Add or update tests for behavior changes.
-- Record important design decisions as ADRs under `docs/architecture/adr/`.
-
-## Project Structure
-
-```text
-knowledge-engine-core/
-  knowledge_engine/
-    cli.py          # Typer command line interface
-    config.py       # Pydantic settings
-    corpus/         # Corpus manifest validation models and service
-    database.py     # SQLAlchemy engine/session/repository logic
-    import_runs/    # Import-run persistence service and repository
-    models.py       # SQLAlchemy ORM models
-    parser.py       # PDF parsing interface and PyMuPDF implementation
-    search.py       # SQLite FTS5 search service
-    utils.py        # Small shared helpers
-  tests/            # Unit tests and integration-style service tests
-  data/             # Local SQLite database location, ignored except .gitkeep
-  papers/           # Local PDF import staging, ignored except .gitkeep
-  database/         # Reserved for future migrations or database assets
-  docs/             # Architecture, roadmap, ADRs, and pain-point tracking
-    architecture/
-      adr/          # Architecture Decision Records
-      diagrams/     # Future system diagrams
-    roadmap/        # Phase-specific roadmap notes
-    research/       # Future corpus and scientific research notes
-  .github/          # Issue templates, PR template, and CI workflow
-```
+- Add or update tests for behavioral changes.
+- Record important design decisions under `docs/architecture/adr/`.
 
 ## Architecture
 
 Knowledge Engine Core uses a small layered architecture:
 
-- `knowledge_engine.parser` extracts text and best-effort metadata from PDFs.
-- `knowledge_engine.models` defines durable relational tables.
+- `knowledge_engine.parser` extracts text and best-effort metadata from PDFs and
+  exposes typed expected document failures.
+- `knowledge_engine.models` defines durable relational state.
 - `knowledge_engine.database` owns initialization and repository writes.
-- `knowledge_engine.import_runs` persists corpus validation attempts.
-- `knowledge_engine.search` provides FTS5-backed keyword and phrase search.
-- `knowledge_engine.corpus` validates versioned corpus manifests before import.
+- `knowledge_engine.corpus` validates versioned corpus manifests and path safety.
+- `knowledge_engine.import_runs` persists validation/import state and orchestrates
+  local corpus ingestion.
+- `knowledge_engine.duplicate_resolution` evaluates duplicate evidence before any
+  paper persistence.
+- `knowledge_engine.search` provides SQLite FTS5 keyword and phrase search.
 - `knowledge_engine.cli` adapts user commands to application services.
 
-The CLI does not contain parsing, storage, or ranking logic. That keeps the
-project easy to test and makes later interfaces possible: an API server, web
-application, worker process, or notebook integration can reuse the same services.
+Expected document-level parser failures and explicitly expected duplicate-resolution
+failures remain recoverable per item. Unexpected programming, type, assertion, ORM,
+or dependency defects propagate as systemic failures rather than being persisted as
+ordinary `paper_parse_failed` or `duplicate_resolution_failed` issues. Persisted
+messages for expected failures remain stable and sanitized.
+
+The CLI does not contain parsing, persistence, or ranking logic. Later interfaces
+can reuse the same services without moving those responsibilities into command
+handlers.
 
 See [docs/architecture.md](docs/architecture.md),
 [docs/architecture/system_overview.md](docs/architecture/system_overview.md),
 [docs/architecture/adr/](docs/architecture/adr/), and
-[docs/decisions.md](docs/decisions.md) for design rationale.
+[docs/decisions.md](docs/decisions.md).
 
 ## Data Model
 
-Phase 0 creates these core tables:
+Core relational state includes:
 
-- `papers`: canonical document metadata, source path, content hash, DOI, page
-  count, word count, and future embedding references.
-- `authors`: normalized author records.
-- `journals`: publication venues.
-- `keywords`: normalized topic labels.
-- `paper_texts`: raw and body text extracted from each paper.
-- `paper_authors` and `paper_keywords`: relationship tables.
-- `manifest_snapshots`, `import_runs`, `import_items`, and `import_issues`:
-  durable validation-attempt state for Phase 1 corpus ingestion.
+- `papers`: canonical document metadata, source path, content hash, DOI, page count,
+  and word count
+- `authors`, `journals`, and `keywords`
+- `paper_texts`, `paper_authors`, and `paper_keywords`
+- `manifest_snapshots`, `import_runs`, `import_items`, and `import_issues`
+- SQLite FTS5 `paper_search` rows for local lexical retrieval
 
-SQLite FTS5 powers local search through a separate `paper_search` virtual table.
-This keeps lexical search fast without coupling canonical data to a single
-search implementation.
+Probable scholarly matches remain review outcomes rather than silent merges. Exact
+or high-confidence duplicate evidence is evaluated before paper persistence.
 
 ## Roadmap
 
-The recommended next milestone is Phase 1: build a focused scientific corpus.
-Start with one domain, such as obesity and metabolic disease, import 500 to
-1,000 legally available papers, then improve metadata extraction with PubMed and
-Crossref adapters.
+The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now includes
+completed M9–M13 ingestion, duplicate/resume, metadata, 100-paper rehearsal, and
+scale-readiness work.
 
-See [docs/roadmap.md](docs/roadmap.md) and `docs/roadmap/` for the longer
-roadmap.
-
-The current vertical slice demo is documented in
-[docs/vertical_slice.md](docs/vertical_slice.md) and
-[docs/glp1_vertical_slice_demo_checklist.md](docs/glp1_vertical_slice_demo_checklist.md).
+The immediate continuation is one controlled 500-paper rehearsal. It must not be
+expanded into Alembic adoption, a new package manager, persistent telemetry, vector
+search, a graph, AI reasoning, an API, web functionality, or unrelated refactoring
+without separate evidence and authorization.
 
 ## Known Issues
 
@@ -293,30 +253,25 @@ Known issues and future fixes are tracked in
 [docs/pain_points.txt](docs/pain_points.txt) and
 [docs/technical_debt.md](docs/technical_debt.md). Current highlights:
 
-- Poetry dependency resolution fails on this machine due to PyPI certificate
-  verification, while pip-based installation works.
-- Metadata extraction is best-effort and needs real-corpus hardening.
-- Bulk PDF ingestion and duplicate reports are not implemented yet.
+- a machine-specific Poetry/PyPI certificate problem remains unresolved
+- PDF text and metadata extraction remain best-effort and need real-corpus evidence
+- persistence failures still use a broad sanitized category pending observed failure
+  semantics
+- FTS update/delete synchronization is not implemented
+- scholarly work/version/file/assertion identity is not yet separated
+- page-level extraction provenance is deferred until before Phase 2 evidence work
 
 ## Contributing
 
-Contributions are welcome once the repository is published. Please read
-[CONTRIBUTING.md](CONTRIBUTING.md), follow the
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), follow the
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and report vulnerabilities through
 [SECURITY.md](SECURITY.md).
 
 ## Repository Family
 
-This repository is named `knowledge-engine-core` so the ecosystem can grow
-without becoming a monolith:
-
-- `knowledge-engine-core`: document ingestion and local search
-- `knowledge-engine-ai`: reasoning and synthesis
-- `knowledge-engine-web`: web interface
-- `knowledge-engine-api`: public API
-- `knowledge-engine-agents`: research agents
-- `knowledge-engine-graph`: citation and knowledge graph
-- `knowledge-engine-models`: trained and evaluated models
+This repository is intentionally limited to the scientific source-vault core. Future
+separate repositories may host AI reasoning, web, API, agent, graph, and model
+systems after their prerequisites are justified.
 
 ## License
 
