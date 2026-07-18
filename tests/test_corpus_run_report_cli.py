@@ -94,7 +94,8 @@ def test_corpus_run_report_surfaces_reconciliation_failure(
 
     assert result.exit_code != 0
     assert "Import run report reconciliation failed" in result.output
-    assert "Declared source rows do not reconcile" in result.output
+    assert "Declared source rows" in result.output
+    assert "persisted import items" in result.output
 
 
 def _run() -> ImportRun:
