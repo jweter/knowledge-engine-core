@@ -99,6 +99,33 @@ def _database_growth(before: int | None, after: int | None) -> int | None:
     return after - before
 
 
+def _counts_are_valid(measurements: ScaleMeasurements) -> bool:
+    required_counts = (
+        measurements.declared_sources,
+        measurements.persisted_items,
+        measurements.imported_items,
+        measurements.duplicate_items,
+        measurements.skipped_items,
+        measurements.failed_items,
+        measurements.review_required_items,
+        measurements.persisted_issues,
+        measurements.papers_after_fresh,
+    )
+    optional_counts = (
+        measurements.papers_after_resume,
+        measurements.resume_items,
+        measurements.resume_linked_items,
+        measurements.unexpected_resume_papers,
+        measurements.database_bytes_before,
+        measurements.database_bytes_after,
+    )
+    return (
+        measurements.declared_sources > 0
+        and all(value >= 0 for value in required_counts)
+        and all(value is None or value >= 0 for value in optional_counts)
+    )
+
+
 def assess_scale_readiness(
     measurements: ScaleMeasurements,
     thresholds: ReadinessThresholds | None = None,
@@ -111,15 +138,18 @@ def assess_scale_readiness(
         + measurements.failed_items
         + measurements.review_required_items
     )
+    counts_are_valid = _counts_are_valid(measurements)
     declared_matches_items = measurements.declared_sources == measurements.persisted_items
     item_count_matches_outcomes = measurements.persisted_items == outcome_total
-    correctness_ok = declared_matches_items and item_count_matches_outcomes
+    correctness_ok = (
+        counts_are_valid and declared_matches_items and item_count_matches_outcomes
+    )
     correctness = DimensionResult(
         status=DimensionStatus.PASS if correctness_ok else DimensionStatus.FAIL,
         explanation=(
-            "Declared sources, persisted items, and item outcomes reconcile exactly."
+            "Declared sources, persisted items, and item outcomes are valid and reconcile exactly."
             if correctness_ok
-            else "Declared sources, persisted items, and item outcomes do not reconcile."
+            else "Measurement counts are invalid or do not reconcile."
         ),
     )
 
@@ -151,7 +181,8 @@ def assess_scale_readiness(
     failure_rate = _safe_rate(measurements.failed_items, measurements.persisted_items)
     issue_rate = _safe_rate(measurements.persisted_issues, measurements.persisted_items)
     reliability_ok = (
-        failure_rate <= thresholds.maximum_failure_rate
+        counts_are_valid
+        and failure_rate <= thresholds.maximum_failure_rate
         and issue_rate <= thresholds.maximum_issue_rate
     )
     reliability = DimensionResult(
@@ -159,7 +190,7 @@ def assess_scale_readiness(
         explanation=(
             "Failure and persisted-issue rates are within policy thresholds."
             if reliability_ok
-            else "Failure or persisted-issue rate exceeds its policy threshold."
+            else "Measurement counts are invalid or a reliability rate exceeds its threshold."
         ),
     )
 
