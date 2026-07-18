@@ -117,7 +117,9 @@ class PyMuPDFParser(DocumentParser):
 
     def _extract_title(self, metadata: dict[str, str], raw_text: str, path: Path) -> str:
         metadata_title = (metadata.get("title") or "").strip()
-        if metadata_title and metadata_title.lower() not in {"untitled", "none"}:
+        if metadata_title.lower() not in {"untitled", "none"} and self._is_title_candidate(
+            metadata_title
+        ):
             return metadata_title
 
         patent_match = PATENT_TITLE_PATTERN.search(raw_text)
@@ -140,6 +142,8 @@ class PyMuPDFParser(DocumentParser):
     def _is_title_candidate(self, candidate: str) -> bool:
         normalized = candidate.casefold().strip(" .:")
         if not 8 <= len(candidate) <= 300:
+            return False
+        if not re.search(r"[A-Za-z]", candidate):
             return False
         if DOI_PATTERN.search(candidate):
             return False
