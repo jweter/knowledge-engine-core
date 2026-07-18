@@ -6,9 +6,6 @@ from pathlib import Path
 from typing import Annotated, cast
 
 import typer
-from rich.markup import escape
-from rich.table import Table
-
 from knowledge_engine.cli import app as app
 from knowledge_engine.cli import console
 from knowledge_engine.config import build_settings
@@ -20,6 +17,9 @@ from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.metadata_enrichment import MetadataProvider, MetadataQuery
 from knowledge_engine.models import ImportRun
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
+from rich.markup import escape
+from rich.table import Table
+
 from knowledge_engine.pubmed_discovery import (
     GetTransport,
     NcbiDiscoveryError,
