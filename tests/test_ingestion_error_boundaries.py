@@ -76,11 +76,10 @@ def test_unexpected_parser_exception_propagates_without_output(
     declare_pdf(tmp_path, "paper.pdf")
     parser = StubParser({"paper.pdf": TypeError("raw parser defect")})
 
-    with pytest.raises(TypeError, match="raw parser defect"):
-        with database.session() as session:
-            CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
-                corpus_path
-            )
+    with pytest.raises(TypeError, match="raw parser defect"), database.session() as session:
+        CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
+            corpus_path
+        )
 
     captured = capsys.readouterr()
     assert "raw parser defect" not in captured.out
@@ -160,11 +159,10 @@ def test_unexpected_duplicate_resolution_exception_propagates_without_output(
 
     monkeypatch.setattr(ingestion_module, "resolve_duplicate_before_persistence", fail_systemically)
 
-    with pytest.raises(TypeError, match="raw duplicate defect"):
-        with database.session() as session:
-            CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
-                corpus_path
-            )
+    with pytest.raises(TypeError, match="raw duplicate defect"), database.session() as session:
+        CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
+            corpus_path
+        )
 
     captured = capsys.readouterr()
     assert "raw duplicate defect" not in captured.out
