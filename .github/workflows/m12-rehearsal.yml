@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/m12-rehearsal.yml
-      - .github/scripts/prepare_m12_pmc_corpus.py
+      - .github/scripts/prepare_m12_pmc_corpus_v2.py
 
 permissions:
   contents: read
@@ -32,9 +32,17 @@ jobs:
           python -m pip install poetry
           poetry install
 
+      - name: Prepare exactly 100 licensed PMC OA PDFs
+        run: |
+          poetry run python .github/scripts/prepare_m12_pmc_corpus_v2.py \
+            --workspace "$GITHUB_WORKSPACE" \
+            --count 100 | tee /tmp/m12-preparation.log
+          test "$(find .m12-runtime/papers -maxdepth 1 -type f -name '*.pdf' | wc -l)" -eq 100
+
       - name: Record environment
         run: |
           mkdir -p .m12-runtime/evidence
+          cp /tmp/m12-preparation.log .m12-runtime/evidence/preparation.log
           {
             echo "Git commit: $GITHUB_SHA"
             echo "Operating system: $(uname -srm)"
@@ -46,13 +54,6 @@ jobs:
             echo "SQLAlchemy: $(poetry run python -c 'import sqlalchemy; print(sqlalchemy.__version__)')"
             echo "SQLite: $(poetry run python -c 'import sqlite3; print(sqlite3.sqlite_version)')"
           } > .m12-runtime/evidence/environment.txt
-
-      - name: Prepare exactly 100 licensed PMC OA PDFs
-        run: |
-          poetry run python .github/scripts/prepare_m12_pmc_corpus.py \
-            --workspace "$GITHUB_WORKSPACE" \
-            --count 100 | tee .m12-runtime/preparation.log
-          test "$(find .m12-runtime/papers -maxdepth 1 -type f -name '*.pdf' | wc -l)" -eq 100
 
       - name: Validate corpus preflight
         run: |
