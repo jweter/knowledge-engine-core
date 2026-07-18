@@ -73,7 +73,9 @@ class PyMuPDFParser(DocumentParser):
                 metadata = document.metadata or {}
                 page_count = document.page_count
         except fitz.FileDataError as exc:
-            raise MalformedDocumentError("The PDF structure could not be parsed.") from exc
+            raise MalformedDocumentError(
+                "The PDF structure could not be parsed."
+            ) from exc
 
         raw_text = normalize_whitespace("\n\n".join(page_texts))
         title = self._extract_title(metadata, raw_text, pdf_path)
@@ -95,7 +97,9 @@ class PyMuPDFParser(DocumentParser):
             body_text=body_text,
         )
 
-    def _extract_title(self, metadata: dict[str, str], raw_text: str, path: Path) -> str:
+    def _extract_title(
+        self, metadata: dict[str, str], raw_text: str, path: Path
+    ) -> str:
         metadata_title = (metadata.get("title") or "").strip()
         if metadata_title and metadata_title.lower() not in {"untitled", "none"}:
             return metadata_title
