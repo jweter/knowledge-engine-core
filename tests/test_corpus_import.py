@@ -8,7 +8,7 @@ import knowledge_engine.import_runs.ingestion as ingestion_module
 from knowledge_engine.database import PaperRepository
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService
 from knowledge_engine.models import Paper
-from knowledge_engine.parser import DocumentParser, ParsedPaper
+from knowledge_engine.parser import DocumentParseError, DocumentParser, ParsedPaper
 from tests.corpus_fixtures import (
     get_run,
     make_database,
@@ -265,7 +265,7 @@ def test_parse_failure_is_sanitized_and_later_items_continue(tmp_path: Path) -> 
     good_pdf = declare_pdf(tmp_path, "good.pdf")
     parser = StubParser(
         {
-            "bad.pdf": ValueError("sensitive parse detail"),
+            "bad.pdf": DocumentParseError("sensitive parse detail"),
             "good.pdf": parsed_paper(
                 good_pdf, title="Good Import", doi="10.1234/good", content_hash="b" * 64
             ),
@@ -489,7 +489,7 @@ def test_all_item_failures_finish_failed(tmp_path: Path) -> None:
     database = make_database(tmp_path)
     corpus_path = make_corpus(tmp_path, rows=[source_row(local_path="bad.pdf")])
     declare_pdf(tmp_path, "bad.pdf")
-    parser = StubParser({"bad.pdf": ValueError("sensitive parse detail")})
+    parser = StubParser({"bad.pdf": DocumentParseError("sensitive parse detail")})
 
     with database.session() as session:
         result = CorpusIngestionService(

@@ -5,21 +5,28 @@ from __future__ import annotations
 from pathlib import Path
 
 from knowledge_engine.database import PaperRepository
-from knowledge_engine.duplicate_resolution import resolve_duplicate_before_persistence
+from knowledge_engine.duplicate_resolution import (
+    DuplicateResolutionError,
+    resolve_duplicate_before_persistence,
+)
 from knowledge_engine.import_runs._helpers import utc_now
 from knowledge_engine.import_runs.ingestion import (
     CorpusIngestionService,
     ImportedCorpusRun,
+    UnsafePersistedPathError,
     _final_review_status,
     _final_run_status,
     _IssueTemplate,
+    _mark_unimported_items_skipped,
     _papers_directory,
     _PapersDirectoryError,
     _resolve_item_path,
+    _result_from_run,
     _should_import_item,
 )
 from knowledge_engine.import_runs.linked import LinkedImportRunService
 from knowledge_engine.import_runs.resume import RunMode
+from knowledge_engine.parser import DocumentParseError
 
 
 class LinkedCorpusIngestionService(CorpusIngestionService):
@@ -48,18 +55,11 @@ class LinkedCorpusIngestionService(CorpusIngestionService):
             raise RuntimeError("Linked import run was not readable after persistence.")
 
         if run.manifest_validity != "valid" or run.import_readiness != "ready":
-            skipped_count = 0
-            for item in run.items:
-                item.completed_at = utc_now()
-                if item.item_status == "valid":
-                    item.item_status = "skipped"
-                if item.item_status != "imported":
-                    skipped_count += 1
+            skipped_count = _mark_unimported_items_skipped(run)
             run.completed_at = utc_now()
             self.session.flush()
-            return ImportedCorpusRun(
-                import_run_id=run.import_run_id,
-                run_status=run.run_status,
+            return _result_from_run(
+                run,
                 imported_count=0,
                 failed_count=0,
                 skipped_count=skipped_count,
@@ -69,13 +69,7 @@ class LinkedCorpusIngestionService(CorpusIngestionService):
         try:
             papers_dir = _papers_directory(run.manifest_snapshot, self.project_root)
         except _PapersDirectoryError:
-            skipped_count = 0
-            for item in run.items:
-                item.completed_at = utc_now()
-                if item.item_status == "valid":
-                    item.item_status = "skipped"
-                if item.item_status != "imported":
-                    skipped_count += 1
+            skipped_count = _mark_unimported_items_skipped(run)
             self._record_run_issue(
                 run,
                 next_sequence,
@@ -88,9 +82,8 @@ class LinkedCorpusIngestionService(CorpusIngestionService):
             run.run_status = "failed"
             run.completed_at = utc_now()
             self.session.flush()
-            return ImportedCorpusRun(
-                import_run_id=run.import_run_id,
-                run_status=run.run_status,
+            return _result_from_run(
+                run,
                 imported_count=0,
                 failed_count=0,
                 skipped_count=skipped_count,
@@ -113,7 +106,7 @@ class LinkedCorpusIngestionService(CorpusIngestionService):
 
             try:
                 local_path = _resolve_item_path(papers_dir, item.local_path or "")
-            except ValueError:
+            except UnsafePersistedPathError:
                 failed_count += 1
                 item.item_status = "failed"
                 next_sequence = self._record_issue(
@@ -155,7 +148,7 @@ class LinkedCorpusIngestionService(CorpusIngestionService):
                     ),
                 )
                 continue
-            except Exception:
+            except DocumentParseError:
                 failed_count += 1
                 item.item_status = "failed"
                 next_sequence = self._record_issue(
@@ -175,7 +168,7 @@ class LinkedCorpusIngestionService(CorpusIngestionService):
                     item=item,
                     parsed=parsed,
                 )
-            except Exception:
+            except DuplicateResolutionError:
                 failed_count += 1
                 item.item_status = "failed"
                 next_sequence = self._record_issue(
@@ -233,16 +226,18 @@ class LinkedCorpusIngestionService(CorpusIngestionService):
             item.item_status = "imported"
             item.matched_paper_id = paper.id
 
-        run.run_status = _final_run_status(imported_count, failed_count)
-        run.review_status = _final_review_status(needs_review_count)
+        final_run_status = _final_run_status(imported_count, failed_count)
+        final_review_status = _final_review_status(needs_review_count)
+        run.run_status = final_run_status.value
+        run.review_status = final_review_status.value
         run.completed_at = utc_now()
         self.session.flush()
         return ImportedCorpusRun(
             import_run_id=run.import_run_id,
-            run_status=run.run_status,
+            run_status=final_run_status,
             imported_count=imported_count,
             failed_count=failed_count,
             skipped_count=skipped_count,
             needs_review_count=needs_review_count,
-            review_status=run.review_status,
+            review_status=final_review_status,
         )
