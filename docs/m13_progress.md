@@ -4,4 +4,6 @@ The deterministic readiness model, Markdown renderer, renderer tests, final 500-
 
 Current decision: ready with conditions for a controlled 500-paper rehearsal. This is not a production-capacity claim.
 
-No CLI or schema migration is justified for M13. Remaining work is final full-diff review, exact-head Quality verification, PR description synchronization, ready-for-review transition, squash merge, and issue #18 closure.
+The assessment rejects empty and negative measurement sets and preserves unknown values explicitly.
+
+No CLI or schema migration is justified for M13. Remaining work is exact-head Quality verification, PR description synchronization, ready-for-review transition, squash merge, and issue #18 closure.
