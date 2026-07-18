@@ -44,6 +44,23 @@ def test_report_redacts_absolute_and_traversal_paths() -> None:
     assert "[redacted unsafe path]" in report
 
 
+def test_report_escapes_markdown_and_html_in_persisted_text() -> None:
+    run = _synthetic_run()
+    run.corpus_name = "# [Click](https://attacker.invalid) <img src=x> *unsafe*"
+    run.items[0].source_id = "source`\n## injected"
+
+    report = render_import_run_report(run)
+
+    assert "# [Click](https://attacker.invalid)" not in report
+    assert "<img src=x>" not in report
+    assert "*unsafe*" not in report
+    assert "\\# \\[Click\\]\\(https://attacker\\.invalid\\)" in report
+    assert "\\<img src=x\\>" in report
+    assert "\\*unsafe\\*" in report
+    assert "source' ## injected" in report
+    assert "\n## injected" not in report
+
+
 def test_report_rejects_source_row_item_count_mismatch() -> None:
     run = _synthetic_run()
     run.total_source_rows = 101
