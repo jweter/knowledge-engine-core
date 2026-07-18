@@ -18,7 +18,6 @@ from knowledge_engine.corpus.validation import (
     APPROVED_FULL_TEXT_STATUSES,
     discover_project_root,
 )
-from knowledge_engine.database import PaperRepository
 from knowledge_engine.duplicate_resolution import (
     DuplicateResolutionError,
     resolve_duplicate_before_persistence,
@@ -33,7 +32,16 @@ from knowledge_engine.import_runs.statuses import (
     derive_run_status,
 )
 from knowledge_engine.models import ImportIssue, ImportItem, ImportRun, ManifestSnapshot
+from knowledge_engine.paper_persistence import ClassifiedPaperRepository
 from knowledge_engine.parser import DocumentParseError, DocumentParser, PyMuPDFParser
+from knowledge_engine.persistence_errors import (
+    DatabaseIOError,
+    DatabaseUnavailableError,
+    DuplicatePaperError,
+    PaperPersistenceError,
+    RelationalWriteError,
+    SearchIndexWriteError,
+)
 
 
 @dataclass(frozen=True)
@@ -67,9 +75,10 @@ class UnsafePersistedPathError(ValueError):
 class CorpusIngestionService:
     """Import local corpus files after persisting an M8 import run.
 
-    Expected document and duplicate-evidence failures are recorded per item and the
-    run continues. Unexpected exceptions propagate so the caller's outer transaction
-    can roll back and the defect cannot masquerade as an ordinary paper failure.
+    Expected document, duplicate-evidence, and operational persistence failures are
+    recorded per item and the run continues. Unexpected exceptions propagate so the
+    caller's outer transaction can roll back and the defect cannot masquerade as an
+    ordinary paper failure.
     """
 
     def __init__(
@@ -231,33 +240,15 @@ class CorpusIngestionService:
                 with self.session.begin_nested():
                     # Isolate one paper import so persistence/FTS failures roll back this
                     # item completely without aborting the rest of the run.
-                    paper = PaperRepository(self.session).add_parsed_paper(parsed)
-            except ValueError:
+                    paper = ClassifiedPaperRepository(self.session).add_parsed_paper(parsed)
+            except PaperPersistenceError as exc:
                 failed_count += 1
                 item.item_status = "failed"
                 next_sequence = self._record_issue(
                     run,
                     item,
                     next_sequence,
-                    _IssueTemplate(
-                        code="paper_already_imported",
-                        message=(
-                            "A paper with the same path, DOI, or content hash already exists."
-                        ),
-                    ),
-                )
-                continue
-            except Exception:
-                failed_count += 1
-                item.item_status = "failed"
-                next_sequence = self._record_issue(
-                    run,
-                    item,
-                    next_sequence,
-                    _IssueTemplate(
-                        code="paper_persistence_failed",
-                        message="The parsed paper could not be saved completely.",
-                    ),
+                    _persistence_issue(exc),
                 )
                 continue
 
@@ -334,6 +325,35 @@ class CorpusIngestionService:
         self.repository.add_issues([issue])
         run.import_blocker_count += 1
         return sequence + 1
+
+
+def _persistence_issue(exc: PaperPersistenceError) -> _IssueTemplate:
+    if isinstance(exc, DuplicatePaperError):
+        return _IssueTemplate(
+            code="paper_already_imported",
+            message="A paper with the same path, DOI, or content hash already exists.",
+        )
+    if isinstance(exc, DatabaseUnavailableError):
+        return _IssueTemplate(
+            code="database_unavailable",
+            message="The database was unavailable while saving the parsed paper.",
+        )
+    if isinstance(exc, DatabaseIOError):
+        return _IssueTemplate(
+            code="database_io_failed",
+            message="The database reported an I/O failure while saving the parsed paper.",
+        )
+    if isinstance(exc, SearchIndexWriteError):
+        return _IssueTemplate(
+            code="paper_search_index_write_failed",
+            message="The parsed paper could not be added to the search index.",
+        )
+    if isinstance(exc, RelationalWriteError):
+        return _IssueTemplate(
+            code="paper_relational_write_failed",
+            message="The parsed paper metadata could not be saved.",
+        )
+    raise TypeError("Unsupported persistence error type.")
 
 
 def _should_import_item(item: ImportItem) -> bool:
