@@ -22,6 +22,7 @@ from knowledge_engine.models import ImportRun
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
 from knowledge_engine.pmc_acquisition import (
     AcquisitionError,
+    AcquisitionReceipt,
     AcquisitionTransport,
     PmcOaAcquisitionService,
 )
@@ -139,6 +140,24 @@ def _write_output(output: Path, content: str) -> None:
         raise typer.BadParameter("Output file could not be written.") from None
 
 
+def _rollback_acquired_files(
+    output_directory: Path,
+    receipt: AcquisitionReceipt,
+) -> None:
+    """Remove files from a completed batch when its receipt cannot be persisted."""
+
+    rollback_failed = False
+    for item in receipt.items:
+        try:
+            (output_directory / item.filename).unlink(missing_ok=True)
+        except OSError:
+            rollback_failed = True
+    if rollback_failed:
+        raise typer.BadParameter(
+            "Receipt output failed and acquired PDFs could not be fully rolled back."
+        )
+
+
 @app.command("metadata-preview")
 def metadata_preview(
     doi: DoiOption,
@@ -242,7 +261,8 @@ def pmc_oa_acquire(
 
     _validate_output(receipt, force=force)
     console.print(
-        "[yellow]Network access:[/yellow] acquiring explicitly approved PDFs from official PMC OA resources."
+        "[yellow]Network access:[/yellow] acquiring explicitly approved PDFs "
+        "from official PMC OA resources."
     )
     try:
         result = _pmc_acquisition_service().acquire(
@@ -254,7 +274,13 @@ def pmc_oa_acquire(
         console.print(f"[red]PMC OA acquisition failed:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
 
-    _write_output(receipt, result.to_json())
+    try:
+        _write_output(receipt, result.to_json())
+    except typer.BadParameter:
+        _rollback_acquired_files(papers_dir, result)
+        raise typer.BadParameter(
+            "Receipt output could not be written; acquired PDFs were rolled back."
+        ) from None
     console.print(
         f"[green]Acquired {result.acquired_count} approved PMC OA PDFs.[/green] "
         f"Receipt: {receipt}"
