@@ -30,7 +30,22 @@ jobs:
         run: poetry install
 
       - name: Check formatting
-        run: poetry run ruff format --check --diff .
+        id: formatting
+        continue-on-error: true
+        run: poetry run ruff format --check --diff . > ruff-format.diff
+
+      - name: Upload formatting diff
+        if: steps.formatting.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruff-format-diff
+          path: ruff-format.diff
+
+      - name: Enforce formatting result
+        if: steps.formatting.outcome == 'failure'
+        run: |
+          cat ruff-format.diff
+          exit 1
 
       - name: Lint
         run: poetry run ruff check .
