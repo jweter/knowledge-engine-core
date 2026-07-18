@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import pytest
 
 from knowledge_engine.pubmed_discovery import (
+    GetTransport,
     NcbiDiscoveryError,
     PubmedPmcDiscoveryService,
 )
@@ -19,7 +20,7 @@ class FakeResponse:
     headers: Mapping[str, str]
 
 
-class FakeTransport:
+class FakeTransport(GetTransport):
     def __init__(self, responses: list[FakeResponse]) -> None:
         self.responses = responses
         self.urls: list[str] = []
