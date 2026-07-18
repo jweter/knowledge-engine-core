@@ -30,7 +30,7 @@ jobs:
         run: poetry install
 
       - name: Check formatting
-        run: poetry run ruff format --check .
+        run: poetry run ruff format --check --diff .
 
       - name: Lint
         run: poetry run ruff check .
