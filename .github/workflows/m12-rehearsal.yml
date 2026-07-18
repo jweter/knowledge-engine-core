@@ -1,9 +1,7 @@
 name: M12 Real 100-Paper Rehearsal
 
 on:
-  push:
-    branches:
-      - feature/m12-100-paper-rehearsal
+  pull_request:
     paths:
       - .github/workflows/m12-rehearsal.yml
       - .github/scripts/prepare_m12_pmc_corpus.py
