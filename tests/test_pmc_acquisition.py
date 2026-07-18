@@ -89,6 +89,27 @@ def test_non_pdf_payload_is_rejected_without_persisting_file(tmp_path: Path) -> 
     assert not (output / "PMC999.pdf").exists()
 
 
+def test_second_download_failure_rolls_back_entire_batch(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path, count=2)
+    approvals = _write_approvals(tmp_path, count=2)
+    output = tmp_path / "papers"
+    transport = FakeTransport(
+        [
+            FakeResponse(200, b"%PDF-1.7\nfirst", {}),
+            FakeResponse(200, b"<html>not pdf</html>", {}),
+        ]
+    )
+
+    with pytest.raises(AcquisitionError, match="not a PDF"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=output,
+        )
+
+    assert list(output.iterdir()) == []
+
+
 def test_existing_output_fails_before_network(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path)
@@ -107,45 +128,61 @@ def test_existing_output_fails_before_network(tmp_path: Path) -> None:
     assert transport.urls == []
 
 
-def _write_candidates(tmp_path: Path) -> Path:
-    path = tmp_path / "candidates.json"
-    path.write_text(
-        json.dumps(
+def _write_candidates(tmp_path: Path, *, count: int = 1) -> Path:
+    rows = [
+        {
+            "pmid": "222",
+            "pmcid": "PMC999",
+            "license": "CC BY",
+            "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf",
+            "open_access": True,
+            "status": "oa_verified",
+        }
+    ]
+    if count == 2:
+        rows.append(
             {
-                "candidates": [
-                    {
-                        "pmid": "222",
-                        "pmcid": "PMC999",
-                        "license": "CC BY",
-                        "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf",
-                        "open_access": True,
-                        "status": "oa_verified",
-                    }
-                ]
+                "pmid": "333",
+                "pmcid": "PMC1000",
+                "license": "CC BY",
+                "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/second.pdf",
+                "open_access": True,
+                "status": "oa_verified",
             }
-        ),
-        encoding="utf-8",
-    )
+        )
+    path = tmp_path / "candidates.json"
+    path.write_text(json.dumps({"candidates": rows}), encoding="utf-8")
     return path
 
 
-def _write_approvals(tmp_path: Path, *, license_name: str = "CC BY") -> Path:
+def _write_approvals(
+    tmp_path: Path,
+    *,
+    license_name: str = "CC BY",
+    count: int = 1,
+) -> Path:
+    rows = [
+        {
+            "pmid": "222",
+            "pmcid": "PMC999",
+            "license": license_name,
+            "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf",
+            "filename": "PMC999.pdf",
+        }
+    ]
+    if count == 2:
+        rows.append(
+            {
+                "pmid": "333",
+                "pmcid": "PMC1000",
+                "license": "CC BY",
+                "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/second.pdf",
+                "filename": "PMC1000.pdf",
+            }
+        )
     path = tmp_path / "approvals.json"
     path.write_text(
-        json.dumps(
-            {
-                "schema_version": 1,
-                "approvals": [
-                    {
-                        "pmid": "222",
-                        "pmcid": "PMC999",
-                        "license": license_name,
-                        "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf",
-                        "filename": "PMC999.pdf",
-                    }
-                ],
-            }
-        ),
+        json.dumps({"schema_version": 1, "approvals": rows}),
         encoding="utf-8",
     )
     return path
