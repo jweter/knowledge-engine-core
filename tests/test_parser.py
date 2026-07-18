@@ -63,6 +63,24 @@ def test_parser_classifies_encrypted_pdf_as_expected_failure(tmp_path: Path) -> 
         PyMuPDFParser().parse(pdf_path)
 
 
+def test_title_fallback_rejects_malformed_embedded_metadata(tmp_path: Path) -> None:
+    parser = PyMuPDFParser()
+
+    title = parser._extract_title(
+        {"title": "PII: S0304-4165(98)00177-9"},
+        (
+            "Rapid estimation of avidin and streptavidin by fluorescence quenching or\n\n"
+            "fluorescence polarization\n\nGerald Kada"
+        ),
+        tmp_path / "paper.pdf",
+    )
+
+    assert title == (
+        "Rapid estimation of avidin and streptavidin by fluorescence quenching or "
+        "fluorescence polarization"
+    )
+
+
 def test_title_fallback_skips_banner_and_combines_wrapped_title(tmp_path: Path) -> None:
     parser = PyMuPDFParser()
 
