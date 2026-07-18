@@ -3,7 +3,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs" / "m14_rehearsal_evidence.schema.json"
 EXAMPLE_PATH = ROOT / "docs" / "m14_rehearsal_evidence.example.json"
