@@ -69,6 +69,9 @@ class PyMuPDFParser(DocumentParser):
 
         try:
             with fitz.open(pdf_path) as document:
+                if document.needs_pass:
+                    msg = "The PDF is encrypted and requires a password."
+                    raise MalformedDocumentError(msg)
                 page_texts = [page.get_text("text") for page in document]
                 metadata = document.metadata or {}
                 page_count = document.page_count
