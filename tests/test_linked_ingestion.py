@@ -4,6 +4,7 @@ from pathlib import Path
 
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService
 from knowledge_engine.import_runs.linked_ingestion import LinkedCorpusIngestionService
+from knowledge_engine.parser import DocumentParseError
 from tests.corpus_fixtures import get_run, make_database
 from tests.test_corpus_import import (
     StubParser,
@@ -57,6 +58,8 @@ def test_resume_does_not_reparse_prior_success(tmp_path: Path) -> None:
     assert resumed.imported_count == 0
     assert resumed.failed_count == 0
     assert resumed.skipped_count == 1
+    assert resumed.needs_review_count == 0
+    assert resumed.review_status == "clear"
     assert run.run_mode == "resume"
     assert run.parent_import_run_id == first.import_run_id
     assert run.items[0].item_status == "skipped"
@@ -90,7 +93,7 @@ def test_retry_failed_processes_only_failed_parent_item(tmp_path: Path) -> None:
             project_root=tmp_path,
             parser=StubParser(
                 {
-                    "failed.pdf": RuntimeError("parse failure"),
+                    "failed.pdf": DocumentParseError("parse failure"),
                     "success.pdf": parsed_paper(
                         success_path,
                         title="Success",
@@ -131,6 +134,8 @@ def test_retry_failed_processes_only_failed_parent_item(tmp_path: Path) -> None:
     assert retried.imported_count == 1
     assert retried.failed_count == 0
     assert retried.skipped_count == 1
+    assert retried.needs_review_count == 0
+    assert retried.review_status == "clear"
     assert run.run_mode == "retry_failed"
     assert items["failed-source"].item_status == "imported"
     assert (
