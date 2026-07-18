@@ -5,10 +5,11 @@ import pytest
 from sqlalchemy import text
 
 import knowledge_engine.import_runs.ingestion as ingestion_module
-from knowledge_engine.database import PaperRepository
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService
 from knowledge_engine.models import Paper
+from knowledge_engine.paper_persistence import ClassifiedPaperRepository
 from knowledge_engine.parser import DocumentParseError, DocumentParser, ParsedPaper
+from knowledge_engine.persistence_errors import SearchIndexWriteError
 from tests.corpus_fixtures import (
     get_run,
     make_database,
@@ -425,7 +426,7 @@ def test_ingestion_updates_run_import_blocker_count(tmp_path: Path) -> None:
     assert [item.import_blocker_count for item in run.items] == [1, 1]
 
 
-def test_persistence_failure_rolls_back_failed_paper_completely(
+def test_expected_search_index_failure_rolls_back_item_and_continues(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -455,14 +456,14 @@ def test_persistence_failure_rolls_back_failed_paper_completely(
             ),
         }
     )
-    original_upsert = PaperRepository.upsert_search_index
+    original_upsert = ClassifiedPaperRepository.upsert_search_index
 
-    def fail_one_index(self: PaperRepository, paper: Paper) -> None:
+    def fail_one_index(self: ClassifiedPaperRepository, paper: Paper) -> None:
         if paper.title == "Fail Me":
-            raise RuntimeError("sensitive sqlite failure")
+            raise SearchIndexWriteError("sensitive sqlite failure")
         original_upsert(self, paper)
 
-    monkeypatch.setattr(PaperRepository, "upsert_search_index", fail_one_index)
+    monkeypatch.setattr(ClassifiedPaperRepository, "upsert_search_index", fail_one_index)
 
     with database.session() as session:
         result = CorpusIngestionService(
@@ -477,12 +478,52 @@ def test_persistence_failure_rolls_back_failed_paper_completely(
         source_paths = list(connection.execute(text("SELECT source_path FROM papers")).scalars())
 
     assert result.run_status == "partially_succeeded"
+    assert result.failed_count == 1
     assert paper_count == 1
     assert text_count == 1
     assert fts_count == 1
     assert source_paths == [str(good_pdf.resolve())]
-    assert any(issue.code == "paper_persistence_failed" for issue in run.issues)
-    assert all("sensitive sqlite failure" not in issue.message for issue in run.issues)
+    issue = next(issue for issue in run.issues if issue.code == "paper_search_index_write_failed")
+    assert issue.message == "The parsed paper could not be added to the search index."
+    assert "sensitive sqlite failure" not in issue.message
+
+
+def test_unexpected_repository_defect_propagates_and_rolls_back_outer_transaction(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(tmp_path)
+    pdf_path = declare_pdf(tmp_path, "paper.pdf")
+    parser = StubParser(
+        {
+            "paper.pdf": parsed_paper(
+                pdf_path,
+                title="Unexpected Failure",
+                doi="10.1234/unexpected",
+                content_hash="e" * 64,
+            )
+        }
+    )
+
+    def fail_unexpectedly(self: ClassifiedPaperRepository, paper: Paper) -> None:
+        del self, paper
+        raise TypeError("sensitive programming defect")
+
+    monkeypatch.setattr(ClassifiedPaperRepository, "upsert_search_index", fail_unexpectedly)
+
+    with pytest.raises(TypeError, match="sensitive programming defect"):
+        with database.session() as session:
+            CorpusIngestionService(
+                session, project_root=tmp_path, parser=parser
+            ).import_corpus(corpus_path)
+
+    with database.engine.connect() as connection:
+        assert connection.execute(text("SELECT count(*) FROM papers")).scalar() == 0
+        assert connection.execute(text("SELECT count(*) FROM paper_texts")).scalar() == 0
+        assert connection.execute(text("SELECT count(*) FROM paper_search")).scalar() == 0
+        assert connection.execute(text("SELECT count(*) FROM import_runs")).scalar() == 0
+        assert connection.execute(text("SELECT count(*) FROM import_issues")).scalar() == 0
 
 
 def test_all_item_failures_finish_failed(tmp_path: Path) -> None:
