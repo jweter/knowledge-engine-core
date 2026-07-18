@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from pathlib import Path
 
 import fitz
@@ -11,6 +12,20 @@ from pydantic import BaseModel, Field
 from knowledge_engine.utils import count_words, file_sha256, normalize_whitespace
 
 DOI_PATTERN = re.compile(r"\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b", re.IGNORECASE)
+REFERENCE_HEADING_PATTERN = re.compile(r"(?im)^\s*(?:references|bibliography|literature cited)\s*$")
+PATENT_TITLE_PATTERN = re.compile(
+    r"(?is)\(54\)\s*Title:\s*(.*?)(?:\n\s*\n\s*\(57\)|\n\s*\n\s*Abstract\b)"
+)
+GENERIC_TITLE_LINES = {
+    "abstract",
+    "article",
+    "articles",
+    "general relativity",
+    "original article",
+    "research article",
+    "review",
+    "reviews",
+}
 
 
 class DocumentParseError(Exception):
@@ -100,14 +115,52 @@ class PyMuPDFParser(DocumentParser):
 
     def _extract_title(self, metadata: dict[str, str], raw_text: str, path: Path) -> str:
         metadata_title = (metadata.get("title") or "").strip()
-        if metadata_title and metadata_title.lower() not in {"untitled", "none"}:
+        if metadata_title.lower() not in {"untitled", "none"} and self._is_title_candidate(
+            metadata_title
+        ):
             return metadata_title
 
-        for line in raw_text.splitlines():
-            candidate = line.strip()
-            if 8 <= len(candidate) <= 300 and not DOI_PATTERN.search(candidate):
-                return candidate
+        patent_match = PATENT_TITLE_PATTERN.search(raw_text)
+        if patent_match:
+            patent_title = normalize_whitespace(patent_match.group(1))
+            if patent_title:
+                return patent_title
+
+        lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+        for index, candidate in enumerate(lines):
+            if not self._is_title_candidate(candidate):
+                continue
+            if index + 1 < len(lines) and self._is_wrapped_title_continuation(
+                candidate, lines[index + 1]
+            ):
+                return f"{candidate} {lines[index + 1]}"
+            return candidate
         return path.stem.replace("_", " ").replace("-", " ").strip().title()
+
+    def _is_title_candidate(self, candidate: str) -> bool:
+        normalized = candidate.casefold().strip(" .:")
+        if not 8 <= len(candidate) <= 300:
+            return False
+        if not any(character.isalpha() for character in candidate):
+            return False
+        if DOI_PATTERN.search(candidate):
+            return False
+        if normalized in GENERIC_TITLE_LINES:
+            return False
+        if re.match(r"^\(\d{2}\)\s", candidate):
+            return False
+        if re.match(r"^(?:pii|issn|isbn)\s*:", candidate, re.IGNORECASE):
+            return False
+        return not (candidate.isupper() and len(candidate.split()) <= 6)
+
+    def _is_wrapped_title_continuation(self, candidate: str, next_line: str) -> bool:
+        if not self._is_title_candidate(next_line):
+            return False
+        first_character = next_line.lstrip()[0]
+        if first_character.islower() or first_character in {"£", "β", "γ"}:
+            return True
+        final_word = candidate.rstrip(" .:;-").split()[-1].casefold()
+        return final_word in {"a", "an", "and", "for", "in", "of", "on", "or", "the", "to", "with"}
 
     def _extract_authors(self, metadata: dict[str, str]) -> list[str]:
         author_text = (metadata.get("author") or "").strip()
@@ -127,10 +180,19 @@ class PyMuPDFParser(DocumentParser):
         return abstract[:5000] if abstract else None
 
     def _extract_doi(self, raw_text: str) -> str | None:
-        match = DOI_PATTERN.search(raw_text)
-        if not match:
-            return None
-        return match.group(0).rstrip(".")
+        reference_heading = REFERENCE_HEADING_PATTERN.search(raw_text)
+        identity_text = raw_text[: reference_heading.start()] if reference_heading else raw_text
+        identity_match = DOI_PATTERN.search(identity_text)
+        if identity_match:
+            return identity_match.group(0).rstrip(".")
+
+        matches = [match.group(0).rstrip(".") for match in DOI_PATTERN.finditer(raw_text)]
+        normalized_counts = Counter(match.casefold() for match in matches)
+        repeated = [match for match, count in normalized_counts.items() if count >= 2]
+        if len(repeated) == 1:
+            repeated_doi = repeated[0]
+            return next(match for match in matches if match.casefold() == repeated_doi)
+        return None
 
     def _extract_body_text(self, raw_text: str, abstract: str | None) -> str:
         if abstract:
