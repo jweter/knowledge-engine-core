@@ -19,13 +19,16 @@ from knowledge_engine.corpus.validation import (
     discover_project_root,
 )
 from knowledge_engine.database import PaperRepository
-from knowledge_engine.duplicate_resolution import resolve_duplicate_before_persistence
+from knowledge_engine.duplicate_resolution import (
+    DuplicateResolutionError,
+    resolve_duplicate_before_persistence,
+)
 from knowledge_engine.import_runs._helpers import new_uuid, utc_now
 from knowledge_engine.import_runs.repository import ImportRunRepository
 from knowledge_engine.import_runs.service import ImportRunService
 from knowledge_engine.import_runs.statuses import derive_review_status, derive_run_status
 from knowledge_engine.models import ImportIssue, ImportItem, ImportRun, ManifestSnapshot
-from knowledge_engine.parser import DocumentParser, PyMuPDFParser
+from knowledge_engine.parser import DocumentParseError, DocumentParser, PyMuPDFParser
 
 
 @dataclass(frozen=True)
@@ -53,7 +56,12 @@ class _PapersDirectoryError(ValueError):
 
 
 class CorpusIngestionService:
-    """Import local corpus files after persisting an M8 import run."""
+    """Import local corpus files after persisting an M8 import run.
+
+    Expected document and duplicate-evidence failures are recorded per item and the
+    run continues. Unexpected exceptions propagate so the caller's outer transaction
+    can roll back and the defect cannot masquerade as an ordinary paper failure.
+    """
 
     def __init__(
         self,
@@ -169,7 +177,7 @@ class CorpusIngestionService:
                     ),
                 )
                 continue
-            except Exception:
+            except DocumentParseError:
                 failed_count += 1
                 item.item_status = "failed"
                 next_sequence = self._record_issue(
@@ -187,7 +195,7 @@ class CorpusIngestionService:
                 decision = resolve_duplicate_before_persistence(
                     self.session, item=item, parsed=parsed
                 )
-            except Exception:
+            except DuplicateResolutionError:
                 failed_count += 1
                 item.item_status = "failed"
                 next_sequence = self._record_issue(
