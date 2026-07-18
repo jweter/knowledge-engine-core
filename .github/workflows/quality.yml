@@ -51,10 +51,40 @@ jobs:
         run: poetry run ruff check .
 
       - name: Type check
-        run: poetry run mypy knowledge_engine tests
+        id: mypy
+        continue-on-error: true
+        run: poetry run mypy knowledge_engine tests 2>&1 | tee mypy.log
+
+      - name: Upload mypy diagnostics
+        if: steps.mypy.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mypy-diagnostics
+          path: mypy.log
+
+      - name: Enforce mypy result
+        if: steps.mypy.outcome == 'failure'
+        run: |
+          cat mypy.log
+          exit 1
 
       - name: Test
-        run: poetry run pytest
+        id: pytest
+        continue-on-error: true
+        run: poetry run pytest 2>&1 | tee pytest.log
+
+      - name: Upload pytest diagnostics
+        if: steps.pytest.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-diagnostics
+          path: pytest.log
+
+      - name: Enforce pytest result
+        if: steps.pytest.outcome == 'failure'
+        run: |
+          cat pytest.log
+          exit 1
 
       - name: Check diff hygiene
         run: git diff --check
