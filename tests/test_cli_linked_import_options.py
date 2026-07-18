@@ -10,6 +10,7 @@ import knowledge_engine.cli as cli
 from knowledge_engine.cli import app
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.ingestion import ImportedCorpusRun
+from knowledge_engine.import_runs.statuses import ReviewStatus, RunStatus
 from tests.test_cli import write_cli_corpus
 
 
@@ -77,10 +78,12 @@ def test_corpus_import_routes_linked_options(
             self.session.flush()
             return ImportedCorpusRun(
                 import_run_id=run.import_run_id,
-                run_status=run.run_status,
+                run_status=RunStatus.SUCCEEDED,
                 imported_count=0,
                 failed_count=0,
                 skipped_count=1,
+                needs_review_count=0,
+                review_status=ReviewStatus.CLEAR,
             )
 
     monkeypatch.setattr(
