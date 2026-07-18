@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "decision": "STOPPED",
+  "execution_state": "not_started",
+  "repository_commit_sha": "5a59556773b6d303a4a38fe0237073e4288bf9a3",
+  "corpus": {
+    "corpus_id": "unknown",
+    "manifest_version": 1,
+    "corpus_json_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "sources_csv_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "accepted_source_rows": 0,
+    "unique_source_ids": 0,
+    "included_full_text_rows": 0,
+    "present_declared_files": 0,
+    "licensed_or_authorized_rows": 0
+  },
+  "preflight": {
+    "quality_suite_passed": false,
+    "manifest_validation_passed": false,
+    "file_readiness_passed": false,
+    "duplicate_source_ids": 0,
+    "unsafe_paths": 0,
+    "database_bytes_before": null
+  },
+  "fresh_import": {
+    "import_run_id": null,
+    "run_mode": "fresh",
+    "run_status": null,
+    "review_status": null,
+    "elapsed_seconds": null,
+    "source_rows": null,
+    "persisted_items": null,
+    "imported": null,
+    "failed": null,
+    "skipped": null,
+    "needs_review": null,
+    "warning_count": null,
+    "issue_count": null,
+    "database_bytes_after": null,
+    "database_growth_bytes": null,
+    "counts_reconciled": null
+  },
+  "linked_resume": {
+    "import_run_id": null,
+    "run_mode": "resume",
+    "run_status": null,
+    "review_status": null,
+    "elapsed_seconds": null,
+    "source_rows": null,
+    "persisted_items": null,
+    "imported": null,
+    "failed": null,
+    "skipped": null,
+    "needs_review": null,
+    "warning_count": null,
+    "issue_count": null,
+    "database_bytes_after": null,
+    "database_growth_bytes": null,
+    "counts_reconciled": null,
+    "parent_import_run_id": null,
+    "paper_rows_before": null,
+    "paper_rows_after": null,
+    "paper_text_rows_before": null,
+    "paper_text_rows_after": null,
+    "fts_rows_before": null,
+    "fts_rows_after": null,
+    "lineage_reconciled_items": null,
+    "idempotent": null
+  },
+  "artifact_hygiene": {
+    "pdfs_committed": false,
+    "databases_committed": false,
+    "private_paths_present": false,
+    "raw_exception_text_present": false,
+    "temporary_artifacts_present": false,
+    "git_diff_reviewed": false,
+    "exact_head_quality_passed": false
+  },
+  "stop_condition": {
+    "code": "entry_gate_failed",
+    "summary": "The required local, legally curated 500-paper corpus was not available to the execution environment. No rehearsal was attempted."
+  },
+  "unknowns": [
+    "Actual corpus manifest hashes",
+    "Actual accepted row and local-file counts",
+    "Local database size and runtime measurements",
+    "Fresh import outcome",
+    "Linked resume idempotency outcome"
+  ]
+}
