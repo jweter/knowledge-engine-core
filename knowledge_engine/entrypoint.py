@@ -20,6 +20,11 @@ from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.metadata_enrichment import MetadataProvider, MetadataQuery
 from knowledge_engine.models import ImportRun
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
+from knowledge_engine.pmc_acquisition import (
+    AcquisitionError,
+    AcquisitionTransport,
+    PmcOaAcquisitionService,
+)
 from knowledge_engine.pubmed_discovery import (
     GetTransport,
     NcbiDiscoveryError,
@@ -59,6 +64,22 @@ CandidateRetstartOption = Annotated[
     int,
     typer.Option("--retstart", min=0, help="Zero-based PubMed page offset."),
 ]
+CandidatesPathOption = Annotated[
+    Path,
+    typer.Option("--candidates", help="Reviewed PubMed candidate JSON path."),
+]
+ApprovalsPathOption = Annotated[
+    Path,
+    typer.Option("--approvals", help="Explicit operator approval JSON path."),
+]
+PapersDirectoryOption = Annotated[
+    Path,
+    typer.Option("--papers-dir", help="Ignored local directory for approved PDFs."),
+]
+ReceiptOutputOption = Annotated[
+    Path,
+    typer.Option("--receipt", help="Path for the sanitized acquisition receipt."),
+]
 
 
 def _crossref_provider() -> MetadataProvider:
@@ -72,6 +93,13 @@ def _pubmed_discovery_service() -> PubmedPmcDiscoveryService:
 
     transport = cast(GetTransport, UrllibNcbiTransport())
     return PubmedPmcDiscoveryService(transport)
+
+
+def _pmc_acquisition_service() -> PmcOaAcquisitionService:
+    """Build the production approval-gated PMC acquisition service."""
+
+    transport = cast(AcquisitionTransport, UrllibNcbiTransport())
+    return PmcOaAcquisitionService(transport)
 
 
 def _report_database() -> Database:
@@ -199,6 +227,40 @@ def pubmed_candidate_discover(
     )
     console.print(
         "[bold]Candidates require human inclusion and license review; no PDFs were downloaded.[/bold]"
+    )
+
+
+@app.command("pmc-oa-acquire")
+def pmc_oa_acquire(
+    candidates: CandidatesPathOption,
+    approvals: ApprovalsPathOption,
+    papers_dir: PapersDirectoryOption,
+    receipt: ReceiptOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Acquire only explicitly approved PMC OA PDFs and write a sanitized receipt."""
+
+    _validate_output(receipt, force=force)
+    console.print(
+        "[yellow]Network access:[/yellow] acquiring explicitly approved PDFs from official PMC OA resources."
+    )
+    try:
+        result = _pmc_acquisition_service().acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=papers_dir,
+        )
+    except AcquisitionError as exc:
+        console.print(f"[red]PMC OA acquisition failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    _write_output(receipt, result.to_json())
+    console.print(
+        f"[green]Acquired {result.acquired_count} approved PMC OA PDFs.[/green] "
+        f"Receipt: {receipt}"
+    )
+    console.print(
+        "[bold]Approval evidence was cross-checked exactly; no manifest rows were promoted.[/bold]"
     )
 
 
