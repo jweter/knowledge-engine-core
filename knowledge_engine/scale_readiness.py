@@ -142,7 +142,9 @@ def assess_scale_readiness(
         + measurements.review_required_items
     )
     counts_are_valid = _counts_are_valid(measurements)
-    declared_matches_items = measurements.declared_sources == measurements.persisted_items
+    declared_matches_items = (
+        measurements.declared_sources == measurements.persisted_items
+    )
     item_count_matches_outcomes = measurements.persisted_items == outcome_total
     counts_reconcile = declared_matches_items and item_count_matches_outcomes
     correctness_ok = counts_are_valid and counts_reconcile
