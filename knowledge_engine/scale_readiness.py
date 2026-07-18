@@ -101,8 +101,9 @@ def _database_growth(before: int | None, after: int | None) -> int | None:
 
 def assess_scale_readiness(
     measurements: ScaleMeasurements,
-    thresholds: ReadinessThresholds = ReadinessThresholds(),
+    thresholds: ReadinessThresholds | None = None,
 ) -> ScaleAssessment:
+    thresholds = thresholds or ReadinessThresholds()
     outcome_total = (
         measurements.imported_items
         + measurements.duplicate_items
