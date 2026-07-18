@@ -11,7 +11,7 @@ Candidate discovery is evidence, not approval. Acquisition requires a separate o
 - reported license;
 - official PMC OA PDF URL.
 
-A mismatch stops before network access.
+A mismatch stops before network access. Duplicate PMIDs or output filenames are also rejected before network access.
 
 ## Approval file
 
@@ -46,11 +46,15 @@ The command:
 
 1. validates both JSON inputs;
 2. cross-checks approval evidence exactly;
-3. rejects unsafe URLs, filenames, symlinks, and existing outputs;
+3. rejects unsafe URLs, duplicate filenames, symlinks, and existing outputs;
 4. downloads only from the official `ftp.ncbi.nlm.nih.gov` HTTPS host;
 5. requires a `%PDF-` payload signature;
-6. writes each PDF atomically;
-7. records filename, byte count, and SHA-256 in a sanitized receipt.
+6. stages the complete approved batch before making final PDF names visible;
+7. rolls back staged and committed PDFs when any batch item fails;
+8. records filename, byte count, and SHA-256 in a sanitized receipt;
+9. removes the acquired PDFs if the receipt cannot be persisted.
+
+The batch is successful only when every approved PDF and the receipt are written. A failed command must not be counted as a completed acquisition batch.
 
 ## Repository boundaries
 
