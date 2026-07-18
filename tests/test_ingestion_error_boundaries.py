@@ -1,11 +1,15 @@
 from pathlib import Path
+from typing import NoReturn
 
 import pytest
+from sqlalchemy.orm import Session
 
 import knowledge_engine.import_runs.ingestion as ingestion_module
 from knowledge_engine.duplicate_resolution import DuplicateResolutionError
+from knowledge_engine.duplicates import DuplicateDecision
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService
-from knowledge_engine.parser import DocumentParseError
+from knowledge_engine.models import ImportItem
+from knowledge_engine.parser import DocumentParseError, ParsedPaper
 from tests.corpus_fixtures import get_run, make_database
 from tests.test_corpus_import import (
     StubParser,
@@ -108,12 +112,14 @@ def test_expected_duplicate_resolution_failure_is_sanitized_and_continues(
     original = ingestion_module.resolve_duplicate_before_persistence
     calls = 0
 
-    def fail_first(*args: object, **kwargs: object):
+    def fail_first(
+        session: Session, *, item: ImportItem, parsed: ParsedPaper
+    ) -> DuplicateDecision:
         nonlocal calls
         calls += 1
         if calls == 1:
             raise DuplicateResolutionError("raw duplicate secret")
-        return original(*args, **kwargs)
+        return original(session, item=item, parsed=parsed)
 
     monkeypatch.setattr(ingestion_module, "resolve_duplicate_before_persistence", fail_first)
 
@@ -150,7 +156,10 @@ def test_unexpected_duplicate_resolution_exception_propagates_without_output(
         }
     )
 
-    def fail_systemically(*_args: object, **_kwargs: object):
+    def fail_systemically(
+        _session: Session, *, item: ImportItem, parsed: ParsedPaper
+    ) -> NoReturn:
+        del item, parsed
         raise TypeError("raw duplicate defect")
 
     monkeypatch.setattr(
