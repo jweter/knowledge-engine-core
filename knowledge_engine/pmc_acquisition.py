@@ -217,8 +217,7 @@ def _build_plans(
     seen_pmids: set[str] = set()
     for approval in approvals:
         values = {
-            key: approval.get(key)
-            for key in ("pmid", "pmcid", "license", "pdf_url", "filename")
+            key: approval.get(key) for key in ("pmid", "pmcid", "license", "pdf_url", "filename")
         }
         if not all(isinstance(value, str) and value for value in values.values()):
             raise AcquisitionError("Approval file contains incomplete approval evidence.")
@@ -235,9 +234,7 @@ def _build_plans(
             )
         for key in ("pmcid", "license", "pdf_url"):
             if candidate.get(key) != values[key]:
-                raise AcquisitionError(
-                    "Approval evidence does not match the discovered candidate."
-                )
+                raise AcquisitionError("Approval evidence does not match the discovered candidate.")
         filename = str(values["filename"])
         if not SAFE_FILENAME.fullmatch(filename):
             raise AcquisitionError("Approval filename is not a safe PDF filename.")
@@ -250,9 +247,7 @@ def _build_plans(
             or parsed.password is not None
             or parsed.port not in (None, 443)
         ):
-            raise AcquisitionError(
-                "Approval PDF URL is not an allowlisted PMC OA HTTPS resource."
-            )
+            raise AcquisitionError("Approval PDF URL is not an allowlisted PMC OA HTTPS resource.")
         plans.append(
             _AcquisitionPlan(
                 pmid=pmid,
