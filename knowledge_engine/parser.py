@@ -12,9 +12,7 @@ from pydantic import BaseModel, Field
 from knowledge_engine.utils import count_words, file_sha256, normalize_whitespace
 
 DOI_PATTERN = re.compile(r"\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b", re.IGNORECASE)
-REFERENCE_HEADING_PATTERN = re.compile(
-    r"(?im)^\s*(?:references|bibliography|literature cited)\s*$"
-)
+REFERENCE_HEADING_PATTERN = re.compile(r"(?im)^\s*(?:references|bibliography|literature cited)\s*$")
 PATENT_TITLE_PATTERN = re.compile(
     r"(?is)\(54\)\s*Title:\s*(.*?)(?:\n\s*\n\s*\(57\)|\n\s*\n\s*Abstract\b)"
 )
