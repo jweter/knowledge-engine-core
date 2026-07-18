@@ -163,10 +163,19 @@ def _rollback_paths(
     staged: list[tuple[_AcquisitionPlan, Path, AcquisitionReceiptItem]],
     committed: list[Path],
 ) -> None:
+    rollback_failed = False
     for path in committed:
-        path.unlink(missing_ok=True)
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            rollback_failed = True
     for _, temporary, _ in staged:
-        temporary.unlink(missing_ok=True)
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            rollback_failed = True
+    if rollback_failed:
+        raise AcquisitionError("Approved PDF batch rollback failed.")
 
 
 def _load_json_object(path: Path, *, label: str) -> dict[str, object]:
@@ -215,6 +224,7 @@ def _build_plans(
 ) -> list[_AcquisitionPlan]:
     plans: list[_AcquisitionPlan] = []
     seen_pmids: set[str] = set()
+    seen_filenames: set[str] = set()
     for approval in approvals:
         values = {
             key: approval.get(key) for key in ("pmid", "pmcid", "license", "pdf_url", "filename")
@@ -238,6 +248,9 @@ def _build_plans(
         filename = str(values["filename"])
         if not SAFE_FILENAME.fullmatch(filename):
             raise AcquisitionError("Approval filename is not a safe PDF filename.")
+        if filename in seen_filenames:
+            raise AcquisitionError("Approval file contains a duplicate PDF filename.")
+        seen_filenames.add(filename)
         pdf_url = str(values["pdf_url"])
         parsed = urlsplit(pdf_url)
         if (
