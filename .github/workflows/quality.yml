@@ -38,23 +38,8 @@ jobs:
       - name: Type check
         run: poetry run mypy knowledge_engine tests
 
-      - name: Capture pytest diagnostics
-        id: pytest
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          poetry run pytest 2>&1 | tee pytest-m12-error.txt
-
-      - name: Upload pytest diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-m12-diagnostics
-          path: pytest-m12-error.txt
-
-      - name: Fail after pytest diagnostics
-        if: steps.pytest.outcome == 'failure'
-        run: exit 1
+      - name: Test
+        run: poetry run pytest
 
       - name: Check diff hygiene
         run: git diff --check
