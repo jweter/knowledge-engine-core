@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 from rich.markup import escape
@@ -19,6 +19,12 @@ from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.metadata_enrichment import MetadataProvider, MetadataQuery
 from knowledge_engine.models import ImportRun
+from knowledge_engine.ncbi_http import UrllibNcbiTransport
+from knowledge_engine.pubmed_discovery import (
+    GetTransport,
+    NcbiDiscoveryError,
+    PubmedPmcDiscoveryService,
+)
 
 DoiOption = Annotated[str, typer.Option("--doi", help="DOI to query.")]
 ProviderOption = Annotated[
@@ -35,7 +41,23 @@ ReportOutputOption = Annotated[
 ]
 ForceOutputOption = Annotated[
     bool,
-    typer.Option("--force", help="Overwrite an existing report file."),
+    typer.Option("--force", help="Overwrite an existing output file."),
+]
+PubmedQueryOption = Annotated[
+    str,
+    typer.Option("--query", help="PubMed search expression."),
+]
+CandidateOutputOption = Annotated[
+    Path,
+    typer.Option("--output", help="Path for reviewable candidate JSON."),
+]
+CandidateLimitOption = Annotated[
+    int,
+    typer.Option("--limit", min=1, max=100, help="Maximum candidates in this page."),
+]
+CandidateRetstartOption = Annotated[
+    int,
+    typer.Option("--retstart", min=0, help="Zero-based PubMed page offset."),
 ]
 
 
@@ -43,6 +65,13 @@ def _crossref_provider() -> MetadataProvider:
     """Build the production Crossref provider only for an explicit preview request."""
 
     return CrossrefProvider(transport=UrllibCrossrefTransport())
+
+
+def _pubmed_discovery_service() -> PubmedPmcDiscoveryService:
+    """Build the production NCBI discovery service for an explicit command."""
+
+    transport = cast(GetTransport, UrllibNcbiTransport())
+    return PubmedPmcDiscoveryService(transport)
 
 
 def _report_database() -> Database:
@@ -63,23 +92,23 @@ def _load_report_run(import_run_id: str) -> ImportRun | None:
         ).get_run(import_run_id)
 
 
-def _validate_report_output(output: Path, *, force: bool) -> None:
-    """Reject symbolic links and accidental overwrites before database access."""
+def _validate_output(output: Path, *, force: bool) -> None:
+    """Reject symbolic links and accidental overwrites before external or database access."""
 
     if output.is_symlink():
-        raise typer.BadParameter("Report output must not be a symbolic link.")
+        raise typer.BadParameter("Output must not be a symbolic link.")
     if output.exists() and not force:
         raise typer.BadParameter("Output file already exists. Use --force to overwrite.")
 
 
-def _write_report_output(output: Path, report: str) -> None:
-    """Write a report while keeping local filesystem details out of CLI errors."""
+def _write_output(output: Path, content: str) -> None:
+    """Write text while keeping local filesystem details out of CLI errors."""
 
     try:
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(report, encoding="utf-8")
+        output.write_text(content, encoding="utf-8")
     except OSError:
-        raise typer.BadParameter("Report output could not be written.") from None
+        raise typer.BadParameter("Output file could not be written.") from None
 
 
 @app.command("metadata-preview")
@@ -136,6 +165,43 @@ def metadata_preview(
     raise typer.Exit(1)
 
 
+@app.command("pubmed-candidate-discover")
+def pubmed_candidate_discover(
+    query: PubmedQueryOption,
+    output: CandidateOutputOption,
+    limit: CandidateLimitOption = 25,
+    retstart: CandidateRetstartOption = 0,
+    force: ForceOutputOption = False,
+) -> None:
+    """Discover reviewable PubMed candidates and PMC OA evidence without downloading PDFs."""
+
+    _validate_output(output, force=force)
+    console.print(
+        "[yellow]Network access:[/yellow] querying official PubMed and PMC services over HTTPS."
+    )
+    try:
+        result = _pubmed_discovery_service().discover(
+            query,
+            limit=limit,
+            retstart=retstart,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except NcbiDiscoveryError as exc:
+        console.print(f"[red]NCBI discovery failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    _write_output(output, result.to_json())
+    verified = sum(candidate.open_access for candidate in result.candidates)
+    console.print(
+        f"[green]Wrote {len(result.candidates)} candidates:[/green] {output} "
+        f"({verified} PMC OA verified)."
+    )
+    console.print(
+        "[bold]Candidates require human inclusion and license review; no PDFs were downloaded.[/bold]"
+    )
+
+
 @app.command("corpus-run-report")
 def corpus_run_report(
     import_run_id: ImportRunIdArgument,
@@ -145,7 +211,7 @@ def corpus_run_report(
     """Render a sanitized Markdown report for a persisted import run."""
 
     if output:
-        _validate_report_output(output, force=force)
+        _validate_output(output, force=force)
 
     run = _load_report_run(import_run_id)
     if run is None:
@@ -158,7 +224,7 @@ def corpus_run_report(
         raise typer.BadParameter(f"Import run report reconciliation failed: {exc}") from exc
 
     if output:
-        _write_report_output(output, report)
+        _write_output(output, report)
         console.print(f"[green]Wrote corpus run report:[/green] {output}")
         return
 
