@@ -13,6 +13,18 @@ from knowledge_engine.utils import count_words, file_sha256, normalize_whitespac
 DOI_PATTERN = re.compile(r"\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b", re.IGNORECASE)
 
 
+class DocumentParseError(Exception):
+    """Expected, recoverable failure while parsing one declared document."""
+
+
+class UnsupportedDocumentError(DocumentParseError):
+    """The declared document type is not supported by the active parser."""
+
+
+class MalformedDocumentError(DocumentParseError):
+    """The declared document is unreadable as a structurally valid PDF."""
+
+
 class ParsedPaper(BaseModel):
     """Structured result returned by a document parser."""
 
@@ -32,7 +44,11 @@ class DocumentParser:
     """Interface for document parsers."""
 
     def parse(self, path: Path) -> ParsedPaper:
-        """Parse a document into normalized metadata and text."""
+        """Parse a document into normalized metadata and text.
+
+        Implementations raise ``DocumentParseError`` only for expected document-level
+        failures. Programming defects and unexpected dependency failures must propagate.
+        """
 
         raise NotImplementedError
 
@@ -49,12 +65,15 @@ class PyMuPDFParser(DocumentParser):
             raise FileNotFoundError(msg)
         if pdf_path.suffix.lower() != ".pdf":
             msg = f"Only PDF files are supported in Phase 0: {pdf_path}"
-            raise ValueError(msg)
+            raise UnsupportedDocumentError(msg)
 
-        with fitz.open(pdf_path) as document:
-            page_texts = [page.get_text("text") for page in document]
-            metadata = document.metadata or {}
-            page_count = document.page_count
+        try:
+            with fitz.open(pdf_path) as document:
+                page_texts = [page.get_text("text") for page in document]
+                metadata = document.metadata or {}
+                page_count = document.page_count
+        except fitz.FileDataError as exc:
+            raise MalformedDocumentError("The PDF structure could not be parsed.") from exc
 
         raw_text = normalize_whitespace("\n\n".join(page_texts))
         title = self._extract_title(metadata, raw_text, pdf_path)
