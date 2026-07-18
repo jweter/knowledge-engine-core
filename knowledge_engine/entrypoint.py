@@ -20,6 +20,12 @@ from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.metadata_enrichment import MetadataProvider, MetadataQuery
 from knowledge_engine.models import ImportRun
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
+from knowledge_engine.pmc_acquisition import (
+    AcquisitionError,
+    AcquisitionReceipt,
+    AcquisitionTransport,
+    PmcOaAcquisitionService,
+)
 from knowledge_engine.pubmed_discovery import (
     GetTransport,
     NcbiDiscoveryError,
@@ -59,6 +65,22 @@ CandidateRetstartOption = Annotated[
     int,
     typer.Option("--retstart", min=0, help="Zero-based PubMed page offset."),
 ]
+CandidatesPathOption = Annotated[
+    Path,
+    typer.Option("--candidates", help="Reviewed PubMed candidate JSON path."),
+]
+ApprovalsPathOption = Annotated[
+    Path,
+    typer.Option("--approvals", help="Explicit operator approval JSON path."),
+]
+PapersDirectoryOption = Annotated[
+    Path,
+    typer.Option("--papers-dir", help="Ignored local directory for approved PDFs."),
+]
+ReceiptOutputOption = Annotated[
+    Path,
+    typer.Option("--receipt", help="Path for the sanitized acquisition receipt."),
+]
 
 
 def _crossref_provider() -> MetadataProvider:
@@ -72,6 +94,13 @@ def _pubmed_discovery_service() -> PubmedPmcDiscoveryService:
 
     transport = cast(GetTransport, UrllibNcbiTransport())
     return PubmedPmcDiscoveryService(transport)
+
+
+def _pmc_acquisition_service() -> PmcOaAcquisitionService:
+    """Build the production approval-gated PMC acquisition service."""
+
+    transport = cast(AcquisitionTransport, UrllibNcbiTransport())
+    return PmcOaAcquisitionService(transport)
 
 
 def _report_database() -> Database:
@@ -109,6 +138,24 @@ def _write_output(output: Path, content: str) -> None:
         output.write_text(content, encoding="utf-8")
     except OSError:
         raise typer.BadParameter("Output file could not be written.") from None
+
+
+def _rollback_acquired_files(
+    output_directory: Path,
+    receipt: AcquisitionReceipt,
+) -> None:
+    """Remove files from a completed batch when its receipt cannot be persisted."""
+
+    rollback_failed = False
+    for item in receipt.items:
+        try:
+            (output_directory / item.filename).unlink(missing_ok=True)
+        except OSError:
+            rollback_failed = True
+    if rollback_failed:
+        raise typer.BadParameter(
+            "Receipt output failed and acquired PDFs could not be fully rolled back."
+        )
 
 
 @app.command("metadata-preview")
@@ -199,6 +246,46 @@ def pubmed_candidate_discover(
     )
     console.print(
         "[bold]Candidates require human inclusion and license review; no PDFs were downloaded.[/bold]"
+    )
+
+
+@app.command("pmc-oa-acquire")
+def pmc_oa_acquire(
+    candidates: CandidatesPathOption,
+    approvals: ApprovalsPathOption,
+    papers_dir: PapersDirectoryOption,
+    receipt: ReceiptOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Acquire only explicitly approved PMC OA PDFs and write a sanitized receipt."""
+
+    _validate_output(receipt, force=force)
+    console.print(
+        "[yellow]Network access:[/yellow] acquiring explicitly approved PDFs "
+        "from official PMC OA resources."
+    )
+    try:
+        result = _pmc_acquisition_service().acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=papers_dir,
+        )
+    except AcquisitionError as exc:
+        console.print(f"[red]PMC OA acquisition failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    try:
+        _write_output(receipt, result.to_json())
+    except typer.BadParameter:
+        _rollback_acquired_files(papers_dir, result)
+        raise typer.BadParameter(
+            "Receipt output could not be written; acquired PDFs were rolled back."
+        ) from None
+    console.print(
+        f"[green]Acquired {result.acquired_count} approved PMC OA PDFs.[/green] Receipt: {receipt}"
+    )
+    console.print(
+        "[bold]Approval evidence was cross-checked exactly; no manifest rows were promoted.[/bold]"
     )
 
 

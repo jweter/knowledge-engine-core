@@ -10,7 +10,12 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-NCBI_HOSTS = {"eutils.ncbi.nlm.nih.gov", "www.ncbi.nlm.nih.gov", "pmc.ncbi.nlm.nih.gov"}
+NCBI_HOSTS = {
+    "eutils.ncbi.nlm.nih.gov",
+    "ftp.ncbi.nlm.nih.gov",
+    "pmc.ncbi.nlm.nih.gov",
+    "www.ncbi.nlm.nih.gov",
+}
 
 
 class ResponseTooLargeError(OSError):
