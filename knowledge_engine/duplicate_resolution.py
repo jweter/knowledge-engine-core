@@ -14,6 +14,10 @@ from knowledge_engine.parser import ParsedPaper
 from knowledge_engine.utils import normalize_doi
 
 
+class DuplicateResolutionError(Exception):
+    """Expected, recoverable failure while resolving one item's duplicate evidence."""
+
+
 def resolve_duplicate_before_persistence(
     session: Session,
     *,
@@ -24,6 +28,10 @@ def resolve_duplicate_before_persistence(
 
     This function must run before any paper, paper-text, author, keyword, or FTS
     persistence. It intentionally has no dependency on ``PaperRepository``.
+
+    Implementations and future adapters may raise ``DuplicateResolutionError`` for
+    expected item-specific evidence failures. Unexpected database, type, assertion,
+    or programming errors must propagate to the caller as systemic failures.
     """
 
     repository = DuplicateQueryRepository(session)
