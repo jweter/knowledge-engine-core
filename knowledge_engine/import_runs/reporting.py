@@ -70,24 +70,24 @@ def render_import_run_report(run: ImportRun) -> str:
         "",
         "## Run identity",
         "",
-        f"- Import run ID: `{_safe(run.import_run_id)}`",
-        f"- Run mode: `{_safe(run.run_mode)}`",
-        f"- Parent import run ID: `{_safe(run.parent_import_run_id or 'none')}`",
-        f"- Run status: `{_safe(run.run_status)}`",
-        f"- Review status: `{_safe(run.review_status)}`",
-        f"- Validation mode: `{_safe(run.validation_mode)}`",
-        f"- Created at: `{_safe(run.created_at)}`",
-        f"- Completed at: `{_safe(run.completed_at)}`",
+        f"- Import run ID: `{_safe_code(run.import_run_id)}`",
+        f"- Run mode: `{_safe_code(run.run_mode)}`",
+        f"- Parent import run ID: `{_safe_code(run.parent_import_run_id or 'none')}`",
+        f"- Run status: `{_safe_code(run.run_status)}`",
+        f"- Review status: `{_safe_code(run.review_status)}`",
+        f"- Validation mode: `{_safe_code(run.validation_mode)}`",
+        f"- Created at: `{_safe_code(run.created_at)}`",
+        f"- Completed at: `{_safe_code(run.completed_at)}`",
         "",
         "## Corpus and manifest",
         "",
-        f"- Corpus ID: `{_safe(run.corpus_id or 'unknown')}`",
-        f"- Corpus name: {_safe(run.corpus_name or 'Unknown')}",
+        f"- Corpus ID: `{_safe_code(run.corpus_id or 'unknown')}`",
+        f"- Corpus name: {_safe_text(run.corpus_name or 'Unknown')}",
         f"- Manifest version: `{manifest_version}`",
-        f"- Manifest validity: `{_safe(run.manifest_validity)}`",
-        f"- Import readiness: `{_safe(run.import_readiness)}`",
-        f"- Manifest snapshot ID: `{_safe(run.manifest_snapshot_id)}`",
-        f"- Combined manifest SHA-256: `{_safe(snapshot.combined_sha256)}`",
+        f"- Manifest validity: `{_safe_code(run.manifest_validity)}`",
+        f"- Import readiness: `{_safe_code(run.import_readiness)}`",
+        f"- Manifest snapshot ID: `{_safe_code(run.manifest_snapshot_id)}`",
+        f"- Combined manifest SHA-256: `{_safe_code(snapshot.combined_sha256)}`",
         f"- Corpus path: `{_safe_path(run.corpus_path)}`",
         f"- Source manifest path: `{_safe_path(run.source_manifest_path or 'unknown')}`",
         "",
@@ -188,7 +188,7 @@ def _count_lines(
 ) -> list[str]:
     if not counts:
         return [empty_label]
-    return [f"- `{_safe(value)}`: {count}" for value, count in counts]
+    return [f"- `{_safe_code(value)}`: {count}" for value, count in counts]
 
 
 def _item_lines(items: list[ImportItem]) -> list[str]:
@@ -199,18 +199,18 @@ def _item_lines(items: list[ImportItem]) -> list[str]:
 
 def _item_line(item: ImportItem) -> str:
     parts = [
-        f"source=`{_safe(item.source_id or 'unknown')}`",
-        f"status=`{_safe(item.item_status)}`",
-        f"duplicate=`{_safe(item.duplicate_outcome or 'none')}`",
+        f"source=`{_safe_code(item.source_id or 'unknown')}`",
+        f"status=`{_safe_code(item.item_status)}`",
+        f"duplicate=`{_safe_code(item.duplicate_outcome or 'none')}`",
         f"paper_id=`{item.matched_paper_id if item.matched_paper_id is not None else 'none'}`",
-        f"matched_item=`{_safe(item.matched_import_item_id or 'none')}`",
-        f"retry_of=`{_safe(item.retry_of_import_item_id or 'none')}`",
+        f"matched_item=`{_safe_code(item.matched_import_item_id or 'none')}`",
+        f"retry_of=`{_safe_code(item.retry_of_import_item_id or 'none')}`",
     ]
     return "- " + "; ".join(parts)
 
 
 def _safe_path(value: str) -> str:
-    normalized = _safe(value)
+    normalized = _safe_code(value)
     if normalized.startswith(("/", "\\")) or re.match(r"^[A-Za-z]:[\\/]", normalized):
         return "[redacted absolute path]"
     if ".." in normalized.replace("\\", "/").split("/"):
@@ -218,10 +218,17 @@ def _safe_path(value: str) -> str:
     return normalized
 
 
-def _safe(value: str) -> str:
-    """Keep persisted values on one Markdown-safe line without exposing full text."""
+def _safe_code(value: str) -> str:
+    """Keep persisted values inside one bounded Markdown code span."""
 
     return " ".join(value.replace("`", "'").split())[:1024]
+
+
+def _safe_text(value: str) -> str:
+    """Escape bounded persisted text that is rendered outside a code span."""
+
+    normalized = " ".join(value.split())[:1024]
+    return re.sub(r"([\\`*_[\]{}()#+.!<>|~-])", r"\\\1", normalized)
 
 
 __all__ = ["ImportRunReportSummary", "render_import_run_report", "summarize_import_run"]
