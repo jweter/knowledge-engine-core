@@ -81,6 +81,12 @@ def test_title_fallback_rejects_malformed_embedded_metadata(tmp_path: Path) -> N
     )
 
 
+def test_title_candidate_supports_unicode_letters() -> None:
+    parser = PyMuPDFParser()
+
+    assert parser._is_title_candidate("Étude moléculaire de la fluorescence")
+
+
 def test_title_fallback_skips_banner_and_combines_wrapped_title(tmp_path: Path) -> None:
     parser = PyMuPDFParser()
 
