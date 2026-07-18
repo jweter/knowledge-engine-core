@@ -282,8 +282,7 @@ def pmc_oa_acquire(
             "Receipt output could not be written; acquired PDFs were rolled back."
         ) from None
     console.print(
-        f"[green]Acquired {result.acquired_count} approved PMC OA PDFs.[/green] "
-        f"Receipt: {receipt}"
+        f"[green]Acquired {result.acquired_count} approved PMC OA PDFs.[/green] Receipt: {receipt}"
     )
     console.print(
         "[bold]Approval evidence was cross-checked exactly; no manifest rows were promoted.[/bold]"
