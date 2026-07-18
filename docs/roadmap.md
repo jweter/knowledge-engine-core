@@ -15,7 +15,7 @@ This file is the roadmap index. Phase-specific notes live in `docs/roadmap/`.
 ## Phase 1: Focused Scientific Corpus
 
 - Choose one domain, such as obesity and metabolic disease.
-- Import 500 to 1,000 legally available papers.
+- Import 500 to 1,000 legally available papers through bounded rehearsals.
 - Improve metadata extraction with Crossref or PubMed adapters.
 - Add citation metadata.
 - Add deduplication reports and import manifests.
@@ -23,16 +23,44 @@ This file is the roadmap index. Phase-specific notes live in `docs/roadmap/`.
 - Add a repeatable corpus ingestion workflow.
 - Use `docs/phase1_design.md` as the detailed design reference.
 
-The current GLP-1 vertical slice is a small retrieval and manual evidence-display
-prototype for Phase 1 preparation. See `docs/vertical_slice.md` and
+The current GLP-1 vertical slice is a retrieval and manual evidence-display
+prototype. See `docs/vertical_slice.md` and
 `docs/glp1_vertical_slice_demo_checklist.md`.
 
-M6 defined the Phase 1 corpus ingestion architecture. M7 implements the manifest
-validation foundation with `ke corpus-validate <corpus.json> [--check-files]`.
-M8 adds durable import-run and import-item persistence for validation attempts
-without importing papers. See `docs/m6_phase1_corpus_ingestion_plan.md`,
-`docs/m7_manifest_validation_foundation.md`, and
-`docs/m8_import_run_persistence.md`.
+### Completed Phase 1 milestones
+
+- **M6** defined the Phase 1 corpus-ingestion architecture.
+- **M7** implemented versioned manifest validation and local-file readiness checks.
+- **M8** added durable import-run, item, issue, and manifest-snapshot persistence.
+- **M9** connected validated local PDFs to persisted import runs and atomic
+  paper/FTS persistence while preserving item-level continuation.
+- **M10** added duplicate evidence decisions, linked resume/retry behavior, and
+  explicit execution/review status semantics.
+- **M11** added provenance-preserving metadata preview and Crossref enrichment
+  boundaries without silently overwriting canonical data.
+- **M12** completed the controlled 100-paper rehearsal and sanitized reporting.
+- **M13** assessed scale readiness and conditionally authorized one controlled
+  500-paper rehearsal with explicit measurement and stop conditions.
+
+### Next bounded milestone
+
+The next milestone is **one controlled 500-paper rehearsal** under the M13 entry,
+measurement, stop, reconciliation, resume, and artifact-hygiene conditions. Before
+that rehearsal begins, repository documentation and expected-versus-unexpected
+ingestion exception contracts must be reconciled. The rehearsal must not introduce
+new architecture solely to collect one run's measurements.
+
+Detailed milestone records include:
+
+- `docs/m6_phase1_corpus_ingestion_plan.md`
+- `docs/m7_manifest_validation_foundation.md`
+- `docs/m8_import_run_persistence.md`
+- `docs/m9_small_ingestion_pilot.md`
+- `docs/m10_duplicate_detection_resumability_plan.md`
+- `docs/m10_operational_contract.md`
+- `docs/m10_release_notes.md`
+- `docs/m12_100_paper_rehearsal.md`
+- `docs/m13_scale_readiness_decision.md`
 
 ## Phase 2: Evidence Records
 
@@ -58,13 +86,12 @@ without importing papers. See `docs/m6_phase1_corpus_ingestion_plan.md`,
 
 ## Release Milestones
 
-- `v0.1.0`: Phase 0 local source vault, CLI, tests, docs, and repository
-  hygiene.
+- `v0.1.0`: Phase 0 local source vault, CLI, tests, docs, and repository hygiene.
 - `v0.1.1`: Bug fixes and setup improvements.
-- `v0.2.0-alpha.1`: GLP-1 retrieval and manual evidence vertical-slice
-  prerelease.
-- `v0.2.0`: Bulk corpus ingestion and import manifests.
-- `v0.3.0`: Metadata enrichment and citation capture.
+- `v0.2.0-alpha.1`: GLP-1 retrieval and manual evidence vertical-slice prerelease.
+- `v0.2.0`: Repeatable corpus ingestion, duplicate handling, resume/retry, metadata
+  preview/enrichment, and bounded scale-rehearsal evidence.
+- `v0.3.0`: Expanded metadata enrichment and citation capture.
 - `v0.4.0`: Knowledge graph foundation.
 - `v0.5.0`: Vector search.
 - `v0.6.0`: AI-assisted reasoning experiments.
@@ -74,9 +101,6 @@ without importing papers. See `docs/m6_phase1_corpus_ingestion_plan.md`,
 ## Detailed Roadmaps
 
 - `docs/phase1_design.md`
-- `docs/m6_phase1_corpus_ingestion_plan.md`
-- `docs/m7_manifest_validation_foundation.md`
-- `docs/m8_import_run_persistence.md`
 - `docs/roadmap/phase0.md`
 - `docs/roadmap/phase1.md`
 - `docs/roadmap/phase2.md`
