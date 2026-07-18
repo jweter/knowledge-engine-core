@@ -9,7 +9,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Added the `ke corpus-import` CLI command for persisted local corpus imports.
+- Added the `ke corpus-import` CLI command for persisted, local-only corpus imports.
+- Added pre-persistence duplicate evidence decisions with exact-duplicate skipping and
+  probable-match review outcomes.
+- Added linked resume and retry behavior with explicit execution and review statuses.
+- Added provenance-preserving metadata preview and Crossref enrichment boundaries.
+- Added a controlled 100-paper rehearsal report and deterministic scale-readiness
+  assessment for the next bounded corpus rehearsal.
+- Added typed expected parser and duplicate-resolution failure contracts.
+
+### Changed
+
+- Made Ruff the authoritative formatter and linter used by both developer commands
+  and GitHub Actions.
+- Unexpected parser and duplicate-resolution exceptions now propagate as systemic
+  failures instead of being persisted as ordinary per-paper issue codes.
+- Reconciled README, roadmap, and technical-debt documentation through M13 and named
+  the controlled 500-paper rehearsal as the next bounded milestone.
 
 ## [0.2.0-alpha.1] - 2026-07-11
 
