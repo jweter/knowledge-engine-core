@@ -10,6 +10,8 @@ class RunStatus(StrEnum):
     SUCCEEDED = "succeeded"
     PARTIALLY_SUCCEEDED = "partially_succeeded"
     FAILED = "failed"
+    VALIDATION_FAILED = "validation_failed"
+    IMPORT_BLOCKED = "import_blocked"
 
 
 class ReviewStatus(StrEnum):
