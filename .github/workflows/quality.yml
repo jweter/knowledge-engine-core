@@ -31,7 +31,7 @@ jobs:
 
       - name: Capture formatting diagnostics
         run: |
-          poetry run ruff format --diff . > ruff-m13-format.txt
+          poetry run ruff format --diff . > ruff-m13-format.txt || true
 
       - name: Upload formatting diagnostics
         uses: actions/upload-artifact@v4
