@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Knowledge Engine M14 Controlled Rehearsal Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision",
+    "execution_state",
+    "repository_commit_sha",
+    "corpus",
+    "preflight",
+    "fresh_import",
+    "linked_resume",
+    "artifact_hygiene",
+    "unknowns"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "decision": {"enum": ["PROCEED", "HOLD", "STOPPED"]},
+    "execution_state": {"enum": ["not_started", "completed", "stopped"]},
+    "repository_commit_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "corpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "corpus_id",
+        "manifest_version",
+        "corpus_json_sha256",
+        "sources_csv_sha256",
+        "accepted_source_rows",
+        "unique_source_ids",
+        "included_full_text_rows",
+        "present_declared_files",
+        "licensed_or_authorized_rows"
+      ],
+      "properties": {
+        "corpus_id": {"type": "string", "minLength": 1},
+        "manifest_version": {"type": "integer", "minimum": 1},
+        "corpus_json_sha256": {"$ref": "#/$defs/sha256"},
+        "sources_csv_sha256": {"$ref": "#/$defs/sha256"},
+        "accepted_source_rows": {"type": "integer", "minimum": 0},
+        "unique_source_ids": {"type": "integer", "minimum": 0},
+        "included_full_text_rows": {"type": "integer", "minimum": 0},
+        "present_declared_files": {"type": "integer", "minimum": 0},
+        "licensed_or_authorized_rows": {"type": "integer", "minimum": 0}
+      }
+    },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quality_suite_passed",
+        "manifest_validation_passed",
+        "file_readiness_passed",
+        "duplicate_source_ids",
+        "unsafe_paths",
+        "database_bytes_before"
+      ],
+      "properties": {
+        "quality_suite_passed": {"type": "boolean"},
+        "manifest_validation_passed": {"type": "boolean"},
+        "file_readiness_passed": {"type": "boolean"},
+        "duplicate_source_ids": {"type": "integer", "minimum": 0},
+        "unsafe_paths": {"type": "integer", "minimum": 0},
+        "database_bytes_before": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "fresh_import": {"$ref": "#/$defs/run"},
+    "linked_resume": {
+      "allOf": [
+        {"$ref": "#/$defs/run"},
+        {
+          "type": "object",
+          "required": [
+            "parent_import_run_id",
+            "paper_rows_before",
+            "paper_rows_after",
+            "paper_text_rows_before",
+            "paper_text_rows_after",
+            "fts_rows_before",
+            "fts_rows_after",
+            "lineage_reconciled_items",
+            "idempotent"
+          ],
+          "properties": {
+            "parent_import_run_id": {"type": ["string", "null"]},
+            "paper_rows_before": {"type": ["integer", "null"], "minimum": 0},
+            "paper_rows_after": {"type": ["integer", "null"], "minimum": 0},
+            "paper_text_rows_before": {"type": ["integer", "null"], "minimum": 0},
+            "paper_text_rows_after": {"type": ["integer", "null"], "minimum": 0},
+            "fts_rows_before": {"type": ["integer", "null"], "minimum": 0},
+            "fts_rows_after": {"type": ["integer", "null"], "minimum": 0},
+            "lineage_reconciled_items": {"type": ["integer", "null"], "minimum": 0},
+            "idempotent": {"type": ["boolean", "null"]}
+          }
+        }
+      ]
+    },
+    "artifact_hygiene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pdfs_committed",
+        "databases_committed",
+        "private_paths_present",
+        "raw_exception_text_present",
+        "temporary_artifacts_present",
+        "git_diff_reviewed",
+        "exact_head_quality_passed"
+      ],
+      "properties": {
+        "pdfs_committed": {"type": "boolean"},
+        "databases_committed": {"type": "boolean"},
+        "private_paths_present": {"type": "boolean"},
+        "raw_exception_text_present": {"type": "boolean"},
+        "temporary_artifacts_present": {"type": "boolean"},
+        "git_diff_reviewed": {"type": "boolean"},
+        "exact_head_quality_passed": {"type": "boolean"}
+      }
+    },
+    "stop_condition": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["code", "summary"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "summary": {"type": "string", "minLength": 1}
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "import_run_id",
+        "run_mode",
+        "run_status",
+        "review_status",
+        "elapsed_seconds",
+        "source_rows",
+        "persisted_items",
+        "imported",
+        "failed",
+        "skipped",
+        "needs_review",
+        "warning_count",
+        "issue_count",
+        "database_bytes_after",
+        "database_growth_bytes",
+        "counts_reconciled"
+      ],
+      "properties": {
+        "import_run_id": {"type": ["string", "null"]},
+        "run_mode": {"enum": ["fresh", "resume", "retry_failed", null]},
+        "run_status": {"type": ["string", "null"]},
+        "review_status": {"type": ["string", "null"]},
+        "elapsed_seconds": {"type": ["number", "null"], "minimum": 0},
+        "source_rows": {"type": ["integer", "null"], "minimum": 0},
+        "persisted_items": {"type": ["integer", "null"], "minimum": 0},
+        "imported": {"type": ["integer", "null"], "minimum": 0},
+        "failed": {"type": ["integer", "null"], "minimum": 0},
+        "skipped": {"type": ["integer", "null"], "minimum": 0},
+        "needs_review": {"type": ["integer", "null"], "minimum": 0},
+        "warning_count": {"type": ["integer", "null"], "minimum": 0},
+        "issue_count": {"type": ["integer", "null"], "minimum": 0},
+        "database_bytes_after": {"type": ["integer", "null"], "minimum": 0},
+        "database_growth_bytes": {"type": ["integer", "null"]},
+        "counts_reconciled": {"type": ["boolean", "null"]}
+      }
+    }
+  }
+}
