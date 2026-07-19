@@ -119,7 +119,9 @@ def validate_corpus_readiness(
         body = _read_bytes(file_path, label="Corpus PDF")
         sha256 = hashlib.sha256(body).hexdigest()
         if len(body) != receipt["byte_count"]:
-            raise CorpusReadinessError("Corpus PDF byte count does not match the acquisition receipt.")
+            raise CorpusReadinessError(
+                "Corpus PDF byte count does not match the acquisition receipt."
+            )
         if sha256 != receipt["sha256"]:
             raise CorpusReadinessError("Corpus PDF hash does not match the acquisition receipt.")
         items.append(
@@ -134,7 +136,9 @@ def validate_corpus_readiness(
         )
 
     if matched_receipt_keys != set(receipts):
-        raise CorpusReadinessError("Acquisition receipts contain entries not present in the manifest.")
+        raise CorpusReadinessError(
+            "Acquisition receipts contain entries not present in the manifest."
+        )
 
     actual_files = {
         path.name
