@@ -92,9 +92,9 @@ def test_http_transport_uses_authorization_and_parses_folder() -> None:
             ).encode()
         )
 
-    metadata = GoogleDriveHttpTransport(access_token="runtime-token", opener=opener).get_folder_metadata(
-        "folder-id"
-    )
+    metadata = GoogleDriveHttpTransport(
+        access_token="runtime-token", opener=opener
+    ).get_folder_metadata("folder-id")
 
     assert metadata.is_folder is True
     assert requests[0].get_header("Authorization") == "Bearer runtime-token"
