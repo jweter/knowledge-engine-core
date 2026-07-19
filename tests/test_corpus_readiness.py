@@ -68,15 +68,41 @@ def test_unexpected_pdf_is_rejected(tmp_path: Path) -> None:
         )
 
 
-def test_unsafe_manifest_path_is_rejected(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "unsafe_filename",
+    ["../PMC100.pdf", r"subdir\PMC100.pdf", r"C:\PMC100.pdf", "/tmp/PMC100.pdf"],
+)
+def test_unsafe_manifest_path_is_rejected(tmp_path: Path, unsafe_filename: str) -> None:
     papers = tmp_path / "papers"
     papers.mkdir()
     body = b"%PDF-1.7\nvalidated"
     (papers / "PMC100.pdf").write_bytes(body)
-    manifest = _write_manifest(tmp_path, filename="../PMC100.pdf")
+    manifest = _write_manifest(tmp_path, filename=unsafe_filename)
     receipt = _write_receipt(tmp_path, filename="PMC100.pdf", body=body)
 
     with pytest.raises(CorpusReadinessError, match="unsafe local path"):
+        validate_corpus_readiness(
+            manifest_path=manifest,
+            receipt_paths=(receipt,),
+            papers_directory=papers,
+            expected_count=1,
+        )
+
+
+def test_malformed_short_csv_row_is_sanitized(tmp_path: Path) -> None:
+    papers = tmp_path / "papers"
+    papers.mkdir()
+    body = b"%PDF-1.7\nvalidated"
+    (papers / "PMC100.pdf").write_bytes(body)
+    manifest = tmp_path / "sources.csv"
+    manifest.write_text(
+        "source_id,pmid,other_identifier,local_path,license_type,usage_status,inclusion_status\n"
+        "source-1,100,PMC100\n",
+        encoding="utf-8",
+    )
+    receipt = _write_receipt(tmp_path, filename="PMC100.pdf", body=body)
+
+    with pytest.raises(CorpusReadinessError, match="missing required evidence"):
         validate_corpus_readiness(
             manifest_path=manifest,
             receipt_paths=(receipt,),
