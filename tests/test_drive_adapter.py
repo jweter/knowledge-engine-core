@@ -10,7 +10,11 @@ from knowledge_engine.drive_adapter import (
     DriveFileMetadata,
     DriveFolderMetadata,
 )
-from knowledge_engine.drive_boundary import DriveBoundaryError, DriveDestination, resolve_drive_destination
+from knowledge_engine.drive_boundary import (
+    DriveBoundaryError,
+    DriveDestination,
+    resolve_drive_destination,
+)
 
 
 class FakeTransport:
@@ -84,9 +88,7 @@ def test_destination_outside_root_fails_before_upload() -> None:
     transport.folders[destination.folder_id] = DriveFolderMetadata(
         destination.folder_id, ("unrelated-root",), True
     )
-    transport.folders["unrelated-root"] = DriveFolderMetadata(
-        "unrelated-root", (), True
-    )
+    transport.folders["unrelated-root"] = DriveFolderMetadata("unrelated-root", (), True)
 
     with pytest.raises(DriveAdapterError, match="not beneath"):
         ConstrainedDriveAdapter(transport).upload(
