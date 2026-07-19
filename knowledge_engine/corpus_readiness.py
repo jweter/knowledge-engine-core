@@ -6,7 +6,7 @@ import csv
 import hashlib
 import json
 from dataclasses import asdict, dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 APPROVED_USAGE_STATUSES = {"approved_open_access", "public_domain"}
 REQUIRED_COLUMNS = {
@@ -161,7 +161,7 @@ def validate_corpus_readiness(
     )
 
 
-def _load_manifest(manifest_bytes: bytes) -> list[dict[str, str]]:
+def _load_manifest(manifest_bytes: bytes) -> list[dict[str, str | None]]:
     try:
         text = manifest_bytes.decode("utf-8-sig")
         reader = csv.DictReader(text.splitlines())
@@ -216,16 +216,29 @@ def _load_receipts(receipt_paths: tuple[Path, ...]) -> dict[tuple[str, str], dic
 
 
 def _safe_filename(value: str) -> str:
-    path = PurePosixPath(value)
-    if path.is_absolute() or len(path.parts) != 1 or path.name in {"", ".", ".."}:
+    posix_path = PurePosixPath(value)
+    windows_path = PureWindowsPath(value)
+    if (
+        "/" in value
+        or "\\" in value
+        or posix_path.is_absolute()
+        or windows_path.is_absolute()
+        or windows_path.drive
+        or len(posix_path.parts) != 1
+        or len(windows_path.parts) != 1
+        or posix_path.name in {"", ".", ".."}
+    ):
         raise CorpusReadinessError("Manifest or receipt contains an unsafe local path.")
-    if path.suffix.casefold() != ".pdf":
+    if posix_path.suffix.casefold() != ".pdf":
         raise CorpusReadinessError("Manifest or receipt local path must name a PDF.")
-    return path.name
+    return posix_path.name
 
 
-def _required(row: dict[str, str], key: str, *, label: str) -> str:
-    value = row.get(key, "").strip()
+def _required(row: dict[str, str | None], key: str, *, label: str) -> str:
+    raw_value = row.get(key)
+    if not isinstance(raw_value, str):
+        raise CorpusReadinessError(f"{label} is missing required evidence.")
+    value = raw_value.strip()
     if not value:
         raise CorpusReadinessError(f"{label} is missing required evidence.")
     return value
