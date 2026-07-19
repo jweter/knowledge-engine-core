@@ -17,6 +17,9 @@ class CandidateReviewItem:
 
     pmid: str
     title: str
+    authors: tuple[str, ...]
+    publication_year: int | None
+    venue: str | None
     doi: str | None
     pmcid: str | None
     open_access: bool
@@ -97,6 +100,9 @@ def prepare_candidate_review(candidates_path: Path) -> CandidateReviewWorksheet:
             CandidateReviewItem(
                 pmid=pmid,
                 title=_required_string(candidate, "title"),
+                authors=_authors(candidate),
+                publication_year=_optional_year(candidate, "publication_year"),
+                venue=_optional_string(candidate, "venue"),
                 doi=_optional_string(candidate, "doi"),
                 pmcid=pmcid,
                 open_access=open_access,
@@ -131,6 +137,24 @@ def _optional_string(payload: dict[str, object], key: str) -> str | None:
         raise CandidateReviewError("Candidate input contains malformed evidence.")
     normalized = value.strip()
     return normalized or None
+
+
+def _authors(payload: dict[str, object]) -> tuple[str, ...]:
+    value = payload.get("authors", [])
+    if not isinstance(value, list) or not all(
+        isinstance(author, str) and author.strip() for author in value
+    ):
+        raise CandidateReviewError("Candidate input contains malformed author evidence.")
+    return tuple(author.strip() for author in value)
+
+
+def _optional_year(payload: dict[str, object], key: str) -> int | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool) or not 1000 <= value <= 9999:
+        raise CandidateReviewError("Candidate input contains malformed publication evidence.")
+    return value
 
 
 def _required_nonnegative_int(payload: dict[str, object], key: str) -> int:
