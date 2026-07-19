@@ -17,10 +17,13 @@ python -m knowledge_engine.manifest_curation_cli export \
 
 ## Automatically populated evidence
 
-The exporter fills only fields supported by reviewed discovery or receipt evidence:
+The exporter fills only fields supported by reviewed discovery, authoritative PubMed metadata, or receipt evidence:
 
 - deterministic source ID;
 - title and DOI when present;
+- author names supplied by PubMed;
+- publication year supplied by PubMed;
+- journal title supplied by PubMed;
 - PMID and PMCID;
 - official PMC article and PDF URLs;
 - local PDF filename;
@@ -30,13 +33,12 @@ The exporter fills only fields supported by reviewed discovery or receipt eviden
 - receipt SHA-256;
 - source type.
 
+PubMed metadata is collected during the existing `efetch` request. No additional per-paper request is needed, and the values remain visible in the review worksheet before promotion.
+
 ## Explicit curation still required
 
 The exporter intentionally leaves these fields blank:
 
-- authors;
-- publication year;
-- venue;
 - access date;
 - license URL;
 - study type;
@@ -45,11 +47,11 @@ The exporter intentionally leaves these fields blank:
 - comparator;
 - outcome notes.
 
-These fields must be curated from authoritative metadata and scientific review before rows are promoted into `sources.csv`.
+These fields require explicit policy, scientific interpretation, or operator evidence before rows are promoted into `sources.csv`.
 
 ## Fail-closed reconciliation
 
-Export stops on unresolved reviews, count mismatches, duplicate identifiers, unsafe filenames, receipt rows without accepted reviews, license or PMCID disagreement, malformed inputs, or missing verified PMC OA evidence.
+Export stops on unresolved reviews, count mismatches, duplicate identifiers, unsafe filenames, receipt rows without accepted reviews, license or PMCID disagreement, malformed author/year metadata, malformed inputs, or missing verified PMC OA evidence.
 
 Rejected records are not expected in the receipt and cannot become manifest rows.
 

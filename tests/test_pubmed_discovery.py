@@ -53,7 +53,17 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
                   <PubmedArticle>
                     <MedlineCitation>
                       <PMID>222</PMID>
-                      <Article><ArticleTitle>Second title</ArticleTitle></Article>
+                      <Article>
+                        <ArticleTitle>Second title</ArticleTitle>
+                        <AuthorList>
+                          <Author><ForeName>Ada</ForeName><LastName>Lovelace</LastName></Author>
+                          <Author><CollectiveName>Trial Group</CollectiveName></Author>
+                        </AuthorList>
+                        <Journal>
+                          <JournalIssue><PubDate><Year>2024</Year></PubDate></JournalIssue>
+                          <Title>Journal of Verified Results</Title>
+                        </Journal>
+                      </Article>
                     </MedlineCitation>
                     <PubmedData>
                       <ArticleIdList>
@@ -66,6 +76,7 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
                       <PMID>111</PMID>
                       <Article>
                         <ArticleTitle>First <i>trial</i></ArticleTitle>
+                        <Journal><JournalIssue><PubDate><MedlineDate>2023 Spring</MedlineDate></PubDate></JournalIssue></Journal>
                       </Article>
                     </MedlineCitation>
                     <PubmedData><ArticleIdList /></PubmedData>
@@ -110,14 +121,19 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
 
     assert [candidate.pmid for candidate in result.candidates] == ["222", "111"]
     assert result.candidates[0].title == "Second title"
+    assert result.candidates[0].authors == ("Ada Lovelace", "Trial Group")
+    assert result.candidates[0].publication_year == 2024
+    assert result.candidates[0].venue == "Journal of Verified Results"
     assert result.candidates[0].doi == "10.1000/second"
     assert result.candidates[0].pmcid == "PMC999"
     assert result.candidates[0].open_access is True
     assert result.candidates[0].license == "CC BY"
     assert result.candidates[0].pdf_url == "https://ftp.ncbi.nlm.nih.gov/article.pdf"
     assert result.candidates[1].title == "First trial"
+    assert result.candidates[1].publication_year == 2023
     assert result.candidates[1].status == "metadata_only"
     assert '"candidate_count": 2' in result.to_json()
+    assert '"authors": [' in result.to_json()
     assert "retmax=2" in transport.urls[0]
     assert "retstart=0" in transport.urls[0]
 

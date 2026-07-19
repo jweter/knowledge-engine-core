@@ -43,6 +43,9 @@ class PubmedCandidate:
 
     pmid: str
     title: str
+    authors: tuple[str, ...]
+    publication_year: int | None
+    venue: str | None
     doi: str | None
     pmcid: str | None
     open_access: bool
@@ -72,6 +75,15 @@ class DiscoveryResult:
             "candidates": [asdict(candidate) for candidate in self.candidates],
         }
         return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
+@dataclass(frozen=True)
+class _PubmedMetadata:
+    title: str
+    authors: tuple[str, ...]
+    publication_year: int | None
+    venue: str | None
+    doi: str | None
 
 
 class PubmedPmcDiscoveryService:
@@ -105,14 +117,17 @@ class PubmedPmcDiscoveryService:
 
         candidates: list[PubmedCandidate] = []
         for pmid in pmids:
-            title, doi = metadata.get(pmid, ("", None))
+            record = metadata.get(pmid, _PubmedMetadata("", (), None, None, None))
             pmcid = pmc_links.get(pmid)
             oa = self._fetch_oa_record(pmcid) if pmcid else None
             candidates.append(
                 PubmedCandidate(
                     pmid=pmid,
-                    title=title,
-                    doi=doi,
+                    title=record.title,
+                    authors=record.authors,
+                    publication_year=record.publication_year,
+                    venue=record.venue,
+                    doi=record.doi,
                     pmcid=pmcid,
                     open_access=oa is not None,
                     license=oa.license if oa else None,
@@ -150,24 +165,37 @@ class PubmedPmcDiscoveryService:
             raise NcbiDiscoveryError("PubMed search response was malformed.")
         return values
 
-    def _fetch_metadata(self, pmids: list[str]) -> dict[str, tuple[str, str | None]]:
+    def _fetch_metadata(self, pmids: list[str]) -> dict[str, _PubmedMetadata]:
         if not pmids:
             return {}
         xml_root = self._get_xml(
             f"{EUTILS_BASE_URL}/efetch.fcgi?"
             + urlencode({"db": "pubmed", "id": ",".join(pmids), "retmode": "xml"})
         )
-        records: dict[str, tuple[str, str | None]] = {}
+        records: dict[str, _PubmedMetadata] = {}
         for article in xml_root.findall(".//PubmedArticle"):
             pmid = _element_text(article.find(".//PMID"))
             title = _flatten_text(article.find(".//ArticleTitle"))
+            authors = tuple(
+                name
+                for author in article.findall(".//Article/AuthorList/Author")
+                if (name := _author_name(author))
+            )
+            venue = _element_text(article.find(".//Article/Journal/Title")) or None
+            publication_year = _publication_year(article)
             doi = None
             for article_id in article.findall(".//ArticleId"):
                 if article_id.attrib.get("IdType") == "doi":
                     doi = _element_text(article_id) or None
                     break
             if pmid:
-                records[pmid] = (title, doi)
+                records[pmid] = _PubmedMetadata(
+                    title=title,
+                    authors=authors,
+                    publication_year=publication_year,
+                    venue=venue,
+                    doi=doi,
+                )
         return records
 
     def _link_pmc(self, pmids: list[str]) -> dict[str, str]:
@@ -262,6 +290,32 @@ class _OaRecord:
     license: str | None
     pdf_url: str | None
     xml_url: str | None
+
+
+def _author_name(author: ET.Element) -> str:
+    collective = _element_text(author.find("CollectiveName"))
+    if collective:
+        return collective
+    fore = _element_text(author.find("ForeName"))
+    last = _element_text(author.find("LastName"))
+    return " ".join(part for part in (fore, last) if part)
+
+
+def _publication_year(article: ET.Element) -> int | None:
+    for path in (
+        ".//Article/Journal/JournalIssue/PubDate/Year",
+        ".//ArticleDate/Year",
+        ".//PubMedPubDate[@PubStatus='pubmed']/Year",
+    ):
+        value = _element_text(article.find(path))
+        if value.isdigit() and len(value) == 4:
+            return int(value)
+    medline_date = _element_text(
+        article.find(".//Article/Journal/JournalIssue/PubDate/MedlineDate")
+    )
+    if len(medline_date) >= 4 and medline_date[:4].isdigit():
+        return int(medline_date[:4])
+    return None
 
 
 def _element_text(element: ET.Element | None) -> str:
