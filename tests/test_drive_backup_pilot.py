@@ -184,9 +184,7 @@ def test_http_transport_deletes_exact_file() -> None:
         requests.append(request)
         return FakeResponse(b"")
 
-    GoogleDriveHttpTransport(access_token="runtime-token", opener=opener).delete_file(
-        "file/id"
-    )
+    GoogleDriveHttpTransport(access_token="runtime-token", opener=opener).delete_file("file/id")
 
     assert requests[0].method == "DELETE"
     assert requests[0].get_header("Authorization") == "Bearer runtime-token"
