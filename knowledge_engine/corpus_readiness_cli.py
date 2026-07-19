@@ -74,6 +74,7 @@ def _write_report_atomically(output: Path, payload: str) -> None:
     """Persist a complete report without exposing partial final evidence."""
 
     stage = output.with_name(f".{output.name}.tmp")
+    stage_created = False
     try:
         if output.parent.is_symlink():
             raise OSError
@@ -81,16 +82,17 @@ def _write_report_atomically(output: Path, payload: str) -> None:
         if stage.is_symlink() or stage.exists():
             raise OSError
         with stage.open("x", encoding="utf-8", newline="\n") as handle:
+            stage_created = True
             handle.write(payload)
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(stage, output)
     except OSError:
-        try:
-            if stage.exists() and not stage.is_symlink():
-                stage.unlink()
-        except OSError:
-            pass
+        if stage_created:
+            try:
+                stage.unlink(missing_ok=True)
+            except OSError:
+                pass
         raise typer.BadParameter("Readiness report could not be written.") from None
 
 
