@@ -31,6 +31,7 @@ class CorpusReadinessItem:
     source_id: str
     pmid: str
     pmcid: str
+    license: str
     filename: str
     byte_count: int
     sha256: str
@@ -100,8 +101,6 @@ def validate_corpus_readiness(
             raise CorpusReadinessError("Manifest contains a non-included row.")
         if usage_status not in APPROVED_USAGE_STATUSES:
             raise CorpusReadinessError("Manifest contains a row without approved usage status.")
-        if not license_type:
-            raise CorpusReadinessError("Manifest contains a row without an explicit license.")
         _add_unique(seen_source_ids, source_id, label="source_id")
         _add_unique(seen_pmids, pmid, label="PMID")
         _add_unique(seen_pmcids, pmcid, label="PMCID")
@@ -112,6 +111,11 @@ def validate_corpus_readiness(
             raise CorpusReadinessError("Manifest row has no matching acquisition receipt.")
         if receipt["filename"] != filename:
             raise CorpusReadinessError("Manifest filename does not match the acquisition receipt.")
+        receipt_license = receipt["license"]
+        if not isinstance(receipt_license, str):
+            raise CorpusReadinessError("Acquisition receipt item is missing required evidence.")
+        if _normalize_license(license_type) != _normalize_license(receipt_license):
+            raise CorpusReadinessError("Manifest license does not match the acquisition receipt.")
         matched_receipt_keys.add((pmid, pmcid))
 
         file_path = papers_directory / filename
@@ -129,6 +133,7 @@ def validate_corpus_readiness(
                 source_id=source_id,
                 pmid=pmid,
                 pmcid=pmcid,
+                license=license_type,
                 filename=filename,
                 byte_count=len(body),
                 sha256=sha256,
@@ -196,6 +201,9 @@ def _load_receipts(receipt_paths: tuple[Path, ...]) -> dict[tuple[str, str], dic
                 raise CorpusReadinessError("Acquisition receipt contains a malformed item.")
             pmid = _json_string(item, "pmid")
             pmcid = _json_string(item, "pmcid")
+            license_type = _json_string(item, "license").strip()
+            if not license_type:
+                raise CorpusReadinessError("Acquisition receipt item is missing required evidence.")
             filename = _safe_filename(_json_string(item, "filename"))
             sha256 = _json_string(item, "sha256")
             byte_count = item.get("byte_count")
@@ -208,11 +216,16 @@ def _load_receipts(receipt_paths: tuple[Path, ...]) -> dict[tuple[str, str], dic
                 raise CorpusReadinessError("Acquisition receipts contain a duplicate identifier.")
             _add_unique(filenames, filename, label="receipt filename")
             receipts[key] = {
+                "license": license_type,
                 "filename": filename,
                 "byte_count": byte_count,
                 "sha256": sha256,
             }
     return receipts
+
+
+def _normalize_license(value: str) -> str:
+    return " ".join(value.split()).casefold()
 
 
 def _safe_filename(value: str) -> str:
