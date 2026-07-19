@@ -55,9 +55,7 @@ def discover_candidate_batch(
     if not normalized_query:
         raise ValueError("PubMed query must not be empty.")
     if not 1 <= total_limit <= MAX_TOTAL_CANDIDATES:
-        raise ValueError(
-            f"Total discovery limit must be between 1 and {MAX_TOTAL_CANDIDATES}."
-        )
+        raise ValueError(f"Total discovery limit must be between 1 and {MAX_TOTAL_CANDIDATES}.")
     if not 1 <= page_size <= MAX_PAGE_SIZE:
         raise ValueError(f"Discovery page size must be between 1 and {MAX_PAGE_SIZE}.")
     if retstart < 0:
