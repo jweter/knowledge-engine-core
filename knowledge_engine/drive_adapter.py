@@ -87,7 +87,9 @@ class ConstrainedDriveAdapter:
             current_ids = next_ids
         raise DriveAdapterError("Drive destination is not beneath the approved project root.")
 
-    def upload(self, *, destination: DriveDestination, name: str, payload: bytes) -> VerifiedDriveUpload:
+    def upload(
+        self, *, destination: DriveDestination, name: str, payload: bytes
+    ) -> VerifiedDriveUpload:
         """Upload bytes and verify the provider readback before returning success."""
 
         if not isinstance(destination, DriveDestination):
