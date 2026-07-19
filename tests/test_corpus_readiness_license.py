@@ -11,7 +11,9 @@ from knowledge_engine.corpus_readiness import CorpusReadinessError, validate_cor
 
 
 def test_matching_license_is_reconciled_and_reported(tmp_path: Path) -> None:
-    manifest, receipt, papers = _fixture(tmp_path, manifest_license="CC BY", receipt_license=" cc   by ")
+    manifest, receipt, papers = _fixture(
+        tmp_path, manifest_license="CC BY", receipt_license=" cc   by "
+    )
 
     report = validate_corpus_readiness(
         manifest_path=manifest,
