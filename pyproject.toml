@@ -24,6 +24,7 @@ ruff = "0.15.20"
 
 [tool.poetry.scripts]
 ke = "knowledge_engine.entrypoint:app"
+ke-drive-backup-pilot = "knowledge_engine.drive_backup_pilot:main"
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]
