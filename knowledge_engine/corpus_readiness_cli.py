@@ -1,0 +1,77 @@
+"""Standalone CLI for M14 corpus-readiness validation."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Annotated
+
+import typer
+
+from knowledge_engine.corpus_readiness import CorpusReadinessError, validate_corpus_readiness
+
+app = typer.Typer(help="Validate a curated corpus before the controlled M14 import.")
+
+ManifestOption = Annotated[
+    Path,
+    typer.Option("--manifest", help="Curated sources.csv manifest path."),
+]
+ReceiptOption = Annotated[
+    list[Path],
+    typer.Option("--receipt", help="Sanitized acquisition receipt; repeat as needed."),
+]
+PapersDirectoryOption = Annotated[
+    Path,
+    typer.Option("--papers-dir", help="Local ignored directory containing corpus PDFs."),
+]
+ExpectedCountOption = Annotated[
+    int,
+    typer.Option("--expected-count", min=1, help="Required accepted corpus size."),
+]
+OutputOption = Annotated[
+    Path,
+    typer.Option("--output", help="Sanitized readiness report path."),
+]
+ForceOption = Annotated[
+    bool,
+    typer.Option("--force", help="Overwrite an existing readiness report."),
+]
+
+
+@app.command("validate")
+def validate_command(
+    manifest: ManifestOption,
+    receipt: ReceiptOption,
+    papers_dir: PapersDirectoryOption,
+    output: OutputOption,
+    expected_count: ExpectedCountOption = 500,
+    force: ForceOption = False,
+) -> None:
+    """Reconcile manifest rows, receipts, and local PDF evidence exactly."""
+
+    if output.is_symlink():
+        raise typer.BadParameter("Output must not be a symbolic link.")
+    if output.exists() and not force:
+        raise typer.BadParameter("Output file already exists. Use --force to overwrite.")
+    try:
+        report = validate_corpus_readiness(
+            manifest_path=manifest,
+            receipt_paths=tuple(receipt),
+            papers_directory=papers_dir,
+            expected_count=expected_count,
+        )
+    except CorpusReadinessError as exc:
+        typer.echo(f"Corpus readiness failed: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    try:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(report.to_json(), encoding="utf-8")
+    except OSError:
+        raise typer.BadParameter("Readiness report could not be written.") from None
+    typer.echo(
+        f"Corpus ready: {report.accepted_count} manifest rows, "
+        f"{report.receipt_count} receipts, {report.file_count} PDFs."
+    )
+
+
+if __name__ == "__main__":
+    app()
