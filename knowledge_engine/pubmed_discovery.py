@@ -310,7 +310,9 @@ def _publication_year(article: ET.Element) -> int | None:
         value = _element_text(article.find(path))
         if value.isdigit() and len(value) == 4:
             return int(value)
-    medline_date = _element_text(article.find(".//Article/Journal/JournalIssue/PubDate/MedlineDate"))
+    medline_date = _element_text(
+        article.find(".//Article/Journal/JournalIssue/PubDate/MedlineDate")
+    )
     if len(medline_date) >= 4 and medline_date[:4].isdigit():
         return int(medline_date[:4])
     return None
