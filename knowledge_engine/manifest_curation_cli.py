@@ -37,8 +37,7 @@ def export_command(
         raise typer.Exit(1) from exc
     _write_report_atomically(output, draft.to_csv())
     typer.echo(
-        f"Exported {len(draft.rows)} manifest curation rows. "
-        "No sources.csv file was modified."
+        f"Exported {len(draft.rows)} manifest curation rows. No sources.csv file was modified."
     )
 
 
