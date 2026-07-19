@@ -137,6 +137,9 @@ def export_manifest_curation_draft(
             {
                 "source_id": f"pmc-{pmcid.removeprefix('PMC')}",
                 "title": _required(review, "title"),
+                "authors": _authors(review),
+                "publication_year": _publication_year(review),
+                "venue": _optional(review, "venue"),
                 "doi": _optional(review, "doi"),
                 "pmid": pmid,
                 "other_identifier": pmcid,
@@ -149,7 +152,7 @@ def export_manifest_curation_draft(
                 "inclusion_reason": _required(review, "inclusion_review"),
                 "expected_content_hash": sha256,
                 "source_type": "paper",
-                "notes": "Generated curation draft; authors, year, venue, study type, population, intervention, comparator, outcome notes, access date, and license URL require explicit curation.",
+                "notes": "Generated curation draft; study type, population, intervention, comparator, outcome notes, access date, and license URL require explicit curation.",
             }
         )
         rows.append(row)
@@ -181,3 +184,21 @@ def _required(row: dict[str, object], field: str) -> str:
 def _optional(row: dict[str, object], field: str) -> str:
     value = row.get(field)
     return value.strip() if isinstance(value, str) else ""
+
+
+def _authors(row: dict[str, object]) -> str:
+    value = row.get("authors", [])
+    if not isinstance(value, list) or not all(
+        isinstance(author, str) and author.strip() for author in value
+    ):
+        raise ManifestCurationError("Author evidence is malformed.")
+    return "; ".join(author.strip() for author in value)
+
+
+def _publication_year(row: dict[str, object]) -> str:
+    value = row.get("publication_year")
+    if value is None:
+        return ""
+    if not isinstance(value, int) or isinstance(value, bool) or not 1000 <= value <= 9999:
+        raise ManifestCurationError("Publication-year evidence is malformed.")
+    return str(value)
