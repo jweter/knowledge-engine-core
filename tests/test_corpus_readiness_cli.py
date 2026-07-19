@@ -36,7 +36,7 @@ def test_cli_writes_sanitized_readiness_report(tmp_path: Path) -> None:
                 "pmid": "100",
                 "other_identifier": "PMC100",
                 "local_path": "PMC100.pdf",
-                "license_type": "CC-BY",
+                "license_type": "CC BY",
                 "usage_status": "approved_open_access",
                 "inclusion_status": "included",
             }
