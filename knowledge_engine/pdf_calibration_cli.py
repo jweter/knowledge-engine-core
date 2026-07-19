@@ -37,9 +37,7 @@ def inspect_command(
         raise typer.Exit(1) from exc
     _write_report_atomically(output, report.to_json())
     hard_failures = sum(
-        finding.severity == "hard_failure"
-        for item in report.items
-        for finding in item.findings
+        finding.severity == "hard_failure" for item in report.items for finding in item.findings
     )
     typer.echo(
         f"Inspected {report.sample_count} PDFs; hard failures: {hard_failures}. "
