@@ -11,11 +11,33 @@ from pathlib import Path
 
 SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.pdf$")
 MANIFEST_FIELDS = (
-    "source_id", "title", "authors", "publication_year", "venue", "doi", "pmid",
-    "arxiv_id", "other_identifier", "source_url", "pdf_url", "local_path",
-    "access_date", "license_type", "license_url", "usage_status", "inclusion_status",
-    "inclusion_reason", "exclusion_reason", "expected_content_hash", "source_type",
-    "study_type", "population", "intervention", "comparator", "outcome_notes", "notes",
+    "source_id",
+    "title",
+    "authors",
+    "publication_year",
+    "venue",
+    "doi",
+    "pmid",
+    "arxiv_id",
+    "other_identifier",
+    "source_url",
+    "pdf_url",
+    "local_path",
+    "access_date",
+    "license_type",
+    "license_url",
+    "usage_status",
+    "inclusion_status",
+    "inclusion_reason",
+    "exclusion_reason",
+    "expected_content_hash",
+    "source_type",
+    "study_type",
+    "population",
+    "intervention",
+    "comparator",
+    "outcome_notes",
+    "notes",
 )
 
 
@@ -68,7 +90,13 @@ def export_manifest_curation_draft(
         pmid = _required(row, "pmid")
         if pmid in accepted:
             raise ManifestCurationError("Review worksheet contains a duplicate accepted PMID.")
-        for field in ("inclusion_review", "identity_review", "license_review", "reviewer", "reviewed_at"):
+        for field in (
+            "inclusion_review",
+            "identity_review",
+            "license_review",
+            "reviewer",
+            "reviewed_at",
+        ):
             _required(row, field)
         accepted[pmid] = row
 
@@ -99,7 +127,10 @@ def export_manifest_curation_draft(
             or _required(review, "pdf_url") == ""
         ):
             raise ManifestCurationError("Reviewed evidence does not match the acquisition receipt.")
-        if review.get("open_access") is not True or _required(review, "discovery_status") != "oa_verified":
+        if (
+            review.get("open_access") is not True
+            or _required(review, "discovery_status") != "oa_verified"
+        ):
             raise ManifestCurationError("Accepted review lacks verified PMC OA evidence.")
         row = {field: "" for field in MANIFEST_FIELDS}
         row.update(
