@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Annotated
 
@@ -62,15 +63,35 @@ def validate_command(
     except CorpusReadinessError as exc:
         typer.echo(f"Corpus readiness failed: {exc}", err=True)
         raise typer.Exit(1) from exc
-    try:
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(report.to_json(), encoding="utf-8")
-    except OSError:
-        raise typer.BadParameter("Readiness report could not be written.") from None
+    _write_report_atomically(output, report.to_json())
     typer.echo(
         f"Corpus ready: {report.accepted_count} manifest rows, "
         f"{report.receipt_count} receipts, {report.file_count} PDFs."
     )
+
+
+def _write_report_atomically(output: Path, payload: str) -> None:
+    """Persist a complete report without exposing partial final evidence."""
+
+    stage = output.with_name(f".{output.name}.tmp")
+    try:
+        if output.parent.is_symlink():
+            raise OSError
+        output.parent.mkdir(parents=True, exist_ok=True)
+        if stage.is_symlink() or stage.exists():
+            raise OSError
+        with stage.open("x", encoding="utf-8", newline="\n") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(stage, output)
+    except OSError:
+        try:
+            if stage.exists() and not stage.is_symlink():
+                stage.unlink()
+        except OSError:
+            pass
+        raise typer.BadParameter("Readiness report could not be written.") from None
 
 
 if __name__ == "__main__":
