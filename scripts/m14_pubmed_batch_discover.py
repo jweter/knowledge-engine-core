@@ -11,7 +11,11 @@ from typing import cast
 
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
 from knowledge_engine.pubmed_batch_discovery import discover_candidate_batch
-from knowledge_engine.pubmed_discovery import GetTransport, NcbiDiscoveryError, PubmedPmcDiscoveryService
+from knowledge_engine.pubmed_discovery import (
+    GetTransport,
+    NcbiDiscoveryError,
+    PubmedPmcDiscoveryService,
+)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -22,9 +26,13 @@ def _parser() -> argparse.ArgumentParser:
         )
     )
     parser.add_argument("--query", required=True, help="PubMed search expression.")
-    parser.add_argument("--limit", required=True, type=int, help="Requested unique candidate count.")
+    parser.add_argument(
+        "--limit", required=True, type=int, help="Requested unique candidate count."
+    )
     parser.add_argument("--retstart", type=int, default=0, help="Initial PubMed result offset.")
-    parser.add_argument("--page-size", type=int, default=100, help="Bounded page size, maximum 100.")
+    parser.add_argument(
+        "--page-size", type=int, default=100, help="Bounded page size, maximum 100."
+    )
     parser.add_argument("--output", required=True, type=Path, help="Review-only JSON output path.")
     parser.add_argument("--force", action="store_true", help="Overwrite an existing output file.")
     return parser
