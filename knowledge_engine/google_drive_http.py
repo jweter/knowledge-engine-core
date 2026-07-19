@@ -8,7 +8,6 @@ import secrets
 from collections.abc import Callable
 from dataclasses import dataclass
 from email.message import Message
-from http.client import HTTPResponse
 from typing import Protocol, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
@@ -131,6 +130,15 @@ class GoogleDriveHttpTransport:
         return self._request_bytes(
             f"{_DRIVE_API}/files/{quote(file_id, safe='')}?"
             + urlencode({"alt": "media", "supportsAllDrives": "true"})
+        )
+
+    def delete_file(self, file_id: str) -> None:
+        """Permanently delete one known pilot upload."""
+
+        self._request_bytes(
+            f"{_DRIVE_API}/files/{quote(file_id, safe='')}?"
+            + urlencode({"supportsAllDrives": "true"}),
+            method="DELETE",
         )
 
     def _request_json(
