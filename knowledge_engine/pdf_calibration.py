@@ -8,7 +8,7 @@ import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-PDF_HEADER = re.compile(br"%PDF-(\d\.\d)")
+PDF_HEADER = re.compile(rb"%PDF-(\d\.\d)")
 EOF_MARKER = b"%%EOF"
 MAX_SAMPLE_SIZE = 4
 
@@ -87,19 +87,65 @@ def calibrate_pdf_sample(receipt_path: Path, pdf_directory: Path) -> PdfCalibrat
         header = PDF_HEADER.match(payload[:16])
         findings: list[PdfCalibrationFinding] = []
         if header is None:
-            findings.append(PdfCalibrationFinding("invalid_pdf_signature", "hard_failure", "Payload does not begin with a PDF signature."))
+            findings.append(
+                PdfCalibrationFinding(
+                    "invalid_pdf_signature",
+                    "hard_failure",
+                    "Payload does not begin with a PDF signature.",
+                )
+            )
         if not payload.rstrip().endswith(EOF_MARKER):
-            findings.append(PdfCalibrationFinding("missing_terminal_eof", "warning", "Terminal PDF EOF marker is absent or displaced."))
+            findings.append(
+                PdfCalibrationFinding(
+                    "missing_terminal_eof",
+                    "warning",
+                    "Terminal PDF EOF marker is absent or displaced.",
+                )
+            )
         if digest != expected_hash:
-            findings.append(PdfCalibrationFinding("receipt_hash_mismatch", "hard_failure", "PDF hash does not match the acquisition receipt."))
+            findings.append(
+                PdfCalibrationFinding(
+                    "receipt_hash_mismatch",
+                    "hard_failure",
+                    "PDF hash does not match the acquisition receipt.",
+                )
+            )
         if b"/Title" not in payload:
-            findings.append(PdfCalibrationFinding("embedded_title_absent", "warning", "Embedded PDF title metadata was not observed."))
+            findings.append(
+                PdfCalibrationFinding(
+                    "embedded_title_absent",
+                    "warning",
+                    "Embedded PDF title metadata was not observed.",
+                )
+            )
         if b"/Author" not in payload:
-            findings.append(PdfCalibrationFinding("embedded_author_absent", "warning", "Embedded PDF author metadata was not observed."))
+            findings.append(
+                PdfCalibrationFinding(
+                    "embedded_author_absent",
+                    "warning",
+                    "Embedded PDF author metadata was not observed.",
+                )
+            )
         if b"/Encrypt" in payload:
-            findings.append(PdfCalibrationFinding("encrypted_pdf", "review_required", "PDF advertises encryption and requires parser review."))
+            findings.append(
+                PdfCalibrationFinding(
+                    "encrypted_pdf",
+                    "review_required",
+                    "PDF advertises encryption and requires parser review.",
+                )
+            )
 
-        items.append(PdfCalibrationItem(filename, len(payload), digest, header.group(1).decode("ascii") if header else None, payload.rstrip().endswith(EOF_MARKER), digest == expected_hash, tuple(findings)))
+        items.append(
+            PdfCalibrationItem(
+                filename,
+                len(payload),
+                digest,
+                header.group(1).decode("ascii") if header else None,
+                payload.rstrip().endswith(EOF_MARKER),
+                digest == expected_hash,
+                tuple(findings),
+            )
+        )
 
     return PdfCalibrationReport(1, len(items), tuple(items))
 
