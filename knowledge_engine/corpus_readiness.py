@@ -121,6 +121,8 @@ def validate_corpus_readiness(
         file_path = papers_directory / filename
         _reject_symlink(file_path, label="Corpus PDF")
         body = _read_bytes(file_path, label="Corpus PDF")
+        if not body.startswith(b"%PDF-"):
+            raise CorpusReadinessError("Corpus file does not have a valid PDF signature.")
         sha256 = hashlib.sha256(body).hexdigest()
         if len(body) != receipt["byte_count"]:
             raise CorpusReadinessError(
