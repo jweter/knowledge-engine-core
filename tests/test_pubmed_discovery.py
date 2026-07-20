@@ -170,6 +170,44 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
     assert "id=PMC999" in transport.urls[3]
 
 
+def test_linkage_requests_are_chunked_and_reconciled() -> None:
+    pmids = [str(value) for value in range(1, 22)]
+    first_links = {
+        "linksets": [
+            {
+                "ids": [pmid],
+                "linksetdbs": [{"linkname": "pubmed_pmc", "links": [f"9{pmid}"]}],
+            }
+            for pmid in pmids[:20]
+        ]
+    }
+    second_links = {
+        "linksets": [
+            {
+                "ids": [pmids[20]],
+                "linksetdbs": [{"linkname": "pubmed_pmc", "links": [f"9{pmids[20]}"]}],
+            }
+        ]
+    }
+    transport = FakeTransport(
+        [
+            FakeResponse(200, json.dumps(first_links).encode(), {}),
+            FakeResponse(200, json.dumps(second_links).encode(), {}),
+        ]
+    )
+
+    result = _service(transport)._link_pmc(pmids)
+
+    assert len(result) == 21
+    assert result["1"] == "PMC91"
+    assert result["21"] == "PMC921"
+    assert len(transport.urls) == 2
+    assert transport.urls[0].count("&id=") == 20
+    assert "id=21" not in transport.urls[0]
+    assert transport.urls[1].count("&id=") == 1
+    assert "id=21" in transport.urls[1]
+
+
 def test_discovery_rejects_batch_mode_linkage_that_loses_source_mapping() -> None:
     transport = FakeTransport(
         [
