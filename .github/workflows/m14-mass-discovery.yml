@@ -32,6 +32,8 @@ on:
       - 'knowledge_engine/candidate_review_cli.py'
       - 'knowledge_engine/reviewed_approval.py'
       - 'knowledge_engine/reviewed_approval_cli.py'
+      - 'knowledge_engine/pmc_acquisition.py'
+      - 'knowledge_engine/entrypoint.py'
       - 'scripts/m14_pubmed_batch_discover.py'
       - 'pyproject.toml'
       - 'poetry.lock'
@@ -42,7 +44,7 @@ permissions:
 jobs:
   discover:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 120
     env:
       DISCOVERY_QUERY: >-
         ${{ github.event_name == 'workflow_dispatch' && inputs.query ||
@@ -111,9 +113,19 @@ jobs:
             --output work/m14/approvals-500.json \
             --limit 500
 
-      - name: Summarize candidate metrics
+      - name: Acquire exactly 500 approved PDFs
+        run: |
+          mkdir -p work/m14/papers
+          poetry run ke pmc-oa-acquire \
+            --candidates work/m14/pubmed-candidates.json \
+            --approvals work/m14/approvals-500.json \
+            --papers-dir work/m14/papers \
+            --receipt work/m14/acquisition-receipt.json
+
+      - name: Summarize and reconcile M14 acquisition
         run: |
           poetry run python - <<'PY'
+          import hashlib
           import json
           from collections import Counter
           from pathlib import Path
@@ -121,6 +133,8 @@ jobs:
           payload = json.loads(Path('work/m14/pubmed-candidates.json').read_text(encoding='utf-8'))
           worksheet = json.loads(Path('work/m14/candidate-review.json').read_text(encoding='utf-8'))
           approvals = json.loads(Path('work/m14/approvals-500.json').read_text(encoding='utf-8'))
+          receipt = json.loads(Path('work/m14/acquisition-receipt.json').read_text(encoding='utf-8'))
+          papers_dir = Path('work/m14/papers')
           candidates = payload['candidates']
           items = worksheet['items']
           candidate_count = payload['candidate_count']
@@ -157,8 +171,39 @@ jobs:
               raise SystemExit('Approval source accepted count does not reconcile.')
           if approvals.get('selected_count') != 500:
               raise SystemExit('Approval selected count must be exactly 500.')
-          if len(approvals.get('approvals', [])) != 500:
+          approval_rows = approvals.get('approvals', [])
+          if len(approval_rows) != 500:
               raise SystemExit('Approval row count must be exactly 500.')
+          if receipt.get('schema_version') != 1 or receipt.get('acquired_count') != 500:
+              raise SystemExit('Acquisition receipt count must be exactly 500.')
+          receipt_items = receipt.get('items', [])
+          if not isinstance(receipt_items, list) or len(receipt_items) != 500:
+              raise SystemExit('Acquisition receipt item count must be exactly 500.')
+          for field in ('pmid', 'pmcid', 'filename'):
+              if len({item[field] for item in receipt_items}) != 500:
+                  raise SystemExit(f'Acquisition receipt contains duplicate {field} values.')
+          approved_by_pmid = {item['pmid']: item for item in approval_rows}
+          total_pdf_bytes = 0
+          for item in receipt_items:
+              approval = approved_by_pmid.get(item['pmid'])
+              if approval is None:
+                  raise SystemExit('Receipt references an unapproved PMID.')
+              for field in ('pmcid', 'license', 'filename'):
+                  if item[field] != approval[field]:
+                      raise SystemExit('Receipt evidence does not reconcile to approval evidence.')
+              path = papers_dir / item['filename']
+              if not path.is_file() or path.is_symlink():
+                  raise SystemExit('Approved local PDF is missing or unsafe.')
+              body = path.read_bytes()
+              if not body.startswith(b'%PDF-'):
+                  raise SystemExit('Approved local file does not have a PDF signature.')
+              if len(body) != item['byte_count']:
+                  raise SystemExit('Receipt byte count does not match the local PDF.')
+              if hashlib.sha256(body).hexdigest() != item['sha256']:
+                  raise SystemExit('Receipt checksum does not match the local PDF.')
+              total_pdf_bytes += len(body)
+          if len(list(papers_dir.glob('*.pdf'))) != 500:
+              raise SystemExit('Local PDF directory must contain exactly 500 PDFs.')
           pmcid_resolution_rate = pmcid_resolved / candidate_count if candidate_count else 0.0
           oa_verification_rate = oa_verified / candidate_count if candidate_count else 0.0
           summary = (
@@ -169,6 +214,8 @@ jobs:
               f"held={decisions['held']}\n"
               f"selected_count={approvals['selected_count']}\n"
               f"selection_rule={approvals['selection_rule']}\n"
+              f"acquired_count={receipt['acquired_count']}\n"
+              f"total_pdf_bytes={total_pdf_bytes}\n"
               f"fetched_page_count={payload['fetched_page_count']}\n"
               f"duplicate_pmids_removed={payload['duplicate_pmids_removed']}\n"
               f"pmcid_resolved={pmcid_resolved}\n"
@@ -181,7 +228,7 @@ jobs:
           print(summary, end='')
           PY
 
-      - name: Upload adjudication artifact
+      - name: Upload M14 evidence artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -191,6 +238,16 @@ jobs:
             work/m14/pubmed-candidates.json
             work/m14/candidate-review.json
             work/m14/approvals-500.json
+            work/m14/acquisition-receipt.json
             work/m14/summary.txt
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Upload approved PDF artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m14-approved-pdfs
+          path: work/m14/papers/*.pdf
+          if-no-files-found: error
+          retention-days: 3
