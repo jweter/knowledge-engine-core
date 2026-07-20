@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Use this workflow when M14 needs more than one bounded PubMed page. It aggregates official NCBI discovery pages into one review-only JSON file and prepares a deterministic candidate worksheet while preserving legal, provenance, and approval boundaries.
+Use this workflow when M14 needs more than one bounded PubMed page. It aggregates official NCBI discovery pages into one review-only JSON file and prepares a deterministic adjudication worksheet while preserving legal and approval boundaries.
 
-Discovery and worksheet preparation do not download PDFs, modify `sources.csv`, create acquisition approvals, or perform ingestion. Later adjudication may automatically accept, reject, or hold records only under the evidence contract defined in `docs/roadmap.md` and `docs/m14_candidate_review_worksheet.md`.
+It does not download PDFs, modify `sources.csv`, create acquisition approvals, or perform ingestion.
 
 ## Command
 
@@ -33,34 +33,22 @@ The workflow:
 4. removes cross-page duplicate PMIDs;
 5. continues until the requested unique count is reached;
 6. stops early when PubMed returns a short or empty page;
-7. writes one deterministic review-only discovery document;
-8. validates that document through the production candidate-review boundary;
-9. writes one candidate worksheet without acquisition approvals;
-10. reconciles discovery and worksheet counts before artifact upload.
+7. writes one deterministic discovery document;
+8. validates that document through the production candidate-adjudication boundary;
+9. writes explicit accepted, rejected, and held decisions;
+10. reconciles discovery and adjudication counts before artifact upload.
 
-The summary records the requested candidate count, worksheet-item count, fetched page count, duplicate PMID count, verified PMC Open Access count, and whether the PubMed result set was exhausted.
+The summary records candidate count, adjudication-item count, fetched page count, duplicate PMID count, verified PMC Open Access count, decision counts, and whether the PubMed result set was exhausted.
 
 ## Temporary artifact
 
-The GitHub workflow uploads exactly:
+The GitHub workflow uploads:
 
 - `pubmed-candidates.json` — provider-derived discovery and OA evidence;
-- `candidate-review.json` — deterministic candidate worksheet;
+- `candidate-review.json` — deterministic adjudication worksheet;
 - `summary.txt` — sanitized aggregate counts.
 
-The artifact is temporary and must not be committed. The worksheet is not itself an acquisition approval file.
-
-## Adjudication boundary
-
-Automated adjudication is a separate repeatable stage after discovery. It may:
-
-- accept records whose scientific, identity, reusable-license, source, and duplicate rules all pass;
-- reject records when an explicit exclusion or legal-ineligibility rule fires;
-- hold records when evidence is missing, ambiguous, or conflicting.
-
-No record may be silently dropped. Every result must preserve reason codes, provider provenance, rule version, processing timestamp, and supporting evidence. `oa_verified` is evidence used by the rules; it is not sufficient by itself for acceptance.
-
-PubMed, PMC, Crossref, Europe PMC, OpenAlex, and publisher evidence must remain separately attributed. Adding or combining a new provider requires a separate measured design decision and must not silently change the trust category of existing evidence.
+The artifact is temporary and must not be committed. The worksheet is not itself an acquisition file.
 
 ## Safety boundary
 
@@ -68,22 +56,21 @@ PubMed, PMC, Crossref, Europe PMC, OpenAlex, and publisher evidence must remain 
 - Existing output is rejected unless `--force` is provided.
 - Output is written atomically in the destination directory.
 - Provider failures remain sanitized.
-- No PDF, provider payload, local database, approval file, completed worksheet, receipt, or generated manifest is committed.
-- Free access, a publisher landing page, or a relevance score alone cannot establish reusable-license eligibility.
-- Ambiguous evidence produces `held`, never a guessed acceptance.
+- No PDF, provider payload, local database, approval file, receipt, or generated manifest is committed.
+- Every candidate receives an explicit decision.
+- `oa_verified` is evidence consumed by deterministic rules, not a blanket legal assumption.
+- Held records are automatically deferred and rejected records are automatically excluded.
 
 ## M14 use
 
-For the current ramp, discover at least 500 candidates and process them through bounded deterministic adjudication batches. Maintain separate counts for:
+Discover and adjudicate candidates in bounded pages. Maintain separate counts for:
 
 - discovered candidates;
 - exact PMID duplicates removed;
 - accepted records;
 - rejected records;
 - held records;
-- probable study-level duplicates;
-- acquisition-approved records;
 - acquired full texts;
 - manifest-ready rows.
 
-If the defensible evidence base is smaller than 500, record the measured evidence ceiling and a `HOLD` decision rather than padding the corpus with duplicate, weak, or legally unusable records.
+When fewer than 500 records are accepted, continue controlled discovery from the next offset or a separately approved query revision. Do not wait for owner review of held records. If the defensible evidence base is smaller than 500, record the measured evidence ceiling and a `HOLD` rehearsal decision rather than padding the corpus with duplicate, weak, or legally unusable records.
