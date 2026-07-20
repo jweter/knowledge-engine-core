@@ -15,7 +15,7 @@ The workflow does not download PDFs, modify `sources.csv`, create acquisition ap
 ```bash
 python scripts/m14_pubmed_batch_discover.py \
   --query '(obesity OR overweight OR "type 2 diabetes" OR "metabolic syndrome") AND (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR liraglutide OR tirzepatide OR metformin OR "SGLT2 inhibitor") AND pubmed pmc open access[filter]' \
-  --limit 500 \
+  --limit 2500 \
   --page-size 100 \
   --retstart 0 \
   --output work/m14/pubmed-candidates.json
@@ -25,7 +25,7 @@ python -m knowledge_engine.candidate_review_cli \
   --output work/m14/candidate-review.json
 ```
 
-The requested unique-candidate limit may be between 1 and 5,000. The GitHub workflow enforces a minimum of 150 for mass-discovery runs. PubMed discovery pages remain bounded to at most 100 records. PMID-to-PMCID conversion requests are subdivided into deterministic batches of at most 100 PMIDs, below the official PMC ID Converter limit of 200 identifiers per request.
+The requested unique-candidate limit may be between 1 and 5,000. The GitHub workflow enforces a minimum of 150 for mass-discovery runs and now defaults to 2,500 candidates so M14 can measure whether the unchanged adjudication rules yield at least 500 accepted records. PubMed discovery pages remain bounded to at most 100 records. PMID-to-PMCID conversion requests are subdivided into deterministic batches of at most 100 PMIDs, below the official PMC ID Converter limit of 200 identifiers per request.
 
 ## Deterministic provider sequence
 
@@ -65,23 +65,23 @@ The summary records:
 
 Coverage denominators are the filtered candidate count in the same run. A PubMed filter match is not treated as PMC OA evidence until the PMID resolves to a PMCID and the official PMC OA response reconciles to that PMCID.
 
-## Measured 500-citation result
+## Measured 500-candidate baseline
 
-Exact-head M14 run `29731402049` on commit `3c7b3a22861259d1792656b2546aca1cd83508eb` produced:
+Exact-head M14 run `29744339485` for PR #71 produced:
 
 - candidate count: 500;
-- fetched pages: 5;
-- duplicate PMIDs removed: 0;
 - PMCID resolved: 500;
 - PMCID resolution rate: 1.000000;
-- PMC OA verified: 491;
-- PMC OA verification rate: 0.982000;
-- accepted: 18;
-- rejected: 9;
-- held: 473;
+- PMC OA verified: 494;
+- PMC OA verification rate: 0.988000;
+- accepted: 124;
+- rejected: 6;
+- held: 370;
 - exhausted: false.
 
-This confirms the identifier resolver is no longer the primary yield bottleneck. The high held count now belongs to later scientific-scope, license, or full-text adjudication policy and is outside this resolver-repair task.
+The accepted yield was 24.8%. At that measured rate, approximately 2,017 candidates would be required to reach 500 accepted records. The 2,500-candidate default adds bounded margin while remaining below the existing 5,000-candidate maximum. This is a larger review pool, not a relaxation of any adjudication or legal rule.
+
+The same artifact showed that 282 held records lacked an approved direct PDF URL and 198 had insufficient scientific-scope evidence. Those records remain held and cannot authorize acquisition. The larger pool seeks additional qualifying records rather than reclassifying unresolved records.
 
 ## Historical measured limitation
 
@@ -115,6 +115,7 @@ The artifact is temporary and must not be committed. The worksheet is not itself
 - The PubMed filter narrows discovery but does not replace the per-record PMC ID Converter, PMC OA, license, identity, and URL checks.
 - PubMed metadata, PMC identifier conversion, and PMC OA evidence remain separate provenance categories.
 - The broader scientific scope does not broaden the legal trust category: only approved PMC OA evidence can authorize acquisition in this stage.
+- Increasing the candidate pool does not change the issue #21 requirement for exactly 500 accepted, legally validated rows and matching local PDFs.
 
 ## M14 use
 
@@ -130,4 +131,4 @@ Discover and adjudicate candidates in bounded pages. Maintain separate counts fo
 - acquired full texts;
 - manifest-ready rows.
 
-When fewer than 500 records are accepted, continue controlled discovery from the next offset or refine the query within the committed obesity and metabolic-disease domain. Do not wait for owner review of held records. If the defensible evidence base is smaller than 500 after measured scope expansion, record the evidence ceiling and a `HOLD` rehearsal decision rather than padding the corpus with duplicate, weak, or legally unusable records.
+When at least 500 records are accepted, select exactly 500 through a separate deterministic approval and acquisition step; do not import or count the excess accepted records automatically. When fewer than 500 records are accepted, continue controlled discovery from the next offset or refine the query within the committed obesity and metabolic-disease domain. Do not wait for owner review of held records. If the defensible evidence base is smaller than 500 after measured scope expansion, record the evidence ceiling and a `HOLD` rehearsal decision rather than padding the corpus with duplicate, weak, or legally unusable records.
