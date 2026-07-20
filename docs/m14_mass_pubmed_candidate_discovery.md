@@ -25,38 +25,56 @@ python -m knowledge_engine.candidate_review_cli \
   --output work/m14/candidate-review.json
 ```
 
-The requested unique-candidate limit may be between 1 and 5,000. The GitHub workflow enforces a minimum of 150 for mass-discovery runs. Every provider request remains bounded to at most 100 PubMed records.
+The requested unique-candidate limit may be between 1 and 5,000. The GitHub workflow enforces a minimum of 150 for mass-discovery runs. Every PubMed page and PMID-to-PMCID linkage request remains bounded to at most 100 source PMIDs.
 
-## Deterministic aggregation
+## Deterministic provider sequence
 
-The workflow:
+For each bounded page, the workflow:
 
-1. requests PubMed pages in stable result order using the explicit PMC OA Subset filter;
-2. fetches metadata and PMC Open Access evidence through the existing production service;
-3. preserves the first occurrence of each PMID;
-4. removes cross-page duplicate PMIDs;
-5. continues until the requested unique count is reached;
-6. stops early when PubMed returns a short or empty page;
-7. writes one deterministic discovery document;
-8. validates that document through the production candidate-adjudication boundary;
-9. writes explicit accepted, rejected, and held decisions;
-10. reconciles discovery and adjudication counts before artifact upload.
+1. requests PubMed PMIDs in stable result order using the explicit PMC OA Subset filter;
+2. fetches bibliographic metadata from PubMed EFetch;
+3. resolves each PMID independently through one bounded PubMed ELink request that sends every source PMID as a separate `id` parameter;
+4. reconciles each returned ELink linkset to exactly one source PMID and at most one PMCID;
+5. queries the official PMC OA service separately for each resolved PMCID;
+6. records PubMed metadata, PubMed linkage, and PMC OA evidence as separate provider sources;
+7. preserves the first occurrence of each PMID across discovery pages;
+8. removes cross-page duplicate PMIDs;
+9. continues until the requested unique count is reached;
+10. writes one deterministic discovery document and adjudication worksheet;
+11. reconciles discovery, resolver, OA, and decision counts before artifact upload.
 
-The summary records candidate count, adjudication-item count, accepted, rejected, and held counts, fetched page count, duplicate PMID count, verified PMC Open Access count, and whether the PubMed result set was exhausted.
+A comma-separated ELink `id` value is not used for PMID-to-PMCID resolution because it produces batch-mode links without preserving the source-to-target mapping required for evidence reconciliation.
 
-## Measured limitation
+## Coverage measurements
 
-The first 500-record run using the official PubMed PMC OA filter returned 500 citations, but the existing per-record PMC OA evidence resolver verified only five records. None satisfied the complete title-scope acceptance rule. This demonstrates an identifier/evidence-resolution coverage gap between filtered PubMed citations and the current PMC OA service integration. It does not demonstrate that the scientific domain lacks 500 reusable papers.
+The summary records:
 
-Resolver expansion or repair is a separate bounded implementation task. The system must not compensate by weakening license, identity, URL, provenance, or scientific-scope rules.
+- candidate count;
+- adjudication-item count;
+- accepted, rejected, and held counts;
+- fetched page count;
+- duplicate PMID count;
+- PMIDs with a resolved PMCID;
+- PMID-to-PMCID resolution rate;
+- records verified by the PMC OA service;
+- PMC OA verification rate;
+- whether the PubMed result set was exhausted.
+
+Coverage denominators are the filtered candidate count in the same run. A PubMed filter match is not treated as PMC OA evidence until the PMID resolves to a PMCID and the official PMC OA response reconciles to that PMCID.
+
+## Historical measured limitation
+
+The first 500-record run using the official PubMed PMC OA filter returned 500 citations, but the earlier ELink request sent one comma-separated PMID value while parsing the response as if source-specific linksets had been requested. That request shape resolved only five PMCIDs and therefore verified only five PMC OA records. None satisfied the complete title-scope acceptance rule.
+
+This task repairs the source-to-target linkage contract and measures the resulting coverage. It does not weaken license, identity, URL, provenance, or scientific-scope rules.
 
 ## Temporary artifact
 
 The GitHub workflow uploads:
 
-- `pubmed-candidates.json` — provider-derived discovery and OA evidence;
+- `pubmed-candidates.json` — provider-derived discovery, identifier, and OA evidence;
 - `candidate-review.json` — deterministic adjudication worksheet;
-- `summary.txt` — sanitized aggregate counts.
+- `summary.txt` — sanitized aggregate counts and coverage rates.
 
 The artifact is temporary and must not be committed. The worksheet is not itself an acquisition file.
 
@@ -70,7 +88,8 @@ The artifact is temporary and must not be committed. The worksheet is not itself
 - Every candidate receives an explicit decision.
 - `oa_verified` is evidence consumed by deterministic rules, not a blanket legal assumption.
 - Held records are automatically deferred and rejected records are automatically excluded.
-- The PubMed filter narrows discovery but does not replace the per-record PMC OA, license, identity, and URL checks.
+- The PubMed filter narrows discovery but does not replace the per-record ELink, PMC OA, license, identity, and URL checks.
+- PubMed metadata, PubMed linkage, and PMC OA evidence remain separate provenance categories.
 - The broader scientific scope does not broaden the legal trust category: only approved PMC OA evidence can authorize acquisition in this stage.
 
 ## M14 use
@@ -79,6 +98,8 @@ Discover and adjudicate candidates in bounded pages. Maintain separate counts fo
 
 - discovered candidates;
 - exact PMID duplicates removed;
+- PMCID-resolved records;
+- PMC OA-verified records;
 - accepted records;
 - rejected records;
 - held records;
