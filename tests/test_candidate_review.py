@@ -8,13 +8,19 @@ import pytest
 from knowledge_engine.candidate_review import CandidateReviewError, prepare_candidate_review
 
 
-def _write_candidates(path: Path, candidates: list[dict[str, object]]) -> None:
+def _write_candidates(
+    path: Path,
+    candidates: list[dict[str, object]],
+    *,
+    limit_key: str = "limit",
+    limit: int = 25,
+) -> None:
     path.write_text(
         json.dumps(
             {
                 "query": "GLP-1 obesity",
                 "retstart": 0,
-                "limit": 25,
+                limit_key: limit,
                 "candidate_count": len(candidates),
                 "candidates": candidates,
             }
@@ -45,6 +51,7 @@ def test_prepare_candidate_review_is_pending_only(tmp_path: Path) -> None:
 
     assert worksheet.schema_version == 1
     assert worksheet.candidate_count == 1
+    assert worksheet.source_limit == 25
     item = worksheet.items[0]
     assert item.pmid == "100"
     assert item.reported_license == "CC BY"
@@ -53,6 +60,38 @@ def test_prepare_candidate_review_is_pending_only(tmp_path: Path) -> None:
     assert item.license_review == ""
     assert item.identity_review == ""
     assert "approvals" not in worksheet.to_json()
+
+
+def test_prepare_candidate_review_accepts_batch_discovery_limit(tmp_path: Path) -> None:
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(
+        candidates,
+        [_candidate()],
+        limit_key="requested_limit",
+        limit=500,
+    )
+
+    worksheet = prepare_candidate_review(candidates)
+
+    assert worksheet.source_limit == 500
+    assert worksheet.candidate_count == 1
+    assert worksheet.items[0].decision == "pending"
+
+
+def test_conflicting_discovery_limits_are_rejected(tmp_path: Path) -> None:
+    candidates = tmp_path / "candidates.json"
+    payload = {
+        "query": "GLP-1 obesity",
+        "retstart": 0,
+        "limit": 25,
+        "requested_limit": 500,
+        "candidate_count": 1,
+        "candidates": [_candidate()],
+    }
+    candidates.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(CandidateReviewError, match="conflicting discovery limits"):
+        prepare_candidate_review(candidates)
 
 
 def test_duplicate_pmid_is_rejected(tmp_path: Path) -> None:
