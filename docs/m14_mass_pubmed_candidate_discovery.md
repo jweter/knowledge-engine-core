@@ -16,7 +16,7 @@ python scripts/m14_pubmed_batch_discover.py \
   --retstart 0 \
   --output work/m14/pubmed-candidates.json
 
-python -m knowledge_engine.candidate_review_cli prepare \
+python -m knowledge_engine.candidate_review_cli \
   --candidates work/m14/pubmed-candidates.json \
   --output work/m14/candidate-review.json
 ```
