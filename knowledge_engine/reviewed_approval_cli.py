@@ -1,4 +1,4 @@
-"""Standalone CLI for exporting completed reviews to acquisition approvals."""
+"""Standalone CLI for exporting automated adjudications to acquisition approvals."""
 
 from __future__ import annotations
 
@@ -10,11 +10,11 @@ import typer
 from knowledge_engine.corpus_readiness_cli import _write_report_atomically
 from knowledge_engine.reviewed_approval import ReviewedApprovalError, export_reviewed_approvals
 
-app = typer.Typer(help="Export fully reviewed M14 candidates to acquisition approvals.")
+app = typer.Typer(help="Export accepted M14 adjudications to acquisition approvals.")
 
 WorksheetOption = Annotated[
     Path,
-    typer.Option("--worksheet", help="Completed candidate review worksheet JSON path."),
+    typer.Option("--worksheet", help="Completed candidate adjudication worksheet JSON path."),
 ]
 OutputOption = Annotated[
     Path,
@@ -32,7 +32,7 @@ def export_command(
     output: OutputOption,
     force: ForceOption = False,
 ) -> None:
-    """Export accepted completed reviews without making approval decisions."""
+    """Export accepted automated adjudications without human input."""
 
     if output.is_symlink():
         raise typer.BadParameter("Output must not be a symbolic link.")
@@ -41,13 +41,13 @@ def export_command(
     try:
         batch = export_reviewed_approvals(worksheet)
     except ReviewedApprovalError as exc:
-        typer.echo(f"Reviewed approval export failed: {exc}", err=True)
+        typer.echo(f"Adjudicated approval export failed: {exc}", err=True)
         raise typer.Exit(1) from exc
 
     _write_report_atomically(output, batch.to_json())
     typer.echo(
-        f"Exported {len(batch.approvals)} reviewed acquisition approvals. "
-        "No review decisions were created or changed."
+        f"Exported {len(batch.approvals)} automated acquisition approvals. "
+        "Held and rejected records were excluded."
     )
 
 
