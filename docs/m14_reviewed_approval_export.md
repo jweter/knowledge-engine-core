@@ -4,7 +4,9 @@
 
 This step exports only records that have passed the complete deterministic M14 acceptance contract into the exact approval schema consumed by `pmc-oa-acquire`.
 
-The exporter does not invent scientific, identity, or licensing evidence. It validates and transforms accepted adjudication records whose rule results, provenance, and reusable-license basis already reconcile. Held or unresolved records cannot be exported.
+The exporter does not invent scientific, identity, or licensing evidence. It validates and transforms accepted adjudication records whose rule results, provenance, and reusable-license basis already reconcile. Held and rejected records are automatically excluded rather than waiting for human resolution.
+
+The implementation retains the historical module name `reviewed_approval` for compatibility, but no human review is required.
 
 ## Command
 
@@ -30,28 +32,30 @@ Every accepted item must include:
 - an adjudication-rules version;
 - a timezone-aware processing timestamp.
 
-Rejected records are omitted with their reasons preserved in the worksheet. Held, pending, malformed, or otherwise unresolved records stop export so a partial or ambiguous batch cannot silently become an acquisition batch.
+Rejected and held records are omitted with their evidence preserved in the adjudication worksheet. Unsupported decision values, malformed accepted records, or contradictory accepted evidence stop export.
 
 ## Output boundary
 
-The exported file contains the acquisition fields required by the acquisition service, including:
+The exported file contains the acquisition fields required by the acquisition service:
 
 - PMID;
 - PMCID;
 - license;
 - approved PDF URL;
-- deterministic `PMCID.pdf` filename;
-- adjudication decision identifier or ruleset reference required for traceability.
+- deterministic `PMCID.pdf` filename.
 
-Detailed evidence and exception-review notes remain in the local adjudication worksheet and are not copied into the minimal acquisition approval file.
+Detailed evidence remains in the local adjudication worksheet and is not copied into the minimal acquisition approval file.
 
 ## Workflow progress
 
 1. Discover bounded PubMed/PMC candidates.
-2. Prepare an adjudication worksheet.
+2. Generate the adjudication worksheet.
 3. Run deterministic scientific, identity, license, source, and duplicate rules.
-4. Route ambiguous records to exception review as `held`.
-5. Export only complete accepted records with this command.
+4. Automatically defer held records and exclude rejected records.
+5. Export complete accepted records with this command.
 6. Acquire the resulting approval batch transactionally.
+7. Continue discovery when the accepted count remains below 500.
+
+No reviewer identity, manual approval, review note, or owner timestamp is required.
 
 Candidate pages, worksheets, approval files, receipts, PDFs, and databases remain ignored local work products and must not be committed.
