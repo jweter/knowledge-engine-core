@@ -24,6 +24,8 @@ on:
       - 'knowledge_engine/pubmed_batch_discovery.py'
       - 'knowledge_engine/pubmed_discovery.py'
       - 'knowledge_engine/ncbi_http.py'
+      - 'knowledge_engine/candidate_review.py'
+      - 'knowledge_engine/candidate_review_cli.py'
       - 'scripts/m14_pubmed_batch_discover.py'
       - 'pyproject.toml'
       - 'poetry.lock'
@@ -80,6 +82,12 @@ jobs:
             --page-size "$DISCOVERY_PAGE_SIZE" \
             --output work/m14/pubmed-candidates.json
 
+      - name: Prepare pending review worksheet
+        run: |
+          poetry run python -m knowledge_engine.candidate_review_cli \
+            --candidates work/m14/pubmed-candidates.json \
+            --output work/m14/candidate-review.json
+
       - name: Summarize candidate metrics
         run: |
           poetry run python - <<'PY'
@@ -87,10 +95,16 @@ jobs:
           from pathlib import Path
 
           payload = json.loads(Path('work/m14/pubmed-candidates.json').read_text(encoding='utf-8'))
+          worksheet = json.loads(Path('work/m14/candidate-review.json').read_text(encoding='utf-8'))
           candidates = payload['candidates']
           oa_verified = sum(candidate['open_access'] for candidate in candidates)
+          if worksheet['candidate_count'] != payload['candidate_count']:
+              raise SystemExit('Candidate review worksheet count does not reconcile.')
+          if any(item['decision'] != 'pending' for item in worksheet['items']):
+              raise SystemExit('Candidate review worksheet contains a non-pending decision.')
           summary = (
               f"candidate_count={payload['candidate_count']}\n"
+              f"review_item_count={worksheet['candidate_count']}\n"
               f"fetched_page_count={payload['fetched_page_count']}\n"
               f"duplicate_pmids_removed={payload['duplicate_pmids_removed']}\n"
               f"oa_verified={oa_verified}\n"
@@ -106,6 +120,7 @@ jobs:
           name: m14-pubmed-candidates
           path: |
             work/m14/pubmed-candidates.json
+            work/m14/candidate-review.json
             work/m14/summary.txt
           if-no-files-found: error
           retention-days: 14
