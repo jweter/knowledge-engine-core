@@ -121,7 +121,7 @@ jobs:
           if any(candidate['metadata_source'] != 'pubmed_efetch' for candidate in candidates):
               raise SystemExit('PubMed metadata provenance does not reconcile.')
           if any(
-              candidate['pmcid'] is not None and candidate['pmcid_source'] != 'pubmed_elink'
+              candidate['pmcid'] is not None and candidate['pmcid_source'] != 'pmc_id_converter'
               for candidate in candidates
           ):
               raise SystemExit('PMCID provenance does not reconcile.')
