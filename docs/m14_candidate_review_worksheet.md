@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This step converts bounded PubMed/PMC discovery output into a deterministic adjudication worksheet. The worksheet performs repeatable machine evaluation of scientific scope, identifier consistency, reusable-license evidence, approved full-text location, and exact duplicate risk.
+This step converts bounded PubMed/PMC discovery output into a deterministic adjudication worksheet. The worksheet supports repeatable machine evaluation of scientific scope, identifier consistency, reusable-license evidence, approved full-text location, and duplicate risk.
 
-It advances M14 from discovery evidence to explicit `accepted`, `rejected`, or `held` decisions. It does not itself download PDFs, modify `sources.csv`, perform ingestion, resolve probable study-level duplicates, or collapse evidence from separate providers into one trust category.
+It advances M14 from discovery evidence to explicit `accepted`, `rejected`, or `held` decisions. It does not download PDFs, modify `sources.csv`, perform ingestion, or collapse evidence from separate providers into one trust category.
 
 ## Command
 
@@ -16,68 +16,61 @@ python -m knowledge_engine.candidate_review_cli \
 
 Use `--force` only when intentionally replacing an existing worksheet. Output replacement is atomic and refuses symbolic-link outputs or stage collisions.
 
-## Initial ruleset
-
-The first implemented ruleset is `m14-candidate-adjudication-v1`.
-
-It uses only evidence already present in the bounded PubMed/PMC discovery document:
-
-- PubMed title and bibliographic identifiers;
-- PubMed-to-PMC identity linkage;
-- PMC Open Access service status;
-- the reported PMC OA license;
-- the official PMC OA PDF URL;
-- exact PMID and PMCID uniqueness within the discovery batch.
-
-No external provider evidence is inferred or silently introduced.
-
 ## Decision contract
 
 Every candidate receives one explicit result:
 
 - `accepted` when every required deterministic rule passes with complete, non-conflicting evidence;
-- `rejected` when the record is `metadata_only` and therefore has no verified reusable full text in the current PMC OA acquisition path;
-- `held` when an OA-linked record has incomplete or unsupported scientific-scope, identity, license, or approved-PDF evidence.
+- `rejected` when a deterministic exclusion or legal-ineligibility rule fires;
+- `held` when identity, licensing, scientific relevance, full-text eligibility, or duplicate status remains incomplete, ambiguous, or conflicting.
 
-No candidate is silently dropped. Held records require exception review or later roadmap-approved evidence expansion before acceptance or rejection.
+No candidate is silently dropped. Held records are automatically deferred from approval and acquisition. They do not wait for owner review and do not block accepted records from continuing through the pipeline.
 
-## Scientific-scope boundary
-
-Version 1 accepts scientific scope only when the title contains both:
-
-- a GLP-1 term (`GLP-1`, `GLP1`, or `glucagon-like peptide-1`); and
-- an obesity or weight term (`obesity`, `obese`, `weight loss`, `body weight`, or `adiposity`).
-
-Title evidence that does not satisfy both groups is held as `SCIENTIFIC_SCOPE_INSUFFICIENT`; it is not automatically rejected. Abstract retrieval, semantic classification, and additional-provider evidence are outside this ruleset.
-
-## License and full-text boundary
-
-Version 1 accepts only:
-
-- PMC OA evidence with a reported license beginning with `CC BY` or `CC0`; and
-- an HTTPS PDF URL hosted at `ftp.ncbi.nlm.nih.gov` whose path ends in `.pdf`.
-
-Free access, publisher landing pages, missing license strings, unrecognized license bases, and non-PMC PDF hosts do not qualify. OA-linked records with those conditions are held rather than guessed.
-
-## Required output evidence
+## Required evidence
 
 Every adjudication record preserves:
 
 - PMID, PMCID, DOI, title, authors, venue, and publication year when available;
-- provider categories (`pubmed_metadata` and `pmc_oa_service`);
-- discovery status, reported license, and PDF URL;
-- scientific, identity, license, full-text, and exact-duplicate rule results;
-- explicit decision reason codes;
+- provider-specific provenance for every evidence value;
+- PMC Open Access status and the exact reusable-license basis;
+- approved full-text location and source category;
+- scientific inclusion and exclusion rule results;
+- exact and probable duplicate evidence;
+- decision reason codes;
 - adjudication-rules version;
-- timezone-aware processing timestamp;
-- unresolved ambiguity categories.
+- processing timestamp;
+- unresolved ambiguity indicators.
 
-The worksheet contains no `approvals` collection and cannot itself authorize acquisition.
+An automated decision must never infer a license from free access, a publisher landing page, or a relevance score alone.
+
+## Deterministic sequence
+
+For each candidate:
+
+1. normalize and reconcile identifiers without overwriting conflicting provider evidence;
+2. evaluate committed scientific inclusion and exclusion rules;
+3. validate PMC Open Access membership, reported license, and approved full-text source;
+4. detect exact identifier duplicates and flag probable study-level duplicates;
+5. emit `accepted`, `rejected`, or `held` with explicit reason codes and evidence;
+6. automatically exclude held and rejected records from acquisition;
+7. continue bounded discovery until exactly 500 accepted records exist or the measured source ceiling is reached;
+8. generate acquisition approval records only from accepted records satisfying the complete acceptance contract.
+
+No reviewer identifier, review note, review timestamp, or owner decision is required by this stage.
+
+## Initial deterministic ruleset
+
+The first ruleset is `m14-candidate-adjudication-v1`.
+
+- `metadata_only` records are rejected for the PMC OA acquisition path with `NO_VERIFIED_REUSABLE_FULL_TEXT`.
+- PMC OA records are accepted only when title-scope evidence, PMCID identity evidence, an allowlisted CC license, and an official NCBI HTTPS PDF URL all pass.
+- Incomplete or unsupported OA evidence produces `held`; it does not request human intervention.
+- Exact duplicate PMIDs or PMCIDs remain malformed-input errors because the discovery artifact must reconcile before adjudication.
 
 ## Validation
 
-Preparation and adjudication reject malformed discovery JSON, count mismatches, duplicate PMIDs, duplicate PMCIDs, unsupported discovery states, inconsistent OA evidence, and conflicting discovery limits.
+Preparation and adjudication reject malformed discovery JSON, count mismatches, duplicate PMIDs, duplicate PMCIDs, unsupported discovery states, inconsistent OA evidence, missing rule versions, and decision records that do not reconcile with their evidence.
 
 ## Repository boundaries
 
-Candidate pages, adjudication worksheets, approval files, receipts, PDFs, and databases remain local ignored work products. Do not commit completed worksheets containing provider payloads, local paths, or operator-specific exception-review data.
+Candidate pages, adjudication worksheets, approval files, receipts, PDFs, and databases remain local ignored work products. Do not commit generated worksheets containing provider payloads or local paths.
