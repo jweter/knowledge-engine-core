@@ -25,7 +25,7 @@ python -m knowledge_engine.candidate_review_cli \
   --output work/m14/candidate-review.json
 ```
 
-The requested unique-candidate limit may be between 1 and 5,000. The GitHub workflow enforces a minimum of 150 for mass-discovery runs. Every PubMed page and PMID-to-PMCID linkage request remains bounded to at most 100 source PMIDs.
+The requested unique-candidate limit may be between 1 and 5,000. The GitHub workflow enforces a minimum of 150 for mass-discovery runs. PubMed discovery pages remain bounded to at most 100 records. PMID-to-PMCID ELink requests are subdivided into deterministic chunks of at most 20 source PMIDs to reduce incomplete-response risk while preserving one-to-one source mapping.
 
 ## Deterministic provider sequence
 
@@ -33,17 +33,19 @@ For each bounded page, the workflow:
 
 1. requests PubMed PMIDs in stable result order using the explicit PMC OA Subset filter;
 2. fetches bibliographic metadata from PubMed EFetch;
-3. resolves each PMID independently through one bounded PubMed ELink request that sends every source PMID as a separate `id` parameter;
-4. reconciles each returned ELink linkset to exactly one source PMID and at most one PMCID;
-5. queries the official PMC OA service separately for each resolved PMCID;
-6. records PubMed metadata, PubMed linkage, and PMC OA evidence as separate provider sources;
-7. preserves the first occurrence of each PMID across discovery pages;
-8. removes cross-page duplicate PMIDs;
-9. continues until the requested unique count is reached;
-10. writes one deterministic discovery document and adjudication worksheet;
-11. reconciles discovery, resolver, OA, and decision counts before artifact upload.
+3. subdivides the page into ELink chunks of at most 20 PMIDs;
+4. sends every source PMID in each chunk as a separate `id` parameter;
+5. reconciles each returned ELink linkset to exactly one source PMID and at most one PMCID;
+6. merges non-overlapping chunk results back into the original PubMed page order;
+7. queries the official PMC OA service separately for each resolved PMCID;
+8. records PubMed metadata, PubMed linkage, and PMC OA evidence as separate provider sources;
+9. preserves the first occurrence of each PMID across discovery pages;
+10. removes cross-page duplicate PMIDs;
+11. continues until the requested unique count is reached;
+12. writes one deterministic discovery document and adjudication worksheet;
+13. reconciles discovery, resolver, OA, and decision counts before artifact upload.
 
-A comma-separated ELink `id` value is not used for PMID-to-PMCID resolution because it produces batch-mode links without preserving the source-to-target mapping required for evidence reconciliation.
+A comma-separated ELink `id` value is not used for PMID-to-PMCID resolution because it produces batch-mode links without preserving the source-to-target mapping required for evidence reconciliation. Transient status codes, timeouts, incomplete response bodies, and other bounded transport failures are retried at most three times with NCBI-compliant request pacing.
 
 ## Coverage measurements
 
@@ -66,12 +68,15 @@ Coverage denominators are the filtered candidate count in the same run. A PubMed
 
 The first 500-record run using the official PubMed PMC OA filter returned 500 citations, but the earlier ELink request sent one comma-separated PMID value while parsing the response as if source-specific linksets had been requested. That request shape resolved only five PMCIDs and therefore verified only five PMC OA records. None satisfied the complete title-scope acceptance rule.
 
+The first repeated-ID repair exposed incomplete HTTP reads on large 100-PMID ELink responses. The resolver now uses 20-PMID chunks with bounded pacing and retry while preserving the same source-to-target reconciliation contract.
+
 This task repairs the source-to-target linkage contract and measures the resulting coverage. It does not weaken license, identity, URL, provenance, or scientific-scope rules.
 
 ## Temporary artifact
 
 The GitHub workflow uploads:
 
+- `discovery.log` — sanitized discovery diagnostics;
 - `pubmed-candidates.json` — provider-derived discovery, identifier, and OA evidence;
 - `candidate-review.json` — deterministic adjudication worksheet;
 - `summary.txt` — sanitized aggregate counts and coverage rates.
