@@ -64,9 +64,18 @@ must be complete before repeated large-run failure evidence is treated as
 diagnostic. The rehearsal must not introduce new architecture solely to collect
 one run's measurements.
 
+The M14 corpus scope is **Obesity and Metabolic-Disease Therapeutics**. The
+original GLP-1 weight-loss question remains the first named subtopic, but the
+rehearsal may include legally reusable treatment evidence for overweight, type 2
+diabetes, metabolic syndrome, metformin, SGLT2 inhibitors, dual incretin
+therapies, and other explicitly allowlisted interventions within this same
+Phase 1 domain. Scope expansion must never weaken license, provenance,
+identifier, duplicate, or full-text validation.
+
 M14 proceeds through explicit stages:
 
-1. bounded PubMed/PMC candidate discovery;
+1. bounded PubMed/PMC candidate discovery within the committed obesity and
+   metabolic-disease therapeutics scope;
 2. deterministic, evidence-preserving candidate adjudication for scientific scope,
    identifier consistency, reusable-license basis, approved full-text location, and
    duplicate risk;
@@ -86,6 +95,12 @@ must remain separate evidence categories; metadata from PubMed, PMC, Crossref,
 OpenAlex, Europe PMC, or publishers must not be silently collapsed into one trust
 category. Held and rejected records never authorize acquisition and never require
 owner intervention before the working-version acceptance review.
+
+If one query or subtopic cannot supply enough accepted records, discovery may
+continue through measured query revisions inside the committed M14 domain. Each
+revision must preserve its query, offset, rules version, decision counts, and
+provider provenance. Unrelated scientific domains require a separate roadmap
+amendment rather than silent corpus mixing.
 
 ### Supporting operator durability
 
