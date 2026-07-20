@@ -88,6 +88,15 @@ jobs:
             --candidates work/m14/pubmed-candidates.json \
             --output work/m14/candidate-review.json
 
+      - name: Upload failed review input
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m14-review-preparation-diagnostic
+          path: work/m14/pubmed-candidates.json
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Summarize candidate metrics
         run: |
           poetry run python - <<'PY'
