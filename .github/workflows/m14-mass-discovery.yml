@@ -42,7 +42,7 @@ permissions:
 jobs:
   discover:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       DISCOVERY_QUERY: >-
         ${{ github.event_name == 'workflow_dispatch' && inputs.query ||
