@@ -23,7 +23,7 @@ def _write_candidates(
     path.write_text(
         json.dumps(
             {
-                "query": "GLP-1 obesity",
+                "query": "obesity and metabolic disease therapeutics",
                 "retstart": 0,
                 limit_key: limit,
                 "candidate_count": len(candidates),
@@ -71,6 +71,18 @@ def test_complete_oa_candidate_is_accepted(tmp_path: Path) -> None:
     assert item.unresolved_ambiguities == ()
     assert datetime.fromisoformat(item.adjudicated_at).tzinfo is not None
     assert "approvals" not in worksheet.to_json()
+
+
+def test_non_glp1_metabolic_therapy_candidate_is_accepted(tmp_path: Path) -> None:
+    candidate = _candidate()
+    candidate["title"] = "Metformin therapy for type 2 diabetes in adults"
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    assert worksheet.items[0].decision == "accepted"
+    assert worksheet.items[0].inclusion_rule_result == "passed"
 
 
 def test_metadata_only_candidate_is_explicitly_rejected(tmp_path: Path) -> None:
@@ -157,7 +169,7 @@ def test_prepare_candidate_review_accepts_batch_discovery_limit(tmp_path: Path) 
 def test_conflicting_discovery_limits_are_rejected(tmp_path: Path) -> None:
     candidates = tmp_path / "candidates.json"
     payload = {
-        "query": "GLP-1 obesity",
+        "query": "obesity and metabolic disease therapeutics",
         "retstart": 0,
         "limit": 25,
         "requested_limit": 500,
