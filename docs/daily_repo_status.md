@@ -1,114 +1,113 @@
 # Daily Repository Status
 
-**Date:** 2026-07-20 18:33 CEST  
+**Date:** 2026-07-20 19:32 CEST  
 **Repository:** `jweter/knowledge-engine-core`  
-**Branch inspected:** `main`  
-**Current draft PR:** None verified open  
+**Branch inspected:** `m14-3250-candidate-pool`  
+**Current draft PR:** #73 — `ci: measure 3250-candidate M14 pool`  
 **Current milestone:** M14 — controlled 500-paper rehearsal
 
 ## Current state
 
-Repository metadata verifies `main` as the default branch. No open pull request, including no draft pull request, was returned by the connected GitHub search at the time of this report.
+PR #73 is open, draft, mergeable, and targets `main`. Its verified head before this status-only update was `a4e9b5b10704cc205a439fc46b241bcc522ec61c`, two commits ahead of base `3a6b0999eefaddcaac103b37942dfc65aa199c4e`. The PR changes only `.github/workflows/m14-mass-discovery.yml` and `docs/m14_mass_pubmed_candidate_discovery.md`; its stated scope is bounded candidate-supply measurement, not completion of M14.
 
-The latest verified commit on `main` is `0e43517dfb9252b01463e7d351706d619796e63d`, the squash merge of PR #72, `ci: measure 2500-candidate M14 pool`. PR #72 is merged and closed; it was explicitly scoped to candidate-supply measurement and did not claim M14 completion.
+The connected GitHub app cannot inspect a Codex machine's local checkout. Local `git status`, uncommitted changes, untracked files, and the currently checked-out local branch therefore remain unverified. No clean-working-tree claim is made.
 
-The connected GitHub app cannot inspect a Codex machine's local checkout. Therefore, local `git status`, uncommitted changes, untracked files, and the currently checked-out local branch remain unverified. No claim of a clean local working tree is made.
+## Completed work
 
-## Recent completed work
+- Increased the bounded M14 discovery pool from 2,500 to 3,250 candidates while preserving the existing query, page-size ceiling, adjudication rules, provenance controls, duplicate controls, licensing checks, and direct-PDF rules.
+- Raised the workflow timeout from 20 to 30 minutes based on the prior measured 2,500-candidate runtime.
+- Completed the exact-head `Quality` and `M14 Mass Discovery` workflows successfully.
+- Produced a temporary 3,250-candidate adjudication artifact with reconciled metrics.
+- No unresolved pull-request review threads were present when inspected.
 
-- PR #70 repaired bounded PubMed-to-PMC Open Access resolution.
-- PR #71 added PubMed abstract evidence for deterministic M14 scope adjudication.
-- PR #72 increased the bounded discovery default from 500 to 2,500 candidates without weakening scientific, legal, provenance, identifier, duplicate, license, or direct-PDF rules.
-- The exact PR #72 head `1f934e29fbde34e08dfd8652c21ac05f1c0b1b20` completed both the `Quality` workflow and the `M14 Mass Discovery` workflow successfully.
-- The M14 workflow successfully completed checkout, Python and Poetry setup, dependency installation, bounded-input validation, mass discovery, candidate adjudication, metric summarization, and temporary-artifact upload.
+## Verified M14 candidate result
 
-## Measured M14 candidate result
-
-Workflow run `29745438536` produced a temporary `m14-pubmed-candidates` artifact. Its `summary.txt` records:
+Workflow run `29761508774` reported:
 
 ```text
-candidate_count=2500
-adjudication_item_count=2500
-accepted=430
-rejected=19
-held=2051
-fetched_page_count=25
+candidate_count=3250
+adjudication_item_count=3250
+accepted=589
+rejected=24
+held=2637
+fetched_page_count=33
 duplicate_pmids_removed=0
-pmcid_resolved=2500
+pmcid_resolved=3250
 pmcid_resolution_rate=1.000000
-oa_verified=2481
-oa_verification_rate=0.992400
+oa_verified=3226
+oa_verification_rate=0.992615
 exhausted=False
 ```
 
-The measured accepted yield was 17.2% (`430 / 2500`). The run did not meet the issue #21 entry requirement of exactly 500 accepted rows. It remains 70 accepted records short. Because discovery reported `exhausted=False`, further bounded discovery inside the committed M14 domain remains possible without relaxing acceptance rules.
-
-## Current failures, blockers, and risks
-
-### 1. Candidate-supply gate remains incomplete
-
-**Observed evidence:** Only 430 of 2,500 adjudicated candidates were accepted. Issue #21 requires exactly 500 legally accepted rows with matching approved local PDFs before the controlled rehearsal can proceed.
-
-**Likely cause:** The deterministic adjudication rules correctly hold or reject records when scientific-scope, direct-PDF, licensing, identity, provenance, or duplicate evidence is incomplete or conflicting. The current discovery pool did not contain enough fully supported records.
-
-**Confidence:** High.
-
-**Risk:** Expanding the candidate pool without preserving offsets and provenance could duplicate work or weaken traceability. Acceptance rules must not be relaxed merely to reach 500.
-
-### 2. No current draft PR exists
-
-There is no verified open draft PR to receive continuation commits. Any implementation continuation must begin on a new focused branch and draft PR unless a currently open branch exists only in an inaccessible local checkout.
-
-### 3. Local working-tree state is unavailable
-
-The GitHub connector cannot verify local uncommitted or untracked changes. A clean working tree must be confirmed in a real repository checkout before any implementation or rehearsal execution.
-
-### 4. Review feedback on workflow timeout remains a residual risk
-
-PR #72 received review feedback that the 20-minute timeout could be tight for 2,500 candidates. The exact-head run nevertheless completed successfully, so this is not a reproduced failure. It remains a capacity risk for larger or slower future runs and should be changed only if measured runtime or a failure demonstrates the need.
+The candidate-supply prerequisite is now met numerically: 589 records were accepted, exceeding the 500-record selection requirement by 89. This does not complete M14. A separate deterministic step must select exactly 500 accepted records and verify their reusable-license, identity, provenance, and approved local-PDF readiness before ingestion.
 
 ## Tests and commands actually observed
 
-### GitHub Actions observed passing
+### GitHub Actions
 
-- `Quality` run `29745437994` on PR #72 head: **success**.
-- `M14 Mass Discovery` run `29745438536` on PR #72 head: **success**.
-- Every reported M14 job step completed successfully, including artifact upload.
+- `Quality` run `29761508853`: **success**.
+  - formatting check: passed
+  - Ruff lint: passed
+  - strict mypy: passed
+  - pytest: passed
+  - diff hygiene: passed
+  - temporary-delivery-artifact rejection: passed
+- `M14 Mass Discovery` run `29761508774`: **success**.
+  - bounded-input validation: passed
+  - mass discovery: passed
+  - adjudication: passed
+  - metric reconciliation: passed
+  - artifact upload: passed
 
 ### Commands run by this report task
 
-No local Poetry, Ruff, mypy, pytest, corpus-import, or Git commands were executed. This report used connected GitHub repository, PR, commit, workflow, issue, and artifact evidence only. The temporary artifact was downloaded and `summary.txt` was read; candidate JSON and provider payloads were not committed.
+No local Git, Poetry, Ruff, mypy, pytest, import, or resume commands were executed. This lightweight report used authenticated GitHub repository, PR, commit, workflow, log, and review-thread evidence only.
+
+## Failures and documented errors
+
+No current failing workflow, failing test, or unresolved review thread was verified on PR #73. The workflow logs contain a Node 20 deprecation notice from GitHub-hosted actions, but the job ran using Node 24 defaults and completed successfully; this is informational, not a reproduced repository failure.
+
+## Blockers and risks
+
+1. **Local working-tree state unavailable.** The connector cannot verify local uncommitted or untracked files. Confidence: high.
+2. **Exactly-500 selection not yet evidenced.** The 589 accepted records must be deterministically reduced to exactly 500 without weakening scientific or legal acceptance rules. Confidence: high.
+3. **PDF readiness not yet evidenced.** Matching approved local PDFs, sanitized acquisition receipts, and immutable manifest reconciliation remain outstanding. Confidence: high.
+4. **M14 rehearsal not yet run.** Fresh import, exact reconciliation, measured database growth and elapsed time, and idempotent linked resume remain required. Confidence: high.
+5. **PR #73 remains a measurement PR.** Its successful result advances the candidate-supply prerequisite but does not itself satisfy the full milestone acceptance criteria. Confidence: high.
 
 ## Exact continuation point
 
-Starting from verified `main` commit `0e43517dfb9252b01463e7d351706d619796e63d`, create a focused continuation branch and perform one bounded discovery extension within the committed obesity and metabolic-disease therapeutics scope. Preserve the exact query, rules version, provider provenance, offset, decision records, and duplicate controls. The immediate objective is to obtain at least 70 additional accepted records without reclassifying held records or weakening legal and scientific evidence requirements.
+From the successful 3,250-candidate artifact produced by workflow run `29761508774`, preserve the full adjudication evidence and deterministically select exactly 500 of the 589 accepted records using a documented, reproducible ordering rule. Do not reclassify held or rejected records and do not weaken license, provenance, identity, duplicate, scientific-scope, or direct-PDF requirements.
 
 ## Next smallest task
 
-Determine and document the next unused PubMed discovery offset from the 2,500-candidate artifact, then run one bounded continuation page or small page group using the existing production discovery and adjudication path. Record incremental accepted, rejected, held, duplicate, PMCID, PMC OA, page-count, and exhaustion metrics. Do not acquire PDFs or construct the final 500-row manifest until cumulative accepted records can be deterministically reconciled and deduplicated.
+Document and test the deterministic exactly-500 selection rule against the 3,250-candidate adjudication artifact, producing a reconciled 500-row approval candidate manifest without acquiring PDFs or running ingestion yet.
 
-## Steps remaining before any PR can be marked ready and merged
+## Steps remaining before the milestone PR can be marked ready and merged
 
-1. Confirm the local checkout is on a clean branch derived from verified `main`.
-2. Create a focused continuation branch and draft PR for the bounded next-offset discovery work.
-3. Preserve the prior 2,500-candidate evidence and use the next unused offset.
-4. Run the smallest bounded continuation needed to measure additional accepted yield.
-5. Reconcile cumulative candidates and remove duplicate PMIDs deterministically.
-6. Verify cumulative accepted records reach at least 500 without weakening adjudication rules.
-7. Select exactly 500 accepted records through a separate deterministic approval step.
-8. Verify explicit reusable-license basis, identity, provenance, and approved direct full-text location for all 500.
-9. Acquire exactly 500 matching approved PDFs with sanitized receipts; do not commit PDFs.
-10. Validate the immutable 500-row manifest and local-file readiness.
-11. Execute the fresh import, exact reconciliation, measured database growth and elapsed time, and linked-resume rehearsal.
-12. Commit the sanitized deterministic M14 report and final `PROCEED`, `HOLD`, or `STOPPED` decision.
-13. Pass exact-head Ruff formatting, Ruff lint, strict mypy, full pytest, diff hygiene, and artifact hygiene.
-14. Confirm the final PR is clean, focused, mergeable, and has no unresolved required review feedback.
-15. Mark ready and merge only when every applicable acceptance criterion is evidenced.
+1. Preserve and verify the 3,250-candidate artifact and summary.
+2. Define a deterministic, reproducible ordering and selection rule.
+3. Select exactly 500 from the 589 accepted records.
+4. Reconcile selected rows against original PMIDs, PMCIDs, decisions, provenance, licenses, and duplicate controls.
+5. Verify approved direct full-text locations and reusable-license basis for all 500.
+6. Acquire exactly 500 matching local PDFs with sanitized receipts; do not commit PDFs.
+7. Validate the immutable 500-row manifest and local-file readiness.
+8. Run the fresh import or record a policy-compliant documented stop.
+9. Reconcile source rows, import items, papers, FTS rows, issues, warnings, database growth, and elapsed time exactly.
+10. Run and verify the idempotent linked-resume rehearsal.
+11. Commit the sanitized deterministic M14 report and final `PROCEED`, `HOLD`, or `STOPPED` decision.
+12. Pass exact-head formatting, lint, strict mypy, full pytest, diff hygiene, and artifact hygiene.
+13. Confirm a clean working tree and no unresolved required review feedback.
+14. Mark ready and merge only when every applicable milestone and repository-policy criterion is evidenced.
 
 ## Access and publication notes
 
-- Repository status and committed GitHub state were accessible through the authenticated GitHub connector.
-- Local working-tree state was not accessible.
-- This report updated only `docs/daily_repo_status.md` on `main`.
+- Authenticated GitHub read and file-write access succeeded.
+- Local checkout and local working-tree inspection were unavailable.
+- This run changed only `docs/daily_repo_status.md` on the existing draft PR branch.
+- No broad test suite was rerun by this report task.
 - No merge or ready-for-review action was performed.
-- No website publication was attempted.
+
+## Coding lesson
+
+A larger candidate pool is useful only when every decision remains reproducible and the final exactly-sized manifest can be traced back to immutable source evidence.
