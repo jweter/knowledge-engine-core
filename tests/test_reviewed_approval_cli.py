@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -74,6 +76,34 @@ def test_cli_exports_exact_limit_atomically(tmp_path: Path) -> None:
     assert payload["approvals"][0]["filename"] == "PMC300.pdf"
     assert "reviewer" not in payload["approvals"][0]
     assert str(tmp_path) not in output.read_text(encoding="utf-8")
+
+
+def test_module_invocation_preserves_export_subcommand(tmp_path: Path) -> None:
+    worksheet = tmp_path / "review.json"
+    _write_worksheet(worksheet, [_accepted(300), _accepted(100)])
+    output = tmp_path / "approvals.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "knowledge_engine.reviewed_approval_cli",
+            "export",
+            "--worksheet",
+            str(worksheet),
+            "--output",
+            str(output),
+            "--limit",
+            "2",
+        ],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Selected 2 of 2 validated accepted records" in result.stdout
+    assert json.loads(output.read_text(encoding="utf-8"))["selected_count"] == 2
 
 
 def test_cli_fails_when_limit_exceeds_accepted_count(tmp_path: Path) -> None:
