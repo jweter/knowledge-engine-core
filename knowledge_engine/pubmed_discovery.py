@@ -53,6 +53,9 @@ class PubmedCandidate:
     pdf_url: str | None
     xml_url: str | None
     status: str
+    metadata_source: str
+    pmcid_source: str | None
+    oa_source: str | None
 
 
 @dataclass(frozen=True)
@@ -134,6 +137,9 @@ class PubmedPmcDiscoveryService:
                     pdf_url=oa.pdf_url if oa else None,
                     xml_url=oa.xml_url if oa else None,
                     status="oa_verified" if oa else "metadata_only",
+                    metadata_source="pubmed_efetch",
+                    pmcid_source="pubmed_elink" if pmcid else None,
+                    oa_source="pmc_oa_service" if oa else None,
                 )
             )
         return DiscoveryResult(
@@ -201,44 +207,50 @@ class PubmedPmcDiscoveryService:
     def _link_pmc(self, pmids: list[str]) -> dict[str, str]:
         if not pmids:
             return {}
-        body = self._get_json(
-            f"{EUTILS_BASE_URL}/elink.fcgi?"
-            + urlencode(
-                {
-                    "dbfrom": "pubmed",
-                    "db": "pmc",
-                    "id": ",".join(pmids),
-                    "retmode": "json",
-                    "linkname": "pubmed_pmc",
-                }
-            )
-        )
+        parameters: list[tuple[str, str]] = [
+            ("dbfrom", "pubmed"),
+            ("db", "pmc"),
+            ("retmode", "json"),
+            ("linkname", "pubmed_pmc"),
+        ]
+        parameters.extend(("id", pmid) for pmid in pmids)
+        body = self._get_json(f"{EUTILS_BASE_URL}/elink.fcgi?" + urlencode(parameters))
+
         result: dict[str, str] = {}
+        requested_pmids = set(pmids)
         linksets = body.get("linksets")
         if not isinstance(linksets, list):
             raise NcbiDiscoveryError("PubMed linkage response was malformed.")
         for linkset in linksets:
             if not isinstance(linkset, dict):
-                continue
+                raise NcbiDiscoveryError("PubMed linkage response was malformed.")
             ids = linkset.get("ids")
             databases = linkset.get("linksetdbs")
-            if not isinstance(ids, list) or not ids or not isinstance(databases, list):
-                continue
+            if not isinstance(ids, list) or len(ids) != 1 or not isinstance(databases, list):
+                raise NcbiDiscoveryError("PubMed linkage response was malformed.")
             pmid = str(ids[0])
+            if pmid not in requested_pmids or pmid in result:
+                raise NcbiDiscoveryError("PubMed linkage response did not reconcile.")
             for database in databases:
                 if not isinstance(database, dict) or database.get("linkname") != "pubmed_pmc":
                     continue
                 links = database.get("links")
-                if isinstance(links, list) and links:
-                    result[pmid] = f"PMC{links[0]}"
-                    break
+                if not isinstance(links, list) or len(links) != 1:
+                    raise NcbiDiscoveryError("PubMed linkage response was ambiguous.")
+                result[pmid] = f"PMC{links[0]}"
+                break
         return result
 
     def _fetch_oa_record(self, pmcid: str) -> _OaRecord | None:
         root = self._get_xml(f"{PMC_OA_URL}?" + urlencode({"id": pmcid}))
-        record = root.find(".//record")
-        if record is None:
+        matching_records = [
+            record for record in root.findall(".//record") if record.attrib.get("id") == pmcid
+        ]
+        if not matching_records:
             return None
+        if len(matching_records) != 1:
+            raise NcbiDiscoveryError("PMC OA response did not reconcile.")
+        record = matching_records[0]
         license_name = record.attrib.get("license") or None
         pdf_url = None
         xml_url = None
