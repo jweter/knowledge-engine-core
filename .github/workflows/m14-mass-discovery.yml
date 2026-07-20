@@ -83,30 +83,10 @@ jobs:
             --output work/m14/pubmed-candidates.json
 
       - name: Prepare pending review worksheet
-        shell: bash
         run: |
-          set +e
-          poetry run python -m knowledge_engine.candidate_review_cli prepare \
+          poetry run python -m knowledge_engine.candidate_review_cli \
             --candidates work/m14/pubmed-candidates.json \
-            --output work/m14/candidate-review.json \
-            2>work/m14/review-preparation-error.txt
-          status=$?
-          if [ "$status" -ne 0 ]; then
-            cat work/m14/review-preparation-error.txt
-            exit "$status"
-          fi
-          rm work/m14/review-preparation-error.txt
-
-      - name: Upload failed review input
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: m14-review-preparation-diagnostic
-          path: |
-            work/m14/pubmed-candidates.json
-            work/m14/review-preparation-error.txt
-          if-no-files-found: error
-          retention-days: 1
+            --output work/m14/candidate-review.json
 
       - name: Summarize candidate metrics
         run: |
