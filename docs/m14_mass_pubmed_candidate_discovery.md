@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Use this workflow when M14 needs more than one bounded PubMed page. It aggregates official NCBI discovery pages into one review-only JSON file and prepares a deterministic pending-only human-review worksheet while preserving the existing legal and approval boundaries.
+Use this workflow when M14 needs more than one bounded PubMed page. It aggregates official NCBI discovery pages into one review-only JSON file and prepares a deterministic candidate worksheet while preserving legal, provenance, and approval boundaries.
 
-It does not download PDFs, approve licenses, modify `sources.csv`, create acquisition approvals, or perform ingestion.
+Discovery and worksheet preparation do not download PDFs, modify `sources.csv`, create acquisition approvals, or perform ingestion. Later adjudication may automatically accept, reject, or hold records only under the evidence contract defined in `docs/roadmap.md` and `docs/m14_candidate_review_worksheet.md`.
 
 ## Command
 
@@ -35,20 +35,32 @@ The workflow:
 6. stops early when PubMed returns a short or empty page;
 7. writes one deterministic review-only discovery document;
 8. validates that document through the production candidate-review boundary;
-9. writes one pending-only review worksheet with no accepted or rejected decisions;
+9. writes one candidate worksheet without acquisition approvals;
 10. reconciles discovery and worksheet counts before artifact upload.
 
-The summary records the requested candidate count, review-item count, fetched page count, duplicate PMID count, verified PMC Open Access count, and whether the PubMed result set was exhausted.
+The summary records the requested candidate count, worksheet-item count, fetched page count, duplicate PMID count, verified PMC Open Access count, and whether the PubMed result set was exhausted.
 
 ## Temporary artifact
 
 The GitHub workflow uploads exactly:
 
 - `pubmed-candidates.json` — provider-derived discovery and OA evidence;
-- `candidate-review.json` — deterministic pending-only human-review worksheet;
+- `candidate-review.json` — deterministic candidate worksheet;
 - `summary.txt` — sanitized aggregate counts.
 
-The artifact is temporary and must not be committed. The worksheet is not an approval file and cannot authorize acquisition.
+The artifact is temporary and must not be committed. The worksheet is not itself an acquisition approval file.
+
+## Adjudication boundary
+
+Automated adjudication is a separate repeatable stage after discovery. It may:
+
+- accept records whose scientific, identity, reusable-license, source, and duplicate rules all pass;
+- reject records when an explicit exclusion or legal-ineligibility rule fires;
+- hold records when evidence is missing, ambiguous, or conflicting.
+
+No record may be silently dropped. Every result must preserve reason codes, provider provenance, rule version, processing timestamp, and supporting evidence. `oa_verified` is evidence used by the rules; it is not sufficient by itself for acceptance.
+
+PubMed, PMC, Crossref, Europe PMC, OpenAlex, and publisher evidence must remain separately attributed. Adding or combining a new provider requires a separate measured design decision and must not silently change the trust category of existing evidence.
 
 ## Safety boundary
 
@@ -57,20 +69,20 @@ The artifact is temporary and must not be committed. The worksheet is not an app
 - Output is written atomically in the destination directory.
 - Provider failures remain sanitized.
 - No PDF, provider payload, local database, approval file, completed worksheet, receipt, or generated manifest is committed.
-- Every generated worksheet item must remain `decision: pending` at artifact creation.
-- `oa_verified` remains evidence for human review, not automatic legal approval.
+- Free access, a publisher landing page, or a relevance score alone cannot establish reusable-license eligibility.
+- Ambiguous evidence produces `held`, never a guessed acceptance.
 
 ## M14 use
 
-For the current ramp, discover at least 500 candidates, then validate them in bounded scientific and legal review slices. Maintain separate counts for:
+For the current ramp, discover at least 500 candidates and process them through bounded deterministic adjudication batches. Maintain separate counts for:
 
 - discovered candidates;
 - exact PMID duplicates removed;
-- pending review items;
-- study-level duplicate reports;
+- accepted records;
 - rejected records;
 - held records;
-- accepted review queue;
+- probable study-level duplicates;
+- acquisition-approved records;
 - acquired full texts;
 - manifest-ready rows.
 
