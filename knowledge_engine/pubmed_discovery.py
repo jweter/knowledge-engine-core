@@ -260,7 +260,7 @@ class PubmedPmcDiscoveryService:
             pmid = record.get("pmid")
             if not isinstance(requested_id, str) or requested_id not in requested_pmids:
                 raise NcbiDiscoveryError("PMC identifier response did not reconcile.")
-            if pmid is not None and pmid != requested_id:
+            if pmid is not None and str(pmid) != requested_id:
                 raise NcbiDiscoveryError("PMC identifier response did not reconcile.")
             if requested_id in seen_pmids:
                 raise NcbiDiscoveryError("PMC identifier response did not reconcile.")
