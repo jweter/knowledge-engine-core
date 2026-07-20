@@ -15,7 +15,7 @@ on:
       limit:
         description: Requested unique candidate count
         required: true
-        default: '2500'
+        default: '3250'
         type: string
       page_size:
         description: Bounded PubMed page size
@@ -40,7 +40,7 @@ permissions:
 jobs:
   discover:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       DISCOVERY_QUERY: >-
         ${{ github.event_name == 'workflow_dispatch' && inputs.query ||
@@ -48,7 +48,7 @@ jobs:
         (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR
         liraglutide OR tirzepatide OR metformin OR "SGLT2 inhibitor") AND
         pubmed pmc open access[filter]' }}
-      DISCOVERY_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '2500' }}
+      DISCOVERY_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '3250' }}
       DISCOVERY_PAGE_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.page_size || '100' }}
     steps:
       - name: Check out repository
