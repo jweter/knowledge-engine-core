@@ -44,6 +44,12 @@ The workflow:
 
 The summary records candidate count, adjudication-item count, accepted, rejected, and held counts, fetched page count, duplicate PMID count, verified PMC Open Access count, and whether the PubMed result set was exhausted.
 
+## Measured limitation
+
+The first 500-record run using the official PubMed PMC OA filter returned 500 citations, but the existing per-record PMC OA evidence resolver verified only five records. None satisfied the complete title-scope acceptance rule. This demonstrates an identifier/evidence-resolution coverage gap between filtered PubMed citations and the current PMC OA service integration. It does not demonstrate that the scientific domain lacks 500 reusable papers.
+
+Resolver expansion or repair is a separate bounded implementation task. The system must not compensate by weakening license, identity, URL, provenance, or scientific-scope rules.
+
 ## Temporary artifact
 
 The GitHub workflow uploads:
