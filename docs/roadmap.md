@@ -56,11 +56,24 @@ one run's measurements.
 M14 proceeds through explicit stages:
 
 1. bounded PubMed/PMC candidate discovery;
-2. human review of identifiers, licenses, and PMC Open Access URLs;
-3. explicit approval records that are separate from raw discovery output;
-4. bounded acquisition of approved files with sanitized receipts;
+2. deterministic, evidence-preserving candidate adjudication for scientific scope,
+   identifier consistency, reusable-license basis, approved full-text location, and
+   duplicate risk;
+3. explicit `accepted`, `rejected`, or `held` decision records that remain separate
+   from raw discovery output, with exception review only when deterministic evidence
+   is insufficient or conflicting;
+4. bounded acquisition of accepted files with sanitized receipts;
 5. reconciliation to exactly 500 accepted rows and matching approved local PDFs;
 6. preflight validation, fresh import, linked resume, and sanitized evidence.
+
+Automated acceptance or rejection is permitted only when repository-defined rules
+produce complete, non-conflicting evidence. Every decision must record reason codes,
+provider provenance, the adjudication-rules version, and the evidence used. A record
+must be held rather than guessed when identity, licensing, scientific relevance,
+full-text eligibility, or duplicate status remains ambiguous. Discovery providers
+must remain separate evidence categories; metadata from PubMed, PMC, Crossref,
+OpenAlex, Europe PMC, or publishers must not be silently collapsed into one trust
+category.
 
 ### Supporting operator durability
 
