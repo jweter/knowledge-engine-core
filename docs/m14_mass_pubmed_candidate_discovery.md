@@ -15,7 +15,7 @@ The workflow does not download PDFs, modify `sources.csv`, create acquisition ap
 ```bash
 python scripts/m14_pubmed_batch_discover.py \
   --query '(obesity OR overweight OR "type 2 diabetes" OR "metabolic syndrome") AND (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR liraglutide OR tirzepatide OR metformin OR "SGLT2 inhibitor") AND pubmed pmc open access[filter]' \
-  --limit 2500 \
+  --limit 3250 \
   --page-size 100 \
   --retstart 0 \
   --output work/m14/pubmed-candidates.json
@@ -25,7 +25,9 @@ python -m knowledge_engine.candidate_review_cli \
   --output work/m14/candidate-review.json
 ```
 
-The requested unique-candidate limit may be between 1 and 5,000. The GitHub workflow enforces a minimum of 150 for mass-discovery runs and now defaults to 2,500 candidates so M14 can measure whether the unchanged adjudication rules yield at least 500 accepted records. PubMed discovery pages remain bounded to at most 100 records. PMID-to-PMCID conversion requests are subdivided into deterministic batches of at most 100 PMIDs, below the official PMC ID Converter limit of 200 identifiers per request.
+The requested unique-candidate limit may be between 1 and 5,000. The GitHub workflow enforces a minimum of 150 for mass-discovery runs and now defaults to 3,250 candidates so M14 can measure whether the unchanged adjudication rules yield at least 500 accepted records. PubMed discovery pages remain bounded to at most 100 records. PMID-to-PMCID conversion requests are subdivided into deterministic batches of at most 100 PMIDs, below the official PMC ID Converter limit of 200 identifiers per request.
+
+The workflow job timeout is 30 minutes. The prior 2,500-candidate run used nearly the former 20-minute window, so the additional time is measured execution headroom for the larger bounded pool rather than a change to provider, adjudication, or corpus semantics.
 
 ## Deterministic provider sequence
 
@@ -65,23 +67,23 @@ The summary records:
 
 Coverage denominators are the filtered candidate count in the same run. A PubMed filter match is not treated as PMC OA evidence until the PMID resolves to a PMCID and the official PMC OA response reconciles to that PMCID.
 
-## Measured 500-candidate baseline
+## Measured 2,500-candidate result
 
-Exact-head M14 run `29744339485` for PR #71 produced:
+Exact-head M14 run `29745438536` for PR #72 produced:
 
-- candidate count: 500;
-- PMCID resolved: 500;
+- candidate count: 2,500;
+- fetched pages: 25;
+- duplicate PMIDs removed: 0;
+- PMCID resolved: 2,500;
 - PMCID resolution rate: 1.000000;
-- PMC OA verified: 494;
-- PMC OA verification rate: 0.988000;
-- accepted: 124;
-- rejected: 6;
-- held: 370;
+- PMC OA verified: 2,481;
+- PMC OA verification rate: 0.992400;
+- accepted: 430;
+- rejected: 19;
+- held: 2,051;
 - exhausted: false.
 
-The accepted yield was 24.8%. At that measured rate, approximately 2,017 candidates would be required to reach 500 accepted records. The 2,500-candidate default adds bounded margin while remaining below the existing 5,000-candidate maximum. This is a larger review pool, not a relaxation of any adjudication or legal rule.
-
-The same artifact showed that 282 held records lacked an approved direct PDF URL and 198 had insufficient scientific-scope evidence. Those records remain held and cannot authorize acquisition. The larger pool seeks additional qualifying records rather than reclassifying unresolved records.
+The measured accepted yield was 17.2%, leaving the pool 70 accepted records short of the issue #21 entry gate. At that yield, approximately 2,907 candidates are required to reach 500 accepted records. The 3,250-candidate default adds bounded margin while remaining below the existing 5,000-candidate maximum. This is a larger candidate pool, not a relaxation of any scientific, legal, identifier, provenance, duplicate, license, or full-text rule.
 
 ## Historical measured limitation
 
