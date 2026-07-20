@@ -14,13 +14,14 @@ from urllib.parse import urlencode
 from knowledge_engine.ncbi_http import TransportResponse
 
 EUTILS_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+PMC_ID_CONVERTER_URL = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
 PMC_OA_URL = "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"
 DEFAULT_HEADERS = {
     "Accept": "application/json, application/xml",
     "User-Agent": "knowledge-engine-core/0.2",
 }
 _RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
-_ELINK_BATCH_SIZE = 20
+_ID_CONVERTER_BATCH_SIZE = 100
 
 
 class NcbiDiscoveryError(RuntimeError):
@@ -153,7 +154,7 @@ class PubmedPmcDiscoveryService:
                     xml_url=oa.xml_url if oa else None,
                     status="oa_verified" if oa else "metadata_only",
                     metadata_source="pubmed_efetch",
-                    pmcid_source="pubmed_elink" if pmcid else None,
+                    pmcid_source="pmc_id_converter" if pmcid else None,
                     oa_source="pmc_oa_service" if oa else None,
                 )
             )
@@ -221,50 +222,56 @@ class PubmedPmcDiscoveryService:
 
     def _link_pmc(self, pmids: list[str]) -> dict[str, str]:
         result: dict[str, str] = {}
-        for offset in range(0, len(pmids), _ELINK_BATCH_SIZE):
-            chunk = pmids[offset : offset + _ELINK_BATCH_SIZE]
+        for offset in range(0, len(pmids), _ID_CONVERTER_BATCH_SIZE):
+            chunk = pmids[offset : offset + _ID_CONVERTER_BATCH_SIZE]
             chunk_result = self._link_pmc_chunk(chunk)
             overlap = set(result).intersection(chunk_result)
             if overlap:
-                raise NcbiDiscoveryError("PubMed linkage response did not reconcile.")
+                raise NcbiDiscoveryError("PMC identifier response did not reconcile.")
             result.update(chunk_result)
         return result
 
     def _link_pmc_chunk(self, pmids: list[str]) -> dict[str, str]:
         if not pmids:
             return {}
-        parameters: list[tuple[str, str]] = [
-            ("dbfrom", "pubmed"),
-            ("db", "pmc"),
-            ("retmode", "json"),
-            ("linkname", "pubmed_pmc"),
-        ]
-        parameters.extend(("id", pmid) for pmid in pmids)
-        body = self._get_json(f"{EUTILS_BASE_URL}/elink.fcgi?" + urlencode(parameters))
+        body = self._get_json(
+            PMC_ID_CONVERTER_URL
+            + "?"
+            + urlencode(
+                {
+                    "ids": ",".join(pmids),
+                    "idtype": "pmid",
+                    "format": "json",
+                    "tool": "knowledge-engine-core",
+                }
+            )
+        )
+        records = body.get("records")
+        if body.get("status") != "ok" or not isinstance(records, list):
+            raise NcbiDiscoveryError("PMC identifier response was malformed.")
 
-        result: dict[str, str] = {}
         requested_pmids = set(pmids)
-        linksets = body.get("linksets")
-        if not isinstance(linksets, list):
-            raise NcbiDiscoveryError("PubMed linkage response was malformed.")
-        for linkset in linksets:
-            if not isinstance(linkset, dict):
-                raise NcbiDiscoveryError("PubMed linkage response was malformed.")
-            ids = linkset.get("ids")
-            databases = linkset.get("linksetdbs", [])
-            if not isinstance(ids, list) or len(ids) != 1 or not isinstance(databases, list):
-                raise NcbiDiscoveryError("PubMed linkage response was malformed.")
-            pmid = str(ids[0])
-            if pmid not in requested_pmids or pmid in result:
-                raise NcbiDiscoveryError("PubMed linkage response did not reconcile.")
-            for database in databases:
-                if not isinstance(database, dict) or database.get("linkname") != "pubmed_pmc":
-                    continue
-                links = database.get("links")
-                if not isinstance(links, list) or len(links) != 1:
-                    raise NcbiDiscoveryError("PubMed linkage response was ambiguous.")
-                result[pmid] = f"PMC{links[0]}"
-                break
+        seen_pmids: set[str] = set()
+        result: dict[str, str] = {}
+        for record in records:
+            if not isinstance(record, dict):
+                raise NcbiDiscoveryError("PMC identifier response was malformed.")
+            requested_id = record.get("requested-id")
+            pmid = record.get("pmid")
+            if not isinstance(requested_id, str) or requested_id not in requested_pmids:
+                raise NcbiDiscoveryError("PMC identifier response did not reconcile.")
+            if pmid is not None and pmid != requested_id:
+                raise NcbiDiscoveryError("PMC identifier response did not reconcile.")
+            if requested_id in seen_pmids:
+                raise NcbiDiscoveryError("PMC identifier response did not reconcile.")
+            seen_pmids.add(requested_id)
+
+            pmcid = record.get("pmcid")
+            if pmcid is None:
+                continue
+            if not isinstance(pmcid, str) or not pmcid.startswith("PMC"):
+                raise NcbiDiscoveryError("PMC identifier response was malformed.")
+            result[requested_id] = pmcid
         return result
 
     def _fetch_oa_record(self, pmcid: str) -> _OaRecord | None:
