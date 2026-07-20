@@ -87,12 +87,20 @@ class PmcOaAcquisitionService:
         candidates_path: Path,
         approvals_path: Path,
         output_directory: Path,
+        expected_count: int | None = None,
     ) -> AcquisitionReceipt:
         """Validate approvals, stage every PDF, commit the batch, and return a receipt."""
 
+        if expected_count is not None and (
+            isinstance(expected_count, bool) or expected_count < 1
+        ):
+            raise AcquisitionError("Expected acquisition count must be at least 1.")
+
         candidates = _load_candidates(candidates_path)
-        approvals = _load_approvals(approvals_path)
+        approvals = _load_approvals(approvals_path, expected_count=expected_count)
         plans = _build_plans(candidates, approvals)
+        if expected_count is not None and len(plans) != expected_count:
+            raise AcquisitionError("Approval plan count does not match the expected acquisition count.")
         _validate_output_directory(output_directory, plans)
 
         output_directory.mkdir(parents=True, exist_ok=True)
@@ -206,7 +214,7 @@ def _load_candidates(path: Path) -> dict[str, dict[str, object]]:
     return result
 
 
-def _load_approvals(path: Path) -> list[dict[str, object]]:
+def _load_approvals(path: Path, *, expected_count: int | None) -> list[dict[str, object]]:
     payload = _load_json_object(path, label="Approval file")
     if payload.get("schema_version") != 1:
         raise AcquisitionError("Approval file schema_version must be 1.")
@@ -215,6 +223,17 @@ def _load_approvals(path: Path) -> list[dict[str, object]]:
         raise AcquisitionError("Approval file must contain at least one approval.")
     if not all(isinstance(row, dict) for row in rows):
         raise AcquisitionError("Approval file contains a malformed approval.")
+
+    selected_count = payload.get("selected_count")
+    if selected_count is not None and (
+        not isinstance(selected_count, int)
+        or isinstance(selected_count, bool)
+        or selected_count != len(rows)
+    ):
+        raise AcquisitionError("Approval selected count does not reconcile.")
+    if expected_count is not None:
+        if selected_count != expected_count or len(rows) != expected_count:
+            raise AcquisitionError("Approval file does not contain the expected selected count.")
     return rows
 
 
@@ -224,6 +243,7 @@ def _build_plans(
 ) -> list[_AcquisitionPlan]:
     plans: list[_AcquisitionPlan] = []
     seen_pmids: set[str] = set()
+    seen_pmcids: set[str] = set()
     seen_filenames: set[str] = set()
     for approval in approvals:
         values = {
@@ -232,9 +252,13 @@ def _build_plans(
         if not all(isinstance(value, str) and value for value in values.values()):
             raise AcquisitionError("Approval file contains incomplete approval evidence.")
         pmid = str(values["pmid"])
+        pmcid = str(values["pmcid"])
         if pmid in seen_pmids:
             raise AcquisitionError("Approval file contains a duplicate PMID.")
+        if pmcid in seen_pmcids:
+            raise AcquisitionError("Approval file contains a duplicate PMCID.")
         seen_pmids.add(pmid)
+        seen_pmcids.add(pmcid)
         candidate = candidates.get(pmid)
         if candidate is None:
             raise AcquisitionError("Approval references an unknown PMID.")
@@ -264,7 +288,7 @@ def _build_plans(
         plans.append(
             _AcquisitionPlan(
                 pmid=pmid,
-                pmcid=str(values["pmcid"]),
+                pmcid=pmcid,
                 license=str(values["license"]),
                 pdf_url=pdf_url,
                 filename=filename,
