@@ -83,13 +83,18 @@ jobs:
           PY
 
       - name: Run bounded mass discovery
+        shell: bash
         run: |
           mkdir -p work/m14
+          set +e
           poetry run python scripts/m14_pubmed_batch_discover.py \
             --query "$DISCOVERY_QUERY" \
             --limit "$DISCOVERY_LIMIT" \
             --page-size "$DISCOVERY_PAGE_SIZE" \
-            --output work/m14/pubmed-candidates.json
+            --output work/m14/pubmed-candidates.json \
+            2>&1 | tee work/m14/discovery.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
 
       - name: Adjudicate candidate evidence
         run: |
@@ -151,12 +156,14 @@ jobs:
           PY
 
       - name: Upload adjudication artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: m14-pubmed-candidates
           path: |
+            work/m14/discovery.log
             work/m14/pubmed-candidates.json
             work/m14/candidate-review.json
             work/m14/summary.txt
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
