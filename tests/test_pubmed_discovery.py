@@ -38,6 +38,21 @@ class FakeTransport(GetTransport):
         return self.responses.pop(0)
 
 
+def _service(
+    transport: FakeTransport,
+    *,
+    max_attempts: int = 3,
+    delays: list[float] | None = None,
+) -> PubmedPmcDiscoveryService:
+    recorded_delays = delays if delays is not None else []
+    return PubmedPmcDiscoveryService(
+        transport,
+        request_interval_seconds=0.0,
+        max_attempts=max_attempts,
+        sleep=recorded_delays.append,
+    )
+
+
 def _search_response(*pmids: str) -> FakeResponse:
     return FakeResponse(200, json.dumps({"esearchresult": {"idlist": list(pmids)}}).encode(), {})
 
@@ -117,7 +132,7 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
         ]
     )
 
-    result = PubmedPmcDiscoveryService(transport).discover(
+    result = _service(transport).discover(
         "semaglutide obesity",
         limit=2,
         retstart=0,
@@ -174,7 +189,7 @@ def test_discovery_rejects_batch_mode_linkage_that_loses_source_mapping() -> Non
     )
 
     with pytest.raises(NcbiDiscoveryError, match="linkage response was malformed"):
-        PubmedPmcDiscoveryService(transport).discover("semaglutide obesity", limit=2)
+        _service(transport).discover("semaglutide obesity", limit=2)
 
 
 def test_discovery_rejects_ambiguous_pmc_links() -> None:
@@ -202,7 +217,7 @@ def test_discovery_rejects_ambiguous_pmc_links() -> None:
     )
 
     with pytest.raises(NcbiDiscoveryError, match="linkage response was ambiguous"):
-        PubmedPmcDiscoveryService(transport).discover("semaglutide obesity", limit=1)
+        _service(transport).discover("semaglutide obesity", limit=1)
 
 
 def test_discovery_rejects_mismatched_pmc_oa_identity() -> None:
@@ -232,7 +247,7 @@ def test_discovery_rejects_mismatched_pmc_oa_identity() -> None:
         ]
     )
 
-    result = PubmedPmcDiscoveryService(transport).discover("semaglutide obesity", limit=1)
+    result = _service(transport).discover("semaglutide obesity", limit=1)
 
     assert result.candidates[0].pmcid == "PMC999"
     assert result.candidates[0].open_access is False
@@ -240,8 +255,23 @@ def test_discovery_rejects_mismatched_pmc_oa_identity() -> None:
     assert result.candidates[0].status == "metadata_only"
 
 
+def test_discovery_retries_bounded_transient_provider_failures() -> None:
+    transport = FakeTransport(
+        [
+            FakeResponse(429, b"rate limited", {}),
+            FakeResponse(503, b"unavailable", {}),
+            _search_response(),
+        ]
+    )
+
+    result = _service(transport, max_attempts=3).discover("semaglutide obesity", limit=1)
+
+    assert result.candidates == ()
+    assert len(transport.urls) == 3
+
+
 def test_discovery_rejects_unbounded_or_empty_requests() -> None:
-    service = PubmedPmcDiscoveryService(FakeTransport([]))
+    service = _service(FakeTransport([]))
 
     with pytest.raises(ValueError, match="must not be empty"):
         service.discover(" ", limit=1)
@@ -252,7 +282,10 @@ def test_discovery_rejects_unbounded_or_empty_requests() -> None:
 
 
 def test_discovery_sanitizes_provider_failures() -> None:
-    service = PubmedPmcDiscoveryService(FakeTransport([FakeResponse(503, b"private", {})]))
+    service = _service(
+        FakeTransport([FakeResponse(503, b"private", {})]),
+        max_attempts=1,
+    )
 
     with pytest.raises(NcbiDiscoveryError, match="non-success") as error:
         service.discover("semaglutide", limit=1)
@@ -261,7 +294,7 @@ def test_discovery_sanitizes_provider_failures() -> None:
 
 
 def test_discovery_rejects_malformed_search_payload() -> None:
-    service = PubmedPmcDiscoveryService(FakeTransport([FakeResponse(200, b"{}", {})]))
+    service = _service(FakeTransport([FakeResponse(200, b"{}", {})]))
 
     with pytest.raises(NcbiDiscoveryError, match="search response was malformed"):
         service.discover("semaglutide", limit=1)
