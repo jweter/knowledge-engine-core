@@ -83,13 +83,18 @@ jobs:
           PY
 
       - name: Run bounded mass discovery
+        shell: bash
         run: |
           mkdir -p work/m14
+          set +e
           poetry run python scripts/m14_pubmed_batch_discover.py \
             --query "$DISCOVERY_QUERY" \
             --limit "$DISCOVERY_LIMIT" \
             --page-size "$DISCOVERY_PAGE_SIZE" \
-            --output work/m14/pubmed-candidates.json
+            --output work/m14/pubmed-candidates.json \
+            2>&1 | tee work/m14/discovery.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
 
       - name: Adjudicate candidate evidence
         run: |
@@ -108,23 +113,42 @@ jobs:
           worksheet = json.loads(Path('work/m14/candidate-review.json').read_text(encoding='utf-8'))
           candidates = payload['candidates']
           items = worksheet['items']
+          candidate_count = payload['candidate_count']
+          pmcid_resolved = sum(candidate['pmcid'] is not None for candidate in candidates)
           oa_verified = sum(candidate['open_access'] for candidate in candidates)
-          if worksheet['candidate_count'] != payload['candidate_count']:
+          if worksheet['candidate_count'] != candidate_count:
               raise SystemExit('Candidate adjudication count does not reconcile.')
+          if any(candidate['metadata_source'] != 'pubmed_efetch' for candidate in candidates):
+              raise SystemExit('PubMed metadata provenance does not reconcile.')
+          if any(
+              candidate['pmcid'] is not None and candidate['pmcid_source'] != 'pmc_id_converter'
+              for candidate in candidates
+          ):
+              raise SystemExit('PMCID provenance does not reconcile.')
+          if any(
+              candidate['open_access'] and candidate['oa_source'] != 'pmc_oa_service'
+              for candidate in candidates
+          ):
+              raise SystemExit('PMC OA provenance does not reconcile.')
           decisions = Counter(item['decision'] for item in items)
           if set(decisions) - {'accepted', 'rejected', 'held'}:
               raise SystemExit('Candidate adjudication contains an unsupported decision.')
           if sum(decisions.values()) != worksheet['candidate_count']:
               raise SystemExit('Candidate decision counts do not reconcile.')
+          pmcid_resolution_rate = pmcid_resolved / candidate_count if candidate_count else 0.0
+          oa_verification_rate = oa_verified / candidate_count if candidate_count else 0.0
           summary = (
-              f"candidate_count={payload['candidate_count']}\n"
+              f"candidate_count={candidate_count}\n"
               f"adjudication_item_count={worksheet['candidate_count']}\n"
               f"accepted={decisions['accepted']}\n"
               f"rejected={decisions['rejected']}\n"
               f"held={decisions['held']}\n"
               f"fetched_page_count={payload['fetched_page_count']}\n"
               f"duplicate_pmids_removed={payload['duplicate_pmids_removed']}\n"
+              f"pmcid_resolved={pmcid_resolved}\n"
+              f"pmcid_resolution_rate={pmcid_resolution_rate:.6f}\n"
               f"oa_verified={oa_verified}\n"
+              f"oa_verification_rate={oa_verification_rate:.6f}\n"
               f"exhausted={payload['exhausted']}\n"
           )
           Path('work/m14/summary.txt').write_text(summary, encoding='utf-8')
@@ -132,12 +156,14 @@ jobs:
           PY
 
       - name: Upload adjudication artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: m14-pubmed-candidates
           path: |
+            work/m14/discovery.log
             work/m14/pubmed-candidates.json
             work/m14/candidate-review.json
             work/m14/summary.txt
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
