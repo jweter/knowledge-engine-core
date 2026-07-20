@@ -71,6 +71,10 @@ def _metadata_response() -> FakeResponse:
               <PMID>222</PMID>
               <Article>
                 <ArticleTitle>Second title</ArticleTitle>
+                <Abstract>
+                  <AbstractText Label="BACKGROUND">Adults with obesity were enrolled.</AbstractText>
+                  <AbstractText Label="METHODS">Semaglutide therapy was compared with placebo.</AbstractText>
+                </Abstract>
                 <AuthorList>
                   <Author><ForeName>Ada</ForeName><LastName>Lovelace</LastName></Author>
                   <Author><CollectiveName>Trial Group</CollectiveName></Author>
@@ -137,6 +141,10 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
 
     assert [candidate.pmid for candidate in result.candidates] == ["222", "111"]
     assert result.candidates[0].title == "Second title"
+    assert result.candidates[0].abstract == (
+        "BACKGROUND: Adults with obesity were enrolled. "
+        "METHODS: Semaglutide therapy was compared with placebo."
+    )
     assert result.candidates[0].authors == ("Ada Lovelace", "Trial Group")
     assert result.candidates[0].publication_year == 2024
     assert result.candidates[0].venue == "Journal of Verified Results"
@@ -149,12 +157,14 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
     assert result.candidates[0].pmcid_source == "pmc_id_converter"
     assert result.candidates[0].oa_source == "pmc_oa_service"
     assert result.candidates[1].title == "First trial"
+    assert result.candidates[1].abstract is None
     assert result.candidates[1].publication_year == 2023
     assert result.candidates[1].status == "metadata_only"
     assert result.candidates[1].metadata_source == "pubmed_efetch"
     assert result.candidates[1].pmcid_source is None
     assert result.candidates[1].oa_source is None
     assert '"candidate_count": 2' in result.to_json()
+    assert '"abstract": "BACKGROUND:' in result.to_json()
     assert '"authors": [' in result.to_json()
     assert "retmax=2" in transport.urls[0]
     assert "retstart=0" in transport.urls[0]
