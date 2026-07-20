@@ -44,14 +44,32 @@ prototype. See `docs/vertical_slice.md` and
 - **Pre-M14 maintenance** reconciled repository state, made Ruff the authoritative
   quality tool, and hardened fresh and linked ingestion error boundaries.
 
-### Next bounded milestone
+### M14: Controlled 500-paper rehearsal
 
-The next milestone is **one controlled 500-paper rehearsal** under the M13 entry,
-measurement, stop, reconciliation, resume, and artifact-hygiene conditions. Issue
-#21 is the authoritative rehearsal tracker. Persistence failure classification in
-issue #22 must be completed before repeated large-run failure evidence is treated as
-diagnostic. The rehearsal must not introduce new architecture solely to collect one
-run's measurements.
+M14 is one controlled 500-paper rehearsal under the M13 entry, measurement, stop,
+reconciliation, resume, and artifact-hygiene conditions. Issue #21 is the
+authoritative rehearsal tracker. Persistence failure classification in issue #22
+must be complete before repeated large-run failure evidence is treated as
+diagnostic. The rehearsal must not introduce new architecture solely to collect
+one run's measurements.
+
+M14 proceeds through explicit stages:
+
+1. bounded PubMed/PMC candidate discovery;
+2. human review of identifiers, licenses, and PMC Open Access URLs;
+3. explicit approval records that are separate from raw discovery output;
+4. bounded acquisition of approved files with sanitized receipts;
+5. reconciliation to exactly 500 accepted rows and matching approved local PDFs;
+6. preflight validation, fresh import, linked resume, and sanitized evidence.
+
+### Supporting operator durability
+
+The Google Drive backup subsystem is supporting operator infrastructure for
+protecting local SQLite backup bundles during the M14-era rehearsal work. It does
+not change corpus inclusion, discovery, approval, acquisition, parsing,
+deduplication, provenance, or import semantics. It should remain optional,
+operator-controlled, and independently documented. Any expansion beyond backup
+transport and recovery support requires a dedicated roadmap decision or ADR.
 
 Detailed milestone records include:
 
