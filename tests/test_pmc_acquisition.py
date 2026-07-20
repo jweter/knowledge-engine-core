@@ -37,7 +37,7 @@ class FakeTransport:
 
 def test_acquire_requires_exact_approval_and_writes_sanitized_receipt(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path)
-    approvals = _write_approvals(tmp_path)
+    approvals = _write_approvals(tmp_path, selected_count=1)
     output = tmp_path / "papers"
     transport = FakeTransport([FakeResponse(200, b"%PDF-1.7\nbody", {})])
 
@@ -45,6 +45,7 @@ def test_acquire_requires_exact_approval_and_writes_sanitized_receipt(tmp_path: 
         candidates_path=candidates,
         approvals_path=approvals,
         output_directory=output,
+        expected_count=1,
     )
 
     assert transport.urls == ["https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf"]
@@ -56,6 +57,37 @@ def test_acquire_requires_exact_approval_and_writes_sanitized_receipt(tmp_path: 
     assert receipt.items[0].byte_count == 13
     assert len(receipt.items[0].sha256) == 64
     assert str(tmp_path) not in receipt.to_json()
+
+
+def test_expected_count_mismatch_fails_before_network(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path)
+    approvals = _write_approvals(tmp_path, selected_count=1)
+    transport = FakeTransport([])
+
+    with pytest.raises(AcquisitionError, match="expected selected count"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=tmp_path / "papers",
+            expected_count=2,
+        )
+
+    assert transport.urls == []
+
+
+def test_boolean_selected_count_fails_before_network(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path)
+    approvals = _write_approvals(tmp_path, selected_count=True)
+    transport = FakeTransport([])
+
+    with pytest.raises(AcquisitionError, match="selected count does not reconcile"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=tmp_path / "papers",
+        )
+
+    assert transport.urls == []
 
 
 def test_approval_mismatch_fails_before_network(tmp_path: Path) -> None:
@@ -176,6 +208,7 @@ def _write_approvals(
     license_name: str = "CC BY",
     count: int = 1,
     duplicate_filename: bool = False,
+    selected_count: int | bool | None = None,
 ) -> Path:
     rows = [
         {
@@ -196,9 +229,9 @@ def _write_approvals(
                 "filename": "PMC999.pdf" if duplicate_filename else "PMC1000.pdf",
             }
         )
+    payload: dict[str, object] = {"schema_version": 1, "approvals": rows}
+    if selected_count is not None:
+        payload["selected_count"] = selected_count
     path = tmp_path / "approvals.json"
-    path.write_text(
-        json.dumps({"schema_version": 1, "approvals": rows}),
-        encoding="utf-8",
-    )
+    path.write_text(json.dumps(payload), encoding="utf-8")
     return path
