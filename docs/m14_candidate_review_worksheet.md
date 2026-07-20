@@ -32,7 +32,7 @@ No candidate is silently dropped. Held records are automatically deferred from a
 
 Every adjudication record preserves:
 
-- PMID, PMCID, DOI, title, authors, venue, and publication year when available;
+- PMID, PMCID, DOI, title, PubMed abstract, authors, venue, and publication year when available;
 - provider-specific provenance for every evidence value;
 - PMC Open Access status and the exact reusable-license basis;
 - approved full-text location and source category;
@@ -50,7 +50,7 @@ An automated decision must never infer a license from free access, a publisher l
 For each candidate:
 
 1. normalize and reconcile identifiers without overwriting conflicting provider evidence;
-2. evaluate committed scientific inclusion and exclusion rules;
+2. evaluate committed scientific inclusion and exclusion rules using PubMed title and abstract evidence;
 3. validate PMC Open Access membership, reported license, and approved full-text source;
 4. detect exact identifier duplicates and flag probable study-level duplicates;
 5. emit `accepted`, `rejected`, or `held` with explicit reason codes and evidence;
@@ -62,13 +62,15 @@ No reviewer identifier, review note, review timestamp, or owner decision is requ
 
 ## Initial deterministic ruleset
 
-The active ruleset is `m14-candidate-adjudication-v2`.
+The active ruleset is `m14-candidate-adjudication-v3`.
 
 - `metadata_only` records are rejected for the PMC OA acquisition path with `NO_VERIFIED_REUSABLE_FULL_TEXT`.
-- Scientific title evidence passes only when a declared metabolic-disease term and a declared treatment or therapeutic term are both present.
+- Scientific evidence passes only when the combined PubMed title and abstract contain both a declared metabolic-disease term and a declared treatment or therapeutic term.
 - Disease terms include obesity, overweight, type 2 diabetes, and metabolic syndrome.
 - Therapeutic terms include general treatment language plus named GLP-1 therapies, metformin, and SGLT2 terminology.
-- PMC OA records are accepted only when scientific title evidence, PMCID identity evidence, an allowlisted CC license, and an official NCBI HTTPS PDF URL all pass.
+- Missing abstracts do not fail by themselves; title evidence may still satisfy the same two-factor rule.
+- PubMed structured abstract sections are preserved in stable source order with their section labels when provided.
+- PMC OA records are accepted only when scientific title-plus-abstract evidence, PMCID identity evidence, an allowlisted CC license, and an official NCBI HTTPS PDF URL all pass.
 - Incomplete or unsupported OA evidence produces `held`; it does not request human intervention.
 - Exact duplicate PMIDs or PMCIDs remain malformed-input errors because the discovery artifact must reconcile before adjudication.
 
