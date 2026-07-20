@@ -65,7 +65,7 @@ def prepare_candidate_review(candidates_path: Path) -> CandidateReviewWorksheet:
 
     query = _required_string(payload, "query")
     retstart = _required_nonnegative_int(payload, "retstart")
-    limit = _required_positive_int(payload, "limit")
+    limit = _discovery_limit(payload)
     candidates = payload.get("candidates")
     if not isinstance(candidates, list) or payload.get("candidate_count") != len(candidates):
         raise CandidateReviewError("Candidate input count does not reconcile.")
@@ -157,6 +157,20 @@ def _optional_year(payload: dict[str, object], key: str) -> int | None:
     return value
 
 
+def _discovery_limit(payload: dict[str, object]) -> int:
+    single_page_limit = payload.get("limit")
+    batch_limit = payload.get("requested_limit")
+    if single_page_limit is not None and batch_limit is not None:
+        if single_page_limit != batch_limit:
+            raise CandidateReviewError("Candidate input contains conflicting discovery limits.")
+        return _required_positive_int(payload, "limit")
+    if single_page_limit is not None:
+        return _required_positive_int(payload, "limit")
+    if batch_limit is not None:
+        return _required_positive_int(payload, "requested_limit")
+    raise CandidateReviewError("Candidate input is missing required discovery limits.")
+
+
 def _required_nonnegative_int(payload: dict[str, object], key: str) -> int:
     value = payload.get(key)
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
@@ -167,5 +181,5 @@ def _required_nonnegative_int(payload: dict[str, object], key: str) -> int:
 def _required_positive_int(payload: dict[str, object], key: str) -> int:
     value = payload.get(key)
     if not isinstance(value, int) or isinstance(value, bool) or value < 1:
-        raise CandidateReviewError("Candidate input contains an invalid page limit.")
+        raise CandidateReviewError("Candidate input contains an invalid discovery limit.")
     return value
