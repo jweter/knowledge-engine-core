@@ -38,7 +38,7 @@ def test_cli_prepares_pending_only_review_worksheet(tmp_path: Path) -> None:
 
     result = CliRunner().invoke(
         app,
-        ["prepare", "--candidates", str(candidates), "--output", str(output)],
+        ["--candidates", str(candidates), "--output", str(output)],
     )
 
     assert result.exit_code == 0
@@ -56,7 +56,6 @@ def test_cli_refuses_existing_output_without_force(tmp_path: Path) -> None:
     result = CliRunner().invoke(
         app,
         [
-            "prepare",
             "--candidates",
             str(tmp_path / "missing.json"),
             "--output",
