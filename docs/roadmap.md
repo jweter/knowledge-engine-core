@@ -25,7 +25,18 @@ This file is the roadmap index. Phase-specific notes live in `docs/roadmap/`.
 
 The current GLP-1 vertical slice is a retrieval and manual evidence-display
 prototype. See `docs/vertical_slice.md` and
-`docs/glp1_vertical_slice_demo_checklist.md`.
+`docs/glp1_vertical_slice_demo_checklist.md`. Those files record historical
+prototype work and do not impose a current manual-review prerequisite.
+
+### Working-version review policy
+
+Repository execution must not depend on the project owner manually reviewing
+individual candidates, PDFs, metadata rows, licenses, duplicate decisions, or
+manifest fields before a working version exists. Deterministic automation must
+accept, reject, hold, retry, or exclude each record with preserved evidence.
+Held records are automatically deferred from acquisition and do not block the
+remaining accepted batch. Human evaluation is reserved for working-version
+acceptance, release validation, and optional post-release quality audits.
 
 ### Completed Phase 1 milestones
 
@@ -60,8 +71,8 @@ M14 proceeds through explicit stages:
    identifier consistency, reusable-license basis, approved full-text location, and
    duplicate risk;
 3. explicit `accepted`, `rejected`, or `held` decision records that remain separate
-   from raw discovery output, with exception review only when deterministic evidence
-   is insufficient or conflicting;
+   from raw discovery output; held records are automatically deferred and discovery
+   continues without waiting for manual resolution;
 4. bounded acquisition of accepted files with sanitized receipts;
 5. reconciliation to exactly 500 accepted rows and matching approved local PDFs;
 6. preflight validation, fresh import, linked resume, and sanitized evidence.
@@ -73,7 +84,8 @@ must be held rather than guessed when identity, licensing, scientific relevance,
 full-text eligibility, or duplicate status remains ambiguous. Discovery providers
 must remain separate evidence categories; metadata from PubMed, PMC, Crossref,
 OpenAlex, Europe PMC, or publishers must not be silently collapsed into one trust
-category.
+category. Held and rejected records never authorize acquisition and never require
+owner intervention before the working-version acceptance review.
 
 ### Supporting operator durability
 
@@ -101,7 +113,7 @@ Detailed milestone records include:
 
 - Extract claims, methods, results, limitations, and evidence quality markers.
 - Keep every generated structure traceable to source text spans.
-- Add human review workflows.
+- Add automated validation and optional post-working-version human audit workflows.
 
 ## Phase 3: Search Plus Semantics
 
