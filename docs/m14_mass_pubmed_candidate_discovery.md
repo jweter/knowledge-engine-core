@@ -2,15 +2,17 @@
 
 ## Purpose
 
-Use this workflow when M14 needs more than one bounded PubMed page. It aggregates official NCBI discovery pages into one review-only JSON file and prepares a deterministic adjudication worksheet while preserving legal and approval boundaries.
+Use this workflow when M14 needs more than one bounded PubMed page. It aggregates official NCBI discovery pages into one local JSON file and prepares a deterministic adjudication worksheet while preserving legal and approval boundaries.
 
-It does not download PDFs, modify `sources.csv`, create acquisition approvals, or perform ingestion.
+The M14 rehearsal scope is **Obesity and Metabolic-Disease Therapeutics**. GLP-1 receptor agonists remain the first named subtopic, but discovery also covers treatment evidence for overweight, type 2 diabetes, and metabolic syndrome so the project can reach its first 500 legally reusable full texts without weakening evidence standards.
+
+The workflow does not download PDFs, modify `sources.csv`, create acquisition approvals, or perform ingestion.
 
 ## Command
 
 ```bash
 python scripts/m14_pubmed_batch_discover.py \
-  --query 'GLP-1 receptor agonist obesity weight loss' \
+  --query '(obesity OR overweight OR "type 2 diabetes" OR "metabolic syndrome") AND (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR liraglutide OR tirzepatide OR metformin OR "SGLT2 inhibitor")' \
   --limit 500 \
   --page-size 100 \
   --retstart 0 \
@@ -38,7 +40,7 @@ The workflow:
 9. writes explicit accepted, rejected, and held decisions;
 10. reconciles discovery and adjudication counts before artifact upload.
 
-The summary records candidate count, adjudication-item count, fetched page count, duplicate PMID count, verified PMC Open Access count, decision counts, and whether the PubMed result set was exhausted.
+The summary records candidate count, adjudication-item count, accepted, rejected, and held counts, fetched page count, duplicate PMID count, verified PMC Open Access count, and whether the PubMed result set was exhausted.
 
 ## Temporary artifact
 
@@ -60,6 +62,7 @@ The artifact is temporary and must not be committed. The worksheet is not itself
 - Every candidate receives an explicit decision.
 - `oa_verified` is evidence consumed by deterministic rules, not a blanket legal assumption.
 - Held records are automatically deferred and rejected records are automatically excluded.
+- The broader scientific scope does not broaden the legal trust category: only approved PMC OA evidence can authorize acquisition in this stage.
 
 ## M14 use
 
@@ -73,4 +76,4 @@ Discover and adjudicate candidates in bounded pages. Maintain separate counts fo
 - acquired full texts;
 - manifest-ready rows.
 
-When fewer than 500 records are accepted, continue controlled discovery from the next offset or a separately approved query revision. Do not wait for owner review of held records. If the defensible evidence base is smaller than 500, record the measured evidence ceiling and a `HOLD` rehearsal decision rather than padding the corpus with duplicate, weak, or legally unusable records.
+When fewer than 500 records are accepted, continue controlled discovery from the next offset or refine the query within the committed obesity and metabolic-disease domain. Do not wait for owner review of held records. If the defensible evidence base is smaller than 500 after measured scope expansion, record the evidence ceiling and a `HOLD` rehearsal decision rather than padding the corpus with duplicate, weak, or legally unusable records.
