@@ -85,6 +85,32 @@ Exact-head M14 run `29745438536` for PR #72 produced:
 
 The measured accepted yield was 17.2%, leaving the pool 70 accepted records short of the issue #21 entry gate. At that yield, approximately 2,907 candidates are required to reach 500 accepted records. The 3,250-candidate default adds bounded margin while remaining below the existing 5,000-candidate maximum. This is a larger candidate pool, not a relaxation of any scientific, legal, identifier, provenance, duplicate, license, or full-text rule.
 
+## Measured 3,250-candidate result
+
+Exact-head M14 run `29761508774` for PR #73 produced:
+
+- candidate count: 3,250;
+- fetched pages: 33;
+- duplicate PMIDs removed: 0;
+- PMCID resolved: 3,250;
+- PMCID resolution rate: 1.000000;
+- PMC OA verified: 3,226;
+- PMC OA verification rate: 0.992615;
+- accepted: 589;
+- rejected: 24;
+- held: 2,637;
+- exhausted: false.
+
+The unchanged adjudication rules therefore yielded 589 accepted records, clearing the candidate-supply prerequisite by 89 records. This result does not authorize acquisition or ingestion of all accepted records and does not complete M14.
+
+## Deterministic exactly-500 selection
+
+The approval-candidate set must be derived only from items whose adjudication decision is `accepted`. Preserve the worksheet order inherited from the stable PubMed discovery order, exclude every `held` and `rejected` item, and take the first 500 accepted items after verifying that each selected PMID and PMCID is unique. The selection must fail closed when fewer than 500 accepted items remain, when an identifier is missing or duplicated, or when a selected item cannot be reconciled to the original discovery and adjudication evidence.
+
+Record the selection rule, source artifact identity, source counts, selected count, excess accepted count, and identifier reconciliation results in the sanitized M14 report. The remaining 89 accepted records stay outside the rehearsal manifest and must not be silently substituted after approval without regenerating and revalidating the complete exactly-500 selection.
+
+This rule defines a reproducible ordering boundary only. It does not replace per-record reusable-license, identity, provenance, approved direct-full-text, receipt, local-file, or manifest-readiness checks.
+
 ## Historical measured limitation
 
 The first 500-record run using the official PubMed PMC OA filter returned 500 citations, but the earlier ELink request sent one comma-separated PMID value while parsing the response as if source-specific linksets had been requested. That request shape resolved only five PMCIDs and therefore verified only five PMC OA records. None satisfied the complete title-scope acceptance rule.
@@ -133,4 +159,4 @@ Discover and adjudicate candidates in bounded pages. Maintain separate counts fo
 - acquired full texts;
 - manifest-ready rows.
 
-When at least 500 records are accepted, select exactly 500 through a separate deterministic approval and acquisition step; do not import or count the excess accepted records automatically. When fewer than 500 records are accepted, continue controlled discovery from the next offset or refine the query within the committed obesity and metabolic-disease domain. Do not wait for owner review of held records. If the defensible evidence base is smaller than 500 after measured scope expansion, record the evidence ceiling and a `HOLD` rehearsal decision rather than padding the corpus with duplicate, weak, or legally unusable records.
+When at least 500 records are accepted, select exactly 500 through the deterministic approval-candidate rule above; do not import or count the excess accepted records automatically. When fewer than 500 records are accepted, continue controlled discovery from the next offset or refine the query within the committed obesity and metabolic-disease domain. Do not wait for owner review of held records. If the defensible evidence base is smaller than 500 after measured scope expansion, record the evidence ceiling and a `HOLD` rehearsal decision rather than padding the corpus with duplicate, weak, or legally unusable records.
