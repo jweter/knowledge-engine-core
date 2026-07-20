@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This step removes manual transcription between completed review, transactional acquisition, and final `sources.csv` curation.
+This step removes manual transcription between automated adjudication, transactional acquisition, and final manifest generation.
 
-It reconciles a completed review worksheet against an acquisition receipt and produces a CSV with the same columns as the production manifest. It does not modify `sources.csv` and it does not invent scientific metadata.
+It reconciles an adjudication worksheet against an acquisition receipt and produces a CSV with the same columns as the production manifest. It does not modify `sources.csv` and it does not invent unsupported scientific metadata.
 
 ## Command
 
@@ -17,7 +17,7 @@ python -m knowledge_engine.manifest_curation_cli export \
 
 ## Automatically populated evidence
 
-The exporter fills only fields supported by reviewed discovery, authoritative PubMed metadata, or receipt evidence:
+The exporter fills fields supported by deterministic adjudication, authoritative PubMed metadata, or receipt evidence:
 
 - deterministic source ID;
 - title and DOI when present;
@@ -27,17 +27,18 @@ The exporter fills only fields supported by reviewed discovery, authoritative Pu
 - PMID and PMCID;
 - official PMC article and PDF URLs;
 - local PDF filename;
-- reviewed license text;
+- validated license text;
 - approved-open-access usage status;
-- included status and reviewed inclusion reason;
+- included status and adjudication reason code;
 - receipt SHA-256;
-- source type.
+- source type;
+- adjudication ruleset reference.
 
-PubMed metadata is collected during the existing `efetch` request. No additional per-paper request is needed, and the values remain visible in the review worksheet before promotion.
+PubMed metadata is collected during the existing `efetch` request. No additional per-paper request or owner review is required.
 
-## Explicit curation still required
+## Deferred optional metadata
 
-The exporter intentionally leaves these fields blank:
+The exporter may leave these non-blocking fields blank when no authoritative automated source supplied them:
 
 - access date;
 - license URL;
@@ -47,14 +48,14 @@ The exporter intentionally leaves these fields blank:
 - comparator;
 - outcome notes.
 
-These fields require explicit policy, scientific interpretation, or operator evidence before rows are promoted into `sources.csv`.
+Blank optional fields do not create a manual prerequisite for the M14 working version. They may be enriched later through roadmap-approved deterministic adapters.
 
 ## Fail-closed reconciliation
 
-Export stops on unresolved reviews, count mismatches, duplicate identifiers, unsafe filenames, receipt rows without accepted reviews, license or PMCID disagreement, malformed author/year metadata, malformed inputs, or missing verified PMC OA evidence.
+Export stops on contradictory accepted evidence, count mismatches, duplicate identifiers, unsafe filenames, receipt rows without accepted adjudications, license or PMCID disagreement, malformed author/year metadata, malformed inputs, or missing verified PMC OA evidence.
 
-Rejected records are not expected in the receipt and cannot become manifest rows.
+Held and rejected records are automatically excluded from acquisition receipts and cannot become manifest rows. They do not require human resolution before accepted records proceed.
 
 ## Repository boundary
 
-Review worksheets, acquisition receipts, curation drafts, PDFs, and databases remain ignored local work products. Never commit a generated curation draft containing incomplete or operator-specific data.
+Adjudication worksheets, acquisition receipts, curation drafts, PDFs, and databases remain ignored local work products. Never commit generated curation output containing local paths or provider payloads.
