@@ -63,7 +63,12 @@ def export_reviewed_approvals(
     worksheet_rules_version = _required_string(payload, "rules_version")
     rows = payload.get("items")
     candidate_count = payload.get("candidate_count")
-    if not isinstance(rows, list) or candidate_count != len(rows):
+    if (
+        not isinstance(rows, list)
+        or not isinstance(candidate_count, int)
+        or isinstance(candidate_count, bool)
+        or candidate_count != len(rows)
+    ):
         raise ReviewedApprovalError("Adjudication worksheet count does not reconcile.")
 
     approvals: list[ReviewedApproval] = []
@@ -142,7 +147,7 @@ def export_reviewed_approvals(
         schema_version=1,
         rules_version=worksheet_rules_version,
         selection_rule=WORKSHEET_ORDER_SELECTION_RULE,
-        source_candidate_count=len(rows),
+        source_candidate_count=candidate_count,
         source_accepted_count=len(approvals),
         selected_count=len(selected),
         approvals=tuple(selected),
