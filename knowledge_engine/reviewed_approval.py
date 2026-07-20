@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 
 PDF_HOST = "ftp.ncbi.nlm.nih.gov"
 SAFE_PMCID = re.compile(r"^PMC[0-9]+$")
+WORKSHEET_ORDER_SELECTION_RULE = "accepted_in_worksheet_order"
 
 
 class ReviewedApprovalError(RuntimeError):
@@ -30,9 +31,14 @@ class ReviewedApproval:
 
 @dataclass(frozen=True)
 class ReviewedApprovalBatch:
-    """Exact schema consumed by PMC OA acquisition."""
+    """Acquisition-compatible approvals plus deterministic selection evidence."""
 
     schema_version: int
+    rules_version: str
+    selection_rule: str
+    source_candidate_count: int
+    source_accepted_count: int
+    selected_count: int
     approvals: tuple[ReviewedApproval, ...]
 
     def to_json(self) -> str:
@@ -41,15 +47,23 @@ class ReviewedApprovalBatch:
         return json.dumps(asdict(self), indent=2, sort_keys=True) + "\n"
 
 
-def export_reviewed_approvals(worksheet_path: Path) -> ReviewedApprovalBatch:
-    """Export accepted automated adjudications and exclude all other outcomes."""
+def export_reviewed_approvals(
+    worksheet_path: Path,
+    *,
+    selection_limit: int | None = None,
+) -> ReviewedApprovalBatch:
+    """Validate accepted adjudications and select them in immutable worksheet order."""
+
+    if selection_limit is not None and selection_limit < 1:
+        raise ReviewedApprovalError("Approval selection limit must be at least 1.")
 
     payload = _load_object(worksheet_path)
     if payload.get("schema_version") != 2:
         raise ReviewedApprovalError("Adjudication worksheet schema_version must be 2.")
     worksheet_rules_version = _required_string(payload, "rules_version")
     rows = payload.get("items")
-    if not isinstance(rows, list) or payload.get("candidate_count") != len(rows):
+    candidate_count = payload.get("candidate_count")
+    if not isinstance(rows, list) or candidate_count != len(rows):
         raise ReviewedApprovalError("Adjudication worksheet count does not reconcile.")
 
     approvals: list[ReviewedApproval] = []
@@ -118,7 +132,21 @@ def export_reviewed_approvals(worksheet_path: Path) -> ReviewedApprovalBatch:
 
     if not approvals:
         raise ReviewedApprovalError("Adjudication worksheet contains no accepted approvals.")
-    return ReviewedApprovalBatch(schema_version=1, approvals=tuple(approvals))
+    if selection_limit is not None and len(approvals) < selection_limit:
+        raise ReviewedApprovalError(
+            "Adjudication worksheet contains fewer accepted approvals than the selection limit."
+        )
+
+    selected = approvals if selection_limit is None else approvals[:selection_limit]
+    return ReviewedApprovalBatch(
+        schema_version=1,
+        rules_version=worksheet_rules_version,
+        selection_rule=WORKSHEET_ORDER_SELECTION_RULE,
+        source_candidate_count=len(rows),
+        source_accepted_count=len(approvals),
+        selected_count=len(selected),
+        approvals=tuple(selected),
+    )
 
 
 def _load_object(path: Path) -> dict[str, object]:
