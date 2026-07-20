@@ -2,39 +2,53 @@
 
 ## Question
 
-Do GLP-1 receptor agonists reduce body weight in adults with overweight or
-obesity?
+What treatment effects, limitations, and safety findings are reported for
+therapeutic interventions used in adults with obesity, overweight, type 2
+diabetes, or metabolic syndrome?
 
 ## Rationale
 
-This question is narrow enough for a 10-paper prototype and broad enough to
-exercise the main Knowledge Engine architecture:
+The original GLP-1 weight-loss question remains an important subtopic, but it is
+too narrow to reliably supply the first 500 legally reusable full-text papers
+under the current PMC Open Access trust boundary. The expanded question remains
+inside the roadmap's obesity and metabolic-disease domain while providing enough
+scientific breadth for a durable Phase 1 corpus.
 
-- Sources can include clinical trials, systematic reviews, and meta-analyses.
-- Claims can be extracted about weight reduction, magnitude of effect,
-  population scope, duration, and limitations.
-- Evidence records can support, qualify, or contextualize the answer.
-- Relationships can distinguish direct support from qualifications such as drug
-  type, dose, duration, population, adverse effects, or comparator.
-- A human-readable answer can cite sources and state uncertainty without
-  claiming final scientific truth.
+The scope supports:
+
+- randomized and observational treatment studies;
+- systematic reviews and meta-analyses;
+- GLP-1 receptor agonists, dual incretin therapies, metformin, SGLT2 inhibitors,
+  and other clearly identified therapeutic interventions;
+- outcomes involving body weight, glycemic control, metabolic risk, treatment
+  durability, adverse effects, and clinically relevant limitations;
+- evidence records that support, qualify, contradict, or contextualize findings.
 
 ## Question Frame
 
-- Population: adults with overweight or obesity.
-- Intervention: GLP-1 receptor agonists.
-- Comparator: placebo, usual care, lifestyle intervention, or other comparator
-  described by each source.
-- Outcome: body weight, BMI, or percent body weight change.
-- Time scope: any clearly reported treatment duration.
+- Population: adults with obesity, overweight, type 2 diabetes, or metabolic
+  syndrome.
+- Intervention: a named therapeutic drug, treatment strategy, or structured
+  clinical intervention.
+- Comparator: placebo, usual care, lifestyle intervention, active treatment, or
+  another comparator described by the source.
+- Outcomes: body weight, BMI, glycemic outcomes, metabolic markers, treatment
+  response, adverse effects, durability, or clinically relevant limitations.
+- Time scope: any clearly reported treatment or follow-up duration.
 
-## Out of Scope for the Prototype Question
+## Initial Subtopics
 
-- Pediatric populations.
+- GLP-1 receptor agonists and weight loss.
+- Dual incretin therapies such as tirzepatide.
+- Metformin and type 2 diabetes treatment.
+- SGLT2 inhibitors and metabolic outcomes.
+- Broader obesity and metabolic-syndrome treatment evidence.
+
+## Out of Scope for Initial M14 Adjudication
+
+- Pediatric-only populations.
 - Type 1 diabetes-specific treatment questions.
-- Weight maintenance after stopping treatment unless directly tied to the main
-  question.
-- Cost effectiveness.
-- Mechanism-only papers without body weight outcomes.
-- Safety-only papers unless they also report body weight outcomes.
-
+- Mechanism-only papers without a named therapeutic or clinical intervention.
+- Cost-effectiveness or policy-only papers without treatment evidence.
+- Editorials, news, marketing material, and unsupported opinion pieces.
+- Records without verified reusable full text under an approved source policy.
