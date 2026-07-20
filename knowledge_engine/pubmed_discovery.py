@@ -14,7 +14,7 @@ from urllib.parse import urlencode, urlsplit
 from knowledge_engine.ncbi_http import TransportResponse
 
 EUTILS_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-PMC_ID_CONVERTER_URL = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
+PMC_ID_CONVERTER_URL = "https://pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles/"
 PMC_OA_URL = "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"
 DEFAULT_HEADERS = {
     "Accept": "application/json, application/xml",
@@ -338,9 +338,7 @@ class PubmedPmcDiscoveryService:
                 response.status_code not in _RETRYABLE_STATUS_CODES
                 or attempt + 1 == self.max_attempts
             ):
-                raise NcbiDiscoveryError(
-                    f"{operation} request returned a non-success status."
-                )
+                raise NcbiDiscoveryError(f"{operation} request returned a non-success status.")
         raise NcbiDiscoveryError(f"{operation} request retry state was invalid.")
 
 
