@@ -6,7 +6,11 @@ on:
       query:
         description: PubMed search expression
         required: true
-        default: GLP-1 receptor agonist obesity weight loss
+        default: >-
+          (obesity OR overweight OR "type 2 diabetes" OR "metabolic syndrome")
+          AND (treatment OR therapy OR intervention OR pharmacotherapy OR
+          semaglutide OR liraglutide OR tirzepatide OR metformin OR
+          "SGLT2 inhibitor")
         type: string
       limit:
         description: Requested unique candidate count
@@ -38,7 +42,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      DISCOVERY_QUERY: ${{ github.event_name == 'workflow_dispatch' && inputs.query || 'GLP-1 receptor agonist obesity weight loss' }}
+      DISCOVERY_QUERY: >-
+        ${{ github.event_name == 'workflow_dispatch' && inputs.query ||
+        '(obesity OR overweight OR "type 2 diabetes" OR "metabolic syndrome") AND
+        (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR
+        liraglutide OR tirzepatide OR metformin OR "SGLT2 inhibitor")' }}
       DISCOVERY_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '500' }}
       DISCOVERY_PAGE_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.page_size || '100' }}
     steps:
@@ -73,7 +81,7 @@ jobs:
               raise SystemExit('Page size must be between 1 and 100.')
           PY
 
-      - name: Run review-only mass discovery
+      - name: Run bounded mass discovery
         run: |
           mkdir -p work/m14
           poetry run python scripts/m14_pubmed_batch_discover.py \
@@ -82,7 +90,7 @@ jobs:
             --page-size "$DISCOVERY_PAGE_SIZE" \
             --output work/m14/pubmed-candidates.json
 
-      - name: Prepare pending review worksheet
+      - name: Adjudicate candidate evidence
         run: |
           poetry run python -m knowledge_engine.candidate_review_cli \
             --candidates work/m14/pubmed-candidates.json \
@@ -92,19 +100,27 @@ jobs:
         run: |
           poetry run python - <<'PY'
           import json
+          from collections import Counter
           from pathlib import Path
 
           payload = json.loads(Path('work/m14/pubmed-candidates.json').read_text(encoding='utf-8'))
           worksheet = json.loads(Path('work/m14/candidate-review.json').read_text(encoding='utf-8'))
           candidates = payload['candidates']
+          items = worksheet['items']
           oa_verified = sum(candidate['open_access'] for candidate in candidates)
           if worksheet['candidate_count'] != payload['candidate_count']:
-              raise SystemExit('Candidate review worksheet count does not reconcile.')
-          if any(item['decision'] != 'pending' for item in worksheet['items']):
-              raise SystemExit('Candidate review worksheet contains a non-pending decision.')
+              raise SystemExit('Candidate adjudication count does not reconcile.')
+          decisions = Counter(item['decision'] for item in items)
+          if set(decisions) - {'accepted', 'rejected', 'held'}:
+              raise SystemExit('Candidate adjudication contains an unsupported decision.')
+          if sum(decisions.values()) != worksheet['candidate_count']:
+              raise SystemExit('Candidate decision counts do not reconcile.')
           summary = (
               f"candidate_count={payload['candidate_count']}\n"
-              f"review_item_count={worksheet['candidate_count']}\n"
+              f"adjudication_item_count={worksheet['candidate_count']}\n"
+              f"accepted={decisions['accepted']}\n"
+              f"rejected={decisions['rejected']}\n"
+              f"held={decisions['held']}\n"
               f"fetched_page_count={payload['fetched_page_count']}\n"
               f"duplicate_pmids_removed={payload['duplicate_pmids_removed']}\n"
               f"oa_verified={oa_verified}\n"
@@ -114,7 +130,7 @@ jobs:
           print(summary, end='')
           PY
 
-      - name: Upload review-only artifact
+      - name: Upload adjudication artifact
         uses: actions/upload-artifact@v4
         with:
           name: m14-pubmed-candidates
