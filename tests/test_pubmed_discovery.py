@@ -167,8 +167,7 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
 def test_identifier_requests_are_chunked_and_reconciled() -> None:
     pmids = [str(value) for value in range(1, 102)]
     first_records = [
-        {"requested-id": pmid, "pmid": pmid, "pmcid": f"PMC9{pmid}"}
-        for pmid in pmids[:100]
+        {"requested-id": pmid, "pmid": pmid, "pmcid": f"PMC9{pmid}"} for pmid in pmids[:100]
     ]
     second_records = [
         {"requested-id": pmids[100], "pmid": pmids[100], "pmcid": f"PMC9{pmids[100]}"}
@@ -194,11 +193,7 @@ def test_identifier_requests_are_chunked_and_reconciled() -> None:
 
 def test_identifier_converter_rejects_conflicting_source_identity() -> None:
     transport = FakeTransport(
-        [
-            _id_converter_response(
-                {"requested-id": "222", "pmid": "111", "pmcid": "PMC999"}
-            )
-        ]
+        [_id_converter_response({"requested-id": "222", "pmid": "111", "pmcid": "PMC999"})]
     )
 
     with pytest.raises(NcbiDiscoveryError, match="did not reconcile"):
@@ -224,9 +219,7 @@ def test_discovery_rejects_mismatched_pmc_oa_identity() -> None:
         [
             _search_response("222"),
             _metadata_response(),
-            _id_converter_response(
-                {"requested-id": "222", "pmid": "222", "pmcid": "PMC999"}
-            ),
+            _id_converter_response({"requested-id": "222", "pmid": "222", "pmcid": "PMC999"}),
             FakeResponse(
                 200,
                 b'<OA><records><record id="PMC1000" license="CC BY" /></records></OA>',
