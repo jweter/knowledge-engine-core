@@ -9,30 +9,46 @@ import pytest
 
 from knowledge_engine.manifest_curation import ManifestCurationError, export_manifest_curation_draft
 
+RULES_VERSION = "m14-candidate-adjudication-v1"
+
 
 def _write(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-def _review() -> dict[str, object]:
+def _adjudication() -> dict[str, object]:
     return {
         "pmid": "100",
-        "title": "Trial title",
+        "title": "GLP-1 receptor agonist treatment for obesity and weight loss",
         "authors": ["Ada Lovelace", "Trial Group"],
         "publication_year": 2024,
         "venue": "Journal of Verified Results",
         "doi": "10.1000/example",
         "pmcid": "PMC100",
         "open_access": True,
-        "reported_license": "CC BY",
+        "reported_license": "CC BY 4.0",
         "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_pdf/example.pdf",
         "discovery_status": "oa_verified",
         "decision": "accepted",
-        "inclusion_review": "Meets criteria",
-        "license_review": "Reusable",
-        "identity_review": "Identifiers match",
-        "reviewer": "reviewer-1",
-        "reviewed_at": "2026-07-19T12:00:00Z",
+        "reason_codes": ["ALL_REQUIRED_RULES_PASSED"],
+        "rules_version": RULES_VERSION,
+        "adjudicated_at": "2026-07-20T12:00:00+00:00",
+        "inclusion_rule_result": "passed",
+        "identity_rule_result": "passed",
+        "license_rule_result": "passed",
+        "full_text_rule_result": "passed",
+        "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+        "evidence_provenance": ["pubmed_metadata", "pmc_oa_service"],
+        "unresolved_ambiguities": [],
+    }
+
+
+def _worksheet(items: list[dict[str, object]]) -> dict[str, object]:
+    return {
+        "schema_version": 2,
+        "rules_version": RULES_VERSION,
+        "candidate_count": len(items),
+        "items": items,
     }
 
 
@@ -44,7 +60,7 @@ def _receipt() -> dict[str, object]:
             {
                 "pmid": "100",
                 "pmcid": "PMC100",
-                "license": "CC BY",
+                "license": "CC BY 4.0",
                 "filename": "PMC100.pdf",
                 "byte_count": 123,
                 "sha256": "a" * 64,
@@ -53,10 +69,10 @@ def _receipt() -> dict[str, object]:
     }
 
 
-def test_export_manifest_curation_draft_populates_only_proven_fields(tmp_path: Path) -> None:
+def test_export_manifest_curation_draft_populates_proven_fields(tmp_path: Path) -> None:
     worksheet = tmp_path / "review.json"
     receipt = tmp_path / "receipt.json"
-    _write(worksheet, {"schema_version": 1, "candidate_count": 1, "items": [_review()]})
+    _write(worksheet, _worksheet([_adjudication()]))
     _write(receipt, _receipt())
 
     draft = export_manifest_curation_draft(worksheet, receipt)
@@ -68,11 +84,11 @@ def test_export_manifest_curation_draft_populates_only_proven_fields(tmp_path: P
     assert row["other_identifier"] == "PMC100"
     assert row["local_path"] == "PMC100.pdf"
     assert row["expected_content_hash"] == "a" * 64
-    assert row["inclusion_reason"] == "Meets criteria"
+    assert row["inclusion_reason"] == "ALL_REQUIRED_RULES_PASSED"
     assert row["authors"] == "Ada Lovelace; Trial Group"
     assert row["publication_year"] == "2024"
     assert row["venue"] == "Journal of Verified Results"
-    assert row["study_type"] == ""
+    assert row["notes"] == f"Automated adjudication ruleset: {RULES_VERSION}"
 
 
 def test_receipt_license_mismatch_is_rejected(tmp_path: Path) -> None:
@@ -80,31 +96,38 @@ def test_receipt_license_mismatch_is_rejected(tmp_path: Path) -> None:
     receipt = tmp_path / "receipt.json"
     payload = _receipt()
     payload["items"][0]["license"] = "CC BY-NC"  # type: ignore[index]
-    _write(worksheet, {"schema_version": 1, "candidate_count": 1, "items": [_review()]})
+    _write(worksheet, _worksheet([_adjudication()]))
     _write(receipt, payload)
 
     with pytest.raises(ManifestCurationError, match="does not match"):
         export_manifest_curation_draft(worksheet, receipt)
 
 
-def test_unresolved_review_is_rejected(tmp_path: Path) -> None:
+def test_held_adjudication_is_excluded_without_human_input(tmp_path: Path) -> None:
     worksheet = tmp_path / "review.json"
     receipt = tmp_path / "receipt.json"
-    review = _review()
-    review["decision"] = "pending"
-    _write(worksheet, {"schema_version": 1, "candidate_count": 1, "items": [review]})
-    _write(receipt, _receipt())
+    held = _adjudication()
+    held.update(
+        {
+            "decision": "held",
+            "reason_codes": ["SCIENTIFIC_SCOPE_INSUFFICIENT"],
+            "inclusion_rule_result": "insufficient_title_evidence",
+            "unresolved_ambiguities": ["scientific_relevance"],
+        }
+    )
+    _write(worksheet, _worksheet([held]))
+    _write(receipt, {"schema_version": 1, "acquired_count": 0, "items": []})
 
-    with pytest.raises(ManifestCurationError, match="unresolved decision"):
+    with pytest.raises(ManifestCurationError, match="No reconciled acquired records"):
         export_manifest_curation_draft(worksheet, receipt)
 
 
 def test_malformed_author_metadata_is_rejected(tmp_path: Path) -> None:
     worksheet = tmp_path / "review.json"
     receipt = tmp_path / "receipt.json"
-    review = _review()
-    review["authors"] = ["Ada Lovelace", ""]
-    _write(worksheet, {"schema_version": 1, "candidate_count": 1, "items": [review]})
+    adjudication = _adjudication()
+    adjudication["authors"] = ["Ada Lovelace", ""]
+    _write(worksheet, _worksheet([adjudication]))
     _write(receipt, _receipt())
 
     with pytest.raises(ManifestCurationError, match="Author evidence is malformed"):

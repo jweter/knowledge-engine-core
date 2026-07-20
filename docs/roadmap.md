@@ -25,7 +25,18 @@ This file is the roadmap index. Phase-specific notes live in `docs/roadmap/`.
 
 The current GLP-1 vertical slice is a retrieval and manual evidence-display
 prototype. See `docs/vertical_slice.md` and
-`docs/glp1_vertical_slice_demo_checklist.md`.
+`docs/glp1_vertical_slice_demo_checklist.md`. Those files record historical
+prototype work and do not impose a current manual-review prerequisite.
+
+### Working-version review policy
+
+Repository execution must not depend on the project owner manually reviewing
+individual candidates, PDFs, metadata rows, licenses, duplicate decisions, or
+manifest fields before a working version exists. Deterministic automation must
+accept, reject, hold, retry, or exclude each record with preserved evidence.
+Held records are automatically deferred from acquisition and do not block the
+remaining accepted batch. Human evaluation is reserved for working-version
+acceptance, release validation, and optional post-release quality audits.
 
 ### Completed Phase 1 milestones
 
@@ -53,14 +64,43 @@ must be complete before repeated large-run failure evidence is treated as
 diagnostic. The rehearsal must not introduce new architecture solely to collect
 one run's measurements.
 
+The M14 corpus scope is **Obesity and Metabolic-Disease Therapeutics**. The
+original GLP-1 weight-loss question remains the first named subtopic, but the
+rehearsal may include legally reusable treatment evidence for overweight, type 2
+diabetes, metabolic syndrome, metformin, SGLT2 inhibitors, dual incretin
+therapies, and other explicitly allowlisted interventions within this same
+Phase 1 domain. Scope expansion must never weaken license, provenance,
+identifier, duplicate, or full-text validation.
+
 M14 proceeds through explicit stages:
 
-1. bounded PubMed/PMC candidate discovery;
-2. human review of identifiers, licenses, and PMC Open Access URLs;
-3. explicit approval records that are separate from raw discovery output;
-4. bounded acquisition of approved files with sanitized receipts;
+1. bounded PubMed/PMC candidate discovery within the committed obesity and
+   metabolic-disease therapeutics scope;
+2. deterministic, evidence-preserving candidate adjudication for scientific scope,
+   identifier consistency, reusable-license basis, approved full-text location, and
+   duplicate risk;
+3. explicit `accepted`, `rejected`, or `held` decision records that remain separate
+   from raw discovery output; held records are automatically deferred and discovery
+   continues without waiting for manual resolution;
+4. bounded acquisition of accepted files with sanitized receipts;
 5. reconciliation to exactly 500 accepted rows and matching approved local PDFs;
 6. preflight validation, fresh import, linked resume, and sanitized evidence.
+
+Automated acceptance or rejection is permitted only when repository-defined rules
+produce complete, non-conflicting evidence. Every decision must record reason codes,
+provider provenance, the adjudication-rules version, and the evidence used. A record
+must be held rather than guessed when identity, licensing, scientific relevance,
+full-text eligibility, or duplicate status remains ambiguous. Discovery providers
+must remain separate evidence categories; metadata from PubMed, PMC, Crossref,
+OpenAlex, Europe PMC, or publishers must not be silently collapsed into one trust
+category. Held and rejected records never authorize acquisition and never require
+owner intervention before the working-version acceptance review.
+
+If one query or subtopic cannot supply enough accepted records, discovery may
+continue through measured query revisions inside the committed M14 domain. Each
+revision must preserve its query, offset, rules version, decision counts, and
+provider provenance. Unrelated scientific domains require a separate roadmap
+amendment rather than silent corpus mixing.
 
 ### Supporting operator durability
 
@@ -88,7 +128,7 @@ Detailed milestone records include:
 
 - Extract claims, methods, results, limitations, and evidence quality markers.
 - Keep every generated structure traceable to source text spans.
-- Add human review workflows.
+- Add automated validation and optional post-working-version human audit workflows.
 
 ## Phase 3: Search Plus Semantics
 

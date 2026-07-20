@@ -8,6 +8,8 @@ from typer.testing import CliRunner
 
 from knowledge_engine.manifest_curation_cli import app
 
+RULES_VERSION = "m14-candidate-adjudication-v1"
+
 
 def test_cli_exports_reconciled_curation_draft(tmp_path: Path) -> None:
     worksheet = tmp_path / "review.json"
@@ -16,24 +18,33 @@ def test_cli_exports_reconciled_curation_draft(tmp_path: Path) -> None:
     worksheet.write_text(
         json.dumps(
             {
-                "schema_version": 1,
+                "schema_version": 2,
+                "rules_version": RULES_VERSION,
                 "candidate_count": 1,
                 "items": [
                     {
                         "pmid": "100",
-                        "title": "Trial title",
+                        "title": "GLP-1 receptor agonist treatment for obesity and weight loss",
+                        "authors": [],
+                        "publication_year": None,
+                        "venue": None,
                         "doi": "10.1000/example",
                         "pmcid": "PMC100",
                         "open_access": True,
-                        "reported_license": "CC BY",
+                        "reported_license": "CC BY 4.0",
                         "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_pdf/example.pdf",
                         "discovery_status": "oa_verified",
                         "decision": "accepted",
-                        "inclusion_review": "Meets criteria",
-                        "license_review": "Reusable",
-                        "identity_review": "Identifiers match",
-                        "reviewer": "reviewer-1",
-                        "reviewed_at": "2026-07-19T12:00:00Z",
+                        "reason_codes": ["ALL_REQUIRED_RULES_PASSED"],
+                        "rules_version": RULES_VERSION,
+                        "adjudicated_at": "2026-07-20T12:00:00+00:00",
+                        "inclusion_rule_result": "passed",
+                        "identity_rule_result": "passed",
+                        "license_rule_result": "passed",
+                        "full_text_rule_result": "passed",
+                        "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+                        "evidence_provenance": ["pubmed_metadata", "pmc_oa_service"],
+                        "unresolved_ambiguities": [],
                     }
                 ],
             }
@@ -49,7 +60,7 @@ def test_cli_exports_reconciled_curation_draft(tmp_path: Path) -> None:
                     {
                         "pmid": "100",
                         "pmcid": "PMC100",
-                        "license": "CC BY",
+                        "license": "CC BY 4.0",
                         "filename": "PMC100.pdf",
                         "byte_count": 123,
                         "sha256": "a" * 64,
@@ -79,6 +90,7 @@ def test_cli_exports_reconciled_curation_draft(tmp_path: Path) -> None:
         rows = list(csv.DictReader(stream))
     assert rows[0]["local_path"] == "PMC100.pdf"
     assert rows[0]["authors"] == ""
+    assert rows[0]["inclusion_reason"] == "ALL_REQUIRED_RULES_PASSED"
     assert str(tmp_path) not in output.read_text(encoding="utf-8")
 
 

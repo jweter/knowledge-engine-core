@@ -1,38 +1,48 @@
 # Inclusion Criteria
 
-A source may be included in the GLP-1 Weight Loss Prototype Corpus when it meets
-all required criteria and at least one preferred criterion.
+A source may be included in the Obesity and Metabolic-Disease Therapeutics
+Corpus when it meets every required criterion.
 
-## Required Criteria
+## Required Scientific Criteria
 
-- The source is a scientific paper, preprint, systematic review, meta-analysis,
-  or clinical research report.
-- The source addresses GLP-1 receptor agonists or closely related GLP-1-based
-  therapies.
-- The source reports, analyzes, or summarizes body weight, BMI, or percent body
-  weight change.
-- The studied population includes adults with overweight or obesity, or reports
-  data that can be interpreted for that population.
-- The source has enough bibliographic information to cite it later.
-- The source has a clear license, open access status, institutional access note,
-  or other documented usage basis.
+- The source is a scientific paper, systematic review, meta-analysis, or
+  clinical research report.
+- The title identifies obesity, overweight, type 2 diabetes, metabolic syndrome,
+  or another explicitly approved metabolic-disease scope term.
+- The title identifies a treatment, therapy, intervention, pharmacotherapy, or
+  named therapeutic agent covered by the active adjudication rules.
+- The studied population includes adults or reports evidence applicable to
+  adult treatment.
+- The source has enough bibliographic and identifier evidence to reconcile its
+  PubMed and PMC identity.
 
-## Preferred Criteria
+## Required Legal and Operational Criteria
 
-- Randomized controlled trial.
-- Systematic review or meta-analysis.
-- Clear comparator group.
-- Clear treatment duration.
-- Clear quantitative body weight outcome.
-- Available full text that can be used legally for local research.
-- DOI or other stable identifier.
+- PMC Open Access evidence is verified.
+- The reusable-license basis is explicit and allowlisted by the active ruleset.
+- The full-text PDF is available from the approved official HTTPS source.
+- The record has no unresolved exact identifier duplicate.
+- Every decision input records provider-specific provenance.
+- The deterministic adjudication result is `accepted` under the recorded rules
+  version.
 
-## Prototype Balance
+## Preferred Evidence Characteristics
 
-The first 10-paper source set should try to include:
+These characteristics improve corpus balance but are not mandatory when all
+required criteria pass:
 
-- Several primary clinical trials.
-- At least one systematic review or meta-analysis.
-- More than one GLP-1 receptor agonist when practical.
-- At least one source that qualifies or limits the apparent effect.
+- randomized controlled trial;
+- systematic review or meta-analysis;
+- clear comparator group;
+- clear treatment and follow-up duration;
+- quantitative treatment outcome;
+- DOI and complete author/journal metadata;
+- explicit limitations or safety findings.
 
+## Initial Corpus Balance
+
+The first 500 accepted papers should include multiple treatment families and
+study designs. GLP-1 research remains a named subtopic, but no fixed quota may
+be filled by weakening the legal, identity, provenance, or scientific rules.
+Held and rejected records remain in adjudication evidence and do not block
+continued discovery.

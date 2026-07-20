@@ -1,10 +1,12 @@
-# M14 Reviewed Approval Export
+# M14 Adjudicated Approval Export
 
 ## Purpose
 
-This step removes manual retyping between completed human review and PMC OA acquisition. It exports only accepted, fully reviewed worksheet items into the exact approval schema consumed by `pmc-oa-acquire`.
+This step exports only records that have passed the complete deterministic M14 acceptance contract into the exact approval schema consumed by `pmc-oa-acquire`.
 
-The exporter does not make scientific, identity, or license decisions. It validates and transforms decisions already recorded by a reviewer.
+The exporter does not invent scientific, identity, or licensing evidence. It validates and transforms accepted adjudication records whose rule results, provenance, and reusable-license basis already reconcile. Held and rejected records are automatically excluded rather than waiting for human resolution.
+
+The implementation retains the historical module name `reviewed_approval` for compatibility, but no human review is required.
 
 ## Command
 
@@ -14,39 +16,46 @@ python -m knowledge_engine.reviewed_approval_cli export \
   --output work/m14/approvals-000.json
 ```
 
-## Accepted-review requirements
+## Accepted-record requirements
 
 Every accepted item must include:
 
 - `decision: accepted`;
-- nonblank inclusion, identity, and license review evidence;
-- a reviewer identifier;
-- a timezone-aware review timestamp;
-- PMID and PMCID;
+- passing scientific inclusion and exclusion results;
+- reconciled PMID, PMCID, title, DOI, and document identity evidence;
 - `open_access: true` and `discovery_status: oa_verified`;
-- a reported license;
-- an official HTTPS `ftp.ncbi.nlm.nih.gov` PDF URL.
+- an explicit reusable-license basis;
+- an approved official HTTPS full-text URL;
+- no unresolved exact or probable duplicate condition;
+- provider-specific provenance for each decision input;
+- explicit decision reason codes;
+- an adjudication-rules version;
+- a timezone-aware processing timestamp.
 
-Rejected records are omitted. Pending or otherwise unresolved records stop the export so a partial review page cannot silently become an acquisition batch.
+Rejected and held records are omitted with their evidence preserved in the adjudication worksheet. Unsupported decision values, malformed accepted records, or contradictory accepted evidence stop export.
 
 ## Output boundary
 
-The exported file contains only the acquisition fields:
+The exported file contains the acquisition fields required by the acquisition service:
 
 - PMID;
 - PMCID;
 - license;
-- PDF URL;
+- approved PDF URL;
 - deterministic `PMCID.pdf` filename.
 
-Reviewer identity and review notes remain in the local worksheet and are not copied into the acquisition approval file.
+Detailed evidence remains in the local adjudication worksheet and is not copied into the minimal acquisition approval file.
 
 ## Workflow progress
 
 1. Discover bounded PubMed/PMC candidates.
-2. Prepare a pending review worksheet.
-3. Complete scientific, identity, and license review.
-4. Export accepted completed reviews with this command.
-5. Acquire the resulting approval batch transactionally.
+2. Generate the adjudication worksheet.
+3. Run deterministic scientific, identity, license, source, and duplicate rules.
+4. Automatically defer held records and exclude rejected records.
+5. Export complete accepted records with this command.
+6. Acquire the resulting approval batch transactionally.
+7. Continue discovery when the accepted count remains below 500.
+
+No reviewer identity, manual approval, review note, or owner timestamp is required.
 
 Candidate pages, worksheets, approval files, receipts, PDFs, and databases remain ignored local work products and must not be committed.
