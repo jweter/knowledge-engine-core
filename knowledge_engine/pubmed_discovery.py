@@ -7,6 +7,7 @@ import time
 import xml.etree.ElementTree as ET
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
+from http.client import IncompleteRead
 from typing import Protocol
 from urllib.parse import urlencode
 
@@ -307,8 +308,10 @@ class PubmedPmcDiscoveryService:
                     timeout_seconds=self.timeout_seconds,
                     max_response_bytes=self.max_response_bytes,
                 )
-            except (OSError, TimeoutError) as exc:
-                raise NcbiDiscoveryError("NCBI request failed.") from exc
+            except (IncompleteRead, OSError, TimeoutError) as exc:
+                if attempt + 1 == self.max_attempts:
+                    raise NcbiDiscoveryError("NCBI request failed.") from exc
+                continue
             if response.status_code == 200:
                 return response
             if (
