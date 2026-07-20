@@ -103,25 +103,18 @@ def _metadata_response() -> FakeResponse:
     )
 
 
+def _id_converter_response(*records: dict[str, str]) -> FakeResponse:
+    return FakeResponse(200, json.dumps({"status": "ok", "records": list(records)}).encode(), {})
+
+
 def test_discovery_returns_stable_reviewable_candidates() -> None:
     transport = FakeTransport(
         [
             _search_response("222", "111"),
             _metadata_response(),
-            FakeResponse(
-                200,
-                json.dumps(
-                    {
-                        "linksets": [
-                            {
-                                "ids": ["222"],
-                                "linksetdbs": [{"linkname": "pubmed_pmc", "links": ["999"]}],
-                            },
-                            {"ids": ["111"], "linksetdbs": []},
-                        ]
-                    }
-                ).encode(),
-                {},
+            _id_converter_response(
+                {"requested-id": "222", "pmid": "222", "pmcid": "PMC999"},
+                {"requested-id": "111", "pmid": "111", "errmsg": "not found"},
             ),
             FakeResponse(
                 200,
@@ -153,7 +146,7 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
     assert result.candidates[0].license == "CC BY"
     assert result.candidates[0].pdf_url == "https://ftp.ncbi.nlm.nih.gov/article.pdf"
     assert result.candidates[0].metadata_source == "pubmed_efetch"
-    assert result.candidates[0].pmcid_source == "pubmed_elink"
+    assert result.candidates[0].pmcid_source == "pmc_id_converter"
     assert result.candidates[0].oa_source == "pmc_oa_service"
     assert result.candidates[1].title == "First trial"
     assert result.candidates[1].publication_year == 2023
@@ -165,101 +158,65 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
     assert '"authors": [' in result.to_json()
     assert "retmax=2" in transport.urls[0]
     assert "retstart=0" in transport.urls[0]
-    assert "id=222&id=111" in transport.urls[2]
-    assert "id=222%2C111" not in transport.urls[2]
+    assert "ids=222%2C111" in transport.urls[2]
+    assert "idtype=pmid" in transport.urls[2]
+    assert "format=json" in transport.urls[2]
     assert "id=PMC999" in transport.urls[3]
 
 
-def test_linkage_requests_are_chunked_and_reconciled() -> None:
-    pmids = [str(value) for value in range(1, 22)]
-    first_links = {
-        "linksets": [
-            {
-                "ids": [pmid],
-                "linksetdbs": [{"linkname": "pubmed_pmc", "links": [f"9{pmid}"]}],
-            }
-            for pmid in pmids[:20]
-        ]
-    }
-    second_links = {
-        "linksets": [
-            {
-                "ids": [pmids[20]],
-                "linksetdbs": [{"linkname": "pubmed_pmc", "links": [f"9{pmids[20]}"]}],
-            }
-        ]
-    }
+def test_identifier_requests_are_chunked_and_reconciled() -> None:
+    pmids = [str(value) for value in range(1, 102)]
+    first_records = [
+        {"requested-id": pmid, "pmid": pmid, "pmcid": f"PMC9{pmid}"}
+        for pmid in pmids[:100]
+    ]
+    second_records = [
+        {"requested-id": pmids[100], "pmid": pmids[100], "pmcid": f"PMC9{pmids[100]}"}
+    ]
     transport = FakeTransport(
         [
-            FakeResponse(200, json.dumps(first_links).encode(), {}),
-            FakeResponse(200, json.dumps(second_links).encode(), {}),
+            _id_converter_response(*first_records),
+            _id_converter_response(*second_records),
         ]
     )
 
     result = _service(transport)._link_pmc(pmids)
 
-    assert len(result) == 21
+    assert len(result) == 101
     assert result["1"] == "PMC91"
-    assert result["21"] == "PMC921"
+    assert result["101"] == "PMC9101"
     assert len(transport.urls) == 2
-    assert transport.urls[0].count("&id=") == 20
-    assert "id=21" not in transport.urls[0]
-    assert transport.urls[1].count("&id=") == 1
-    assert "id=21" in transport.urls[1]
+    assert "ids=" in transport.urls[0]
+    assert "%2C100" in transport.urls[0]
+    assert "101" not in transport.urls[0].split("ids=", 1)[1].split("&", 1)[0]
+    assert "ids=101" in transport.urls[1]
 
 
-def test_discovery_rejects_batch_mode_linkage_that_loses_source_mapping() -> None:
+def test_identifier_converter_rejects_conflicting_source_identity() -> None:
     transport = FakeTransport(
         [
-            _search_response("222", "111"),
-            _metadata_response(),
-            FakeResponse(
-                200,
-                json.dumps(
-                    {
-                        "linksets": [
-                            {
-                                "ids": ["222", "111"],
-                                "linksetdbs": [{"linkname": "pubmed_pmc", "links": ["999"]}],
-                            }
-                        ]
-                    }
-                ).encode(),
-                {},
-            ),
+            _id_converter_response(
+                {"requested-id": "222", "pmid": "111", "pmcid": "PMC999"}
+            )
         ]
     )
 
-    with pytest.raises(NcbiDiscoveryError, match="linkage response was malformed"):
-        _service(transport).discover("semaglutide obesity", limit=2)
+    with pytest.raises(NcbiDiscoveryError, match="did not reconcile"):
+        _service(transport)._link_pmc(["222"])
 
 
-def test_discovery_rejects_ambiguous_pmc_links() -> None:
+def test_identifier_converter_rejects_duplicate_records() -> None:
     transport = FakeTransport(
         [
-            _search_response("222"),
-            _metadata_response(),
-            FakeResponse(
-                200,
-                json.dumps(
-                    {
-                        "linksets": [
-                            {
-                                "ids": ["222"],
-                                "linksetdbs": [
-                                    {"linkname": "pubmed_pmc", "links": ["999", "1000"]}
-                                ],
-                            }
-                        ]
-                    }
-                ).encode(),
-                {},
-            ),
+            _id_converter_response(
+                {"requested-id": "222", "pmid": "222", "pmcid": "PMC999"},
+                {"requested-id": "222", "pmid": "222", "pmcid": "PMC1000"},
+            )
         ]
     )
 
-    with pytest.raises(NcbiDiscoveryError, match="linkage response was ambiguous"):
-        _service(transport).discover("semaglutide obesity", limit=1)
+    with pytest.raises(NcbiDiscoveryError, match="did not reconcile"):
+        _service(transport)._link_pmc(["222"])
 
 
 def test_discovery_rejects_mismatched_pmc_oa_identity() -> None:
@@ -267,19 +224,8 @@ def test_discovery_rejects_mismatched_pmc_oa_identity() -> None:
         [
             _search_response("222"),
             _metadata_response(),
-            FakeResponse(
-                200,
-                json.dumps(
-                    {
-                        "linksets": [
-                            {
-                                "ids": ["222"],
-                                "linksetdbs": [{"linkname": "pubmed_pmc", "links": ["999"]}],
-                            }
-                        ]
-                    }
-                ).encode(),
-                {},
+            _id_converter_response(
+                {"requested-id": "222", "pmid": "222", "pmcid": "PMC999"}
             ),
             FakeResponse(
                 200,
