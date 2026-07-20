@@ -11,7 +11,7 @@ on:
       limit:
         description: Requested unique candidate count
         required: true
-        default: '160'
+        default: '500'
         type: string
       page_size:
         description: Bounded PubMed page size
@@ -37,7 +37,7 @@ jobs:
     timeout-minutes: 20
     env:
       DISCOVERY_QUERY: ${{ github.event_name == 'workflow_dispatch' && inputs.query || 'GLP-1 receptor agonist obesity weight loss' }}
-      DISCOVERY_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '160' }}
+      DISCOVERY_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '500' }}
       DISCOVERY_PAGE_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.page_size || '100' }}
     steps:
       - name: Check out repository
