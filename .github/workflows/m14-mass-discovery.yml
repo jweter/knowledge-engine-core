@@ -30,6 +30,8 @@ on:
       - 'knowledge_engine/ncbi_http.py'
       - 'knowledge_engine/candidate_review.py'
       - 'knowledge_engine/candidate_review_cli.py'
+      - 'knowledge_engine/reviewed_approval.py'
+      - 'knowledge_engine/reviewed_approval_cli.py'
       - 'scripts/m14_pubmed_batch_discover.py'
       - 'pyproject.toml'
       - 'poetry.lock'
@@ -102,6 +104,13 @@ jobs:
             --candidates work/m14/pubmed-candidates.json \
             --output work/m14/candidate-review.json
 
+      - name: Select exactly 500 accepted records
+        run: |
+          poetry run python -m knowledge_engine.reviewed_approval_cli export \
+            --worksheet work/m14/candidate-review.json \
+            --output work/m14/approvals-500.json \
+            --limit 500
+
       - name: Summarize candidate metrics
         run: |
           poetry run python - <<'PY'
@@ -111,6 +120,7 @@ jobs:
 
           payload = json.loads(Path('work/m14/pubmed-candidates.json').read_text(encoding='utf-8'))
           worksheet = json.loads(Path('work/m14/candidate-review.json').read_text(encoding='utf-8'))
+          approvals = json.loads(Path('work/m14/approvals-500.json').read_text(encoding='utf-8'))
           candidates = payload['candidates']
           items = worksheet['items']
           candidate_count = payload['candidate_count']
@@ -135,6 +145,20 @@ jobs:
               raise SystemExit('Candidate adjudication contains an unsupported decision.')
           if sum(decisions.values()) != worksheet['candidate_count']:
               raise SystemExit('Candidate decision counts do not reconcile.')
+          if approvals.get('schema_version') != 1:
+              raise SystemExit('Approval schema version does not reconcile.')
+          if approvals.get('rules_version') != worksheet.get('rules_version'):
+              raise SystemExit('Approval rules version does not reconcile.')
+          if approvals.get('selection_rule') != 'accepted_in_worksheet_order':
+              raise SystemExit('Approval selection rule does not reconcile.')
+          if approvals.get('source_candidate_count') != candidate_count:
+              raise SystemExit('Approval source candidate count does not reconcile.')
+          if approvals.get('source_accepted_count') != decisions['accepted']:
+              raise SystemExit('Approval source accepted count does not reconcile.')
+          if approvals.get('selected_count') != 500:
+              raise SystemExit('Approval selected count must be exactly 500.')
+          if len(approvals.get('approvals', [])) != 500:
+              raise SystemExit('Approval row count must be exactly 500.')
           pmcid_resolution_rate = pmcid_resolved / candidate_count if candidate_count else 0.0
           oa_verification_rate = oa_verified / candidate_count if candidate_count else 0.0
           summary = (
@@ -143,6 +167,8 @@ jobs:
               f"accepted={decisions['accepted']}\n"
               f"rejected={decisions['rejected']}\n"
               f"held={decisions['held']}\n"
+              f"selected_count={approvals['selected_count']}\n"
+              f"selection_rule={approvals['selection_rule']}\n"
               f"fetched_page_count={payload['fetched_page_count']}\n"
               f"duplicate_pmids_removed={payload['duplicate_pmids_removed']}\n"
               f"pmcid_resolved={pmcid_resolved}\n"
@@ -164,6 +190,7 @@ jobs:
             work/m14/discovery.log
             work/m14/pubmed-candidates.json
             work/m14/candidate-review.json
+            work/m14/approvals-500.json
             work/m14/summary.txt
           if-no-files-found: warn
           retention-days: 14
