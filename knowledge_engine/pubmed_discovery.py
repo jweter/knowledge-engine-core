@@ -20,6 +20,7 @@ DEFAULT_HEADERS = {
     "User-Agent": "knowledge-engine-core/0.2",
 }
 _RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+_ELINK_BATCH_SIZE = 20
 
 
 class NcbiDiscoveryError(RuntimeError):
@@ -219,6 +220,17 @@ class PubmedPmcDiscoveryService:
         return records
 
     def _link_pmc(self, pmids: list[str]) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for offset in range(0, len(pmids), _ELINK_BATCH_SIZE):
+            chunk = pmids[offset : offset + _ELINK_BATCH_SIZE]
+            chunk_result = self._link_pmc_chunk(chunk)
+            overlap = set(result).intersection(chunk_result)
+            if overlap:
+                raise NcbiDiscoveryError("PubMed linkage response did not reconcile.")
+            result.update(chunk_result)
+        return result
+
+    def _link_pmc_chunk(self, pmids: list[str]) -> dict[str, str]:
         if not pmids:
             return {}
         parameters: list[tuple[str, str]] = [
