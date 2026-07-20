@@ -1,0 +1,111 @@
+name: M14 Mass Discovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: PubMed search expression
+        required: true
+        default: GLP-1 receptor agonist obesity weight loss
+        type: string
+      limit:
+        description: Requested unique candidate count
+        required: true
+        default: '160'
+        type: string
+      page_size:
+        description: Bounded PubMed page size
+        required: true
+        default: '100'
+        type: string
+  pull_request:
+    paths:
+      - '.github/workflows/m14-mass-discovery.yml'
+      - 'knowledge_engine/pubmed_batch_discovery.py'
+      - 'knowledge_engine/pubmed_discovery.py'
+      - 'knowledge_engine/ncbi_http.py'
+      - 'scripts/m14_pubmed_batch_discover.py'
+      - 'pyproject.toml'
+      - 'poetry.lock'
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DISCOVERY_QUERY: ${{ github.event_name == 'workflow_dispatch' && inputs.query || 'GLP-1 receptor agonist obesity weight loss' }}
+      DISCOVERY_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '160' }}
+      DISCOVERY_PAGE_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.page_size || '100' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Validate bounded inputs
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+
+          limit = int(os.environ['DISCOVERY_LIMIT'])
+          page_size = int(os.environ['DISCOVERY_PAGE_SIZE'])
+          query = os.environ['DISCOVERY_QUERY'].strip()
+          if not query:
+              raise SystemExit('Discovery query must not be empty.')
+          if not 150 <= limit <= 5000:
+              raise SystemExit('Discovery limit must be between 150 and 5000.')
+          if not 1 <= page_size <= 100:
+              raise SystemExit('Page size must be between 1 and 100.')
+          PY
+
+      - name: Run review-only mass discovery
+        run: |
+          mkdir -p work/m14
+          poetry run python scripts/m14_pubmed_batch_discover.py \
+            --query "$DISCOVERY_QUERY" \
+            --limit "$DISCOVERY_LIMIT" \
+            --page-size "$DISCOVERY_PAGE_SIZE" \
+            --output work/m14/pubmed-candidates.json
+
+      - name: Summarize candidate metrics
+        run: |
+          poetry run python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path('work/m14/pubmed-candidates.json').read_text(encoding='utf-8'))
+          candidates = payload['candidates']
+          oa_verified = sum(candidate['open_access'] for candidate in candidates)
+          summary = (
+              f"candidate_count={payload['candidate_count']}\n"
+              f"fetched_page_count={payload['fetched_page_count']}\n"
+              f"duplicate_pmids_removed={payload['duplicate_pmids_removed']}\n"
+              f"oa_verified={oa_verified}\n"
+              f"exhausted={payload['exhausted']}\n"
+          )
+          Path('work/m14/summary.txt').write_text(summary, encoding='utf-8')
+          print(summary, end='')
+          PY
+
+      - name: Upload review-only artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: m14-pubmed-candidates
+          path: |
+            work/m14/pubmed-candidates.json
+            work/m14/summary.txt
+          if-no-files-found: error
+          retention-days: 14
