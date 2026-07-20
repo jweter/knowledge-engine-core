@@ -167,8 +167,7 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
 def test_identifier_requests_are_chunked_and_reconciled() -> None:
     pmids = [str(value) for value in range(1, 102)]
     first_records = [
-        {"requested-id": pmid, "pmid": int(pmid), "pmcid": f"PMC9{pmid}"}
-        for pmid in pmids[:100]
+        {"requested-id": pmid, "pmid": int(pmid), "pmcid": f"PMC9{pmid}"} for pmid in pmids[:100]
     ]
     second_records = [
         {
