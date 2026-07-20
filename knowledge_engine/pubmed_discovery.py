@@ -9,7 +9,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from http.client import IncompleteRead
 from typing import Protocol
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from knowledge_engine.ncbi_http import TransportResponse
 
@@ -316,6 +316,7 @@ class PubmedPmcDiscoveryService:
             raise NcbiDiscoveryError("NCBI returned malformed XML.") from exc
 
     def _get(self, url: str) -> TransportResponse:
+        operation = _provider_operation(url)
         for attempt in range(self.max_attempts):
             if self._request_count and self.request_interval_seconds:
                 self.sleep(self.request_interval_seconds)
@@ -329,7 +330,7 @@ class PubmedPmcDiscoveryService:
                 )
             except (IncompleteRead, OSError, TimeoutError) as exc:
                 if attempt + 1 == self.max_attempts:
-                    raise NcbiDiscoveryError("NCBI request failed.") from exc
+                    raise NcbiDiscoveryError(f"{operation} request failed.") from exc
                 continue
             if response.status_code == 200:
                 return response
@@ -337,8 +338,23 @@ class PubmedPmcDiscoveryService:
                 response.status_code not in _RETRYABLE_STATUS_CODES
                 or attempt + 1 == self.max_attempts
             ):
-                raise NcbiDiscoveryError("NCBI request returned a non-success status.")
-        raise NcbiDiscoveryError("NCBI request retry state was invalid.")
+                raise NcbiDiscoveryError(
+                    f"{operation} request returned a non-success status."
+                )
+        raise NcbiDiscoveryError(f"{operation} request retry state was invalid.")
+
+
+def _provider_operation(url: str) -> str:
+    path = urlsplit(url).path
+    if path.endswith("/esearch.fcgi"):
+        return "PubMed search"
+    if path.endswith("/efetch.fcgi"):
+        return "PubMed metadata"
+    if "/idconv/" in path:
+        return "PMC identifier conversion"
+    if path.endswith("/oa.fcgi"):
+        return "PMC OA lookup"
+    return "NCBI"
 
 
 @dataclass(frozen=True)
