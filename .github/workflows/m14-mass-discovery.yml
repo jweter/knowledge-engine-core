@@ -10,7 +10,7 @@ on:
           (obesity OR overweight OR "type 2 diabetes" OR "metabolic syndrome")
           AND (treatment OR therapy OR intervention OR pharmacotherapy OR
           semaglutide OR liraglutide OR tirzepatide OR metformin OR
-          "SGLT2 inhibitor") AND pmc open access[filter]
+          "SGLT2 inhibitor") AND pubmed pmc open access[filter]
         type: string
       limit:
         description: Requested unique candidate count
@@ -47,7 +47,7 @@ jobs:
         '(obesity OR overweight OR "type 2 diabetes" OR "metabolic syndrome") AND
         (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR
         liraglutide OR tirzepatide OR metformin OR "SGLT2 inhibitor") AND
-        pmc open access[filter]' }}
+        pubmed pmc open access[filter]' }}
       DISCOVERY_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '500' }}
       DISCOVERY_PAGE_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.page_size || '100' }}
     steps:
