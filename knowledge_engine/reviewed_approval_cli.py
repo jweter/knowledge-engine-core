@@ -34,6 +34,11 @@ ForceOption = Annotated[
 ]
 
 
+@app.callback()
+def main() -> None:
+    """Expose approval export through an explicit command group."""
+
+
 @app.command("export")
 def export_command(
     worksheet: WorksheetOption,
