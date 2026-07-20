@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
-ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v2"
+ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v3"
 _ALLOWED_LICENSE_PREFIXES = ("CC BY", "CC0")
 _DISEASE_TERMS = (
     "obesity",
@@ -49,6 +49,7 @@ class CandidateReviewItem:
 
     pmid: str
     title: str
+    abstract: str | None
     authors: tuple[str, ...]
     publication_year: int | None
     venue: str | None
@@ -136,10 +137,12 @@ def prepare_candidate_review(candidates_path: Path) -> CandidateReviewWorksheet:
             raise CandidateReviewError("Candidate OA evidence does not reconcile.")
 
         title = _required_string(candidate, "title")
+        abstract = _optional_string(candidate, "abstract")
         reported_license = _optional_string(candidate, "license")
         pdf_url = _optional_string(candidate, "pdf_url")
         decision = _adjudicate(
             title=title,
+            abstract=abstract,
             pmcid=pmcid,
             status=status,
             reported_license=reported_license,
@@ -149,6 +152,7 @@ def prepare_candidate_review(candidates_path: Path) -> CandidateReviewWorksheet:
             CandidateReviewItem(
                 pmid=pmid,
                 title=title,
+                abstract=abstract,
                 authors=_authors(candidate),
                 publication_year=_optional_year(candidate, "publication_year"),
                 venue=_optional_string(candidate, "venue"),
@@ -179,12 +183,13 @@ def prepare_candidate_review(candidates_path: Path) -> CandidateReviewWorksheet:
 def _adjudicate(
     *,
     title: str,
+    abstract: str | None,
     pmcid: str | None,
     status: str,
     reported_license: str | None,
     pdf_url: str | None,
 ) -> dict[str, object]:
-    inclusion = _scientific_scope(title)
+    inclusion = _scientific_scope(title, abstract)
     identity = "passed" if pmcid is not None else "incomplete_missing_pmcid"
     license_result = _license_result(reported_license)
     full_text = _full_text_result(pdf_url)
@@ -240,11 +245,12 @@ def _adjudicate(
     }
 
 
-def _scientific_scope(title: str) -> str:
-    normalized = " ".join(title.casefold().split())
+def _scientific_scope(title: str, abstract: str | None) -> str:
+    evidence = title if abstract is None else f"{title} {abstract}"
+    normalized = " ".join(evidence.casefold().split())
     has_disease = any(term in normalized for term in _DISEASE_TERMS)
     has_intervention = any(term in normalized for term in _INTERVENTION_TERMS)
-    return "passed" if has_disease and has_intervention else "insufficient_title_evidence"
+    return "passed" if has_disease and has_intervention else "insufficient_title_abstract_evidence"
 
 
 def _license_result(reported_license: str | None) -> str:
@@ -320,18 +326,18 @@ def _discovery_limit(payload: dict[str, object]) -> int:
         return _required_positive_int(payload, "limit")
     if batch_limit is not None:
         return _required_positive_int(payload, "requested_limit")
-    raise CandidateReviewError("Candidate input is missing required discovery limits.")
-
-
-def _required_nonnegative_int(payload: dict[str, object], key: str) -> int:
-    value = payload.get(key)
-    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-        raise CandidateReviewError("Candidate input contains an invalid page offset.")
-    return value
+    raise CandidateReviewError("Candidate input is missing a discovery limit.")
 
 
 def _required_positive_int(payload: dict[str, object], key: str) -> int:
     value = payload.get(key)
     if not isinstance(value, int) or isinstance(value, bool) or value < 1:
-        raise CandidateReviewError("Candidate input contains an invalid discovery limit.")
+        raise CandidateReviewError("Candidate input contains malformed discovery metadata.")
+    return value
+
+
+def _required_nonnegative_int(payload: dict[str, object], key: str) -> int:
+    value = payload.get(key)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise CandidateReviewError("Candidate input contains malformed discovery metadata.")
     return value
