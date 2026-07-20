@@ -48,6 +48,7 @@ class PubmedCandidate:
 
     pmid: str
     title: str
+    abstract: str | None
     authors: tuple[str, ...]
     publication_year: int | None
     venue: str | None
@@ -88,6 +89,7 @@ class DiscoveryResult:
 @dataclass(frozen=True)
 class _PubmedMetadata:
     title: str
+    abstract: str | None
     authors: tuple[str, ...]
     publication_year: int | None
     venue: str | None
@@ -136,13 +138,14 @@ class PubmedPmcDiscoveryService:
 
         candidates: list[PubmedCandidate] = []
         for pmid in pmids:
-            record = metadata.get(pmid, _PubmedMetadata("", (), None, None, None))
+            record = metadata.get(pmid, _PubmedMetadata("", None, (), None, None, None))
             pmcid = pmc_links.get(pmid)
             oa = self._fetch_oa_record(pmcid) if pmcid else None
             candidates.append(
                 PubmedCandidate(
                     pmid=pmid,
                     title=record.title,
+                    abstract=record.abstract,
                     authors=record.authors,
                     publication_year=record.publication_year,
                     venue=record.venue,
@@ -198,6 +201,7 @@ class PubmedPmcDiscoveryService:
         for article in xml_root.findall(".//PubmedArticle"):
             pmid = _element_text(article.find(".//PMID"))
             title = _flatten_text(article.find(".//ArticleTitle"))
+            abstract = _abstract_text(article)
             authors = tuple(
                 name
                 for author in article.findall(".//Article/AuthorList/Author")
@@ -213,6 +217,7 @@ class PubmedPmcDiscoveryService:
             if pmid:
                 records[pmid] = _PubmedMetadata(
                     title=title,
+                    abstract=abstract,
                     authors=authors,
                     publication_year=publication_year,
                     venue=venue,
@@ -369,6 +374,18 @@ def _author_name(author: ET.Element) -> str:
     fore = _element_text(author.find("ForeName"))
     last = _element_text(author.find("LastName"))
     return " ".join(part for part in (fore, last) if part)
+
+
+def _abstract_text(article: ET.Element) -> str | None:
+    sections: list[str] = []
+    for element in article.findall(".//Article/Abstract/AbstractText"):
+        text = _flatten_text(element)
+        if not text:
+            continue
+        label = (element.attrib.get("Label") or element.attrib.get("NlmCategory") or "").strip()
+        sections.append(f"{label}: {text}" if label else text)
+    normalized = " ".join(sections).strip()
+    return normalized or None
 
 
 def _publication_year(article: ET.Element) -> int | None:
