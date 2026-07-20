@@ -25,7 +25,7 @@ python -m knowledge_engine.candidate_review_cli \
   --output work/m14/candidate-review.json
 ```
 
-The requested unique-candidate limit may be between 1 and 5,000. The GitHub workflow enforces a minimum of 150 for mass-discovery runs. PubMed discovery pages remain bounded to at most 100 records. PMID-to-PMCID conversion uses the official PMC ID Converter in deterministic batches of at most 100 PMIDs, below the service's documented 200-ID limit.
+The requested unique-candidate limit may be between 1 and 5,000. The GitHub workflow enforces a minimum of 150 for mass-discovery runs. PubMed discovery pages remain bounded to at most 100 records. PMID-to-PMCID conversion requests are subdivided into deterministic batches of at most 100 PMIDs, below the official PMC ID Converter limit of 200 identifiers per request.
 
 ## Deterministic provider sequence
 
@@ -33,18 +33,20 @@ For each bounded page, the workflow:
 
 1. requests PubMed PMIDs in stable result order using the explicit PMC OA Subset filter;
 2. fetches bibliographic metadata from PubMed EFetch;
-3. submits the page's PMIDs to the official PMC ID Converter in bounded batches;
-4. reconciles every returned `requested-id`, PMID, and PMCID before accepting the mapping;
-5. merges non-overlapping conversion results back into the original PubMed page order;
-6. queries the official PMC OA service separately for each resolved PMCID;
-7. records PubMed metadata, PMC identifier conversion, and PMC OA evidence as separate provider sources;
-8. preserves the first occurrence of each PMID across discovery pages;
-9. removes cross-page duplicate PMIDs;
-10. continues until the requested unique count is reached;
-11. writes one deterministic discovery document and adjudication worksheet;
-12. reconciles discovery, resolver, OA, and decision counts before artifact upload.
+3. subdivides the page into PMC ID Converter batches of at most 100 PMIDs;
+4. resolves each PMID through the official PMC ID Converter;
+5. normalizes numeric returned PMID fields before reconciling them with string `requested-id` fields;
+6. reconciles every returned identifier record to one requested PMID and at most one PMCID;
+7. merges non-overlapping batch results back into the original PubMed page order;
+8. queries the official PMC OA service separately for each resolved PMCID;
+9. records PubMed metadata, PMC identifier conversion, and PMC OA evidence as separate provider sources;
+10. preserves the first occurrence of each PMID across discovery pages;
+11. removes cross-page duplicate PMIDs;
+12. continues until the requested unique count is reached;
+13. writes one deterministic discovery document and adjudication worksheet;
+14. reconciles discovery, resolver, OA, and decision counts before artifact upload.
 
-The resolver never infers PMCID identity from title or DOI similarity. Missing conversions remain unresolved. Conflicting, duplicate, or malformed mappings fail closed. Transient status codes, timeouts, incomplete response bodies, and other bounded transport failures are retried at most three times with NCBI-compliant request pacing.
+Transient status codes, timeouts, incomplete response bodies, and other bounded transport failures are retried at most three times with NCBI-compliant request pacing. Provider errors remain sanitized while naming the failed operation category.
 
 ## Coverage measurements
 
@@ -63,11 +65,29 @@ The summary records:
 
 Coverage denominators are the filtered candidate count in the same run. A PubMed filter match is not treated as PMC OA evidence until the PMID resolves to a PMCID and the official PMC OA response reconciles to that PMCID.
 
+## Measured 500-citation result
+
+Exact-head M14 run `29731402049` on commit `3c7b3a22861259d1792656b2546aca1cd83508eb` produced:
+
+- candidate count: 500;
+- fetched pages: 5;
+- duplicate PMIDs removed: 0;
+- PMCID resolved: 500;
+- PMCID resolution rate: 1.000000;
+- PMC OA verified: 491;
+- PMC OA verification rate: 0.982000;
+- accepted: 18;
+- rejected: 9;
+- held: 473;
+- exhausted: false.
+
+This confirms the identifier resolver is no longer the primary yield bottleneck. The high held count now belongs to later scientific-scope, license, or full-text adjudication policy and is outside this resolver-repair task.
+
 ## Historical measured limitation
 
 The first 500-record run using the official PubMed PMC OA filter returned 500 citations, but the earlier ELink request sent one comma-separated PMID value while parsing the response as if source-specific linksets had been requested. That request shape resolved only five PMCIDs and therefore verified only five PMC OA records. None satisfied the complete title-scope acceptance rule.
 
-Repeated-ID ELink requests then exposed incomplete HTTP reads even after chunking and bounded retry. The resolver now uses the official PMC ID Converter's purpose-built multi-ID endpoint for PMID-to-PMCID mapping, while retaining the PMC OA service as the separate license and downloadable-resource evidence source.
+Repeated-ID ELink requests then exposed incomplete HTTP reads. The implementation moved to the official PMC ID Converter, corrected its canonical no-redirect endpoint, and normalized its documented mixed string/numeric identifier response shape.
 
 This task repairs the source-to-target linkage contract and measures the resulting coverage. It does not weaken license, identity, URL, provenance, or scientific-scope rules.
 
