@@ -38,6 +38,7 @@ def _candidate() -> dict[str, object]:
     return {
         "pmid": "100",
         "title": "GLP-1 receptor agonist treatment for obesity and weight loss",
+        "abstract": None,
         "doi": "10.1000/example",
         "pmcid": "PMC100",
         "open_access": True,
@@ -60,6 +61,7 @@ def test_complete_oa_candidate_is_accepted(tmp_path: Path) -> None:
     assert worksheet.source_limit == 25
     item = worksheet.items[0]
     assert item.pmid == "100"
+    assert item.abstract is None
     assert item.reported_license == "CC BY 4.0"
     assert item.decision == "accepted"
     assert item.reason_codes == ("ALL_REQUIRED_RULES_PASSED",)
@@ -83,6 +85,23 @@ def test_non_glp1_metabolic_therapy_candidate_is_accepted(tmp_path: Path) -> Non
 
     assert worksheet.items[0].decision == "accepted"
     assert worksheet.items[0].inclusion_rule_result == "passed"
+
+
+def test_abstract_can_supply_complete_scientific_scope_evidence(tmp_path: Path) -> None:
+    candidate = _candidate()
+    candidate["title"] = "Cardiovascular outcomes in a randomized clinical trial"
+    candidate["abstract"] = (
+        "Adults with obesity received semaglutide therapy or placebo for 68 weeks."
+    )
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.abstract == candidate["abstract"]
+    assert item.decision == "accepted"
+    assert item.inclusion_rule_result == "passed"
 
 
 def test_metadata_only_candidate_is_explicitly_rejected(tmp_path: Path) -> None:
@@ -110,6 +129,7 @@ def test_metadata_only_candidate_is_explicitly_rejected(tmp_path: Path) -> None:
 def test_oa_candidate_with_insufficient_scope_evidence_is_held(tmp_path: Path) -> None:
     candidate = _candidate()
     candidate["title"] = "Cardiovascular outcomes in a randomized clinical trial"
+    candidate["abstract"] = "Participants were followed for cardiovascular events."
     candidates = tmp_path / "candidates.json"
     _write_candidates(candidates, [candidate])
 
@@ -117,6 +137,7 @@ def test_oa_candidate_with_insufficient_scope_evidence_is_held(tmp_path: Path) -
 
     item = worksheet.items[0]
     assert item.decision == "held"
+    assert item.inclusion_rule_result == "insufficient_title_abstract_evidence"
     assert item.reason_codes == ("SCIENTIFIC_SCOPE_INSUFFICIENT",)
     assert item.unresolved_ambiguities == ("scientific_relevance",)
 
