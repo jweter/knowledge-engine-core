@@ -3,6 +3,8 @@
 This document tracks known technical debt for the current Phase 1 prerelease.
 Debt is not automatically bad. Some debt is the correct tradeoff while the project
 is pre-1.0, provided it remains visible and is revisited when evidence justifies it.
+This is the single authoritative debt register; the former `docs/pain_points.txt`
+register has been retired to prevent duplicate or contradictory status.
 
 ## Critical
 
@@ -57,6 +59,19 @@ Resolved by M9 and extended by M10–M13. Validated local PDFs now import throug
 persisted run/item state, parser and persistence outcomes are recorded, duplicate
 decisions occur before persistence, and linked resume/retry and bounded rehearsal
 reporting are available.
+
+### Architecture documentation lagged current Phase 1 modules
+
+Resolved by the audit documentation reconciliation. `docs/architecture.md` now
+records corpus validation, import-run persistence, duplicate resolution, PubMed/PMC
+discovery and acquisition boundaries, and optional Drive-backup infrastructure.
+
+### Drive-backup work lacked roadmap traceability
+
+Resolved at the documentation level by identifying the subsystem as optional
+operator durability support for local SQLite backup bundles. It does not alter
+scientific-ingestion semantics. Any expansion beyond backup transport and recovery
+support still requires a dedicated roadmap decision or ADR.
 
 ## Medium
 
@@ -131,6 +146,19 @@ or stable text spans.
 Eventual fix: add page-level extraction identity before Phase 2 claim/evidence work,
 not as part of the current bounded rehearsal.
 
+### One-off GitHub Actions workflows are not classified
+
+The workflow directory contains recurring quality/rehearsal workflows alongside
+historical one-off diagnostic and patch workflows.
+
+Why it matters: contributors cannot immediately distinguish load-bearing automation
+from retained implementation history, and obsolete workflows increase maintenance
+and accidental-execution risk.
+
+Eventual fix: after M14 is stable, inventory every workflow, retain recurring
+operational workflows, archive evidence in documentation where needed, and remove
+obsolete remote-patch or diagnostic workflows in a dedicated cleanup PR.
+
 ## Low
 
 ### Search snippets rely on SQLite FTS behavior
@@ -162,3 +190,14 @@ confuse future command resolution on that machine.
 
 Eventual fix: remove stale entries from an elevated shell or the Windows
 Environment Variables UI.
+
+### Typer and Click compatibility pin
+
+Typer 0.12.x previously failed with newer Click versions, so Click remains bounded
+to the verified compatible range.
+
+Why it matters: dependency pins can conceal future compatibility improvements or
+security updates if they are never revisited.
+
+Eventual fix: retest the CLI after a deliberate Typer upgrade and loosen the Click
+constraint only when the full Quality workflow remains green.
