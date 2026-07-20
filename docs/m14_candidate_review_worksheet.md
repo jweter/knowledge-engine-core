@@ -4,6 +4,8 @@
 
 This step converts bounded PubMed/PMC discovery output into a deterministic adjudication worksheet. The worksheet supports repeatable machine evaluation of scientific scope, identifier consistency, reusable-license evidence, approved full-text location, and duplicate risk.
 
+The active M14 scientific scope is **Obesity and Metabolic-Disease Therapeutics**. GLP-1 receptor agonists remain a named subtopic alongside treatment evidence for overweight, type 2 diabetes, metabolic syndrome, metformin, SGLT2 inhibitors, and other explicitly allowlisted therapeutic terms.
+
 It advances M14 from discovery evidence to explicit `accepted`, `rejected`, or `held` decisions. It does not download PDFs, modify `sources.csv`, perform ingestion, or collapse evidence from separate providers into one trust category.
 
 ## Command
@@ -60,10 +62,13 @@ No reviewer identifier, review note, review timestamp, or owner decision is requ
 
 ## Initial deterministic ruleset
 
-The first ruleset is `m14-candidate-adjudication-v1`.
+The active ruleset is `m14-candidate-adjudication-v2`.
 
 - `metadata_only` records are rejected for the PMC OA acquisition path with `NO_VERIFIED_REUSABLE_FULL_TEXT`.
-- PMC OA records are accepted only when title-scope evidence, PMCID identity evidence, an allowlisted CC license, and an official NCBI HTTPS PDF URL all pass.
+- Scientific title evidence passes only when a declared metabolic-disease term and a declared treatment or therapeutic term are both present.
+- Disease terms include obesity, overweight, type 2 diabetes, and metabolic syndrome.
+- Therapeutic terms include general treatment language plus named GLP-1 therapies, metformin, and SGLT2 terminology.
+- PMC OA records are accepted only when scientific title evidence, PMCID identity evidence, an allowlisted CC license, and an official NCBI HTTPS PDF URL all pass.
 - Incomplete or unsupported OA evidence produces `held`; it does not request human intervention.
 - Exact duplicate PMIDs or PMCIDs remain malformed-input errors because the discovery artifact must reconcile before adjudication.
 
