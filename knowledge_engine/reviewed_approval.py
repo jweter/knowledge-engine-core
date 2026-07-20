@@ -142,8 +142,10 @@ def _required_string(row: dict[str, object], field: str) -> str:
 
 def _required_string_list(row: dict[str, object], field: str) -> tuple[str, ...]:
     value = row.get(field)
-    if not isinstance(value, list) or not value or not all(
-        isinstance(item, str) and item.strip() for item in value
+    if (
+        not isinstance(value, list)
+        or not value
+        or not all(isinstance(item, str) and item.strip() for item in value)
     ):
         raise ReviewedApprovalError("Accepted adjudication is missing required evidence.")
     return tuple(item.strip() for item in value)
