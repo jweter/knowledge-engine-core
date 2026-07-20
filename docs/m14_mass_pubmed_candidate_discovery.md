@@ -56,6 +56,12 @@ Exact-head M14 run `29764185659` produced:
 
 The supply prerequisite is met with 89 accepted records above the required 500. Excess accepted records remain in the worksheet but are not selected automatically.
 
+## Measured workflow timeout
+
+Exact-head M14 run `29774362242` on PR #74 was cancelled while bounded discovery was still running. The job began at approximately 20:24 UTC and uploaded its partial artifact at approximately 20:54 UTC, matching the former 30-minute job timeout. Adjudication, exactly-500 selection, and summary reconciliation were therefore skipped.
+
+The job timeout is now 45 minutes. This is measured execution headroom for the same bounded 3,250-candidate query and unchanged rules; it does not alter provider, corpus, selection, licensing, or ingestion semantics.
+
 ## Temporary artifact
 
 The workflow uploads:
