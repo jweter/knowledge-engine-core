@@ -1,35 +1,41 @@
-# Exclusion Criteria
+# Exclusion and Hold Criteria
 
-A source should be excluded from the GLP-1 Weight Loss Prototype Corpus when any
-of the following apply.
+A source is rejected or held from the Obesity and Metabolic-Disease
+Therapeutics Corpus when any condition below applies.
 
-## Scientific Scope Exclusions
+## Deterministic Scientific Rejection or Hold Conditions
 
-- The source does not address GLP-1 receptor agonists or closely related
-  GLP-1-based therapies.
-- The source does not report, analyze, or summarize body weight, BMI, or percent
-  body weight change.
-- The source focuses only on mechanism without human body weight outcomes.
-- The source focuses only on safety, tolerability, cost, adherence, or policy
-  without reporting body weight outcomes.
+- The title does not identify obesity, overweight, type 2 diabetes, metabolic
+  syndrome, or another approved metabolic-disease scope term.
+- The title does not identify a treatment, therapy, intervention,
+  pharmacotherapy, or named therapeutic agent covered by the active ruleset.
 - The source is limited to pediatric populations.
-- The source cannot be reasonably connected to adults with overweight or obesity.
+- The source is type 1 diabetes-specific without evidence applicable to the
+  committed Phase 1 scope.
+- The source is mechanism-only and does not address a named therapeutic or
+  clinical intervention.
+- The source is an editorial, news article, marketing page, or unsupported
+  opinion piece rather than primary or synthesized evidence.
 
-## Source Quality Exclusions
+Insufficient title evidence produces `held`, not an invented scientific
+conclusion. Held records are automatically deferred while discovery continues.
 
-- The source is an editorial, news article, marketing page, or opinion piece
-  without primary or synthesized evidence.
-- The source lacks enough bibliographic information to cite.
-- The source is a duplicate of another selected source.
-- The source is retracted or has a serious correction that makes it unsuitable
-  for the prototype, unless the purpose is to represent contradiction or
-  uncertainty.
+## Identity and Duplicate Conditions
 
-## Legal and Practical Exclusions
+- Required PubMed or PMC identity evidence is missing or conflicting.
+- The PMID or PMCID duplicates an already selected record.
+- A probable study-level duplicate remains unresolved by deterministic evidence.
+- The source is retracted or has a serious correction that makes it unsuitable.
 
-- The source cannot be used legally for local research.
-- The license or usage status is unknown after reasonable review.
-- The PDF cannot be obtained or referenced reproducibly.
-- The file is damaged in a way that prevents basic text extraction and no
-  alternative accessible representation is available.
+## Legal and Practical Conditions
 
+- PMC Open Access membership is not verified.
+- The license is missing, ambiguous, unsupported, or not allowlisted.
+- The full-text URL is missing or is not an approved official HTTPS resource.
+- The PDF cannot be acquired reproducibly.
+- The file is not a readable PDF payload or fails bounded file validation.
+
+Records with no verified reusable full text are explicitly `rejected` for the
+current acquisition path. Conflicting or incomplete evidence is `held`. Neither
+outcome requires owner action before the first working version, and neither can
+authorize acquisition.
