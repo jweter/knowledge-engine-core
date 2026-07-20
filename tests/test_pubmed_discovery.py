@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
+from http.client import IncompleteRead
 
 import pytest
 
@@ -21,7 +22,7 @@ class FakeResponse:
 
 
 class FakeTransport(GetTransport):
-    def __init__(self, responses: list[FakeResponse]) -> None:
+    def __init__(self, responses: list[FakeResponse | Exception]) -> None:
         self.responses = responses
         self.urls: list[str] = []
 
@@ -35,7 +36,10 @@ class FakeTransport(GetTransport):
     ) -> FakeResponse:
         del headers, timeout_seconds, max_response_bytes
         self.urls.append(url)
-        return self.responses.pop(0)
+        response = self.responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
 
 
 def _service(
@@ -268,6 +272,20 @@ def test_discovery_retries_bounded_transient_provider_failures() -> None:
 
     assert result.candidates == ()
     assert len(transport.urls) == 3
+
+
+def test_discovery_retries_incomplete_response_bodies() -> None:
+    transport = FakeTransport(
+        [
+            IncompleteRead(b"partial"),
+            _search_response(),
+        ]
+    )
+
+    result = _service(transport, max_attempts=2).discover("semaglutide obesity", limit=1)
+
+    assert result.candidates == ()
+    assert len(transport.urls) == 2
 
 
 def test_discovery_rejects_unbounded_or_empty_requests() -> None:
