@@ -8,10 +8,35 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
-ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v1"
+ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v2"
 _ALLOWED_LICENSE_PREFIXES = ("CC BY", "CC0")
-_GLP1_TERMS = ("glp-1", "glp1", "glucagon-like peptide-1")
-_WEIGHT_TERMS = ("obesity", "obese", "weight loss", "body weight", "adiposity")
+_DISEASE_TERMS = (
+    "obesity",
+    "obese",
+    "overweight",
+    "type 2 diabetes",
+    "type ii diabetes",
+    "t2d",
+    "metabolic syndrome",
+)
+_INTERVENTION_TERMS = (
+    "treatment",
+    "therapy",
+    "therapeutic",
+    "intervention",
+    "pharmacotherapy",
+    "drug",
+    "medication",
+    "glp-1",
+    "glp1",
+    "glucagon-like peptide-1",
+    "semaglutide",
+    "liraglutide",
+    "tirzepatide",
+    "metformin",
+    "sglt2",
+    "sodium-glucose cotransporter 2",
+)
 
 
 class CandidateReviewError(RuntimeError):
@@ -216,10 +241,10 @@ def _adjudicate(
 
 
 def _scientific_scope(title: str) -> str:
-    normalized = title.casefold()
-    has_glp1 = any(term in normalized for term in _GLP1_TERMS)
-    has_weight = any(term in normalized for term in _WEIGHT_TERMS)
-    return "passed" if has_glp1 and has_weight else "insufficient_title_evidence"
+    normalized = " ".join(title.casefold().split())
+    has_disease = any(term in normalized for term in _DISEASE_TERMS)
+    has_intervention = any(term in normalized for term in _INTERVENTION_TERMS)
+    return "passed" if has_disease and has_intervention else "insufficient_title_evidence"
 
 
 def _license_result(reported_license: str | None) -> str:
@@ -240,6 +265,9 @@ def _full_text_result(pdf_url: str | None) -> str:
     if (
         parsed.scheme != "https"
         or parsed.hostname != "ftp.ncbi.nlm.nih.gov"
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.port not in (None, 443)
         or not parsed.path.lower().endswith(".pdf")
     ):
         return "invalid_approved_pdf_url"
