@@ -119,6 +119,24 @@ def test_selection_limit_must_be_positive(tmp_path: Path) -> None:
         export_reviewed_approvals(worksheet, selection_limit=0)
 
 
+def test_boolean_candidate_count_is_rejected(tmp_path: Path) -> None:
+    worksheet = tmp_path / "review.json"
+    worksheet.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "rules_version": RULES_VERSION,
+                "candidate_count": True,
+                "items": [_accepted()],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ReviewedApprovalError, match="count does not reconcile"):
+        export_reviewed_approvals(worksheet)
+
+
 def test_unsupported_decision_stops_export(tmp_path: Path) -> None:
     item = _accepted()
     item["decision"] = "pending"
