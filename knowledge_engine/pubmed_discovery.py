@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+import time
 import xml.etree.ElementTree as ET
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from typing import Protocol
 from urllib.parse import urlencode
@@ -17,6 +18,7 @@ DEFAULT_HEADERS = {
     "Accept": "application/json, application/xml",
     "User-Agent": "knowledge-engine-core/0.2",
 }
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 
 
 class NcbiDiscoveryError(RuntimeError):
@@ -98,10 +100,21 @@ class PubmedPmcDiscoveryService:
         *,
         timeout_seconds: float = 20.0,
         max_response_bytes: int = 5_000_000,
+        request_interval_seconds: float = 0.34,
+        max_attempts: int = 3,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
+        if request_interval_seconds < 0:
+            raise ValueError("NCBI request interval must be non-negative.")
+        if max_attempts < 1:
+            raise ValueError("NCBI max attempts must be positive.")
         self.transport = transport
         self.timeout_seconds = timeout_seconds
         self.max_response_bytes = max_response_bytes
+        self.request_interval_seconds = request_interval_seconds
+        self.max_attempts = max_attempts
+        self.sleep = sleep
+        self._request_count = 0
 
     def discover(self, query: str, *, limit: int, retstart: int = 0) -> DiscoveryResult:
         """Return a bounded, deterministic page of candidates."""
@@ -225,7 +238,7 @@ class PubmedPmcDiscoveryService:
             if not isinstance(linkset, dict):
                 raise NcbiDiscoveryError("PubMed linkage response was malformed.")
             ids = linkset.get("ids")
-            databases = linkset.get("linksetdbs")
+            databases = linkset.get("linksetdbs", [])
             if not isinstance(ids, list) or len(ids) != 1 or not isinstance(databases, list):
                 raise NcbiDiscoveryError("PubMed linkage response was malformed.")
             pmid = str(ids[0])
@@ -283,18 +296,24 @@ class PubmedPmcDiscoveryService:
             raise NcbiDiscoveryError("NCBI returned malformed XML.") from exc
 
     def _get(self, url: str) -> TransportResponse:
-        try:
-            response = self.transport.get(
-                url=url,
-                headers=DEFAULT_HEADERS,
-                timeout_seconds=self.timeout_seconds,
-                max_response_bytes=self.max_response_bytes,
-            )
-        except (OSError, TimeoutError) as exc:
-            raise NcbiDiscoveryError("NCBI request failed.") from exc
-        if response.status_code != 200:
-            raise NcbiDiscoveryError("NCBI request returned a non-success status.")
-        return response
+        for attempt in range(self.max_attempts):
+            if self._request_count and self.request_interval_seconds:
+                self.sleep(self.request_interval_seconds)
+            self._request_count += 1
+            try:
+                response = self.transport.get(
+                    url=url,
+                    headers=DEFAULT_HEADERS,
+                    timeout_seconds=self.timeout_seconds,
+                    max_response_bytes=self.max_response_bytes,
+                )
+            except (OSError, TimeoutError) as exc:
+                raise NcbiDiscoveryError("NCBI request failed.") from exc
+            if response.status_code == 200:
+                return response
+            if response.status_code not in _RETRYABLE_STATUS_CODES or attempt + 1 == self.max_attempts:
+                raise NcbiDiscoveryError("NCBI request returned a non-success status.")
+        raise NcbiDiscoveryError("NCBI request retry state was invalid.")
 
 
 @dataclass(frozen=True)
