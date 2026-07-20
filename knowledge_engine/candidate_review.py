@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
-
 ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v1"
 _ALLOWED_LICENSE_PREFIXES = ("CC BY", "CC0")
 _GLP1_TERMS = ("glp-1", "glp1", "glucagon-like peptide-1")
@@ -45,11 +44,6 @@ class CandidateReviewItem:
     duplicate_rule_result: str
     evidence_provenance: tuple[str, ...]
     unresolved_ambiguities: tuple[str, ...]
-    inclusion_review: str = ""
-    license_review: str = ""
-    identity_review: str = ""
-    reviewer: str = ""
-    reviewed_at: str = ""
 
 
 @dataclass(frozen=True)
@@ -232,11 +226,7 @@ def _license_result(reported_license: str | None) -> str:
     if reported_license is None:
         return "incomplete_missing_license"
     normalized = " ".join(reported_license.upper().split())
-    return (
-        "passed"
-        if normalized.startswith(_ALLOWED_LICENSE_PREFIXES)
-        else "unsupported_license_basis"
-    )
+    return "passed" if normalized.startswith(_ALLOWED_LICENSE_PREFIXES) else "unsupported_license_basis"
 
 
 def _full_text_result(pdf_url: str | None) -> str:
