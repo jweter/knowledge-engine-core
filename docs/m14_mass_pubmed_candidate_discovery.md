@@ -6,7 +6,7 @@ Use this workflow when M14 needs more than one bounded PubMed page. It aggregate
 
 The M14 rehearsal scope is **Obesity and Metabolic-Disease Therapeutics**. GLP-1 receptor agonists remain the first named subtopic, but discovery also covers treatment evidence for overweight, type 2 diabetes, and metabolic syndrome so the project can reach its first 500 legally reusable full texts without weakening evidence standards.
 
-The default query includes PubMed's `pmc open access[filter]`. This moves the reusable-full-text constraint into discovery instead of spending most of each batch on metadata-only records that the acquisition policy must reject.
+The default PubMed query includes NCBI's documented `pubmed pmc open access[filter]`. This moves the reusable-full-text constraint into discovery instead of spending most of each batch on metadata-only records that the acquisition policy must reject.
 
 The workflow does not download PDFs, modify `sources.csv`, create acquisition approvals, or perform ingestion.
 
@@ -14,7 +14,7 @@ The workflow does not download PDFs, modify `sources.csv`, create acquisition ap
 
 ```bash
 python scripts/m14_pubmed_batch_discover.py \
-  --query '(obesity OR overweight OR "type 2 diabetes" OR "metabolic syndrome") AND (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR liraglutide OR tirzepatide OR metformin OR "SGLT2 inhibitor") AND pmc open access[filter]' \
+  --query '(obesity OR overweight OR "type 2 diabetes" OR "metabolic syndrome") AND (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR liraglutide OR tirzepatide OR metformin OR "SGLT2 inhibitor") AND pubmed pmc open access[filter]' \
   --limit 500 \
   --page-size 100 \
   --retstart 0 \
@@ -31,7 +31,7 @@ The requested unique-candidate limit may be between 1 and 5,000. The GitHub work
 
 The workflow:
 
-1. requests PubMed pages in stable result order using the explicit PMC OA filter;
+1. requests PubMed pages in stable result order using the explicit PMC OA Subset filter;
 2. fetches metadata and PMC Open Access evidence through the existing production service;
 3. preserves the first occurrence of each PMID;
 4. removes cross-page duplicate PMIDs;
