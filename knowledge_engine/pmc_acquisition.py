@@ -91,16 +91,16 @@ class PmcOaAcquisitionService:
     ) -> AcquisitionReceipt:
         """Validate approvals, stage every PDF, commit the batch, and return a receipt."""
 
-        if expected_count is not None and (
-            isinstance(expected_count, bool) or expected_count < 1
-        ):
+        if expected_count is not None and (isinstance(expected_count, bool) or expected_count < 1):
             raise AcquisitionError("Expected acquisition count must be at least 1.")
 
         candidates = _load_candidates(candidates_path)
         approvals = _load_approvals(approvals_path, expected_count=expected_count)
         plans = _build_plans(candidates, approvals)
         if expected_count is not None and len(plans) != expected_count:
-            raise AcquisitionError("Approval plan count does not match the expected acquisition count.")
+            raise AcquisitionError(
+                "Approval plan count does not match the expected acquisition count."
+            )
         _validate_output_directory(output_directory, plans)
 
         output_directory.mkdir(parents=True, exist_ok=True)
