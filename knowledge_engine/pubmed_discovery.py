@@ -311,7 +311,10 @@ class PubmedPmcDiscoveryService:
                 raise NcbiDiscoveryError("NCBI request failed.") from exc
             if response.status_code == 200:
                 return response
-            if response.status_code not in _RETRYABLE_STATUS_CODES or attempt + 1 == self.max_attempts:
+            if (
+                response.status_code not in _RETRYABLE_STATUS_CODES
+                or attempt + 1 == self.max_attempts
+            ):
                 raise NcbiDiscoveryError("NCBI request returned a non-success status.")
         raise NcbiDiscoveryError("NCBI request retry state was invalid.")
 
