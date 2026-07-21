@@ -29,6 +29,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed M14 bounded PubMed/PMC discovery retrying NCBI failures (including PMC
+  identifier conversion) with only the steady-state request pacing interval instead
+  of a real backoff; retries now use exponential backoff and failure messages
+  include the HTTP status code for diagnosability.
 - Fixed M14 PMC OA acquisition failing on every PDF request because NCBI relocated
   its legacy PMC FTP paths ahead of removing them in August 2026; acquisition now
   retries once against NCBI's confirmed `/pub/pmc/deprecated/` relocation, and
