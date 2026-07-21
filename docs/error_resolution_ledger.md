@@ -17,6 +17,7 @@ Use one entry per distinct failure. Record the first failing command, the exact 
 - **Fix:** Exact change that resolved the failure.
 - **Validation:** Commands, CI run, and commit that passed after the fix.
 - **Prevention / fast path:** What to check first if the symptom returns.
+- **Tracked as:** GitHub issue link (required whenever Status is `open` and the fix is deferred to a later session/PR; omit for `resolved` or `superseded`).
 - **Status:** resolved | open | superseded
 ```
 
