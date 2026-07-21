@@ -107,8 +107,8 @@ class PmcOaAcquisitionService:
         staged: list[tuple[_AcquisitionPlan, Path, AcquisitionReceiptItem]] = []
         committed: list[Path] = []
         try:
-            for plan in plans:
-                response = self._get_pdf(plan.pdf_url)
+            for ordinal, plan in enumerate(plans, start=1):
+                response = self._get_pdf(plan.pdf_url, pmcid=plan.pmcid, ordinal=ordinal)
                 if not response.body.startswith(PDF_SIGNATURE):
                     raise AcquisitionError("PMC OA resource was not a PDF payload.")
                 temporary = output_directory / f".{plan.filename}.tmp"
@@ -142,7 +142,7 @@ class PmcOaAcquisitionService:
         items = tuple(item for _, _, item in staged)
         return AcquisitionReceipt(schema_version=1, acquired_count=len(items), items=items)
 
-    def _get_pdf(self, url: str) -> TransportResponse:
+    def _get_pdf(self, url: str, *, pmcid: str, ordinal: int) -> TransportResponse:
         try:
             response = self.transport.get(
                 url=url,
@@ -151,9 +151,14 @@ class PmcOaAcquisitionService:
                 max_response_bytes=self.max_pdf_bytes,
             )
         except (OSError, TimeoutError) as exc:
-            raise AcquisitionError("PMC OA PDF request failed.") from exc
+            raise AcquisitionError(
+                f"PMC OA PDF request failed for approval {ordinal} ({pmcid})."
+            ) from exc
         if response.status_code != 200:
-            raise AcquisitionError("PMC OA PDF request returned a non-success status.")
+            raise AcquisitionError(
+                f"PMC OA PDF request returned a non-success status "
+                f"({response.status_code}) for approval {ordinal} ({pmcid})."
+            )
         return response
 
 

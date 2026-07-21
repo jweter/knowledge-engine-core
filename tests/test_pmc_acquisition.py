@@ -152,6 +152,22 @@ def test_non_pdf_payload_is_rejected_without_persisting_file(tmp_path: Path) -> 
     assert not (output / "PMC999.pdf").exists()
 
 
+def test_non_success_status_is_reported_with_status_code_and_locator(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path)
+    approvals = _write_approvals(tmp_path)
+    output = tmp_path / "papers"
+    transport = FakeTransport([FakeResponse(404, b"not found", {})])
+
+    with pytest.raises(AcquisitionError, match=r"non-success status \(404\).*approval 1.*PMC999"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=output,
+        )
+
+    assert not (output / "PMC999.pdf").exists()
+
+
 def test_second_download_failure_rolls_back_entire_batch(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path, count=2)
     approvals = _write_approvals(tmp_path, count=2)
@@ -164,6 +180,27 @@ def test_second_download_failure_rolls_back_entire_batch(tmp_path: Path) -> None
     )
 
     with pytest.raises(AcquisitionError, match="not a PDF"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=output,
+        )
+
+    assert list(output.iterdir()) == []
+
+
+def test_non_success_status_locator_uses_failing_approvals_ordinal(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path, count=2)
+    approvals = _write_approvals(tmp_path, count=2)
+    output = tmp_path / "papers"
+    transport = FakeTransport(
+        [
+            FakeResponse(200, b"%PDF-1.7\nfirst", {}),
+            FakeResponse(503, b"unavailable", {}),
+        ]
+    )
+
+    with pytest.raises(AcquisitionError, match=r"non-success status \(503\).*approval 2.*PMC1000"):
         PmcOaAcquisitionService(transport).acquire(
             candidates_path=candidates,
             approvals_path=approvals,
