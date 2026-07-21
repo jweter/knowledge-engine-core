@@ -23,14 +23,14 @@ The command refuses to overwrite an existing output unless `--force` is supplied
 The command contacts only allowlisted official NCBI HTTPS hosts:
 
 - `eutils.ncbi.nlm.nih.gov` for PubMed search, record retrieval, and PubMed-to-PMC linkage;
-- `www.ncbi.nlm.nih.gov` for the PMC Open Access Web Service;
-- `pmc.ncbi.nlm.nih.gov` as an allowed official PMC host.
+- `pmc.ncbi.nlm.nih.gov` for PMC identifier conversion;
+- `pmc-oa-opendata.s3.amazonaws.com` for the PMC Article Datasets Cloud Service, which resolves OA verification, license evidence, and PDF/XML download URLs (see `docs/architecture/adr/0004-migrate-pmc-oa-acquisition-to-cloud-service.md` for the full API contract and why this replaced the retired PMC OA Web Service).
 
 Redirects, URL credentials, non-HTTPS URLs, nonstandard ports, oversized responses, and unsupported hosts are rejected. Provider failures are returned as sanitized messages without raw payloads.
 
 ## Candidate states
 
-- `oa_verified`: the PubMed record links to a PMC record and the PMC OA service returned downloadable-resource evidence.
+- `oa_verified`: the PubMed record links to a PMC record and the PMC Cloud Service confirmed it is part of the PMC Open Access Subset (`is_pmc_openaccess`), with downloadable-resource evidence.
 - `metadata_only`: PubMed metadata was found, but reusable PMC OA evidence was not established.
 
 `oa_verified` is evidence for review, not automatic legal approval. A reviewer must still confirm the license, inclusion criteria, document identity, and intended use before promoting a source into `sources.csv`.

@@ -32,7 +32,7 @@ def _accepted(index: int = 100) -> dict[str, object]:
         "pmcid": f"PMC{index}",
         "open_access": True,
         "reported_license": "CC BY 4.0",
-        "pdf_url": f"https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_pdf/{index}.pdf",
+        "pdf_url": f"https://pmc-oa-opendata.s3.amazonaws.com/PMC{index}.1/PMC{index}.1.pdf",
         "discovery_status": "oa_verified",
         "decision": "accepted",
         "reason_codes": ["ALL_REQUIRED_RULES_PASSED"],
@@ -43,7 +43,7 @@ def _accepted(index: int = 100) -> dict[str, object]:
         "license_rule_result": "passed",
         "full_text_rule_result": "passed",
         "duplicate_rule_result": "passed_exact_identifier_uniqueness",
-        "evidence_provenance": ["pubmed_metadata", "pmc_oa_service"],
+        "evidence_provenance": ["pubmed_metadata", "pmc_cloud_service"],
         "unresolved_ambiguities": [],
     }
 

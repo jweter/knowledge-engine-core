@@ -20,7 +20,7 @@ The M14 approval artifact retains acquisition schema version 1 and records deter
 ```json
 {
   "schema_version": 1,
-  "rules_version": "m14-candidate-adjudication-v3",
+  "rules_version": "m14-candidate-adjudication-v4",
   "selection_rule": "accepted_in_worksheet_order",
   "source_candidate_count": 3250,
   "source_accepted_count": 589,
@@ -30,7 +30,7 @@ The M14 approval artifact retains acquisition schema version 1 and records deter
       "pmid": "12345678",
       "pmcid": "PMC1234567",
       "license": "CC BY",
-      "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_pdf/example.pdf",
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC1234567.1/PMC1234567.1.pdf",
       "filename": "PMC1234567.pdf"
     }
   ]
@@ -54,7 +54,7 @@ The command:
 1. validates both JSON inputs;
 2. cross-checks every approval against provider-derived candidate evidence;
 3. rejects unsafe URLs, duplicate identifiers, duplicate filenames, symlinks, and existing outputs;
-4. downloads only from the official `ftp.ncbi.nlm.nih.gov` HTTPS host;
+4. downloads only from the official `pmc-oa-opendata.s3.amazonaws.com` HTTPS host (NCBI's PMC Article Datasets Cloud Service — see `docs/architecture/adr/0004-migrate-pmc-oa-acquisition-to-cloud-service.md`);
 5. requires a `%PDF-` payload signature;
 6. stages the complete approved batch before making final PDF names visible;
 7. rolls back staged and committed PDFs when any batch item fails;

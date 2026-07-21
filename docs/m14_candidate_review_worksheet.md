@@ -62,7 +62,7 @@ No reviewer identifier, review note, review timestamp, or owner decision is requ
 
 ## Initial deterministic ruleset
 
-The active ruleset is `m14-candidate-adjudication-v3`.
+The active ruleset is `m14-candidate-adjudication-v4`.
 
 - `metadata_only` records are rejected for the PMC OA acquisition path with `NO_VERIFIED_REUSABLE_FULL_TEXT`.
 - Scientific evidence passes only when the combined PubMed title and abstract contain both a declared metabolic-disease term and a declared treatment or therapeutic term.
@@ -70,7 +70,7 @@ The active ruleset is `m14-candidate-adjudication-v3`.
 - Therapeutic terms include general treatment language plus named GLP-1 therapies, metformin, and SGLT2 terminology.
 - Missing abstracts do not fail by themselves; title evidence may still satisfy the same two-factor rule.
 - PubMed structured abstract sections are preserved in stable source order with their section labels when provided.
-- PMC OA records are accepted only when scientific title-plus-abstract evidence, PMCID identity evidence, an allowlisted CC license, and an official NCBI HTTPS PDF URL all pass.
+- PMC OA records are accepted only when scientific title-plus-abstract evidence, PMCID identity evidence, an allowlisted CC license, and an official PMC Cloud Service HTTPS PDF URL (`pmc-oa-opendata.s3.amazonaws.com`) all pass.
 - Incomplete or unsupported OA evidence produces `held`; it does not request human intervention.
 - Exact duplicate PMIDs or PMCIDs remain malformed-input errors because the discovery artifact must reconcile before adjudication.
 

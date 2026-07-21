@@ -49,7 +49,7 @@ def test_acquire_requires_exact_approval_and_writes_sanitized_receipt(tmp_path: 
         expected_count=1,
     )
 
-    assert transport.urls == ["https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf"]
+    assert transport.urls == ["https://pmc-oa-opendata.s3.amazonaws.com/PMC999.1/PMC999.1.pdf"]
     assert (output / "PMC999.pdf").read_bytes().startswith(b"%PDF-")
     assert receipt.acquired_count == 1
     assert receipt.items[0].pmid == "222"
@@ -121,6 +121,55 @@ def test_duplicate_pmcids_fail_before_network(tmp_path: Path) -> None:
     assert transport.urls == []
 
 
+def test_unallowlisted_pdf_host_fails_before_network(tmp_path: Path) -> None:
+    candidates_path = tmp_path / "candidates.json"
+    candidates_path.write_text(
+        json.dumps(
+            {
+                "candidates": [
+                    {
+                        "pmid": "222",
+                        "pmcid": "PMC999",
+                        "license": "CC BY",
+                        "pdf_url": "https://attacker.example/PMC999.pdf",
+                        "open_access": True,
+                        "status": "oa_verified",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    approvals_path = tmp_path / "approvals.json"
+    approvals_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "approvals": [
+                    {
+                        "pmid": "222",
+                        "pmcid": "PMC999",
+                        "license": "CC BY",
+                        "pdf_url": "https://attacker.example/PMC999.pdf",
+                        "filename": "PMC999.pdf",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    transport = FakeTransport([])
+
+    with pytest.raises(AcquisitionError, match="not an allowlisted"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates_path,
+            approvals_path=approvals_path,
+            output_directory=tmp_path / "papers",
+        )
+
+    assert transport.urls == []
+
+
 def test_duplicate_filenames_fail_before_network(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path, count=2)
     approvals = _write_approvals(tmp_path, count=2, duplicate_filename=True)
@@ -165,49 +214,7 @@ def test_non_success_status_is_reported_with_status_code_and_locator(tmp_path: P
             output_directory=output,
         )
 
-    assert transport.urls == ["https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf"]
-    assert not (output / "PMC999.pdf").exists()
-
-
-def test_legacy_path_404_falls_back_to_deprecated_ncbi_relocation(tmp_path: Path) -> None:
-    candidates = _write_candidates(tmp_path)
-    approvals = _write_approvals(tmp_path)
-    output = tmp_path / "papers"
-    transport = FakeTransport(
-        [FakeResponse(404, b"not found", {}), FakeResponse(200, b"%PDF-1.7\nbody", {})]
-    )
-
-    receipt = PmcOaAcquisitionService(transport).acquire(
-        candidates_path=candidates,
-        approvals_path=approvals,
-        output_directory=output,
-    )
-
-    assert transport.urls == [
-        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf",
-        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/example.pdf",
-    ]
-    assert receipt.acquired_count == 1
-    assert (output / "PMC999.pdf").read_bytes().startswith(b"%PDF-")
-
-
-def test_deprecated_fallback_failure_still_reports_original_locator(tmp_path: Path) -> None:
-    candidates = _write_candidates(tmp_path)
-    approvals = _write_approvals(tmp_path)
-    output = tmp_path / "papers"
-    transport = FakeTransport([FakeResponse(404, b"not found", {}), FakeResponse(404, b"gone", {})])
-
-    with pytest.raises(AcquisitionError, match=r"non-success status \(404\).*approval 1.*PMC999"):
-        PmcOaAcquisitionService(transport).acquire(
-            candidates_path=candidates,
-            approvals_path=approvals,
-            output_directory=output,
-        )
-
-    assert transport.urls == [
-        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf",
-        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/example.pdf",
-    ]
+    assert transport.urls == ["https://pmc-oa-opendata.s3.amazonaws.com/PMC999.1/PMC999.1.pdf"]
     assert not (output / "PMC999.pdf").exists()
 
 
@@ -282,7 +289,7 @@ def _write_candidates(
             "pmid": "222",
             "pmcid": "PMC999",
             "license": "CC BY",
-            "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf",
+            "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC999.1/PMC999.1.pdf",
             "open_access": True,
             "status": "oa_verified",
         }
@@ -293,7 +300,7 @@ def _write_candidates(
                 "pmid": "333",
                 "pmcid": "PMC999" if duplicate_pmcid else "PMC1000",
                 "license": "CC BY",
-                "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/second.pdf",
+                "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC1000.1/PMC1000.1.pdf",
                 "open_access": True,
                 "status": "oa_verified",
             }
@@ -317,7 +324,7 @@ def _write_approvals(
             "pmid": "222",
             "pmcid": "PMC999",
             "license": license_name,
-            "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf",
+            "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC999.1/PMC999.1.pdf",
             "filename": "PMC999.pdf",
         }
     ]
@@ -327,7 +334,7 @@ def _write_approvals(
                 "pmid": "333",
                 "pmcid": "PMC999" if duplicate_pmcid else "PMC1000",
                 "license": "CC BY",
-                "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/second.pdf",
+                "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC1000.1/PMC1000.1.pdf",
                 "filename": "PMC999.pdf" if duplicate_filename else "PMC1000.pdf",
             }
         )

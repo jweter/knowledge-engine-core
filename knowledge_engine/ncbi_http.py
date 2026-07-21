@@ -10,11 +10,18 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+PMC_CLOUD_PDF_HOST = "pmc-oa-opendata.s3.amazonaws.com"
+"""Public, world-readable S3 bucket host for NCBI's PMC Article Datasets Cloud
+Service (https://pmc.ncbi.nlm.nih.gov/tools/pmcaws/). Requires no AWS account,
+credentials, or SDK: it is reachable with ordinary unsigned HTTPS GET requests.
+This is the single source of truth for the expected PMC PDF host so discovery,
+approval, and acquisition cannot drift out of sync with each other."""
+
 NCBI_HOSTS = {
     "eutils.ncbi.nlm.nih.gov",
-    "ftp.ncbi.nlm.nih.gov",
     "pmc.ncbi.nlm.nih.gov",
     "www.ncbi.nlm.nih.gov",
+    PMC_CLOUD_PDF_HOST,
 }
 
 

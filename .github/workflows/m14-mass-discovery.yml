@@ -176,7 +176,7 @@ jobs:
           ):
               raise SystemExit('PMCID provenance does not reconcile.')
           if any(
-              candidate['open_access'] and candidate['oa_source'] != 'pmc_oa_service'
+              candidate['open_access'] and candidate['oa_source'] != 'pmc_cloud_service'
               for candidate in candidates
           ):
               raise SystemExit('PMC OA provenance does not reconcile.')

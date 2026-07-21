@@ -32,7 +32,7 @@ def test_cli_exports_reconciled_curation_draft(tmp_path: Path) -> None:
                         "pmcid": "PMC100",
                         "open_access": True,
                         "reported_license": "CC BY 4.0",
-                        "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_pdf/example.pdf",
+                        "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC100.1/PMC100.1.pdf",
                         "discovery_status": "oa_verified",
                         "decision": "accepted",
                         "reason_codes": ["ALL_REQUIRED_RULES_PASSED"],
@@ -43,7 +43,7 @@ def test_cli_exports_reconciled_curation_draft(tmp_path: Path) -> None:
                         "license_rule_result": "passed",
                         "full_text_rule_result": "passed",
                         "duplicate_rule_result": "passed_exact_identifier_uniqueness",
-                        "evidence_provenance": ["pubmed_metadata", "pmc_oa_service"],
+                        "evidence_provenance": ["pubmed_metadata", "pmc_cloud_service"],
                         "unresolved_ambiguities": [],
                     }
                 ],

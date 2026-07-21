@@ -11,11 +11,15 @@ from http.client import IncompleteRead
 from typing import Protocol
 from urllib.parse import urlencode, urlsplit
 
-from knowledge_engine.ncbi_http import TransportResponse
+from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST, TransportResponse
 
 EUTILS_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 PMC_ID_CONVERTER_URL = "https://pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles/"
-PMC_OA_URL = "https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi"
+PMC_CLOUD_BASE_URL = f"https://{PMC_CLOUD_PDF_HOST}"
+"""Base URL for NCBI's PMC Article Datasets Cloud Service. Replaces the
+retired PMC OA Web Service API (oa.fcgi), which NCBI is removing entirely in
+August 2026. See docs/architecture/adr/0004-migrate-pmc-oa-acquisition-to-cloud-service.md."""
+_S3_LIST_NAMESPACE = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
 DEFAULT_HEADERS = {
     "Accept": "application/json, application/xml",
     "User-Agent": "knowledge-engine-core/0.2",
@@ -162,7 +166,7 @@ class PubmedPmcDiscoveryService:
                     status="oa_verified" if oa else "metadata_only",
                     metadata_source="pubmed_efetch",
                     pmcid_source="pmc_id_converter" if pmcid else None,
-                    oa_source="pmc_oa_service" if oa else None,
+                    oa_source="pmc_cloud_service" if oa else None,
                 )
             )
         return DiscoveryResult(
@@ -284,28 +288,44 @@ class PubmedPmcDiscoveryService:
         return result
 
     def _fetch_oa_record(self, pmcid: str) -> _OaRecord | None:
-        root = self._get_xml(f"{PMC_OA_URL}?" + urlencode({"id": pmcid}))
-        matching_records = [
-            record for record in root.findall(".//record") if record.attrib.get("id") == pmcid
-        ]
-        if not matching_records:
+        version = self._latest_pmc_cloud_version(pmcid)
+        if version is None:
             return None
-        if len(matching_records) != 1:
-            raise NcbiDiscoveryError("PMC OA response did not reconcile.")
-        record = matching_records[0]
-        license_name = record.attrib.get("license") or None
-        pdf_url = None
-        xml_url = None
-        for link in record.findall("link"):
-            href = link.attrib.get("href")
-            if not href:
-                continue
-            normalized_href = href.replace("ftp://", "https://")
-            if link.attrib.get("format") == "pdf":
-                pdf_url = normalized_href
-            elif link.attrib.get("format") in {"tgz", "xml"}:
-                xml_url = normalized_href
-        return _OaRecord(license=license_name, pdf_url=pdf_url, xml_url=xml_url)
+        metadata = self._get_json(f"{PMC_CLOUD_BASE_URL}/metadata/{pmcid}.{version}.json")
+        if metadata.get("pmcid") != pmcid or metadata.get("version") != version:
+            raise NcbiDiscoveryError("PMC Cloud Service metadata did not reconcile.")
+        if metadata.get("is_pmc_openaccess") is not True:
+            return None
+        license_name = metadata.get("license_code")
+        if license_name is not None and not isinstance(license_name, str):
+            raise NcbiDiscoveryError("PMC Cloud Service metadata was malformed.")
+        return _OaRecord(
+            license=license_name,
+            pdf_url=_s3_metadata_url(metadata, "pdf_url"),
+            xml_url=_s3_metadata_url(metadata, "xml_url"),
+        )
+
+    def _latest_pmc_cloud_version(self, pmcid: str) -> int | None:
+        """Discover the highest PMC Cloud Service article version for a PMCID.
+
+        Most articles have exactly one version, but preprints and manuscripts
+        can accumulate several; NCBI's own documented workflow always looks
+        this up rather than assuming version 1
+        (https://pmc.ncbi.nlm.nih.gov/tools/pmcaws/).
+        """
+
+        root = self._get_xml(
+            f"{PMC_CLOUD_BASE_URL}/?"
+            + urlencode({"list-type": "2", "prefix": f"{pmcid}.", "delimiter": "/"})
+        )
+        versions: list[int] = []
+        for prefix_element in root.findall(".//s3:CommonPrefixes/s3:Prefix", _S3_LIST_NAMESPACE):
+            prefix = _element_text(prefix_element)
+            suffix = prefix.removeprefix(f"{pmcid}.").rstrip("/")
+            if not suffix.isdigit():
+                raise NcbiDiscoveryError("PMC Cloud Service listing did not reconcile.")
+            versions.append(int(suffix))
+        return max(versions) if versions else None
 
     def _get_json(self, url: str) -> dict[str, object]:
         response = self._get(url)
@@ -360,15 +380,18 @@ class PubmedPmcDiscoveryService:
 
 
 def _provider_operation(url: str) -> str:
-    path = urlsplit(url).path
+    parsed = urlsplit(url)
+    path = parsed.path
     if path.endswith("/esearch.fcgi"):
         return "PubMed search"
     if path.endswith("/efetch.fcgi"):
         return "PubMed metadata"
     if "/idconv/" in path:
         return "PMC identifier conversion"
-    if path.endswith("/oa.fcgi"):
-        return "PMC OA lookup"
+    if parsed.hostname == PMC_CLOUD_PDF_HOST:
+        if path.startswith("/metadata/"):
+            return "PMC Cloud Service metadata"
+        return "PMC Cloud Service listing"
     return "NCBI"
 
 
@@ -377,6 +400,23 @@ class _OaRecord:
     license: str | None
     pdf_url: str | None
     xml_url: str | None
+
+
+def _s3_metadata_url(metadata: dict[str, object], key: str) -> str | None:
+    value = metadata.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise NcbiDiscoveryError("PMC Cloud Service metadata was malformed.")
+    return _s3_uri_to_https(value)
+
+
+def _s3_uri_to_https(uri: str) -> str:
+    parsed = urlsplit(uri)
+    if parsed.scheme != "s3" or parsed.hostname != "pmc-oa-opendata":
+        raise NcbiDiscoveryError("PMC Cloud Service metadata contained an unexpected object URI.")
+    query = f"?{parsed.query}" if parsed.query else ""
+    return f"{PMC_CLOUD_BASE_URL}/{parsed.path.lstrip('/')}{query}"
 
 
 def _author_name(author: ET.Element) -> str:

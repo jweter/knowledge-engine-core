@@ -116,6 +116,41 @@ def _id_converter_response(*records: dict[str, object]) -> FakeResponse:
     return FakeResponse(200, json.dumps({"status": "ok", "records": list(records)}).encode(), {})
 
 
+def _s3_listing_response(pmcid: str, *versions: int) -> FakeResponse:
+    prefixes = "".join(
+        f"<CommonPrefixes><Prefix>{pmcid}.{version}/</Prefix></CommonPrefixes>"
+        for version in versions
+    )
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">'
+        f"{prefixes}</ListBucketResult>"
+    ).encode()
+    return FakeResponse(200, body, {})
+
+
+def _pmc_cloud_metadata_response(
+    *,
+    pmcid: str,
+    version: int,
+    is_pmc_openaccess: bool = True,
+    license_code: str | None = "CC BY",
+    pdf_key: str | None = "article.pdf",
+    xml_key: str | None = "article.xml",
+) -> FakeResponse:
+    payload: dict[str, object] = {
+        "pmcid": pmcid,
+        "version": version,
+        "is_pmc_openaccess": is_pmc_openaccess,
+        "license_code": license_code,
+    }
+    if pdf_key is not None:
+        payload["pdf_url"] = f"s3://pmc-oa-opendata/{pmcid}.{version}/{pdf_key}"
+    if xml_key is not None:
+        payload["xml_url"] = f"s3://pmc-oa-opendata/{pmcid}.{version}/{xml_key}"
+    return FakeResponse(200, json.dumps(payload).encode(), {})
+
+
 def test_discovery_returns_stable_reviewable_candidates() -> None:
     transport = FakeTransport(
         [
@@ -125,15 +160,13 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
                 {"requested-id": "222", "pmid": 222, "pmcid": "PMC999"},
                 {"requested-id": "111", "pmid": 111, "errmsg": "not found"},
             ),
-            FakeResponse(
-                200,
-                b"""
-                <OA><records><record id="PMC999" license="CC BY">
-                  <link format="pdf" href="ftp://ftp.ncbi.nlm.nih.gov/article.pdf" />
-                  <link format="tgz" href="ftp://ftp.ncbi.nlm.nih.gov/article.tar.gz" />
-                </record></records></OA>
-                """,
-                {},
+            _s3_listing_response("PMC999", 1),
+            _pmc_cloud_metadata_response(
+                pmcid="PMC999",
+                version=1,
+                license_code="CC BY",
+                pdf_key="PMC999.1.pdf",
+                xml_key="PMC999.1.xml",
             ),
         ]
     )
@@ -157,10 +190,15 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
     assert result.candidates[0].pmcid == "PMC999"
     assert result.candidates[0].open_access is True
     assert result.candidates[0].license == "CC BY"
-    assert result.candidates[0].pdf_url == "https://ftp.ncbi.nlm.nih.gov/article.pdf"
+    assert result.candidates[0].pdf_url == (
+        "https://pmc-oa-opendata.s3.amazonaws.com/PMC999.1/PMC999.1.pdf"
+    )
+    assert result.candidates[0].xml_url == (
+        "https://pmc-oa-opendata.s3.amazonaws.com/PMC999.1/PMC999.1.xml"
+    )
     assert result.candidates[0].metadata_source == "pubmed_efetch"
     assert result.candidates[0].pmcid_source == "pmc_id_converter"
-    assert result.candidates[0].oa_source == "pmc_oa_service"
+    assert result.candidates[0].oa_source == "pmc_cloud_service"
     assert result.candidates[1].title == "First trial"
     assert result.candidates[1].abstract is None
     assert result.candidates[1].publication_year == 2023
@@ -176,7 +214,9 @@ def test_discovery_returns_stable_reviewable_candidates() -> None:
     assert "ids=222%2C111" in transport.urls[2]
     assert "idtype=pmid" in transport.urls[2]
     assert "format=json" in transport.urls[2]
-    assert "id=PMC999" in transport.urls[3]
+    assert "prefix=PMC999." in transport.urls[3]
+    assert "list-type=2" in transport.urls[3]
+    assert transport.urls[4].endswith("/metadata/PMC999.1.json")
 
 
 def test_identifier_requests_are_chunked_and_reconciled() -> None:
@@ -233,17 +273,69 @@ def test_identifier_converter_rejects_duplicate_records() -> None:
         _service(transport)._link_pmc(["222"])
 
 
-def test_discovery_rejects_mismatched_pmc_oa_identity() -> None:
+def test_discovery_rejects_pmc_cloud_metadata_that_does_not_reconcile() -> None:
     transport = FakeTransport(
         [
             _search_response("222"),
             _metadata_response(),
             _id_converter_response({"requested-id": "222", "pmid": 222, "pmcid": "PMC999"}),
-            FakeResponse(
-                200,
-                b'<OA><records><record id="PMC1000" license="CC BY" /></records></OA>',
-                {},
+            _s3_listing_response("PMC999", 1),
+            _pmc_cloud_metadata_response(pmcid="PMC1000", version=1),
+        ]
+    )
+
+    with pytest.raises(NcbiDiscoveryError, match="did not reconcile"):
+        _service(transport).discover("semaglutide obesity", limit=1)
+
+
+def test_discovery_treats_non_open_access_record_as_absent() -> None:
+    transport = FakeTransport(
+        [
+            _search_response("222"),
+            _metadata_response(),
+            _id_converter_response({"requested-id": "222", "pmid": 222, "pmcid": "PMC999"}),
+            _s3_listing_response("PMC999", 1),
+            _pmc_cloud_metadata_response(
+                pmcid="PMC999", version=1, is_pmc_openaccess=False, license_code="TDM"
             ),
+        ]
+    )
+
+    result = _service(transport).discover("semaglutide obesity", limit=1)
+
+    assert result.candidates[0].pmcid == "PMC999"
+    assert result.candidates[0].open_access is False
+    assert result.candidates[0].license is None
+    assert result.candidates[0].oa_source is None
+    assert result.candidates[0].status == "metadata_only"
+
+
+def test_discovery_uses_latest_version_when_multiple_exist() -> None:
+    transport = FakeTransport(
+        [
+            _search_response("222"),
+            _metadata_response(),
+            _id_converter_response({"requested-id": "222", "pmid": 222, "pmcid": "PMC999"}),
+            _s3_listing_response("PMC999", 1, 2),
+            _pmc_cloud_metadata_response(pmcid="PMC999", version=2, pdf_key="PMC999.2.pdf"),
+        ]
+    )
+
+    result = _service(transport).discover("semaglutide obesity", limit=1)
+
+    assert result.candidates[0].pdf_url == (
+        "https://pmc-oa-opendata.s3.amazonaws.com/PMC999.2/PMC999.2.pdf"
+    )
+    assert transport.urls[4].endswith("/metadata/PMC999.2.json")
+
+
+def test_discovery_treats_missing_pmc_cloud_listing_as_absent() -> None:
+    transport = FakeTransport(
+        [
+            _search_response("222"),
+            _metadata_response(),
+            _id_converter_response({"requested-id": "222", "pmid": 222, "pmcid": "PMC999"}),
+            _s3_listing_response("PMC999"),
         ]
     )
 
@@ -253,6 +345,54 @@ def test_discovery_rejects_mismatched_pmc_oa_identity() -> None:
     assert result.candidates[0].open_access is False
     assert result.candidates[0].oa_source is None
     assert result.candidates[0].status == "metadata_only"
+
+
+def test_discovery_rejects_malformed_pmc_cloud_listing() -> None:
+    transport = FakeTransport(
+        [
+            _search_response("222"),
+            _metadata_response(),
+            _id_converter_response({"requested-id": "222", "pmid": 222, "pmcid": "PMC999"}),
+            FakeResponse(
+                200,
+                b'<?xml version="1.0" encoding="UTF-8"?>'
+                b'<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">'
+                b"<CommonPrefixes><Prefix>PMC999.latest/</Prefix></CommonPrefixes>"
+                b"</ListBucketResult>",
+                {},
+            ),
+        ]
+    )
+
+    with pytest.raises(NcbiDiscoveryError, match="did not reconcile"):
+        _service(transport).discover("semaglutide obesity", limit=1)
+
+
+def test_discovery_rejects_unexpected_object_uri_in_pmc_cloud_metadata() -> None:
+    transport = FakeTransport(
+        [
+            _search_response("222"),
+            _metadata_response(),
+            _id_converter_response({"requested-id": "222", "pmid": 222, "pmcid": "PMC999"}),
+            _s3_listing_response("PMC999", 1),
+            FakeResponse(
+                200,
+                json.dumps(
+                    {
+                        "pmcid": "PMC999",
+                        "version": 1,
+                        "is_pmc_openaccess": True,
+                        "license_code": "CC BY",
+                        "pdf_url": "https://attacker.example/PMC999.1.pdf",
+                    }
+                ).encode(),
+                {},
+            ),
+        ]
+    )
+
+    with pytest.raises(NcbiDiscoveryError, match="unexpected object URI"):
+        _service(transport).discover("semaglutide obesity", limit=1)
 
 
 def test_discovery_retries_bounded_transient_provider_failures() -> None:
