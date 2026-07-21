@@ -7,10 +7,11 @@ from pathlib import Path
 
 import pytest
 
+from knowledge_engine.ncbi_http import TransportResponse
 from knowledge_engine.pmc_acquisition import AcquisitionError, PmcOaAcquisitionService
 
 
-@dataclass(frozen=True)
+@dataclass
 class FakeResponse:
     status_code: int
     body: bytes
@@ -29,7 +30,7 @@ class FakeTransport:
         headers: Mapping[str, str],
         timeout_seconds: float,
         max_response_bytes: int,
-    ) -> FakeResponse:
+    ) -> TransportResponse:
         del headers, timeout_seconds, max_response_bytes
         self.urls.append(url)
         return self.responses.pop(0)
@@ -96,6 +97,21 @@ def test_approval_mismatch_fails_before_network(tmp_path: Path) -> None:
     transport = FakeTransport([])
 
     with pytest.raises(AcquisitionError, match="does not match"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=tmp_path / "papers",
+        )
+
+    assert transport.urls == []
+
+
+def test_duplicate_pmcids_fail_before_network(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path, count=2, duplicate_pmcid=True)
+    approvals = _write_approvals(tmp_path, count=2, duplicate_pmcid=True)
+    transport = FakeTransport([])
+
+    with pytest.raises(AcquisitionError, match="duplicate PMCID"):
         PmcOaAcquisitionService(transport).acquire(
             candidates_path=candidates,
             approvals_path=approvals,
@@ -175,7 +191,12 @@ def test_existing_output_fails_before_network(tmp_path: Path) -> None:
     assert transport.urls == []
 
 
-def _write_candidates(tmp_path: Path, *, count: int = 1) -> Path:
+def _write_candidates(
+    tmp_path: Path,
+    *,
+    count: int = 1,
+    duplicate_pmcid: bool = False,
+) -> Path:
     rows = [
         {
             "pmid": "222",
@@ -190,7 +211,7 @@ def _write_candidates(tmp_path: Path, *, count: int = 1) -> Path:
         rows.append(
             {
                 "pmid": "333",
-                "pmcid": "PMC1000",
+                "pmcid": "PMC999" if duplicate_pmcid else "PMC1000",
                 "license": "CC BY",
                 "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/second.pdf",
                 "open_access": True,
@@ -208,6 +229,7 @@ def _write_approvals(
     license_name: str = "CC BY",
     count: int = 1,
     duplicate_filename: bool = False,
+    duplicate_pmcid: bool = False,
     selected_count: int | bool | None = None,
 ) -> Path:
     rows = [
@@ -223,7 +245,7 @@ def _write_approvals(
         rows.append(
             {
                 "pmid": "333",
-                "pmcid": "PMC1000",
+                "pmcid": "PMC999" if duplicate_pmcid else "PMC1000",
                 "license": "CC BY",
                 "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/second.pdf",
                 "filename": "PMC999.pdf" if duplicate_filename else "PMC1000.pdf",
