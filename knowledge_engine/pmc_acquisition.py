@@ -22,6 +22,27 @@ DEFAULT_HEADERS = {
     "User-Agent": "knowledge-engine-core/0.2",
 }
 
+_LEGACY_PMC_PATH_PREFIX = "/pub/pmc/"
+_DEPRECATED_PMC_PATH_PREFIX = "/pub/pmc/deprecated/"
+
+
+def _deprecated_pmc_fallback_url(url: str) -> str | None:
+    """Return NCBI's confirmed temporary relocation of a legacy PMC FTP path.
+
+    NCBI moved legacy PMC Article Dataset files (including oa_pdf and oa_package)
+    under /pub/pmc/deprecated/ ahead of removing the legacy paths entirely in
+    August 2026 (see https://ftp.ncbi.nlm.nih.gov/pub/pmc/readme.txt). The PMC OA
+    service (oa.fcgi) still returns links at the pre-migration paths, so those
+    requests now 404 until oa.fcgi is updated or the deprecated copies are removed.
+    """
+    if _DEPRECATED_PMC_PATH_PREFIX in url:
+        return None
+    index = url.find(_LEGACY_PMC_PATH_PREFIX)
+    if index == -1:
+        return None
+    insertion_point = index + len(_LEGACY_PMC_PATH_PREFIX)
+    return url[:insertion_point] + "deprecated/" + url[insertion_point:]
+
 
 class AcquisitionError(RuntimeError):
     """Sanitized acquisition failure."""
@@ -143,8 +164,21 @@ class PmcOaAcquisitionService:
         return AcquisitionReceipt(schema_version=1, acquired_count=len(items), items=items)
 
     def _get_pdf(self, url: str, *, pmcid: str, ordinal: int) -> TransportResponse:
+        response = self._request_pdf(url, pmcid=pmcid, ordinal=ordinal)
+        if response.status_code == 404:
+            fallback_url = _deprecated_pmc_fallback_url(url)
+            if fallback_url is not None:
+                response = self._request_pdf(fallback_url, pmcid=pmcid, ordinal=ordinal)
+        if response.status_code != 200:
+            raise AcquisitionError(
+                f"PMC OA PDF request returned a non-success status "
+                f"({response.status_code}) for approval {ordinal} ({pmcid})."
+            )
+        return response
+
+    def _request_pdf(self, url: str, *, pmcid: str, ordinal: int) -> TransportResponse:
         try:
-            response = self.transport.get(
+            return self.transport.get(
                 url=url,
                 headers=DEFAULT_HEADERS,
                 timeout_seconds=self.timeout_seconds,
@@ -154,12 +188,6 @@ class PmcOaAcquisitionService:
             raise AcquisitionError(
                 f"PMC OA PDF request failed for approval {ordinal} ({pmcid})."
             ) from exc
-        if response.status_code != 200:
-            raise AcquisitionError(
-                f"PMC OA PDF request returned a non-success status "
-                f"({response.status_code}) for approval {ordinal} ({pmcid})."
-            )
-        return response
 
 
 @dataclass(frozen=True)

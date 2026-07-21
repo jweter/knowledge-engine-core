@@ -156,7 +156,46 @@ def test_non_success_status_is_reported_with_status_code_and_locator(tmp_path: P
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path)
     output = tmp_path / "papers"
-    transport = FakeTransport([FakeResponse(404, b"not found", {})])
+    transport = FakeTransport([FakeResponse(403, b"forbidden", {})])
+
+    with pytest.raises(AcquisitionError, match=r"non-success status \(403\).*approval 1.*PMC999"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=output,
+        )
+
+    assert transport.urls == ["https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf"]
+    assert not (output / "PMC999.pdf").exists()
+
+
+def test_legacy_path_404_falls_back_to_deprecated_ncbi_relocation(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path)
+    approvals = _write_approvals(tmp_path)
+    output = tmp_path / "papers"
+    transport = FakeTransport(
+        [FakeResponse(404, b"not found", {}), FakeResponse(200, b"%PDF-1.7\nbody", {})]
+    )
+
+    receipt = PmcOaAcquisitionService(transport).acquire(
+        candidates_path=candidates,
+        approvals_path=approvals,
+        output_directory=output,
+    )
+
+    assert transport.urls == [
+        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf",
+        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/example.pdf",
+    ]
+    assert receipt.acquired_count == 1
+    assert (output / "PMC999.pdf").read_bytes().startswith(b"%PDF-")
+
+
+def test_deprecated_fallback_failure_still_reports_original_locator(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path)
+    approvals = _write_approvals(tmp_path)
+    output = tmp_path / "papers"
+    transport = FakeTransport([FakeResponse(404, b"not found", {}), FakeResponse(404, b"gone", {})])
 
     with pytest.raises(AcquisitionError, match=r"non-success status \(404\).*approval 1.*PMC999"):
         PmcOaAcquisitionService(transport).acquire(
@@ -165,6 +204,10 @@ def test_non_success_status_is_reported_with_status_code_and_locator(tmp_path: P
             output_directory=output,
         )
 
+    assert transport.urls == [
+        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf",
+        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/example.pdf",
+    ]
     assert not (output / "PMC999.pdf").exists()
 
 
