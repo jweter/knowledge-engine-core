@@ -7,10 +7,11 @@ from pathlib import Path
 
 import pytest
 
+from knowledge_engine.ncbi_http import TransportResponse
 from knowledge_engine.pmc_acquisition import AcquisitionError, PmcOaAcquisitionService
 
 
-@dataclass(frozen=True)
+@dataclass
 class FakeResponse:
     status_code: int
     body: bytes
@@ -29,7 +30,7 @@ class FakeTransport:
         headers: Mapping[str, str],
         timeout_seconds: float,
         max_response_bytes: int,
-    ) -> FakeResponse:
+    ) -> TransportResponse:
         del headers, timeout_seconds, max_response_bytes
         self.urls.append(url)
         return self.responses.pop(0)

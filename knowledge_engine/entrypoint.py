@@ -245,7 +245,8 @@ def pubmed_candidate_discover(
         f"({verified} PMC OA verified)."
     )
     console.print(
-        "[bold]Candidates require human inclusion and license review; no PDFs were downloaded.[/bold]"
+        "[bold]Candidates require human inclusion and license review; "
+        "no PDFs were downloaded.[/bold]"
     )
 
 
@@ -278,9 +279,9 @@ def pmc_oa_acquire(
         _write_output(receipt, result.to_json())
     except typer.BadParameter:
         _rollback_acquired_files(papers_dir, result)
-        raise typer.BadParameter(
-            "Receipt output could not be written; acquired PDFs were rolled back."
-        ) from None
+        console.print("[red]PMC OA acquisition failed:[/red]")
+        console.print("Receipt could not be written; acquired PDFs were rolled back.")
+        raise typer.Exit(1) from None
     console.print(
         f"[green]Acquired {result.acquired_count} approved PMC OA PDFs.[/green] Receipt: {receipt}"
     )
@@ -311,7 +312,11 @@ def corpus_run_report(
         raise typer.BadParameter(f"Import run report reconciliation failed: {exc}") from exc
 
     if output:
-        _write_output(output, report)
+        try:
+            _write_output(output, report)
+        except typer.BadParameter:
+            console.print("[red]Report output could not be written.[/red]")
+            raise typer.Exit(1) from None
         console.print(f"[green]Wrote corpus run report:[/green] {output}")
         return
 
