@@ -90,15 +90,13 @@ jobs:
         shell: bash
         run: |
           mkdir -p work/m14
-          set +e
+          set -o pipefail
           poetry run python scripts/m14_pubmed_batch_discover.py \
             --query "$DISCOVERY_QUERY" \
             --limit "$DISCOVERY_LIMIT" \
             --page-size "$DISCOVERY_PAGE_SIZE" \
             --output work/m14/pubmed-candidates.json \
             2>&1 | tee work/m14/discovery.log
-          status=${PIPESTATUS[0]}
-          exit "$status"
 
       - name: Adjudicate candidate evidence
         run: |
@@ -113,19 +111,38 @@ jobs:
             --output work/m14/approvals-500.json \
             --limit 500
 
+      - name: Preflight exactly 500 approvals before network access
+        run: |
+          poetry run python - <<'PY'
+          import json
+          from pathlib import Path
+
+          approvals = json.loads(
+              Path('work/m14/approvals-500.json').read_text(encoding='utf-8')
+          )
+          rows = approvals.get('approvals')
+          if approvals.get('schema_version') != 1:
+              raise SystemExit('Approval schema version does not reconcile.')
+          if approvals.get('selected_count') != 500:
+              raise SystemExit('Approval selected count must be exactly 500.')
+          if not isinstance(rows, list) or len(rows) != 500:
+              raise SystemExit('Approval row count must be exactly 500.')
+          for field in ('pmid', 'pmcid', 'filename'):
+              if len({row[field] for row in rows}) != 500:
+                  raise SystemExit(f'Approval file contains duplicate {field} values.')
+          PY
+
       - name: Acquire exactly 500 approved PDFs
         shell: bash
         run: |
           mkdir -p work/m14/papers
-          set +e
+          set -o pipefail
           poetry run ke pmc-oa-acquire \
             --candidates work/m14/pubmed-candidates.json \
             --approvals work/m14/approvals-500.json \
             --papers-dir work/m14/papers \
             --receipt work/m14/acquisition-receipt.json \
             2>&1 | tee work/m14/acquisition.log
-          status=${PIPESTATUS[0]}
-          exit "$status"
 
       - name: Summarize and reconcile M14 acquisition
         run: |
