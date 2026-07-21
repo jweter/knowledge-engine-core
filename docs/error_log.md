@@ -1,5 +1,18 @@
 # Error Log
 
-This file records the currently active, unresolved failure for the bounded M14 continuation. The authoritative resolved-failure history remains [`docs/error_resolution_ledger.md`](error_resolution_ledger.md).
+Superseded. Open, unresolved defects are now tracked as GitHub issues labeled
+[`bug`](https://github.com/jweter/knowledge-engine-core/issues?q=is%3Aissue+is%3Aopen+label%3Abug),
+not in this file — an issue can be assigned, linked from the fixing PR (`Fixes #N`), and
+closed when resolved, none of which a prose file supports. This file is kept only so
+existing links to it (PR descriptions, past ledger entries) do not break.
 
-No active unresolved failure. The most recent entry (2026-07-21, exact-500 PMC OA acquisition failing on NCBI's FTP path migration) was resolved and moved to `docs/error_resolution_ledger.md`. See that entry for a named follow-up required before NCBI removes the `/pub/pmc/deprecated/` copies in August 2026.
+The authoritative resolved-failure history remains
+[`docs/error_resolution_ledger.md`](error_resolution_ledger.md).
+
+Known open issues as of 2026-07-21:
+
+- [#78](https://github.com/jweter/knowledge-engine-core/issues/78) — Quality gate does not
+  actually enforce lint, type-check, or test results (`.github/workflows/quality.yml`
+  pipefail gap).
+- [#79](https://github.com/jweter/knowledge-engine-core/issues/79) — PMC OA acquisition
+  depends on a temporary NCBI path bridge that expires August 2026.
