@@ -43,7 +43,7 @@ def _candidate() -> dict[str, object]:
         "pmcid": "PMC100",
         "open_access": True,
         "license": "CC BY 4.0",
-        "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_pdf/example.pdf",
+        "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC100.1/PMC100.1.pdf",
         "xml_url": None,
         "status": "oa_verified",
     }

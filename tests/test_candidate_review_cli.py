@@ -25,7 +25,7 @@ def test_cli_prepares_pending_only_review_worksheet(tmp_path: Path) -> None:
                         "pmcid": "PMC100",
                         "open_access": True,
                         "license": "CC BY",
-                        "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_pdf/example.pdf",
+                        "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC100.1/PMC100.1.pdf",
                         "xml_url": None,
                         "status": "oa_verified",
                     }

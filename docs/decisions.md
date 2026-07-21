@@ -52,3 +52,15 @@ framework. A small `schema_versions` table gives the local SQLite app explicit
 additive migration behavior while preserving room to adopt Alembic later.
 
 See: `docs/architecture/adr/0003-use-lightweight-schema-versioning-for-import-runs.md`
+
+### Migrate PMC OA discovery and acquisition to NCBI's Cloud Service
+
+NCBI is retiring both the PMC OA Web Service API (`oa.fcgi`) and the PMC FTP
+Service in August 2026, including the temporary `/pub/pmc/deprecated/`
+relocation this project had already bridged to once. The documented durable
+replacement is NCBI's PMC Article Datasets Cloud Service: a public,
+world-readable S3 bucket reachable with ordinary unsigned HTTPS requests, no
+AWS account or new dependency required. Migrated ahead of the removal date
+rather than patching reactively when it happens.
+
+See: `docs/architecture/adr/0004-migrate-pmc-oa-acquisition-to-cloud-service.md`

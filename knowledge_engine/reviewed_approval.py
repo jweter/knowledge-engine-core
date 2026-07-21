@@ -9,7 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
-PDF_HOST = "ftp.ncbi.nlm.nih.gov"
+from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST
+
 SAFE_PMCID = re.compile(r"^PMC[0-9]+$")
 WORKSHEET_ORDER_SELECTION_RULE = "accepted_in_worksheet_order"
 
@@ -114,7 +115,7 @@ def export_reviewed_approvals(
         parsed = urlsplit(pdf_url)
         if (
             parsed.scheme != "https"
-            or parsed.hostname != PDF_HOST
+            or parsed.hostname != PMC_CLOUD_PDF_HOST
             or parsed.username is not None
             or parsed.password is not None
             or parsed.port not in (None, 443)

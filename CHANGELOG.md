@@ -26,6 +26,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   failures instead of being persisted as ordinary per-paper issue codes.
 - Reconciled README, roadmap, and technical-debt documentation through M13 and named
   the controlled 500-paper rehearsal as the next bounded milestone.
+- Migrated M14 PMC OA discovery and acquisition off the PMC OA Web Service API
+  (`oa.fcgi`) and the PMC FTP Service, both of which NCBI is removing entirely in
+  August 2026, onto NCBI's documented PMC Article Datasets Cloud Service (a public,
+  world-readable S3 bucket reachable via ordinary unsigned HTTPS — no new
+  dependency). This is a durable replacement, done ahead of the removal date,
+  superseding the temporary `/pub/pmc/deprecated/` bridge added previously. See
+  `docs/architecture/adr/0004-migrate-pmc-oa-acquisition-to-cloud-service.md`.
+  Bumped the M14 adjudication ruleset to `m14-candidate-adjudication-v4` since the
+  accepted PDF-URL host changed.
 
 ### Fixed
 

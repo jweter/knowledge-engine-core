@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import TypedDict
 from urllib.parse import urlparse
 
-ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v3"
+from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST
+
+ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v4"
 _ALLOWED_LICENSE_PREFIXES = ("CC BY", "CC0")
 _DISEASE_TERMS = (
     "obesity",
@@ -165,7 +167,7 @@ def prepare_candidate_review(candidates_path: Path) -> CandidateReviewWorksheet:
                 discovery_status=status,
                 adjudicated_at=adjudicated_at,
                 duplicate_rule_result="passed_exact_identifier_uniqueness",
-                evidence_provenance=("pubmed_metadata", "pmc_oa_service"),
+                evidence_provenance=("pubmed_metadata", "pmc_cloud_service"),
                 **decision,
             )
         )
@@ -282,7 +284,7 @@ def _full_text_result(pdf_url: str | None) -> str:
     parsed = urlparse(pdf_url)
     if (
         parsed.scheme != "https"
-        or parsed.hostname != "ftp.ncbi.nlm.nih.gov"
+        or parsed.hostname != PMC_CLOUD_PDF_HOST
         or parsed.username is not None
         or parsed.password is not None
         or parsed.port not in (None, 443)
