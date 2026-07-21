@@ -27,6 +27,13 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Reconciled README, roadmap, and technical-debt documentation through M13 and named
   the controlled 500-paper rehearsal as the next bounded milestone.
 
+### Fixed
+
+- Fixed M14 PMC OA acquisition failing on every PDF request because NCBI relocated
+  its legacy PMC FTP paths ahead of removing them in August 2026; acquisition now
+  retries once against NCBI's confirmed `/pub/pmc/deprecated/` relocation, and
+  failures now report the HTTP status code and failing approval for diagnosability.
+
 ## [0.2.0-alpha.1] - 2026-07-11
 
 ### Added
