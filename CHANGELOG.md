@@ -27,6 +27,13 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Reconciled README, roadmap, and technical-debt documentation through M13 and named
   the controlled 500-paper rehearsal as the next bounded milestone.
 
+### Fixed
+
+- Fixed M14 bounded PubMed/PMC discovery retrying NCBI failures (including PMC
+  identifier conversion) with only the steady-state request pacing interval instead
+  of a real backoff; retries now use exponential backoff and failure messages
+  include the HTTP status code for diagnosability.
+
 ## [0.2.0-alpha.1] - 2026-07-11
 
 ### Added

@@ -107,17 +107,21 @@ class PubmedPmcDiscoveryService:
         max_response_bytes: int = 5_000_000,
         request_interval_seconds: float = 0.34,
         max_attempts: int = 3,
+        retry_backoff_seconds: float = 2.0,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if request_interval_seconds < 0:
             raise ValueError("NCBI request interval must be non-negative.")
         if max_attempts < 1:
             raise ValueError("NCBI max attempts must be positive.")
+        if retry_backoff_seconds < 0:
+            raise ValueError("NCBI retry backoff must be non-negative.")
         self.transport = transport
         self.timeout_seconds = timeout_seconds
         self.max_response_bytes = max_response_bytes
         self.request_interval_seconds = request_interval_seconds
         self.max_attempts = max_attempts
+        self.retry_backoff_seconds = retry_backoff_seconds
         self.sleep = sleep
         self._request_count = 0
 
@@ -323,8 +327,11 @@ class PubmedPmcDiscoveryService:
     def _get(self, url: str) -> TransportResponse:
         operation = _provider_operation(url)
         for attempt in range(self.max_attempts):
-            if self._request_count and self.request_interval_seconds:
-                self.sleep(self.request_interval_seconds)
+            if attempt == 0:
+                if self._request_count and self.request_interval_seconds:
+                    self.sleep(self.request_interval_seconds)
+            elif self.retry_backoff_seconds:
+                self.sleep(self.retry_backoff_seconds * (2 ** (attempt - 1)))
             self._request_count += 1
             try:
                 response = self.transport.get(
@@ -335,7 +342,9 @@ class PubmedPmcDiscoveryService:
                 )
             except (IncompleteRead, OSError, TimeoutError) as exc:
                 if attempt + 1 == self.max_attempts:
-                    raise NcbiDiscoveryError(f"{operation} request failed.") from exc
+                    raise NcbiDiscoveryError(
+                        f"{operation} request failed after {attempt + 1} attempt(s)."
+                    ) from exc
                 continue
             if response.status_code == 200:
                 return response
@@ -343,7 +352,10 @@ class PubmedPmcDiscoveryService:
                 response.status_code not in _RETRYABLE_STATUS_CODES
                 or attempt + 1 == self.max_attempts
             ):
-                raise NcbiDiscoveryError(f"{operation} request returned a non-success status.")
+                raise NcbiDiscoveryError(
+                    f"{operation} request returned a non-success status "
+                    f"({response.status_code}) after {attempt + 1} attempt(s)."
+                )
         raise NcbiDiscoveryError(f"{operation} request retry state was invalid.")
 
 
