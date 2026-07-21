@@ -300,6 +300,37 @@ def test_discovery_sanitizes_provider_failures() -> None:
         service.discover("semaglutide", limit=1)
 
     assert "private" not in str(error.value)
+    assert "503" in str(error.value)
+
+
+def test_discovery_backs_off_exponentially_between_retries() -> None:
+    transport = FakeTransport(
+        [
+            FakeResponse(429, b"rate limited", {}),
+            FakeResponse(503, b"unavailable", {}),
+            FakeResponse(429, b"rate limited", {}),
+        ]
+    )
+    delays: list[float] = []
+    service = PubmedPmcDiscoveryService(
+        transport,
+        request_interval_seconds=0.0,
+        max_attempts=3,
+        retry_backoff_seconds=2.0,
+        sleep=delays.append,
+    )
+
+    with pytest.raises(NcbiDiscoveryError, match="non-success") as error:
+        service.discover("semaglutide", limit=1)
+
+    assert delays == [2.0, 4.0]
+    assert "429" in str(error.value)
+    assert "3 attempt" in str(error.value)
+
+
+def test_discovery_rejects_negative_retry_backoff() -> None:
+    with pytest.raises(ValueError, match="retry backoff"):
+        PubmedPmcDiscoveryService(FakeTransport([]), retry_backoff_seconds=-1.0)
 
 
 def test_discovery_rejects_malformed_search_payload() -> None:
