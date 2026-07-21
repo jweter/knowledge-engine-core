@@ -26,6 +26,11 @@ ForceOption = Annotated[
 ]
 
 
+@app.callback()
+def main() -> None:
+    """Expose candidate review preparation through an explicit command group."""
+
+
 @app.command("prepare")
 def prepare_command(
     candidates: CandidatesOption,

@@ -20,7 +20,7 @@ def test_cli_prepares_pending_only_review_worksheet(tmp_path: Path) -> None:
                 "candidates": [
                     {
                         "pmid": "100",
-                        "title": "Trial title",
+                        "title": "GLP-1 receptor agonist treatment for obesity and weight loss",
                         "doi": "10.1000/example",
                         "pmcid": "PMC100",
                         "open_access": True,
@@ -38,13 +38,13 @@ def test_cli_prepares_pending_only_review_worksheet(tmp_path: Path) -> None:
 
     result = CliRunner().invoke(
         app,
-        ["--candidates", str(candidates), "--output", str(output)],
+        ["prepare", "--candidates", str(candidates), "--output", str(output)],
     )
 
     assert result.exit_code == 0
     assert "Prepared 1 pending candidate reviews" in result.output
     payload = json.loads(output.read_text(encoding="utf-8"))
-    assert payload["items"][0]["decision"] == "pending"
+    assert payload["items"][0]["decision"] == "accepted"
     assert "approvals" not in payload
     assert str(tmp_path) not in output.read_text(encoding="utf-8")
 
@@ -56,6 +56,7 @@ def test_cli_refuses_existing_output_without_force(tmp_path: Path) -> None:
     result = CliRunner().invoke(
         app,
         [
+            "prepare",
             "--candidates",
             str(tmp_path / "missing.json"),
             "--output",

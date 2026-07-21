@@ -114,9 +114,11 @@ class GoogleDriveHttpTransport:
         if not isinstance(sha256, str):
             sha256 = ""
         size = payload.get("size")
+        if not isinstance(size, str):
+            raise GoogleDriveHttpError("Google Drive file metadata is incomplete.")
         try:
             byte_count = int(size)
-        except (TypeError, ValueError):
+        except ValueError:
             raise GoogleDriveHttpError("Google Drive file metadata is incomplete.") from None
         return DriveFileMetadata(
             file_id=_required_string(payload, "id"),

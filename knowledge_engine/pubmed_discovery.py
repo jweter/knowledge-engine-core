@@ -186,10 +186,10 @@ class PubmedPmcDiscoveryService:
                 }
             )
         )
-        try:
-            values = body["esearchresult"]["idlist"]
-        except (KeyError, TypeError) as exc:
-            raise NcbiDiscoveryError("PubMed search response was malformed.") from exc
+        esearchresult = body.get("esearchresult")
+        if not isinstance(esearchresult, dict):
+            raise NcbiDiscoveryError("PubMed search response was malformed.")
+        values = esearchresult.get("idlist")
         if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
             raise NcbiDiscoveryError("PubMed search response was malformed.")
         return values

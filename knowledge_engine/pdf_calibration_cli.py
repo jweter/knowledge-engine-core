@@ -17,6 +17,11 @@ OutputOption = Annotated[Path, typer.Option("--output")]
 ForceOption = Annotated[bool, typer.Option("--force")]
 
 
+@app.callback()
+def main() -> None:
+    """Expose PDF calibration inspection through an explicit command group."""
+
+
 @app.command("inspect")
 def inspect_command(
     receipt: ReceiptOption,

@@ -5,10 +5,10 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Mapping
 
 COUNTED_TABLES = ("papers", "sources", "import_runs")
 
@@ -54,9 +54,11 @@ def create_sqlite_backup(
     snapshot_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        with sqlite3.connect(f"file:{source_path}?mode=ro", uri=True) as source:
-            with sqlite3.connect(snapshot_path) as target:
-                source.backup(target)
+        with (
+            sqlite3.connect(f"file:{source_path}?mode=ro", uri=True) as source,
+            sqlite3.connect(snapshot_path) as target,
+        ):
+            source.backup(target)
         manifest = inspect_sqlite_snapshot(
             snapshot_path=snapshot_path,
             production_commit=production_commit,
@@ -65,6 +67,9 @@ def create_sqlite_backup(
     except (OSError, sqlite3.Error) as exc:
         snapshot_path.unlink(missing_ok=True)
         raise SQLiteBackupError("SQLite snapshot creation or verification failed.") from exc
+    except SQLiteBackupError:
+        snapshot_path.unlink(missing_ok=True)
+        raise
     return manifest
 
 
@@ -100,12 +105,12 @@ def inspect_sqlite_snapshot(
     except (OSError, sqlite3.Error) as exc:
         raise SQLiteBackupError("SQLite snapshot inspection failed.") from exc
 
-    timestamp = created_at or datetime.now(timezone.utc)
+    timestamp = created_at or datetime.now(UTC)
     if timestamp.tzinfo is None:
         raise SQLiteBackupError("Backup timestamp must be timezone-aware.")
     return SQLiteBackupManifest(
         schema_version=schema_version,
-        created_at=timestamp.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+        created_at=timestamp.astimezone(UTC).isoformat().replace("+00:00", "Z"),
         production_commit=production_commit,
         filename=snapshot_path.name,
         byte_count=len(payload),

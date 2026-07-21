@@ -245,7 +245,8 @@ def pubmed_candidate_discover(
         f"({verified} PMC OA verified)."
     )
     console.print(
-        "[bold]Candidates require human inclusion and license review; no PDFs were downloaded.[/bold]"
+        "[bold]Candidates require human inclusion and license review; "
+        "no PDFs were downloaded.[/bold]"
     )
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -40,7 +41,7 @@ def test_replace_failure_removes_owned_stage_and_preserves_final(
     def fail_replace(source: Path, destination: Path) -> None:
         raise OSError
 
-    monkeypatch.setattr(corpus_readiness_cli.os, "replace", fail_replace)
+    monkeypatch.setattr(os, "replace", fail_replace)
 
     with pytest.raises(typer.BadParameter, match="could not be written"):
         corpus_readiness_cli._write_report_atomically(output, "new\n")

@@ -36,7 +36,6 @@ class TransportResponse(Protocol):
 
 class _ReadableResponse(Protocol):
     headers: Message
-    status: int
 
     def read(self, amt: int = -1) -> bytes:
         """Read at most ``amt`` bytes."""

@@ -129,7 +129,7 @@ def test_corpus_run_report_sanitizes_filesystem_write_failure(
     )
 
     assert result.exit_code != 0
-    assert "Report output could not be written" in result.output
+    assert "Output file could not be written" in result.output
     assert "/private/location" not in result.output
     assert "permission denied" not in result.output
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -29,7 +29,7 @@ def test_create_backup_and_verify_restore(tmp_path: Path) -> None:
     source = tmp_path / "live.sqlite"
     snapshot = tmp_path / "backup" / "snapshot.sqlite"
     build_database(source)
-    created_at = datetime(2026, 7, 19, 20, 0, tzinfo=timezone.utc)
+    created_at = datetime(2026, 7, 19, 20, 0, tzinfo=UTC)
 
     manifest = create_sqlite_backup(
         source_path=source,
