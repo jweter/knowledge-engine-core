@@ -114,13 +114,18 @@ jobs:
             --limit 500
 
       - name: Acquire exactly 500 approved PDFs
+        shell: bash
         run: |
           mkdir -p work/m14/papers
+          set +e
           poetry run ke pmc-oa-acquire \
             --candidates work/m14/pubmed-candidates.json \
             --approvals work/m14/approvals-500.json \
             --papers-dir work/m14/papers \
-            --receipt work/m14/acquisition-receipt.json
+            --receipt work/m14/acquisition-receipt.json \
+            2>&1 | tee work/m14/acquisition.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
 
       - name: Summarize and reconcile M14 acquisition
         run: |
@@ -235,6 +240,7 @@ jobs:
           name: m14-pubmed-candidates
           path: |
             work/m14/discovery.log
+            work/m14/acquisition.log
             work/m14/pubmed-candidates.json
             work/m14/candidate-review.json
             work/m14/approvals-500.json
