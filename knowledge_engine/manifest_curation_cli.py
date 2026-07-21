@@ -17,6 +17,11 @@ OutputOption = Annotated[Path, typer.Option("--output")]
 ForceOption = Annotated[bool, typer.Option("--force")]
 
 
+@app.callback()
+def main() -> None:
+    """Expose curation export through an explicit command group."""
+
+
 @app.command("export")
 def export_command(
     worksheet: WorksheetOption,

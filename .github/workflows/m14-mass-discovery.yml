@@ -33,6 +33,10 @@ on:
       - 'knowledge_engine/reviewed_approval.py'
       - 'knowledge_engine/reviewed_approval_cli.py'
       - 'knowledge_engine/pmc_acquisition.py'
+      - 'knowledge_engine/manifest_curation.py'
+      - 'knowledge_engine/manifest_curation_cli.py'
+      - 'knowledge_engine/corpus_readiness.py'
+      - 'knowledge_engine/corpus_readiness_cli.py'
       - 'knowledge_engine/entrypoint.py'
       - 'scripts/m14_pubmed_batch_discover.py'
       - 'pyproject.toml'
@@ -250,6 +254,22 @@ jobs:
           print(summary, end='')
           PY
 
+      - name: Export manifest curation draft
+        run: |
+          poetry run python -m knowledge_engine.manifest_curation_cli export \
+            --worksheet work/m14/candidate-review.json \
+            --receipt work/m14/acquisition-receipt.json \
+            --output work/m14/manifest-draft.csv
+
+      - name: Validate corpus readiness
+        run: |
+          poetry run python -m knowledge_engine.corpus_readiness_cli validate \
+            --manifest work/m14/manifest-draft.csv \
+            --receipt work/m14/acquisition-receipt.json \
+            --papers-dir work/m14/papers \
+            --output work/m14/readiness-report.json \
+            --expected-count 500
+
       - name: Upload M14 evidence artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -262,6 +282,8 @@ jobs:
             work/m14/candidate-review.json
             work/m14/approvals-500.json
             work/m14/acquisition-receipt.json
+            work/m14/manifest-draft.csv
+            work/m14/readiness-report.json
             work/m14/summary.txt
           if-no-files-found: warn
           retention-days: 14

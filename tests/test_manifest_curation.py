@@ -122,6 +122,34 @@ def test_held_adjudication_is_excluded_without_human_input(tmp_path: Path) -> No
         export_manifest_curation_draft(worksheet, receipt)
 
 
+def test_accepted_superset_of_receipt_is_reconciled_by_selection(tmp_path: Path) -> None:
+    worksheet = tmp_path / "review.json"
+    receipt = tmp_path / "receipt.json"
+    selected = _adjudication()
+    not_selected = _adjudication()
+    not_selected.update({"pmid": "200", "pmcid": "PMC200"})
+    _write(worksheet, _worksheet([selected, not_selected]))
+    _write(receipt, _receipt())
+
+    draft = export_manifest_curation_draft(worksheet, receipt)
+    rows = list(csv.DictReader(io.StringIO(draft.to_csv())))
+
+    assert len(rows) == 1
+    assert rows[0]["pmid"] == "100"
+
+
+def test_receipt_pmid_without_accepted_adjudication_is_rejected(tmp_path: Path) -> None:
+    worksheet = tmp_path / "review.json"
+    receipt = tmp_path / "receipt.json"
+    other = _adjudication()
+    other.update({"pmid": "300", "pmcid": "PMC300"})
+    _write(worksheet, _worksheet([other]))
+    _write(receipt, _receipt())
+
+    with pytest.raises(ManifestCurationError, match="without an accepted adjudication"):
+        export_manifest_curation_draft(worksheet, receipt)
+
+
 def test_malformed_author_metadata_is_rejected(tmp_path: Path) -> None:
     worksheet = tmp_path / "review.json"
     receipt = tmp_path / "receipt.json"

@@ -114,9 +114,6 @@ def export_manifest_curation_draft(
             )
         accepted[pmid] = row
 
-    if len(accepted) != len(receipt_rows):
-        raise ManifestCurationError("Accepted adjudication and receipt counts do not reconcile.")
-
     rows: list[dict[str, str]] = []
     seen_pmcids: set[str] = set()
     for item in receipt_rows:

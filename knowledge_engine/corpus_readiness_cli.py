@@ -38,6 +38,11 @@ ForceOption = Annotated[
 ]
 
 
+@app.callback()
+def main() -> None:
+    """Expose readiness validation through an explicit command group."""
+
+
 @app.command("validate")
 def validate_command(
     manifest: ManifestOption,
