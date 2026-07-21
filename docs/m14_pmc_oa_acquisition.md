@@ -37,7 +37,7 @@ The M14 approval artifact retains acquisition schema version 1 and records deter
 }
 ```
 
-The acquisition service validates `selected_count` against the approval-array length. The controlled M14 run additionally requires an expected count of exactly 500.
+The acquisition service validates `selected_count` against the approval-array length. Before the acquisition command is allowed to make any network request, the controlled M14 workflow separately requires schema version 1, `selected_count` equal to 500, exactly 500 approval rows, and 500 unique PMIDs, PMCIDs, and filenames.
 
 ## Command
 
