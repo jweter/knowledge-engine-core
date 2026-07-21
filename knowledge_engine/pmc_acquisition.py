@@ -264,9 +264,10 @@ def _load_approvals(path: Path, *, expected_count: int | None) -> list[dict[str,
         or selected_count != len(rows)
     ):
         raise AcquisitionError("Approval selected count does not reconcile.")
-    if expected_count is not None:
-        if selected_count != expected_count or len(rows) != expected_count:
-            raise AcquisitionError("Approval file does not contain the expected selected count.")
+    if expected_count is not None and (
+        selected_count != expected_count or len(rows) != expected_count
+    ):
+        raise AcquisitionError("Approval file does not contain the expected selected count.")
     return rows
 
 

@@ -11,7 +11,7 @@ It advances M14 from discovery evidence to explicit `accepted`, `rejected`, or `
 ## Command
 
 ```bash
-python -m knowledge_engine.candidate_review_cli \
+python -m knowledge_engine.candidate_review_cli prepare \
   --candidates work/m14/candidates-000.json \
   --output work/m14/review-000.json
 ```

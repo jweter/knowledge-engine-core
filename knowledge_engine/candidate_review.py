@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import TypedDict
 from urllib.parse import urlparse
 
 ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v3"
@@ -109,7 +110,7 @@ def prepare_candidate_review(candidates_path: Path) -> CandidateReviewWorksheet:
     if not isinstance(candidates, list) or payload.get("candidate_count") != len(candidates):
         raise CandidateReviewError("Candidate input count does not reconcile.")
 
-    adjudicated_at = datetime.now(timezone.utc).isoformat()
+    adjudicated_at = datetime.now(UTC).isoformat()
     items: list[CandidateReviewItem] = []
     seen_pmids: set[str] = set()
     seen_pmcids: set[str] = set()
@@ -180,6 +181,17 @@ def prepare_candidate_review(candidates_path: Path) -> CandidateReviewWorksheet:
     )
 
 
+class _AdjudicationDecision(TypedDict):
+    decision: str
+    reason_codes: tuple[str, ...]
+    rules_version: str
+    inclusion_rule_result: str
+    identity_rule_result: str
+    license_rule_result: str
+    full_text_rule_result: str
+    unresolved_ambiguities: tuple[str, ...]
+
+
 def _adjudicate(
     *,
     title: str,
@@ -188,7 +200,7 @@ def _adjudicate(
     status: str,
     reported_license: str | None,
     pdf_url: str | None,
-) -> dict[str, object]:
+) -> _AdjudicationDecision:
     inclusion = _scientific_scope(title, abstract)
     identity = "passed" if pmcid is not None else "incomplete_missing_pmcid"
     license_result = _license_result(reported_license)

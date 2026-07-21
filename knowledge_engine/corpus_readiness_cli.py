@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 from pathlib import Path
 from typing import Annotated
@@ -94,10 +95,8 @@ def _write_report_atomically(output: Path, payload: str) -> None:
         os.replace(stage, output)
     except OSError:
         if stage_created:
-            try:
+            with contextlib.suppress(OSError):
                 stage.unlink(missing_ok=True)
-            except OSError:
-                pass
         raise typer.BadParameter("Readiness report could not be written.") from None
 
 

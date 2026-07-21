@@ -4,11 +4,19 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
+from typing import Protocol
 
-from knowledge_engine.pubmed_discovery import PubmedCandidate, PubmedPmcDiscoveryService
+from knowledge_engine.pubmed_discovery import DiscoveryResult, PubmedCandidate
 
 MAX_TOTAL_CANDIDATES = 5_000
 MAX_PAGE_SIZE = 100
+
+
+class DiscoveryService(Protocol):
+    """Structural interface for one bounded page-discovery call."""
+
+    def discover(self, query: str, *, limit: int, retstart: int = 0) -> DiscoveryResult:
+        """Return a bounded, deterministic page of candidates."""
 
 
 @dataclass(frozen=True)
@@ -42,7 +50,7 @@ class BatchDiscoveryResult:
 
 
 def discover_candidate_batch(
-    service: PubmedPmcDiscoveryService,
+    service: DiscoveryService,
     query: str,
     *,
     total_limit: int,

@@ -34,6 +34,10 @@ def test_pubmed_candidate_discover_writes_reviewable_json(
                 PubmedCandidate(
                     pmid="123",
                     title="Example trial",
+                    abstract=None,
+                    authors=(),
+                    publication_year=None,
+                    venue=None,
                     doi="10.1000/example",
                     pmcid="PMC123",
                     open_access=True,
@@ -41,6 +45,9 @@ def test_pubmed_candidate_discover_writes_reviewable_json(
                     pdf_url="https://ftp.ncbi.nlm.nih.gov/example.pdf",
                     xml_url="https://ftp.ncbi.nlm.nih.gov/example.tar.gz",
                     status="oa_verified",
+                    metadata_source="pubmed_efetch",
+                    pmcid_source="pmc_id_converter",
+                    oa_source="pmc_oa_service",
                 ),
             ),
         )

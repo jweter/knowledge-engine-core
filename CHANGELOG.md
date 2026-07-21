@@ -37,6 +37,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its legacy PMC FTP paths ahead of removing them in August 2026; acquisition now
   retries once against NCBI's confirmed `/pub/pmc/deprecated/` relocation, and
   failures now report the HTTP status code and failing approval for diagnosability.
+- Fixed the `Quality` GitHub Actions gate silently reporting success even when lint,
+  type-check, or tests failed, because piping through `tee` without `set -o
+  pipefail` swallowed the real tool exit code. Also fixed every pre-existing lint
+  finding, mypy error, and test failure the corrected gate now enforces, including
+  a third and fourth occurrence of the single-command Typer CLI collapse bug
+  (`pdf_calibration_cli.py`, `candidate_review_cli.py`) and a real SQLite backup
+  bug where a naive (non-timezone-aware) timestamp left a partial, unverified
+  snapshot file on disk instead of being cleaned up.
 
 ## [0.2.0-alpha.1] - 2026-07-11
 

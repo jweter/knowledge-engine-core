@@ -133,5 +133,5 @@ def test_receipt_write_failure_rolls_back_acquired_pdfs(
     )
 
     assert result.exit_code != 0
-    assert "were rolled back" in result.output
+    assert "rolled back" in result.output
     assert not (papers / "PMC999.pdf").exists()

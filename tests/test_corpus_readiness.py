@@ -37,7 +37,7 @@ def test_ready_corpus_reconciles_manifest_receipt_and_pdf(tmp_path: Path) -> Non
 def test_hash_mismatch_is_rejected(tmp_path: Path) -> None:
     papers = tmp_path / "papers"
     papers.mkdir()
-    (papers / "PMC100.pdf").write_bytes(b"%PDF-changed")
+    (papers / "PMC100.pdf").write_bytes(b"%PDF-changed1")
     manifest = _write_manifest(tmp_path, filename="PMC100.pdf")
     receipt = _write_receipt(tmp_path, filename="PMC100.pdf", body=b"%PDF-original")
 
@@ -157,7 +157,7 @@ def _write_manifest(
                 "pmid": "100",
                 "other_identifier": "PMC100",
                 "local_path": filename,
-                "license_type": "CC-BY",
+                "license_type": "CC BY",
                 "usage_status": usage_status,
                 "inclusion_status": "included",
             }

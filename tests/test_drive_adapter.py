@@ -151,8 +151,8 @@ def test_unsafe_names_are_rejected(name: str) -> None:
 def test_raw_destination_is_rejected() -> None:
     transport = FakeTransport()
     with pytest.raises(DriveBoundaryError, match="validated"):
-        ConstrainedDriveAdapter(transport).upload(  # type: ignore[arg-type]
-            destination="1arbitrary",
+        ConstrainedDriveAdapter(transport).upload(
+            destination="1arbitrary",  # type: ignore[arg-type]
             name="backup.sqlite",
             payload=b"snapshot",
         )

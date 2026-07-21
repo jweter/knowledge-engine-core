@@ -50,7 +50,9 @@ jobs:
       - name: Lint
         id: ruff
         continue-on-error: true
-        run: poetry run ruff check . 2>&1 | tee ruff.log
+        run: |
+          set -o pipefail
+          poetry run ruff check . 2>&1 | tee ruff.log
 
       - name: Upload lint diagnostics
         if: steps.ruff.outcome == 'failure'
@@ -68,7 +70,9 @@ jobs:
       - name: Type check
         id: mypy
         continue-on-error: true
-        run: poetry run mypy knowledge_engine tests 2>&1 | tee mypy.log
+        run: |
+          set -o pipefail
+          poetry run mypy knowledge_engine tests 2>&1 | tee mypy.log
 
       - name: Upload mypy diagnostics
         if: steps.mypy.outcome == 'failure'
@@ -86,7 +90,9 @@ jobs:
       - name: Test
         id: pytest
         continue-on-error: true
-        run: poetry run pytest 2>&1 | tee pytest.log
+        run: |
+          set -o pipefail
+          poetry run pytest 2>&1 | tee pytest.log
 
       - name: Upload pytest diagnostics
         if: steps.pytest.outcome == 'failure'

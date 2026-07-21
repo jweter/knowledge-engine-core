@@ -30,6 +30,7 @@ def _candidate(pmid: str) -> PubmedCandidate:
     return PubmedCandidate(
         pmid=pmid,
         title=f"Paper {pmid}",
+        abstract=None,
         authors=(),
         publication_year=2026,
         venue="Journal",
@@ -40,6 +41,9 @@ def _candidate(pmid: str) -> PubmedCandidate:
         pdf_url=None,
         xml_url=None,
         status="metadata_only",
+        metadata_source="pubmed_efetch",
+        pmcid_source=None,
+        oa_source=None,
     )
 
 

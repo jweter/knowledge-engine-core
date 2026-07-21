@@ -8,20 +8,19 @@ from http.client import IncompleteRead
 import pytest
 
 from knowledge_engine.pubmed_discovery import (
-    GetTransport,
     NcbiDiscoveryError,
     PubmedPmcDiscoveryService,
 )
 
 
-@dataclass(frozen=True)
+@dataclass
 class FakeResponse:
     status_code: int
     body: bytes
     headers: Mapping[str, str]
 
 
-class FakeTransport(GetTransport):
+class FakeTransport:
     def __init__(self, responses: list[FakeResponse | Exception]) -> None:
         self.responses = responses
         self.urls: list[str] = []
@@ -73,7 +72,9 @@ def _metadata_response() -> FakeResponse:
                 <ArticleTitle>Second title</ArticleTitle>
                 <Abstract>
                   <AbstractText Label="BACKGROUND">Adults with obesity were enrolled.</AbstractText>
-                  <AbstractText Label="METHODS">Semaglutide therapy was compared with placebo.</AbstractText>
+                  <AbstractText Label="METHODS">
+                    Semaglutide therapy was compared with placebo.
+                  </AbstractText>
                 </Abstract>
                 <AuthorList>
                   <Author><ForeName>Ada</ForeName><LastName>Lovelace</LastName></Author>
@@ -96,7 +97,11 @@ def _metadata_response() -> FakeResponse:
               <PMID>111</PMID>
               <Article>
                 <ArticleTitle>First <i>trial</i></ArticleTitle>
-                <Journal><JournalIssue><PubDate><MedlineDate>2023 Spring</MedlineDate></PubDate></JournalIssue></Journal>
+                <Journal>
+                  <JournalIssue>
+                    <PubDate><MedlineDate>2023 Spring</MedlineDate></PubDate>
+                  </JournalIssue>
+                </Journal>
               </Article>
             </MedlineCitation>
             <PubmedData><ArticleIdList /></PubmedData>

@@ -11,6 +11,7 @@ from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.ingestion import ImportedCorpusRun
+from knowledge_engine.import_runs.statuses import ReviewStatus, RunStatus
 from knowledge_engine.parser import ParsedPaper
 
 
@@ -153,15 +154,17 @@ def test_corpus_import_command_reports_successful_import(
                 persisted.import_run_id
             )
             assert run is not None
-            run.run_status = "succeeded"
+            run.run_status = RunStatus.SUCCEEDED
             run.items[0].item_status = "imported"
             self.session.flush()
             return ImportedCorpusRun(
                 import_run_id=run.import_run_id,
-                run_status=run.run_status,
+                run_status=RunStatus(run.run_status),
                 imported_count=1,
                 failed_count=0,
                 skipped_count=0,
+                needs_review_count=0,
+                review_status=ReviewStatus.CLEAR,
             )
 
     monkeypatch.setattr(cli, "CorpusIngestionService", StubCorpusIngestionService)
