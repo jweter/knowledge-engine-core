@@ -22,6 +22,27 @@ DEFAULT_HEADERS = {
     "User-Agent": "knowledge-engine-core/0.2",
 }
 
+_LEGACY_PMC_PATH_PREFIX = "/pub/pmc/"
+_DEPRECATED_PMC_PATH_PREFIX = "/pub/pmc/deprecated/"
+
+
+def _deprecated_pmc_fallback_url(url: str) -> str | None:
+    """Return NCBI's confirmed temporary relocation of a legacy PMC FTP path.
+
+    NCBI moved legacy PMC Article Dataset files (including oa_pdf and oa_package)
+    under /pub/pmc/deprecated/ ahead of removing the legacy paths entirely in
+    August 2026 (see https://ftp.ncbi.nlm.nih.gov/pub/pmc/readme.txt). The PMC OA
+    service (oa.fcgi) still returns links at the pre-migration paths, so those
+    requests now 404 until oa.fcgi is updated or the deprecated copies are removed.
+    """
+    if _DEPRECATED_PMC_PATH_PREFIX in url:
+        return None
+    index = url.find(_LEGACY_PMC_PATH_PREFIX)
+    if index == -1:
+        return None
+    insertion_point = index + len(_LEGACY_PMC_PATH_PREFIX)
+    return url[:insertion_point] + "deprecated/" + url[insertion_point:]
+
 
 class AcquisitionError(RuntimeError):
     """Sanitized acquisition failure."""
@@ -87,20 +108,28 @@ class PmcOaAcquisitionService:
         candidates_path: Path,
         approvals_path: Path,
         output_directory: Path,
+        expected_count: int | None = None,
     ) -> AcquisitionReceipt:
         """Validate approvals, stage every PDF, commit the batch, and return a receipt."""
 
+        if expected_count is not None and (isinstance(expected_count, bool) or expected_count < 1):
+            raise AcquisitionError("Expected acquisition count must be at least 1.")
+
         candidates = _load_candidates(candidates_path)
-        approvals = _load_approvals(approvals_path)
+        approvals = _load_approvals(approvals_path, expected_count=expected_count)
         plans = _build_plans(candidates, approvals)
+        if expected_count is not None and len(plans) != expected_count:
+            raise AcquisitionError(
+                "Approval plan count does not match the expected acquisition count."
+            )
         _validate_output_directory(output_directory, plans)
 
         output_directory.mkdir(parents=True, exist_ok=True)
         staged: list[tuple[_AcquisitionPlan, Path, AcquisitionReceiptItem]] = []
         committed: list[Path] = []
         try:
-            for plan in plans:
-                response = self._get_pdf(plan.pdf_url)
+            for ordinal, plan in enumerate(plans, start=1):
+                response = self._get_pdf(plan.pdf_url, pmcid=plan.pmcid, ordinal=ordinal)
                 if not response.body.startswith(PDF_SIGNATURE):
                     raise AcquisitionError("PMC OA resource was not a PDF payload.")
                 temporary = output_directory / f".{plan.filename}.tmp"
@@ -134,19 +163,31 @@ class PmcOaAcquisitionService:
         items = tuple(item for _, _, item in staged)
         return AcquisitionReceipt(schema_version=1, acquired_count=len(items), items=items)
 
-    def _get_pdf(self, url: str) -> TransportResponse:
+    def _get_pdf(self, url: str, *, pmcid: str, ordinal: int) -> TransportResponse:
+        response = self._request_pdf(url, pmcid=pmcid, ordinal=ordinal)
+        if response.status_code == 404:
+            fallback_url = _deprecated_pmc_fallback_url(url)
+            if fallback_url is not None:
+                response = self._request_pdf(fallback_url, pmcid=pmcid, ordinal=ordinal)
+        if response.status_code != 200:
+            raise AcquisitionError(
+                f"PMC OA PDF request returned a non-success status "
+                f"({response.status_code}) for approval {ordinal} ({pmcid})."
+            )
+        return response
+
+    def _request_pdf(self, url: str, *, pmcid: str, ordinal: int) -> TransportResponse:
         try:
-            response = self.transport.get(
+            return self.transport.get(
                 url=url,
                 headers=DEFAULT_HEADERS,
                 timeout_seconds=self.timeout_seconds,
                 max_response_bytes=self.max_pdf_bytes,
             )
         except (OSError, TimeoutError) as exc:
-            raise AcquisitionError("PMC OA PDF request failed.") from exc
-        if response.status_code != 200:
-            raise AcquisitionError("PMC OA PDF request returned a non-success status.")
-        return response
+            raise AcquisitionError(
+                f"PMC OA PDF request failed for approval {ordinal} ({pmcid})."
+            ) from exc
 
 
 @dataclass(frozen=True)
@@ -206,7 +247,7 @@ def _load_candidates(path: Path) -> dict[str, dict[str, object]]:
     return result
 
 
-def _load_approvals(path: Path) -> list[dict[str, object]]:
+def _load_approvals(path: Path, *, expected_count: int | None) -> list[dict[str, object]]:
     payload = _load_json_object(path, label="Approval file")
     if payload.get("schema_version") != 1:
         raise AcquisitionError("Approval file schema_version must be 1.")
@@ -215,6 +256,17 @@ def _load_approvals(path: Path) -> list[dict[str, object]]:
         raise AcquisitionError("Approval file must contain at least one approval.")
     if not all(isinstance(row, dict) for row in rows):
         raise AcquisitionError("Approval file contains a malformed approval.")
+
+    selected_count = payload.get("selected_count")
+    if selected_count is not None and (
+        not isinstance(selected_count, int)
+        or isinstance(selected_count, bool)
+        or selected_count != len(rows)
+    ):
+        raise AcquisitionError("Approval selected count does not reconcile.")
+    if expected_count is not None:
+        if selected_count != expected_count or len(rows) != expected_count:
+            raise AcquisitionError("Approval file does not contain the expected selected count.")
     return rows
 
 
@@ -224,6 +276,7 @@ def _build_plans(
 ) -> list[_AcquisitionPlan]:
     plans: list[_AcquisitionPlan] = []
     seen_pmids: set[str] = set()
+    seen_pmcids: set[str] = set()
     seen_filenames: set[str] = set()
     for approval in approvals:
         values = {
@@ -232,9 +285,13 @@ def _build_plans(
         if not all(isinstance(value, str) and value for value in values.values()):
             raise AcquisitionError("Approval file contains incomplete approval evidence.")
         pmid = str(values["pmid"])
+        pmcid = str(values["pmcid"])
         if pmid in seen_pmids:
             raise AcquisitionError("Approval file contains a duplicate PMID.")
+        if pmcid in seen_pmcids:
+            raise AcquisitionError("Approval file contains a duplicate PMCID.")
         seen_pmids.add(pmid)
+        seen_pmcids.add(pmcid)
         candidate = candidates.get(pmid)
         if candidate is None:
             raise AcquisitionError("Approval references an unknown PMID.")
@@ -264,7 +321,7 @@ def _build_plans(
         plans.append(
             _AcquisitionPlan(
                 pmid=pmid,
-                pmcid=str(values["pmcid"]),
+                pmcid=pmcid,
                 license=str(values["license"]),
                 pdf_url=pdf_url,
                 filename=filename,

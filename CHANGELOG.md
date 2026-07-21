@@ -33,6 +33,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   identifier conversion) with only the steady-state request pacing interval instead
   of a real backoff; retries now use exponential backoff and failure messages
   include the HTTP status code for diagnosability.
+- Fixed M14 PMC OA acquisition failing on every PDF request because NCBI relocated
+  its legacy PMC FTP paths ahead of removing them in August 2026; acquisition now
+  retries once against NCBI's confirmed `/pub/pmc/deprecated/` relocation, and
+  failures now report the HTTP status code and failing approval for diagnosability.
 
 ## [0.2.0-alpha.1] - 2026-07-11
 

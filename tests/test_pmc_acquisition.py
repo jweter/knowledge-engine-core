@@ -7,10 +7,11 @@ from pathlib import Path
 
 import pytest
 
+from knowledge_engine.ncbi_http import TransportResponse
 from knowledge_engine.pmc_acquisition import AcquisitionError, PmcOaAcquisitionService
 
 
-@dataclass(frozen=True)
+@dataclass
 class FakeResponse:
     status_code: int
     body: bytes
@@ -29,7 +30,7 @@ class FakeTransport:
         headers: Mapping[str, str],
         timeout_seconds: float,
         max_response_bytes: int,
-    ) -> FakeResponse:
+    ) -> TransportResponse:
         del headers, timeout_seconds, max_response_bytes
         self.urls.append(url)
         return self.responses.pop(0)
@@ -37,7 +38,7 @@ class FakeTransport:
 
 def test_acquire_requires_exact_approval_and_writes_sanitized_receipt(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path)
-    approvals = _write_approvals(tmp_path)
+    approvals = _write_approvals(tmp_path, selected_count=1)
     output = tmp_path / "papers"
     transport = FakeTransport([FakeResponse(200, b"%PDF-1.7\nbody", {})])
 
@@ -45,6 +46,7 @@ def test_acquire_requires_exact_approval_and_writes_sanitized_receipt(tmp_path: 
         candidates_path=candidates,
         approvals_path=approvals,
         output_directory=output,
+        expected_count=1,
     )
 
     assert transport.urls == ["https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf"]
@@ -58,12 +60,58 @@ def test_acquire_requires_exact_approval_and_writes_sanitized_receipt(tmp_path: 
     assert str(tmp_path) not in receipt.to_json()
 
 
+def test_expected_count_mismatch_fails_before_network(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path)
+    approvals = _write_approvals(tmp_path, selected_count=1)
+    transport = FakeTransport([])
+
+    with pytest.raises(AcquisitionError, match="expected selected count"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=tmp_path / "papers",
+            expected_count=2,
+        )
+
+    assert transport.urls == []
+
+
+def test_boolean_selected_count_fails_before_network(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path)
+    approvals = _write_approvals(tmp_path, selected_count=True)
+    transport = FakeTransport([])
+
+    with pytest.raises(AcquisitionError, match="selected count does not reconcile"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=tmp_path / "papers",
+        )
+
+    assert transport.urls == []
+
+
 def test_approval_mismatch_fails_before_network(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path, license_name="CC BY-SA")
     transport = FakeTransport([])
 
     with pytest.raises(AcquisitionError, match="does not match"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=tmp_path / "papers",
+        )
+
+    assert transport.urls == []
+
+
+def test_duplicate_pmcids_fail_before_network(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path, count=2, duplicate_pmcid=True)
+    approvals = _write_approvals(tmp_path, count=2, duplicate_pmcid=True)
+    transport = FakeTransport([])
+
+    with pytest.raises(AcquisitionError, match="duplicate PMCID"):
         PmcOaAcquisitionService(transport).acquire(
             candidates_path=candidates,
             approvals_path=approvals,
@@ -104,6 +152,65 @@ def test_non_pdf_payload_is_rejected_without_persisting_file(tmp_path: Path) -> 
     assert not (output / "PMC999.pdf").exists()
 
 
+def test_non_success_status_is_reported_with_status_code_and_locator(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path)
+    approvals = _write_approvals(tmp_path)
+    output = tmp_path / "papers"
+    transport = FakeTransport([FakeResponse(403, b"forbidden", {})])
+
+    with pytest.raises(AcquisitionError, match=r"non-success status \(403\).*approval 1.*PMC999"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=output,
+        )
+
+    assert transport.urls == ["https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf"]
+    assert not (output / "PMC999.pdf").exists()
+
+
+def test_legacy_path_404_falls_back_to_deprecated_ncbi_relocation(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path)
+    approvals = _write_approvals(tmp_path)
+    output = tmp_path / "papers"
+    transport = FakeTransport(
+        [FakeResponse(404, b"not found", {}), FakeResponse(200, b"%PDF-1.7\nbody", {})]
+    )
+
+    receipt = PmcOaAcquisitionService(transport).acquire(
+        candidates_path=candidates,
+        approvals_path=approvals,
+        output_directory=output,
+    )
+
+    assert transport.urls == [
+        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf",
+        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/example.pdf",
+    ]
+    assert receipt.acquired_count == 1
+    assert (output / "PMC999.pdf").read_bytes().startswith(b"%PDF-")
+
+
+def test_deprecated_fallback_failure_still_reports_original_locator(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path)
+    approvals = _write_approvals(tmp_path)
+    output = tmp_path / "papers"
+    transport = FakeTransport([FakeResponse(404, b"not found", {}), FakeResponse(404, b"gone", {})])
+
+    with pytest.raises(AcquisitionError, match=r"non-success status \(404\).*approval 1.*PMC999"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=output,
+        )
+
+    assert transport.urls == [
+        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/example.pdf",
+        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/example.pdf",
+    ]
+    assert not (output / "PMC999.pdf").exists()
+
+
 def test_second_download_failure_rolls_back_entire_batch(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path, count=2)
     approvals = _write_approvals(tmp_path, count=2)
@@ -116,6 +223,27 @@ def test_second_download_failure_rolls_back_entire_batch(tmp_path: Path) -> None
     )
 
     with pytest.raises(AcquisitionError, match="not a PDF"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=output,
+        )
+
+    assert list(output.iterdir()) == []
+
+
+def test_non_success_status_locator_uses_failing_approvals_ordinal(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path, count=2)
+    approvals = _write_approvals(tmp_path, count=2)
+    output = tmp_path / "papers"
+    transport = FakeTransport(
+        [
+            FakeResponse(200, b"%PDF-1.7\nfirst", {}),
+            FakeResponse(503, b"unavailable", {}),
+        ]
+    )
+
+    with pytest.raises(AcquisitionError, match=r"non-success status \(503\).*approval 2.*PMC1000"):
         PmcOaAcquisitionService(transport).acquire(
             candidates_path=candidates,
             approvals_path=approvals,
@@ -143,7 +271,12 @@ def test_existing_output_fails_before_network(tmp_path: Path) -> None:
     assert transport.urls == []
 
 
-def _write_candidates(tmp_path: Path, *, count: int = 1) -> Path:
+def _write_candidates(
+    tmp_path: Path,
+    *,
+    count: int = 1,
+    duplicate_pmcid: bool = False,
+) -> Path:
     rows = [
         {
             "pmid": "222",
@@ -158,7 +291,7 @@ def _write_candidates(tmp_path: Path, *, count: int = 1) -> Path:
         rows.append(
             {
                 "pmid": "333",
-                "pmcid": "PMC1000",
+                "pmcid": "PMC999" if duplicate_pmcid else "PMC1000",
                 "license": "CC BY",
                 "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/second.pdf",
                 "open_access": True,
@@ -176,6 +309,8 @@ def _write_approvals(
     license_name: str = "CC BY",
     count: int = 1,
     duplicate_filename: bool = False,
+    duplicate_pmcid: bool = False,
+    selected_count: int | bool | None = None,
 ) -> Path:
     rows = [
         {
@@ -190,15 +325,15 @@ def _write_approvals(
         rows.append(
             {
                 "pmid": "333",
-                "pmcid": "PMC1000",
+                "pmcid": "PMC999" if duplicate_pmcid else "PMC1000",
                 "license": "CC BY",
                 "pdf_url": "https://ftp.ncbi.nlm.nih.gov/pub/pmc/second.pdf",
                 "filename": "PMC999.pdf" if duplicate_filename else "PMC1000.pdf",
             }
         )
+    payload: dict[str, object] = {"schema_version": 1, "approvals": rows}
+    if selected_count is not None:
+        payload["selected_count"] = selected_count
     path = tmp_path / "approvals.json"
-    path.write_text(
-        json.dumps({"schema_version": 1, "approvals": rows}),
-        encoding="utf-8",
-    )
+    path.write_text(json.dumps(payload), encoding="utf-8")
     return path
