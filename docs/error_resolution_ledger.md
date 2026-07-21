@@ -17,6 +17,7 @@ Use one entry per distinct failure. Record the first failing command, the exact 
 - **Fix:** Exact change that resolved the failure.
 - **Validation:** Commands, CI run, and commit that passed after the fix.
 - **Prevention / fast path:** What to check first if the symptom returns.
+- **Tracked as:** GitHub issue link (required whenever Status is `open` and the fix is deferred to a later session/PR; omit for `resolved` or `superseded`).
 - **Status:** resolved | open | superseded
 ```
 
@@ -198,6 +199,7 @@ Use one entry per distinct failure. Record the first failing command, the exact 
 - **Fix:** Not applied in this session — out of the scope of the M14 PMC identifier conversion task this session was authorized for. Needs its own change (e.g. `set -o pipefail` before each piped step, matching the pattern already used correctly in `.github/workflows/m14-mass-discovery.yml`'s discovery step) plus a decision on how to handle the 26 pre-existing test failures, 26 pre-existing mypy errors, and 11 pre-existing lint findings this exposes on `main`.
 - **Validation:** N/A — not fixed.
 - **Prevention / fast path:** Before trusting a green `Quality` check on this repository, independently run `poetry run ruff check .`, `poetry run mypy knowledge_engine tests`, and `poetry run pytest` locally (each as its own command, not through a pipe) until `.github/workflows/quality.yml` is corrected.
+- **Tracked as:** [issue #78](https://github.com/jweter/knowledge-engine-core/issues/78).
 - **Status:** open
 
 ## 2026-07-21 — M14 PMC OA acquisition failed on NCBI's FTP path migration
@@ -210,7 +212,7 @@ Use one entry per distinct failure. Record the first failing command, the exact 
 - **Fix:** First landed a diagnostic-only change (commit `e1d6469`) adding the numeric HTTP status code and a non-sensitive locator (1-based approval ordinal + PMCID) to `AcquisitionError` messages — this is what surfaced the `404` and allowed the root cause above to be confirmed from a live run rather than guessed. Then (commit `e3ce203`) added a single retry against NCBI's confirmed `/pub/pmc/deprecated/` relocation when the announced path 404s; no other status code's handling changed, no host-allowlist or PDF/licensing/count/checksum/transactional validation was touched.
 - **Validation:** `poetry run pytest tests/test_pmc_acquisition.py -q` — 13 passed (was 9 before either commit), including `test_non_success_status_is_reported_with_status_code_and_locator`, `test_legacy_path_404_falls_back_to_deprecated_ncbi_relocation`, and `test_deprecated_fallback_failure_still_reports_original_locator`. Full-suite `pytest` and `mypy knowledge_engine tests` matched this branch's pre-existing baseline exactly (26 failures / 20 errors, none touching the changed files) both before and after. Live: PR #75 workflow run `29827601057` (commit `e3ce203`) — the full 3,250-candidate pipeline, the same scale and query that originally failed — completed with every step passing: discovery (33 pages), adjudication, exact-500 selection, preflight, acquisition, reconciliation, and both artifact uploads. The acquisition step's own log confirms `With the provided path, there will be 500 files uploaded` — all 500 approved PDFs were downloaded (878,820,437 bytes total) and uploaded as the `m14-approved-pdfs` artifact.
 - **Prevention / fast path:** If PMC OA acquisition 404s again, check `https://ftp.ncbi.nlm.nih.gov/pub/pmc/readme.txt` first for further NCBI path changes before assuming a code regression.
-- **Known follow-up required before August 2026:** This fix is a confirmed, working, but explicitly **temporary** bridge — NCBI's `readme.txt` states the `/pub/pmc/deprecated/` copies will themselves be removed in August 2026. Before that date this project needs a durable replacement, most likely migrating PMC OA acquisition to NCBI's documented cloud/AWS access path (`https://pmc.ncbi.nlm.nih.gov/tools/cloud/`, referenced in the same `readme.txt`), or picking this back up if/when `oa.fcgi` is updated to return corrected paths. This should be owned by a dedicated roadmap/ADR decision rather than another silent path patch when the `deprecated/` copies disappear.
+- **Known follow-up required before August 2026:** This fix is a confirmed, working, but explicitly **temporary** bridge — NCBI's `readme.txt` states the `/pub/pmc/deprecated/` copies will themselves be removed in August 2026. Before that date this project needs a durable replacement, most likely migrating PMC OA acquisition to NCBI's documented cloud/AWS access path (`https://pmc.ncbi.nlm.nih.gov/tools/cloud/`, referenced in the same `readme.txt`), or picking this back up if/when `oa.fcgi` is updated to return corrected paths. This should be owned by a dedicated roadmap/ADR decision rather than another silent path patch when the `deprecated/` copies disappear. **Tracked as:** [issue #79](https://github.com/jweter/knowledge-engine-core/issues/79).
 - **Status:** resolved
 
 ## Operating rule
@@ -224,3 +226,4 @@ When CI fails:
 5. Validate locally with repository configuration, then require the complete GitHub Actions Quality gate.
 6. Add or update the ledger entry with the passing commit and workflow run.
 7. Remove temporary diagnostic workflows, artifacts, scripts, and delivery files before considering the fix complete.
+8. If the fix cannot land in the same session/PR, open a GitHub issue labeled `bug` for it instead of leaving it only as a `Status: open` ledger entry, and add a `Tracked as:` line here pointing to that issue. The ledger stays the permanent root-cause record; the issue is what's actually watched, assigned, and closed. See `docs/error_log.md` for why this replaced the old single-active-failure file.
