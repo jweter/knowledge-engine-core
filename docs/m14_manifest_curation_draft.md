@@ -28,20 +28,28 @@ The exporter fills fields supported by deterministic adjudication, authoritative
 - official PMC article and PDF URLs;
 - local PDF filename;
 - validated license text;
+- canonical Creative Commons deed URL for the validated license (see below);
+- access date, derived from the adjudication timestamp;
 - approved-open-access usage status;
 - included status and adjudication reason code;
-- receipt SHA-256;
+- receipt SHA-256, written as `sha256:<64 lowercase hexadecimal characters>`;
 - source type;
 - adjudication ruleset reference.
 
 PubMed metadata is collected during the existing `efetch` request. No additional per-paper request or owner review is required.
 
+### License URL derivation
+
+`license_url` is derived deterministically from `license_type` via `knowledge_engine.candidate_review.license_deed_url`, the same module that defines which licenses are allowed (`_ALLOWED_LICENSE_PATTERN`). Every accepted row's license already matched that pattern during adjudication, so the mapping never guesses: `CC BY` (optionally versioned) maps to `https://creativecommons.org/licenses/by/<version>/` and `CC0` (optionally versioned) maps to `https://creativecommons.org/publicdomain/zero/<version>/`, defaulting to the current version (`4.0` for CC BY, `1.0` for CC0) when the reported license text has no explicit version. This keeps license-matching logic in one place instead of a second, independently drifting copy.
+
+### Access date derivation
+
+`access_date` is the date portion (`YYYY-MM-DD`) of the accepted adjudication's `adjudicated_at` timestamp — the moment the automated pipeline captured PMC OA evidence for that paper, not a fabricated or estimated value.
+
 ## Deferred optional metadata
 
 The exporter may leave these non-blocking fields blank when no authoritative automated source supplied them:
 
-- access date;
-- license URL;
 - study type;
 - population;
 - intervention;

@@ -58,6 +58,11 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and `CC BY-NC-SA` licenses as if they were the fully-reusable `CC BY` license,
   because the license check used a string-prefix match instead of an exact match.
   Restricted licenses are now correctly held instead of accepted.
+- Fixed M14 manifest curation leaving `license_url` and `access_date` blank and
+  `expected_content_hash` unprefixed, which caused every exported row to fail
+  corpus-import validation. `license_url` is now derived deterministically from
+  `license_type`, `access_date` from the adjudication timestamp, and the hash is
+  now written with its required `sha256:` prefix.
 
 ## [0.2.0-alpha.1] - 2026-07-11
 

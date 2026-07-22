@@ -282,6 +282,25 @@ def _license_result(reported_license: str | None) -> str:
     )
 
 
+def license_deed_url(license_type: str) -> str:
+    """Canonical Creative Commons deed URL for an allowed license string.
+
+    Raises ValueError if `license_type` does not match `_ALLOWED_LICENSE_PATTERN`,
+    so callers only ever reuse this single source of truth for what counts as
+    an unrestricted license, rather than re-deriving license semantics.
+    """
+
+    normalized = " ".join(license_type.upper().split())
+    if not _ALLOWED_LICENSE_PATTERN.fullmatch(normalized):
+        raise ValueError(f"Unsupported license type: {license_type!r}")
+    parts = normalized.split(" ")
+    if parts[0] == "CC0":
+        version = parts[1] if len(parts) > 1 else "1.0"
+        return f"https://creativecommons.org/publicdomain/zero/{version}/"
+    version = parts[2] if len(parts) > 2 else "4.0"
+    return f"https://creativecommons.org/licenses/by/{version}/"
+
+
 def _full_text_result(pdf_url: str | None) -> str:
     if pdf_url is None:
         return "incomplete_missing_pdf_url"
