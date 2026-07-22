@@ -15,9 +15,13 @@ prerequisite: page/span-level extraction provenance (`ParsedPaper.pages`, the
 `paper_pages` table), plus the evidence-record validator and renderer fixes
 described below. M16 (issue #91, PR #92, merged) implemented deterministic
 structured-section detection (`knowledge_engine.extraction.detect_sections`)
-— the first piece of the Extraction Layer — as a standalone unit, before any
-claim-extraction rules are written against it. No claim/evidence extraction
-code exists yet; that is the next, not-yet-scoped milestone.
+— the first piece of the Extraction Layer. M17 (issue #94, in progress)
+implements deterministic claim-candidate sentence detection
+(`knowledge_engine.extraction.detect_claim_candidates`) within `results`/
+`conclusion` sections, using a conservative quantitative/comparative signal
+match — the second piece of the Extraction Layer, still stopping short of
+PICO extraction, evidence-direction classification, and `EvidenceRecord`
+generation, which remain later, not-yet-scoped milestones.
 
 ## Mission
 
