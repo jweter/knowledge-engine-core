@@ -54,15 +54,23 @@ acceptance, release validation, and optional post-release quality audits.
   500-paper rehearsal with explicit measurement and stop conditions.
 - **Pre-M14 maintenance** reconciled repository state, made Ruff the authoritative
   quality tool, and hardened fresh and linked ingestion error boundaries.
+- **M14** migrated PMC OA discovery and acquisition to NCBI's Cloud Service ahead
+  of the August 2026 FTP/`oa.fcgi` removal, fixed a license-adjudication defect
+  that had been silently accepting restricted `CC BY-NC`/`-ND`/`-SA` variants,
+  and completed the controlled 500-paper rehearsal (issue #21) with a `PROCEED`
+  decision: a fresh import and a linked resume against the same manifest
+  snapshot both reconciled exactly, with zero failures, zero issues, and a fully
+  idempotent resume. See `docs/m14_500_paper_rehearsal_report.md`.
 
 ### M14: Controlled 500-paper rehearsal
 
 M14 is one controlled 500-paper rehearsal under the M13 entry, measurement, stop,
 reconciliation, resume, and artifact-hygiene conditions. Issue #21 is the
-authoritative rehearsal tracker. Persistence failure classification in issue #22
-must be complete before repeated large-run failure evidence is treated as
-diagnostic. The rehearsal must not introduce new architecture solely to collect
-one run's measurements.
+authoritative rehearsal tracker; it completed with a `PROCEED` decision (see
+`docs/m14_500_paper_rehearsal_report.md`). Persistence failure classification in
+issue #22 must be complete before repeated large-run failure evidence is treated
+as diagnostic. The rehearsal must not introduce new architecture solely to
+collect one run's measurements.
 
 The M14 corpus scope is **Obesity and Metabolic-Disease Therapeutics**. The
 original GLP-1 weight-loss question remains the first named subtopic, but the
@@ -122,6 +130,7 @@ Detailed milestone records include:
 - `docs/m10_release_notes.md`
 - `docs/m12_100_paper_rehearsal.md`
 - `docs/m13_scale_readiness_decision.md`
+- `docs/m14_500_paper_rehearsal_report.md`
 - `docs/audit_remediation_register.md`
 
 ## Phase 2: Evidence Records
