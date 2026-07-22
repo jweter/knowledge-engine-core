@@ -43,6 +43,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   zero sections rather than a guessed default. Not yet wired into any CLI
   command or evidence-record generation -- claim extraction against these
   spans is a later milestone.
+- Added the M17 deterministic claim-candidate sentence detection (issue #94):
+  `knowledge_engine.extraction.detect_claim_candidates` locates candidate
+  claim sentences within a paper's `results`/`conclusion` sections (from M16)
+  by conservative signal matching -- a percentage, p-value, confidence
+  interval, or explicit comparative phrase -- using a deterministic,
+  abbreviation-aware sentence splitter (no new dependency, no statistical
+  model). A sentence with no such signal is never treated as a candidate.
+  Stops short of PICO extraction, evidence-direction classification, and
+  `EvidenceRecord` generation, which remain later milestones.
 
 ### Changed
 
