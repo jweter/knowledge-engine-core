@@ -24,9 +24,16 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added `docs/phase2_design.md`, the implementation-ready Phase 2 design
   (mirroring `docs/phase1_design.md`'s role for Phase 1): architecture,
   extraction-record schema reuse, testing strategy, and open questions for
-  automated claim/evidence extraction. Identifies page/span-level extraction
-  provenance (currently discarded by the parser) as the first concrete
-  prerequisite before any extraction logic is written.
+  automated claim/evidence extraction.
+- Added the M15 Phase 2 foundation (issue #89): page/span-level extraction
+  provenance. `PyMuPDFParser` now normalizes text per page and
+  `ParsedPaper.pages` preserves page boundaries a document-level join used to
+  discard; a new `paper_pages` table persists this so a future extracted claim
+  can cite an exact `(page_number, offset)` span instead of only a page count.
+  `ke evidence-validate` now validates `source_span`'s shape and requires a
+  non-empty `extraction_status`, and `ke evidence`/`ke answer --evidence`/
+  `ke evidence-report` display each record's real `extraction_method` instead
+  of a hardcoded manual label.
 
 ### Changed
 
@@ -77,6 +84,16 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (e.g. `CC0 2.0`, a version that was never published) instead of a real
   Creative Commons version, which could let malformed license evidence pass
   adjudication and produce a license URL with no real deed behind it.
+- Fixed `migrate_schema` verifying that every table registered in the ORM
+  metadata already exists *before* creating newly-registered tables, for any
+  database past schema version 0 — a table introduced by a new schema version
+  (like this release's `paper_pages`) could never actually migrate onto an
+  existing database; it would always raise instead. Fixed by only exempting
+  tables introduced at a version newer than the database's own recorded
+  version from the pre-creation check, so a genuinely new table is created
+  silently while a table that was actually dropped or corrupted from an
+  already-reached version still raises rather than being silently recreated
+  empty.
 
 ## [0.2.0-alpha.1] - 2026-07-11
 

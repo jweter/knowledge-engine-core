@@ -73,6 +73,14 @@ operator durability support for local SQLite backup bundles. It does not alter
 scientific-ingestion semantics. Any expansion beyond backup transport and recovery
 support still requires a dedicated roadmap decision or ADR.
 
+### Page-level extraction provenance was not retained
+
+Resolved by the M15 Phase 2 foundation milestone. `PyMuPDFParser` now normalizes
+each page individually and `ParsedPaper.pages` preserves page boundaries; a new
+`paper_pages` table (`PaperPage` model) persists per-page text keyed to `papers`.
+Every extracted claim can now cite an exact `(page_number, offset)` span instead of
+only a page count. See `docs/phase2_design.md`'s Prerequisite section.
+
 ## Medium
 
 ### Best-effort PDF metadata extraction
@@ -134,17 +142,6 @@ provider conflicts will eventually require explicit provenance-aware identity.
 
 Eventual fix: design this model when multiple-provider/version conflicts become an
 operational requirement. Do not introduce it solely for the 500-paper rehearsal.
-
-### Page-level extraction provenance is not yet retained
-
-Current ingestion stores document-level raw/body text rather than stable page/span
-records.
-
-Why it matters: Phase 2 evidence extraction will need citations back to source pages
-or stable text spans.
-
-Eventual fix: add page-level extraction identity before Phase 2 claim/evidence work,
-not as part of the current bounded rehearsal.
 
 ### One-off GitHub Actions workflows are not classified
 

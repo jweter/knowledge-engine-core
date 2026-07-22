@@ -4,6 +4,7 @@ import fitz
 import pytest
 
 from knowledge_engine.parser import MalformedDocumentError, PyMuPDFParser
+from knowledge_engine.utils import normalize_whitespace
 
 
 def make_pdf(path: Path) -> None:
@@ -53,6 +54,43 @@ def test_parser_extracts_pdf_metadata(tmp_path: Path) -> None:
     assert parsed.page_count == 1
     assert parsed.word_count > 10
     assert "alzheimer biomarkers" in parsed.raw_text.lower()
+
+
+def make_multi_page_pdf(path: Path) -> None:
+    document = fitz.open()
+    page_one = document.new_page()
+    page_one.insert_text((72, 72), "First page discusses metabolic signaling.")
+    document.new_page()  # deliberately blank middle page
+    page_three = document.new_page()
+    page_three.insert_text((72, 72), "Third page reports biomarker findings.")
+    document.save(path)
+    document.close()
+
+
+def test_parser_preserves_page_boundaries_and_matches_document_level_join(
+    tmp_path: Path,
+) -> None:
+    pdf_path = tmp_path / "multi_page.pdf"
+    make_multi_page_pdf(pdf_path)
+
+    with fitz.open(pdf_path) as document:
+        original_page_texts = [page.get_text("text") for page in document]
+
+    parsed = PyMuPDFParser().parse(pdf_path)
+
+    assert parsed.page_count == 3
+    assert [page.page_number for page in parsed.pages] == [1, 2, 3]
+    assert "metabolic signaling" in parsed.pages[0].text.lower()
+    assert parsed.pages[1].text == ""
+    assert "biomarker findings" in parsed.pages[2].text.lower()
+
+    # A page's normalized text must equal that page's own contribution to the
+    # document-level raw_text, and the join across all pages must reproduce
+    # exactly what normalizing the whole document at once would have produced
+    # (including the blank middle page correctly contributing no extra
+    # separator), so a span offset computed against one page's text is
+    # directly usable as a citation with no separate global-offset mapping.
+    assert parsed.raw_text == normalize_whitespace("\n\n".join(original_page_texts))
 
 
 def test_parser_classifies_encrypted_pdf_as_expected_failure(tmp_path: Path) -> None:

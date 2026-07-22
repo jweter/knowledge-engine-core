@@ -290,6 +290,9 @@ class Paper(Base):
     keyword_links: Mapped[list[PaperKeyword]] = relationship(
         back_populates="paper", cascade="all, delete-orphan"
     )
+    pages: Mapped[list[PaperPage]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan", order_by="PaperPage.page_number"
+    )
 
     __table_args__ = (
         Index("ix_papers_embedding", "embedding_model", "embedding_id"),
@@ -311,3 +314,33 @@ class PaperText(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     paper: Mapped[Paper] = relationship(back_populates="text")
+
+
+class PaperPage(Base):
+    """Per-page normalized text, preserving page boundaries.
+
+    Document-level ``PaperText.raw_text``/``body_text`` join every page's text
+    together and discard which page any substring came from. Phase 2 evidence
+    extraction needs an exact, reproducible (page_number, offset) citation for
+    every claim, so this table retains each page's normalized text
+    separately. A page's contribution to the joined ``raw_text`` is exactly
+    its ``text`` value here; offsets computed against ``text`` are therefore
+    directly usable as a source-span citation without a global-to-page offset
+    mapping.
+
+    Only populated going forward by ``PaperRepository.add_parsed_paper``. A
+    paper imported before this table existed has zero rows here until a
+    separate backfill utility re-parses its original local PDF -- which is
+    only possible if that PDF file is still present, since page boundaries
+    cannot be recovered from the already-joined ``raw_text``/``body_text``
+    alone. Extraction logic must treat an empty ``pages`` list as "no page
+    provenance available" rather than assuming every paper has one.
+    """
+
+    __tablename__ = "paper_pages"
+
+    paper_id: Mapped[int] = mapped_column(ForeignKey("papers.id"), primary_key=True)
+    page_number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+
+    paper: Mapped[Paper] = relationship(back_populates="pages")

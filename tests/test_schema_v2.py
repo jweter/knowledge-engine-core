@@ -43,7 +43,7 @@ def _table_names(database: Database) -> set[str]:
         )
 
 
-def test_fresh_database_initializes_at_schema_version_3(tmp_path: Path) -> None:
+def test_fresh_database_initializes_at_current_schema_version(tmp_path: Path) -> None:
     database = _database(tmp_path)
 
     database.initialize()
@@ -52,7 +52,7 @@ def test_fresh_database_initializes_at_schema_version_3(tmp_path: Path) -> None:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
         foreign_keys_enabled = connection.execute(text("PRAGMA foreign_keys")).scalar_one()
 
-    assert version == CURRENT_SCHEMA_VERSION == 3
+    assert version == CURRENT_SCHEMA_VERSION == 4
     assert "review_status" in _column_names(database, "import_runs")
     assert foreign_keys_enabled == 1
     assert "run_mode" in _column_names(database, "import_runs")
@@ -74,12 +74,12 @@ def test_fresh_database_initializes_at_schema_version_3(tmp_path: Path) -> None:
     } <= _index_names(database)
 
 
-def test_schema_version_3_migration_is_retry_safe(tmp_path: Path) -> None:
+def test_schema_version_4_migration_is_retry_safe(tmp_path: Path) -> None:
     database = _database(tmp_path)
     database.initialize()
 
     with database.engine.begin() as connection:
-        connection.execute(text("UPDATE schema_versions SET version = 2 WHERE version = 3"))
+        connection.execute(text("UPDATE schema_versions SET version = 2 WHERE version = 4"))
 
     database.initialize()
     database.initialize()
@@ -91,7 +91,7 @@ def test_schema_version_3_migration_is_retry_safe(tmp_path: Path) -> None:
             ).scalars()
         )
 
-    assert versions == [2, 3]
+    assert versions == [2, 4]
     assert "run_mode" in _column_names(database, "import_runs")
     assert "duplicate_evidence_json" in _column_names(database, "import_items")
 
@@ -117,7 +117,7 @@ def test_older_version_missing_table_is_not_silently_repaired(tmp_path: Path) ->
     database.initialize()
 
     with database.engine.begin() as connection:
-        connection.execute(text("UPDATE schema_versions SET version = 2 WHERE version = 3"))
+        connection.execute(text("UPDATE schema_versions SET version = 2 WHERE version = 4"))
         connection.execute(text("DROP TABLE import_items"))
 
     with pytest.raises(RuntimeError, match="incomplete"):
@@ -145,3 +145,41 @@ def test_current_version_missing_index_is_not_silently_repaired(tmp_path: Path) 
         database.initialize()
 
     assert index_name not in _index_names(database)
+
+
+def test_upgrading_older_database_adds_new_table_without_error(tmp_path: Path) -> None:
+    """A table introduced at a newer schema version is expected to be absent on an
+    older database; create_all must add it silently rather than raise."""
+
+    database = _database(tmp_path)
+    database.initialize()
+
+    with database.engine.begin() as connection:
+        connection.execute(text("DROP TABLE paper_pages"))
+        connection.execute(text("UPDATE schema_versions SET version = 3 WHERE version = 4"))
+
+    database.initialize()
+
+    assert "paper_pages" in _table_names(database)
+    with database.engine.connect() as connection:
+        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+    assert version == CURRENT_SCHEMA_VERSION == 4
+
+
+def test_dropping_paper_pages_at_current_version_is_not_silently_repaired(
+    tmp_path: Path,
+) -> None:
+    """Once a database is already at the version that introduced paper_pages,
+    dropping it is corruption, not an expected absence, and must not be
+    silently recreated by create_all."""
+
+    database = _database(tmp_path)
+    database.initialize()
+
+    with database.engine.begin() as connection:
+        connection.execute(text("DROP TABLE paper_pages"))
+
+    with pytest.raises(RuntimeError, match="incomplete"):
+        database.initialize()
+
+    assert "paper_pages" not in _table_names(database)
