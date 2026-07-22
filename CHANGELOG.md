@@ -54,6 +54,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`pdf_calibration_cli.py`, `candidate_review_cli.py`) and a real SQLite backup
   bug where a naive (non-timezone-aware) timestamp left a partial, unverified
   snapshot file on disk instead of being cleaned up.
+- Fixed M14 candidate adjudication accepting restricted `CC BY-NC`, `CC BY-NC-ND`,
+  and `CC BY-NC-SA` licenses as if they were the fully-reusable `CC BY` license,
+  because the license check used a string-prefix match instead of an exact match.
+  Restricted licenses are now correctly held instead of accepted.
 
 ## [0.2.0-alpha.1] - 2026-07-11
 
