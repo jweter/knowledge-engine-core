@@ -138,6 +138,13 @@ Detailed milestone records include:
 - Extract claims, methods, results, limitations, and evidence quality markers.
 - Keep every generated structure traceable to source text spans.
 - Add automated validation and optional post-working-version human audit workflows.
+- Use `docs/phase2_design.md` as the detailed design reference. Its first
+  concrete prerequisite is adding page/span-level extraction provenance to the
+  parser (currently discarded after parsing; see `docs/technical_debt.md`),
+  which must exist before any claim/evidence extraction logic is written.
+  Extraction methodology (rule-based, classical NLP, or a combination) remains
+  an open decision pending project-owner input; see the design doc's Open
+  Questions.
 
 ## Phase 3: Search Plus Semantics
 
