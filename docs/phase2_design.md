@@ -145,6 +145,26 @@ Implemented:
   than being silently recreated as empty. Confirmed with dedicated tests for
   both cases.
 
+**Known gap, found by Codex automated review, deliberately not fixed in this
+milestone**: `paper_pages` is only populated going forward, by
+`PaperRepository.add_parsed_paper`. A paper imported before this migration has
+zero page rows after upgrading, and cannot simply be re-imported to backfill
+them — `papers.source_path`/`doi`/`content_hash` uniqueness rejects a repeat
+import of the same file. This matches how every prior additive schema change
+in this codebase works (v2/v3 added columns that start empty for pre-existing
+rows and are populated only by new operations going forward), but with one
+real difference: a genuine backfill *is* possible for `paper_pages` specifically
+(re-parse the paper's original local PDF, since the same per-page normalization
+logic in `PyMuPDFParser` is deterministic), but only as long as that PDF file
+is still present — and it may not be, since local PDFs are treated as
+ephemeral working files throughout this project, not permanent storage. A
+backfill CLI command is real, separately-scoped work (locating papers with a
+still-present source file, re-parsing, upserting page rows, and reporting
+which papers could not be backfilled) — tracked as a follow-up in issue #89,
+not implemented here. `PaperPage`'s docstring documents that extraction logic
+must treat an empty `pages` list as "no page provenance available," not
+assume every paper has one.
+
 This prerequisite was Phase 2's first concrete milestone. Automated claim and
 evidence extraction cannot be reviewed for correctness — reviewers cannot
 check "does this span actually say what the claim says" — without it.

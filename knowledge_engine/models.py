@@ -327,6 +327,14 @@ class PaperPage(Base):
     its ``text`` value here; offsets computed against ``text`` are therefore
     directly usable as a source-span citation without a global-to-page offset
     mapping.
+
+    Only populated going forward by ``PaperRepository.add_parsed_paper``. A
+    paper imported before this table existed has zero rows here until a
+    separate backfill utility re-parses its original local PDF -- which is
+    only possible if that PDF file is still present, since page boundaries
+    cannot be recovered from the already-joined ``raw_text``/``body_text``
+    alone. Extraction logic must treat an empty ``pages`` list as "no page
+    provenance available" rather than assuming every paper has one.
     """
 
     __tablename__ = "paper_pages"
