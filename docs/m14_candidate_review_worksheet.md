@@ -62,7 +62,7 @@ No reviewer identifier, review note, review timestamp, or owner decision is requ
 
 ## Initial deterministic ruleset
 
-The active ruleset is `m14-candidate-adjudication-v4`.
+The active ruleset is `m14-candidate-adjudication-v5`.
 
 - `metadata_only` records are rejected for the PMC OA acquisition path with `NO_VERIFIED_REUSABLE_FULL_TEXT`.
 - Scientific evidence passes only when the combined PubMed title and abstract contain both a declared metabolic-disease term and a declared treatment or therapeutic term.

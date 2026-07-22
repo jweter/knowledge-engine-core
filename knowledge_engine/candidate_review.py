@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -11,8 +12,13 @@ from urllib.parse import urlparse
 
 from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST
 
-ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v4"
-_ALLOWED_LICENSE_PREFIXES = ("CC BY", "CC0")
+ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v5"
+_ALLOWED_LICENSE_PATTERN = re.compile(r"^(?:CC BY|CC0)(?: [0-9][0-9.]*)?$")
+"""Matches only unrestricted licenses: exactly "CC BY" or "CC0", optionally
+followed by a version number (e.g. "CC BY 4.0"). Deliberately does not match
+"CC BY-NC", "CC BY-NC-ND", "CC BY-NC-SA", or "CC BY-SA" - those restrict
+commercial use and/or derivative works, which conflicts with this project's
+extraction and redistribution of derived evidence records (Phase 2)."""
 _DISEASE_TERMS = (
     "obesity",
     "obese",
@@ -272,9 +278,7 @@ def _license_result(reported_license: str | None) -> str:
         return "incomplete_missing_license"
     normalized = " ".join(reported_license.upper().split())
     return (
-        "passed"
-        if normalized.startswith(_ALLOWED_LICENSE_PREFIXES)
-        else "unsupported_license_basis"
+        "passed" if _ALLOWED_LICENSE_PATTERN.fullmatch(normalized) else "unsupported_license_basis"
     )
 
 

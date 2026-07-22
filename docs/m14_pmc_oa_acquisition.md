@@ -20,7 +20,7 @@ The M14 approval artifact retains acquisition schema version 1 and records deter
 ```json
 {
   "schema_version": 1,
-  "rules_version": "m14-candidate-adjudication-v4",
+  "rules_version": "m14-candidate-adjudication-v5",
   "selection_rule": "accepted_in_worksheet_order",
   "source_candidate_count": 3250,
   "source_accepted_count": 589,
