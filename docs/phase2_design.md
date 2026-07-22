@@ -19,9 +19,19 @@ structured-section detection (`knowledge_engine.extraction.detect_sections`)
 implemented deterministic claim-candidate sentence detection
 (`knowledge_engine.extraction.detect_claim_candidates`) within `results`/
 `conclusion` sections, using a conservative quantitative/comparative signal
-match — the second piece of the Extraction Layer, still stopping short of
-PICO extraction, evidence-direction classification, and `EvidenceRecord`
-generation, which remain later, not-yet-scoped milestones.
+match — the second piece of the Extraction Layer. M18 (issue #98, in
+progress) implements deterministic claim framing-cue classification
+(`knowledge_engine.extraction.classify_claim_framing`) — the third piece of
+the Extraction Layer. M18 deliberately does not implement the schema's
+`evidence_direction` field: that field is defined relative to a
+`research_question` (see `docs/vs7_manual_evidence_record.md`'s worked
+example), which a claim candidate does not have. M18 instead classifies only
+how a candidate's sentence frames itself relative to prior work the text
+itself references (`contextualizes`/`contradicts`/`qualifies`), leaving most
+candidates `unclassified` rather than guessing a supports-equivalent label.
+PICO extraction, real research-question-relative `evidence_direction`
+classification, and `EvidenceRecord` generation remain later, not-yet-scoped
+milestones.
 
 ## Mission
 
