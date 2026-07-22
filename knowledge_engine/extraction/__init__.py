@@ -5,6 +5,11 @@ from knowledge_engine.extraction.claims import (
     ClaimCandidate,
     detect_claim_candidates,
 )
+from knowledge_engine.extraction.direction import (
+    CLAIM_FRAMING_RULES_VERSION,
+    ClaimFraming,
+    classify_claim_framing,
+)
 from knowledge_engine.extraction.sections import (
     SECTION_DETECTION_RULES_VERSION,
     SECTION_TYPES,
@@ -14,10 +19,13 @@ from knowledge_engine.extraction.sections import (
 
 __all__ = [
     "CLAIM_CANDIDATE_RULES_VERSION",
+    "CLAIM_FRAMING_RULES_VERSION",
     "SECTION_DETECTION_RULES_VERSION",
     "SECTION_TYPES",
     "ClaimCandidate",
+    "ClaimFraming",
     "SectionSpan",
+    "classify_claim_framing",
     "detect_claim_candidates",
     "detect_sections",
 ]

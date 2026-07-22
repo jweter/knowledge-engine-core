@@ -47,6 +47,10 @@ Phase 2 completed capabilities include:
 - deterministic claim-candidate sentence detection
   (`knowledge_engine.extraction.detect_claim_candidates`) within results/
   conclusion sections
+- deterministic claim framing-cue classification
+  (`knowledge_engine.extraction.classify_claim_framing`), distinct from the
+  evidence-record schema's research-question-relative `evidence_direction`
+  field
 
 See [docs/phase2_design.md](docs/phase2_design.md) for the Phase 2 architecture
 and milestone-by-milestone status.
@@ -71,9 +75,12 @@ and milestone-by-milestone status.
   piece of the Phase 2 Extraction Layer.
 - **M17:** implemented deterministic claim-candidate sentence detection within
   results/conclusion sections, the second piece of the Extraction Layer.
+- **M18:** implemented deterministic claim framing-cue classification, the
+  third piece of the Extraction Layer. Deliberately not the schema's
+  research-question-relative `evidence_direction` field.
 
 Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is in
-progress through M17. See [docs/roadmap.md](docs/roadmap.md) and
+progress through M18. See [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase2_design.md](docs/phase2_design.md) for the next milestone.
 
 ## Requirements
@@ -268,11 +275,13 @@ The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now inc
 completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
 scale-readiness, and the controlled 500-paper rehearsal
 ([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
-[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M17:
-deterministic, rule-based structured-section and claim-candidate detection.
-`EvidenceRecord` generation from these candidates is not yet implemented. All
-Phase 2 extraction is rule-based, with no LLM-based extraction, synthesis, or
-reasoning of any kind.
+[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M18:
+deterministic, rule-based structured-section detection, claim-candidate
+detection, and claim framing-cue classification. `EvidenceRecord` generation
+from these candidates, and the schema's research-question-relative
+`evidence_direction` field, are not yet implemented. All Phase 2 extraction
+is rule-based, with no LLM-based extraction, synthesis, or reasoning of any
+kind.
 
 Neither phase should be expanded into Alembic adoption, a new package manager,
 persistent telemetry, vector search, a graph, AI reasoning, an API, web

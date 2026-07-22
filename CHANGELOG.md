@@ -52,6 +52,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   model). A sentence with no such signal is never treated as a candidate.
   Stops short of PICO extraction, evidence-direction classification, and
   `EvidenceRecord` generation, which remain later milestones.
+- Added the M18 deterministic claim framing-cue classification (issue #98):
+  `knowledge_engine.extraction.classify_claim_framing` classifies each M17
+  claim candidate by how its sentence frames itself relative to prior work
+  the text itself references -- `contextualizes`, `contradicts`, `qualifies`,
+  or `unclassified` when no such cue is present. This is deliberately not the
+  evidence-record schema's `evidence_direction` field, which is defined
+  relative to a `research_question` a claim candidate does not have; a
+  candidate is never defaulted to a supports-equivalent label absent an
+  explicit cue.
 
 ### Changed
 
