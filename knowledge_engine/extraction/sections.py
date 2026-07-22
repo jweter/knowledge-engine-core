@@ -47,7 +47,9 @@ _SECTION_HEADING_PATTERNS: dict[str, re.Pattern[str]] = {
     "discussion": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}discussion\s*$"),
     "limitations": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}limitations\s*$"),
     "conclusion": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}conclusions?\s*$"),
-    "references": re.compile(r"(?im)^\s*(?:references|bibliography|literature cited)\s*$"),
+    "references": re.compile(
+        rf"(?im)^\s*{_NUMBERING_PREFIX}(?:references|bibliography|literature cited)\s*$"
+    ),
 }
 
 

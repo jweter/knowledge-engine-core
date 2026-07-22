@@ -52,6 +52,19 @@ def test_detects_numbered_heading() -> None:
     assert spans[0].heading_text == "3. Results"
 
 
+def test_detects_numbered_references_heading() -> None:
+    """References must support numbering like every other section heading;
+    otherwise a numbered bibliography is missed and the preceding section's
+    span silently swallows the citation text as body content."""
+
+    pages = [ParsedPage(page_number=1, text="Results\n\nEffect seen.\n\n7. References\n\n1. Foo.")]
+
+    spans = detect_sections(pages)
+
+    assert [span.section_type for span in spans] == ["results", "references"]
+    assert spans[1].heading_text == "7. References"
+
+
 def test_detects_multiple_sections_in_document_order() -> None:
     pages = [
         ParsedPage(
