@@ -7,7 +7,10 @@ import io
 import json
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
+
+from knowledge_engine.candidate_review import license_deed_url
 
 SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.pdf$")
 MANIFEST_FIELDS = (
@@ -148,6 +151,7 @@ def export_manifest_curation_draft(
         ):
             raise ManifestCurationError("Accepted adjudication lacks verified PMC OA evidence.")
         reason_codes = _required_list(adjudication, "reason_codes")
+        adjudicated_at = _required(adjudication, "adjudicated_at")
         row = {field: "" for field in MANIFEST_FIELDS}
         row.update(
             {
@@ -162,11 +166,13 @@ def export_manifest_curation_draft(
                 "source_url": f"https://pmc.ncbi.nlm.nih.gov/articles/{pmcid}/",
                 "pdf_url": _required(adjudication, "pdf_url"),
                 "local_path": filename,
+                "access_date": _access_date(adjudicated_at),
                 "license_type": license_name,
+                "license_url": _license_url(license_name),
                 "usage_status": "approved_open_access",
                 "inclusion_status": "included",
                 "inclusion_reason": ";".join(reason_codes),
-                "expected_content_hash": sha256,
+                "expected_content_hash": f"sha256:{sha256}",
                 "source_type": "paper",
                 "notes": f"Automated adjudication ruleset: {worksheet_rules_version}",
             }
@@ -211,6 +217,20 @@ def _required_list(row: dict[str, object], field: str) -> tuple[str, ...]:
 def _optional(row: dict[str, object], field: str) -> str:
     value = row.get(field)
     return value.strip() if isinstance(value, str) else ""
+
+
+def _access_date(adjudicated_at: str) -> str:
+    try:
+        return datetime.fromisoformat(adjudicated_at).date().isoformat()
+    except ValueError as exc:
+        raise ManifestCurationError("Adjudication timestamp is malformed.") from exc
+
+
+def _license_url(license_name: str) -> str:
+    try:
+        return license_deed_url(license_name)
+    except ValueError as exc:
+        raise ManifestCurationError("License evidence has no canonical deed URL.") from exc
 
 
 def _authors(row: dict[str, object]) -> str:

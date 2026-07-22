@@ -12,13 +12,18 @@ from urllib.parse import urlparse
 
 from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST
 
-ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v5"
-_ALLOWED_LICENSE_PATTERN = re.compile(r"^(?:CC BY|CC0)(?: [0-9][0-9.]*)?$")
+ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v6"
+_ALLOWED_LICENSE_PATTERN = re.compile(
+    r"^(?:CC BY(?: (?:1\.0|2\.0|2\.5|3\.0|4\.0))?|CC0(?: 1\.0)?)$"
+)
 """Matches only unrestricted licenses: exactly "CC BY" or "CC0", optionally
-followed by a version number (e.g. "CC BY 4.0"). Deliberately does not match
-"CC BY-NC", "CC BY-NC-ND", "CC BY-NC-SA", or "CC BY-SA" - those restrict
-commercial use and/or derivative works, which conflicts with this project's
-extraction and redistribution of derived evidence records (Phase 2)."""
+followed by one of their real published version numbers (CC BY: 1.0, 2.0, 2.5,
+3.0, or 4.0; CC0: only 1.0 exists). Deliberately does not match "CC BY-NC",
+"CC BY-NC-ND", "CC BY-NC-SA", or "CC BY-SA" - those restrict commercial use
+and/or derivative works, which conflicts with this project's extraction and
+redistribution of derived evidence records (Phase 2). The version allowlist
+(rather than a loose `[0-9.]*` pattern) also ensures a version that passes
+here always has a real Creative Commons deed URL - see `license_deed_url`."""
 _DISEASE_TERMS = (
     "obesity",
     "obese",
@@ -280,6 +285,25 @@ def _license_result(reported_license: str | None) -> str:
     return (
         "passed" if _ALLOWED_LICENSE_PATTERN.fullmatch(normalized) else "unsupported_license_basis"
     )
+
+
+def license_deed_url(license_type: str) -> str:
+    """Canonical Creative Commons deed URL for an allowed license string.
+
+    Raises ValueError if `license_type` does not match `_ALLOWED_LICENSE_PATTERN`,
+    so callers only ever reuse this single source of truth for what counts as
+    an unrestricted license, rather than re-deriving license semantics.
+    """
+
+    normalized = " ".join(license_type.upper().split())
+    if not _ALLOWED_LICENSE_PATTERN.fullmatch(normalized):
+        raise ValueError(f"Unsupported license type: {license_type!r}")
+    parts = normalized.split(" ")
+    if parts[0] == "CC0":
+        version = parts[1] if len(parts) > 1 else "1.0"
+        return f"https://creativecommons.org/publicdomain/zero/{version}/"
+    version = parts[2] if len(parts) > 2 else "4.0"
+    return f"https://creativecommons.org/licenses/by/{version}/"
 
 
 def _full_text_result(pdf_url: str | None) -> str:

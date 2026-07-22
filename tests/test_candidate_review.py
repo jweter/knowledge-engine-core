@@ -9,6 +9,7 @@ import pytest
 from knowledge_engine.candidate_review import (
     ADJUDICATION_RULES_VERSION,
     CandidateReviewError,
+    license_deed_url,
     prepare_candidate_review,
 )
 
@@ -180,7 +181,10 @@ def test_oa_candidate_with_restricted_cc_variant_is_held(
     assert "LICENSE_EVIDENCE_INCOMPLETE_OR_UNSUPPORTED" in item.reason_codes
 
 
-@pytest.mark.parametrize("allowed_license", ["CC BY", "CC BY 4.0", "CC0", "CC0 1.0"])
+@pytest.mark.parametrize(
+    "allowed_license",
+    ["CC BY", "CC BY 1.0", "CC BY 2.0", "CC BY 2.5", "CC BY 3.0", "CC BY 4.0", "CC0", "CC0 1.0"],
+)
 def test_oa_candidate_with_unrestricted_cc_variant_passes(
     tmp_path: Path, allowed_license: str
 ) -> None:
@@ -193,6 +197,30 @@ def test_oa_candidate_with_unrestricted_cc_variant_passes(
 
     item = worksheet.items[0]
     assert item.license_rule_result == "passed"
+
+
+@pytest.mark.parametrize(
+    "malformed_license",
+    ["CC0 2.0", "CC BY 4..0", "CC BY 4.0.", "CC BY 99.0", "CC BY 5.0"],
+)
+def test_oa_candidate_with_malformed_cc_version_is_held(
+    tmp_path: Path, malformed_license: str
+) -> None:
+    """A version string that shares the shared regex's character class but
+    names a Creative Commons version that was never published (e.g. CC0 2.0,
+    which doesn't exist) must not pass merely because it is digits and dots -
+    passing would produce a license_url with no real deed behind it."""
+
+    candidate = _candidate()
+    candidate["license"] = malformed_license
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "held"
+    assert item.license_rule_result == "unsupported_license_basis"
 
 
 def test_oa_candidate_with_unapproved_pdf_host_is_held(tmp_path: Path) -> None:
@@ -257,3 +285,30 @@ def test_inconsistent_oa_status_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(CandidateReviewError, match="does not reconcile"):
         prepare_candidate_review(candidates)
+
+
+@pytest.mark.parametrize(
+    ("license_type", "expected_url"),
+    [
+        ("CC BY", "https://creativecommons.org/licenses/by/4.0/"),
+        ("CC BY 1.0", "https://creativecommons.org/licenses/by/1.0/"),
+        ("CC BY 2.0", "https://creativecommons.org/licenses/by/2.0/"),
+        ("CC BY 2.5", "https://creativecommons.org/licenses/by/2.5/"),
+        ("CC BY 3.0", "https://creativecommons.org/licenses/by/3.0/"),
+        ("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/"),
+        ("CC0", "https://creativecommons.org/publicdomain/zero/1.0/"),
+        ("CC0 1.0", "https://creativecommons.org/publicdomain/zero/1.0/"),
+        ("cc by", "https://creativecommons.org/licenses/by/4.0/"),
+    ],
+)
+def test_license_deed_url_maps_allowed_licenses(license_type: str, expected_url: str) -> None:
+    assert license_deed_url(license_type) == expected_url
+
+
+@pytest.mark.parametrize(
+    "license_type",
+    ["CC BY-NC", "CC0 2.0", "CC BY 4..0", "CC BY 5.0", "Publisher free access"],
+)
+def test_license_deed_url_rejects_unsupported_licenses(license_type: str) -> None:
+    with pytest.raises(ValueError, match="Unsupported license type"):
+        license_deed_url(license_type)

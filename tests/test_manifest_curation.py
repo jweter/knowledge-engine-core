@@ -83,12 +83,44 @@ def test_export_manifest_curation_draft_populates_proven_fields(tmp_path: Path) 
     assert row["source_id"] == "pmc-100"
     assert row["other_identifier"] == "PMC100"
     assert row["local_path"] == "PMC100.pdf"
-    assert row["expected_content_hash"] == "a" * 64
+    assert row["expected_content_hash"] == "sha256:" + "a" * 64
     assert row["inclusion_reason"] == "ALL_REQUIRED_RULES_PASSED"
     assert row["authors"] == "Ada Lovelace; Trial Group"
     assert row["publication_year"] == "2024"
     assert row["venue"] == "Journal of Verified Results"
     assert row["notes"] == f"Automated adjudication ruleset: {RULES_VERSION}"
+    assert row["access_date"] == "2026-07-20"
+    assert row["license_url"] == "https://creativecommons.org/licenses/by/4.0/"
+
+
+def test_export_manifest_curation_draft_maps_cc0_license_to_deed_url(tmp_path: Path) -> None:
+    worksheet = tmp_path / "review.json"
+    receipt = tmp_path / "receipt.json"
+    adjudication = _adjudication()
+    adjudication["reported_license"] = "CC0"
+    payload = _receipt()
+    payload["items"][0]["license"] = "CC0"  # type: ignore[index]
+    _write(worksheet, _worksheet([adjudication]))
+    _write(receipt, payload)
+
+    draft = export_manifest_curation_draft(worksheet, receipt)
+    rows = list(csv.DictReader(io.StringIO(draft.to_csv())))
+
+    assert rows[0]["license_url"] == "https://creativecommons.org/publicdomain/zero/1.0/"
+
+
+def test_unsupported_license_evidence_has_no_canonical_deed_url(tmp_path: Path) -> None:
+    worksheet = tmp_path / "review.json"
+    receipt = tmp_path / "receipt.json"
+    adjudication = _adjudication()
+    adjudication["reported_license"] = "CC BY-NC"
+    payload = _receipt()
+    payload["items"][0]["license"] = "CC BY-NC"  # type: ignore[index]
+    _write(worksheet, _worksheet([adjudication]))
+    _write(receipt, payload)
+
+    with pytest.raises(ManifestCurationError, match="no canonical deed URL"):
+        export_manifest_curation_draft(worksheet, receipt)
 
 
 def test_receipt_license_mismatch_is_rejected(tmp_path: Path) -> None:
