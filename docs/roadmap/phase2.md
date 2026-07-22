@@ -2,6 +2,11 @@
 
 Phase 2 begins converting source documents into structured scientific knowledge.
 
+The detailed design is maintained in `docs/phase2_design.md`. Its first
+concrete prerequisite is page/span-level extraction provenance in the parser,
+which does not exist yet (see `docs/technical_debt.md`); no claim/evidence
+extraction logic should be written before it does.
+
 ## Goals
 
 - Extract claims, methods, results, limitations, and evidence markers.

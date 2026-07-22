@@ -21,6 +21,12 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   import and a linked resume against the same manifest snapshot both reconciled
   exactly with zero failures, zero issues, and a fully idempotent resume,
   yielding a `PROCEED` decision.
+- Added `docs/phase2_design.md`, the implementation-ready Phase 2 design
+  (mirroring `docs/phase1_design.md`'s role for Phase 1): architecture,
+  extraction-record schema reuse, testing strategy, and open questions for
+  automated claim/evidence extraction. Identifies page/span-level extraction
+  provenance (currently discarded by the parser) as the first concrete
+  prerequisite before any extraction logic is written.
 
 ### Changed
 
