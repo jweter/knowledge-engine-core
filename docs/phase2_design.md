@@ -5,10 +5,18 @@ This is the Phase 2 design sketch, written before any Phase 2 implementation
 milestone. It plays the same role for Phase 2 that
 `docs/m6_phase1_corpus_ingestion_plan.md` played for Phase 1: it turns the
 four-bullet goal statement in `docs/roadmap/phase2.md` into an
-implementation-ready architecture, sequencing, and open-question list. No
-extraction code exists yet. See `docs/roadmap.md` for how this fits the
-overall roadmap and `docs/vertical_slice.md` for the historical manual
-evidence-record prototype this phase supersedes with automated extraction.
+implementation-ready architecture, sequencing, and open-question list. See
+`docs/roadmap.md` for how this fits the overall roadmap and
+`docs/vertical_slice.md` for the historical manual evidence-record prototype
+this phase supersedes with automated extraction.
+
+M15 (issue #89, PR #90, merged) implemented this design's foundation
+prerequisite: page/span-level extraction provenance (`ParsedPaper.pages`, the
+`paper_pages` table), plus the evidence-record validator and renderer fixes
+described below. M16 (issue #91, in progress) implements deterministic
+structured-section detection — the first piece of the Extraction Layer — as a
+standalone unit, before any claim-extraction rules are written against it. No
+claim/evidence extraction code exists yet.
 
 ## Mission
 

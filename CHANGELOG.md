@@ -34,6 +34,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   non-empty `extraction_status`, and `ke evidence`/`ke answer --evidence`/
   `ke evidence-report` display each record's real `extraction_method` instead
   of a hardcoded manual label.
+- Added the M16 deterministic structured-section detection (issue #91):
+  `knowledge_engine.extraction.detect_sections` locates methods/results/
+  limitations-style IMRAD sections within a paper's parsed pages by
+  conservative heading-pattern matching (no new dependency, no statistical
+  model), returning page/offset-bounded `SectionSpan` records. Sections may
+  span multiple pages. A paper with no recognizable headings simply produces
+  zero sections rather than a guessed default. Not yet wired into any CLI
+  command or evidence-record generation -- claim extraction against these
+  spans is a later milestone.
 
 ### Changed
 
