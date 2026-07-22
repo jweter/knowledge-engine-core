@@ -12,13 +12,18 @@ from urllib.parse import urlparse
 
 from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST
 
-ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v5"
-_ALLOWED_LICENSE_PATTERN = re.compile(r"^(?:CC BY|CC0)(?: [0-9][0-9.]*)?$")
+ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v6"
+_ALLOWED_LICENSE_PATTERN = re.compile(
+    r"^(?:CC BY(?: (?:1\.0|2\.0|2\.5|3\.0|4\.0))?|CC0(?: 1\.0)?)$"
+)
 """Matches only unrestricted licenses: exactly "CC BY" or "CC0", optionally
-followed by a version number (e.g. "CC BY 4.0"). Deliberately does not match
-"CC BY-NC", "CC BY-NC-ND", "CC BY-NC-SA", or "CC BY-SA" - those restrict
-commercial use and/or derivative works, which conflicts with this project's
-extraction and redistribution of derived evidence records (Phase 2)."""
+followed by one of their real published version numbers (CC BY: 1.0, 2.0, 2.5,
+3.0, or 4.0; CC0: only 1.0 exists). Deliberately does not match "CC BY-NC",
+"CC BY-NC-ND", "CC BY-NC-SA", or "CC BY-SA" - those restrict commercial use
+and/or derivative works, which conflicts with this project's extraction and
+redistribution of derived evidence records (Phase 2). The version allowlist
+(rather than a loose `[0-9.]*` pattern) also ensures a version that passes
+here always has a real Creative Commons deed URL - see `license_deed_url`."""
 _DISEASE_TERMS = (
     "obesity",
     "obese",

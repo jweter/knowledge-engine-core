@@ -63,6 +63,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   corpus-import validation. `license_url` is now derived deterministically from
   `license_type`, `access_date` from the adjudication timestamp, and the hash is
   now written with its required `sha256:` prefix.
+- Fixed the allowed-license version pattern matching any digits-and-dots string
+  (e.g. `CC0 2.0`, a version that was never published) instead of a real
+  Creative Commons version, which could let malformed license evidence pass
+  adjudication and produce a license URL with no real deed behind it.
 
 ## [0.2.0-alpha.1] - 2026-07-11
 
