@@ -29,9 +29,23 @@ example), which a claim candidate does not have. M18 instead classifies only
 how a candidate's sentence frames itself relative to prior work the text
 itself references (`contextualizes`/`contradicts`/`qualifies`), leaving most
 candidates `unclassified` rather than guessing a supports-equivalent label.
-PICO extraction, real research-question-relative `evidence_direction`
-classification, and `EvidenceRecord` generation remain later, not-yet-scoped
-milestones.
+M19 (issue #101, in progress) implements draft extraction review-item
+generation (`knowledge_engine.extraction.build_draft_evidence_items`) — the
+first piece of the Evidence Layer. A `DraftEvidenceItem` populates every
+field with an honest deterministic source (`claim_text`, `result_summary`,
+`source_span` — including the paper's `paper_id`, so a DOI-less paper's
+offsets stay traceable, since title alone is not a unique identity in this
+repository — `source_doi`/`source_title` from the paper, `source_type`,
+`extraction_method`, `extraction_status`) and leaves every field requiring
+real judgment or external input (`research_question`, `evidence_direction`,
+PICO fields, `study_type`, `limitations`, `uncertainty_notes`,
+`confidence_note`, `provenance`) explicitly `None`. It is not a valid
+`EvidenceRecord` and is confirmed to fail the existing validator's checks
+until a reviewer completes it — no CLI command or JSONL writer exists yet
+to consume it.
+`research_question` acquisition, real research-question-relative
+`evidence_direction` classification, and PICO extraction remain later,
+not-yet-scoped milestones.
 
 ## Mission
 

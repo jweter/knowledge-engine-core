@@ -61,6 +61,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   relative to a `research_question` a claim candidate does not have; a
   candidate is never defaulted to a supports-equivalent label absent an
   explicit cue.
+- Added the M19 draft extraction review-item generation (issue #101):
+  `knowledge_engine.extraction.build_draft_evidence_items` combines a claim
+  candidate, its M18 framing classification, and a paper's own `paper_id`/
+  `doi`/`title` into a `DraftEvidenceItem` -- the first piece of the Evidence
+  Layer. Every field with an honest deterministic source (`claim_text`,
+  `result_summary`, `source_span` including the paper's `paper_id` so a
+  DOI-less paper's offsets are still traceable, `source_doi`, `source_title`,
+  `source_type`, `extraction_method`, `extraction_status`) is populated;
+  every field requiring real judgment or external input
+  (`research_question`, `evidence_direction`, PICO fields, `study_type`,
+  `limitations`, `uncertainty_notes`, `confidence_note`, `provenance`) is
+  explicitly `None`, never a guessed placeholder. A draft item is not a
+  valid `EvidenceRecord` and is confirmed to fail
+  `_validate_evidence_record`'s existing checks until a reviewer completes
+  it. No CLI command, JSONL writer, or schema change.
 
 ### Changed
 
