@@ -13,10 +13,11 @@ this phase supersedes with automated extraction.
 M15 (issue #89, PR #90, merged) implemented this design's foundation
 prerequisite: page/span-level extraction provenance (`ParsedPaper.pages`, the
 `paper_pages` table), plus the evidence-record validator and renderer fixes
-described below. M16 (issue #91, in progress) implements deterministic
-structured-section detection — the first piece of the Extraction Layer — as a
-standalone unit, before any claim-extraction rules are written against it. No
-claim/evidence extraction code exists yet.
+described below. M16 (issue #91, PR #92, merged) implemented deterministic
+structured-section detection (`knowledge_engine.extraction.detect_sections`)
+— the first piece of the Extraction Layer — as a standalone unit, before any
+claim-extraction rules are written against it. No claim/evidence extraction
+code exists yet; that is the next, not-yet-scoped milestone.
 
 ## Mission
 
