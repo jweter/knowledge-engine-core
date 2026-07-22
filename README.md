@@ -269,8 +269,10 @@ completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
 scale-readiness, and the controlled 500-paper rehearsal
 ([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
 [docs/phase2_design.md](docs/phase2_design.md)) is in progress through M17:
-deterministic, rule-based claim and evidence extraction, with no LLM-based
-extraction, synthesis, or reasoning of any kind.
+deterministic, rule-based structured-section and claim-candidate detection.
+`EvidenceRecord` generation from these candidates is not yet implemented. All
+Phase 2 extraction is rule-based, with no LLM-based extraction, synthesis, or
+reasoning of any kind.
 
 Neither phase should be expanded into Alembic adoption, a new package manager,
 persistent telemetry, vector search, a graph, AI reasoning, an API, web
