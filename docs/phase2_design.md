@@ -53,10 +53,15 @@ generative or probabilistic judgment about what a paper means.
 - Extraction failures and low-confidence/ambiguous passages are recorded as
   explicit review-required output, not silently dropped and not silently
   accepted.
-- The existing `ke evidence`, `ke evidence-validate`, `ke evidence-report`, and
-  `ke answer --evidence` commands work unmodified against automatically
-  extracted records, because those records satisfy the same schema as manually
-  authored ones.
+- `ke evidence-validate`, `ke evidence`, `ke answer --evidence`, and
+  `ke evidence-report` accept automatically extracted records without a schema
+  migration, because those records satisfy the same field contract as manually
+  authored ones. Their *rendering* must change (see Renderer Changes below) —
+  confirmed by inspection, every current renderer hardcodes a "manual" label
+  regardless of `extraction_method`'s actual value (for example
+  `ke answer --evidence` prints the literal string `"Extraction method:
+  manual"` rather than reading the field), which would misrepresent automated
+  records as manual if left as-is.
 - Tests cover extraction happy paths, ambiguous/no-match text, and malformed
   parser input, using synthetic fixtures — no scientific claim in a test
   fixture is asserted to be true or false, only that it was correctly located
@@ -175,6 +180,51 @@ Reusing rather than duplicating the existing schema in
   existing manual-record default, so the existing review workflow applies
   without a schema change.
 
+## Validator Changes
+
+Confirmed by inspection of `_validate_evidence_record` in
+`knowledge_engine/cli.py`: `REQUIRED_EVIDENCE_FIELDS` only requires that
+`source_span` and `extraction_status` be *present* (`missing_fields = sorted(
+required_fields - record.keys())`); neither field's content is validated.
+`source_span` is never checked for type or shape, so a record with
+`source_span: null` or an arbitrary string currently passes
+`ke evidence-validate`. `extraction_status` has no allowed-value check at all
+— unlike `review_status`, which is checked against `ALLOWED_REVIEW_STATUSES`.
+
+This means the exact-provenance and review-required guarantees stated in the
+Success Criteria above are not actually enforced by the current validator, and
+cannot be claimed as already covered by "the same schema." Phase 2's first
+implementation milestone (alongside the span-provenance prerequisite) must add:
+
+- a `source_span` shape/type check once the page/offset span identity is
+  decided (see Prerequisite and Open Questions), analogous to how `HASH_RE`
+  validates `expected_content_hash`'s format in `corpus/validation.py`;
+- an `extraction_status` allowed-value check mirroring the existing
+  `ALLOWED_REVIEW_STATUSES` pattern, once the accepted/held/rejected
+  vocabulary above is finalized.
+
+## Renderer Changes
+
+Confirmed by inspection: every current evidence renderer in
+`knowledge_engine/cli.py` hardcodes a manual-only label rather than reading
+`extraction_method`. `ke evidence` appends the literal suffix `" (manual)"`
+after the field value and ends with "This is manually extracted evidence.";
+`ke answer --evidence` prints the unconditional literal string
+`"Extraction method: manual"` — not even interpolating the field; and
+`ke evidence-report` labels every row `"#### Manual Evidence Record"` and
+appends `" (manual)"` to the extraction-method line. Leaving these renderers
+unmodified would directly violate this design's own requirement that
+automated and manual records "remain visibly distinct by `extraction_method`"
+— every automated record would display as manual.
+
+Phase 2 must update all three renderers (and the shared review-status summary
+they use) to display the record's actual `extraction_method` value instead of
+a hardcoded label, and to adjust the fixed disclaimer text so it no longer
+unconditionally asserts every record was manually extracted. This is
+renderer-only work — no schema or validator change is required for this part
+— and should land alongside the first extraction-producing milestone, not be
+deferred, since a reviewer must never see a mislabeled record.
+
 ## Extraction Methodology (open question, not decided here)
 
 This is the largest undecided question in this design and should not be
@@ -217,8 +267,12 @@ fixtures rather than requiring real copyrighted papers:
   explicit review-required outcome, not a low-confidence guess.
 - Malformed/adversarial input tests: text that could crash a naive parser
   (unusual whitespace, embedded control characters, extremely long lines).
-- CLI/schema tests confirming automated records pass the existing
-  `ke evidence-validate` unmodified.
+- Validator tests confirming the new `source_span`/`extraction_status` checks
+  correctly accept well-formed automated records and reject malformed ones
+  (see Validator Changes).
+- Renderer tests confirming `ke evidence`, `ke answer --evidence`, and
+  `ke evidence-report` display an automated record's real `extraction_method`
+  and do not print a manual-only disclaimer for it (see Renderer Changes).
 
 No test fixture should assert that a scientific claim is true; only that
 extraction located and categorized it correctly.
