@@ -1,96 +1,87 @@
 # Daily Repository Status
 
-**Date:** 2026-07-23 00:25 CEST  
+**Date:** 2026-07-23 01:29 CEST  
 **Repository:** `jweter/knowledge-engine-core`  
-**Branch inspected:** `main`  
-**Current draft PR:** None verified open  
-**Current milestone:** Phase 2 Evidence Records; M19 completed, no subsequent milestone currently scoped
+**Branch inspected:** `claude/m14-pmc-conversion-error-urqzob`  
+**Current draft PR:** #105 — `feat: M20 extraction-review-generate CLI command`  
+**Current milestone:** M20 — extraction-review-generate CLI command
 
 ## Roadmap authorization
 
-`docs/roadmap.md` authorizes Phase 2 work to extract claims, methods, results, limitations, and evidence-quality markers while preserving exact source-span traceability. It also requires page/span provenance before claim/evidence extraction. That prerequisite and the first Phase 2 extraction/evidence milestones are complete.
+`docs/roadmap.md` authorizes Phase 2 work to extract evidence structures while preserving exact source-span traceability. `docs/phase2_design.md` and issue #104 specifically authorize M20 as CLI plumbing over the already implemented M16–M19 extraction pipeline. The command is a separate opt-in operation and does not change `corpus-import`, the evidence schema, or scientific-judgment fields.
 
-`docs/phase2_design.md` verifies:
+## Current repository and PR state
 
-- M15 completed page/span provenance;
-- M16 completed deterministic section detection;
-- M17 completed deterministic claim-candidate detection;
-- M18 completed deterministic claim-framing classification;
-- M19 completed draft extraction review-item generation.
-
-The same design file states that research-question acquisition, research-question-relative `evidence_direction`, and PICO extraction remain later, not-yet-scoped milestones. No implementation scope is inferred beyond that statement.
-
-## Current repository state
-
-- No open pull request was returned by the authenticated GitHub connector.
-- No open GitHub issue was returned by the authenticated GitHub connector.
-- The latest verified commit on `main` is `448a415f0e9bb8b989cc747ea80444a9e9952b47`, the merge of PR #103, which records M19 completion in the Phase 2 design status.
-- PR #103 was documentation-only and merged successfully.
-- Local `git status`, uncommitted files, untracked files, and local working-tree cleanliness cannot be inspected through the connected GitHub app. No clean-working-tree claim is made.
+- PR #105 is open, mergeable, and was converted back to draft during this run because all observed workflows had not yet completed.
+- Head commit inspected: `4e2def84f5d7d46b90ea8d2366e1dbff41ed5676`.
+- Base commit recorded by the PR: `1a4ab716088261c37e1ef97c03a717e833cfa26c` on `main`.
+- Changed files are limited to `CHANGELOG.md`, `README.md`, `docs/phase2_design.md`, `knowledge_engine/entrypoint.py`, `knowledge_engine/extraction/evidence_items.py`, and `tests/test_extraction_review_generate_cli.py`.
+- No unresolved inline review thread was returned by the connected GitHub review-thread query.
+- Local `git status`, uncommitted changes, untracked files, and local working-tree cleanliness are not exposed by the connected GitHub app and remain unverified.
 
 ## Completed work
 
-- M14 completed the controlled 500-paper rehearsal with a documented `PROCEED` decision.
-- M15 through M19 completed the currently documented Phase 2 provenance, extraction, framing, and draft-review-item sequence.
-- `DraftEvidenceItem` now preserves deterministic source-backed fields while leaving judgment-dependent fields explicitly unset; it is intentionally not yet a valid completed `EvidenceRecord`.
-- `docs/error_log.md` remains a compatibility pointer; open defects belong in GitHub issues labeled `bug`.
-- `docs/codex_fixes.md` remains a compatibility pointer; verified fixes belong in `docs/error_resolution_ledger.md`.
+- M20 issue #104 defines a separate opt-in `ke extraction-review-generate` command.
+- The PR wires persisted `PaperPage` records through section detection, claim-candidate detection, framing classification, and draft evidence-item generation.
+- Output is a distinct JSONL review queue, not a validated `EvidenceRecord` file.
+- Unknown-paper, zero-page, zero-candidate, overwrite-protection, and real repository round-trip cases are documented as covered by tests in the PR.
+- PR #105 was restored to draft state in this run; no merge or ready-for-review action was performed.
 
 ## Tests and checks actually observed
 
-- PR #103 states that Ruff formatting, Ruff lint, strict mypy, and pytest were run for its documentation-only change.
-- The connector returned no pull-request-triggered workflow run associated with merge commit `448a415f0e9bb8b989cc747ea80444a9e9952b47`; therefore, no exact-merge-head CI result is claimed.
-- No local Git, Ruff, mypy, pytest, or application command was executed in this run.
+- GitHub Actions Quality run `29964808290` completed successfully on head `4e2def84f5d7d46b90ea8d2366e1dbff41ed5676`.
+- M14 Mass Discovery run `29964808287` was still in progress when inspected. This workflow was observed but no result is claimed.
+- The PR description reports local Ruff formatting, Ruff lint, strict mypy, and pytest with `559 passed`, including seven new tests. Those are author-reported results; this status report did not rerun them locally.
+- No local Git, Ruff, mypy, pytest, or application command was executed by this report task.
 
-## Current errors, issues, and blockers
+## Current errors, issues, blockers, and risks
 
-### 1. No unresolved repository error is currently verified
+### 1. No reproducible M20 defect is currently verified
 
-No open issue or open pull request was returned. No failing test or CI run was observed. `docs/error_log.md` correctly directs new unresolved defects to GitHub issues, and no new defect was created without reproducible evidence.
+No open GitHub issue labeled `bug`, failing Quality result, or unresolved review thread was returned. `docs/error_log.md` and `docs/codex_fixes.md` are compatibility pointers and must not receive new entries; unresolved defects belong in GitHub issues and verified resolutions belong in `docs/error_resolution_ledger.md`.
 
 **Confidence:** High for connected GitHub state; local-only defects remain outside connector visibility.
 
-### 2. The next Phase 2 implementation milestone is not scoped
+### 2. One workflow result remains incomplete
 
-The Phase 2 design explicitly identifies research-question acquisition, research-question-relative evidence-direction classification, and PICO extraction as later, not-yet-scoped milestones. Starting one without a roadmap or issue decision would exceed the authorized plan.
+The M14 Mass Discovery workflow associated with the M20 head was still running when inspected. The PR states that M20 does not touch M14-watched paths, so the reason that workflow was triggered has not been independently established in this run.
 
-**Root cause:** The project has reached the end of the currently completed M15–M19 sequence, while the next judgment-dependent extraction milestone has not yet been selected and bounded.  
-**Confidence:** High.
+**Likely cause:** Workflow path-filter or repository event configuration may be broader than the PR author expected, but this is not yet a verified defect.  
+**Confidence:** Low until the workflow completes and its trigger context is inspected.
 
-### 3. Local working-tree state is unavailable
+### 3. Working-tree cleanliness is unverified
 
-The GitHub connector exposes committed remote state but not a Codex machine's local checkout.
+The connector exposes committed GitHub state but not the active Codex checkout.
 
 **Confidence:** High.
 
 ## Exact continuation point
 
-Create or approve one narrowly bounded Phase 2 milestone before implementation. The milestone must choose exactly one roadmap-aligned next capability and define deterministic inputs, outputs, evidence boundaries, acceptance criteria, tests, and explicit non-goals. Candidate areas named by the design—but not yet authorized for implementation—are research-question acquisition, research-question-relative `evidence_direction`, or PICO extraction.
+Inspect completion of M14 Mass Discovery run `29964808287`. If it succeeds and no new review feedback appears, verify the final PR diff and exact-head Quality evidence. If it fails, capture the first failing step and exact sanitized evidence before changing code or workflow configuration.
 
 ## Next smallest task
 
-Draft a milestone issue or roadmap amendment for one selected Phase 2 capability. Do not write extraction code until that issue identifies the deterministic rule boundary and confirms how judgment-dependent or ambiguous output is held for review rather than guessed.
+Perform a read-only inspection of workflow run `29964808287` after completion. Do not broaden M20 into research-question acquisition, evidence-direction classification, PICO extraction, database schema changes, or import integration.
 
-## Steps remaining before a future PR can be marked ready and merged
+## Steps remaining before PR #105 can be marked ready and merged
 
-1. Select and document the next Phase 2 milestone in the roadmap or an authoritative GitHub issue.
-2. Define its deterministic behavior, source-span requirements, review-required outcomes, and non-goals.
-3. Create a focused branch and draft PR tied to that authorization.
-4. Implement only the smallest authorized slice.
-5. Run targeted tests and the repository's required full quality checks.
-6. Record any verified failure and resolution in the repository's authoritative issue and ledger systems.
-7. Confirm no unresolved review feedback.
-8. Verify a clean local working tree from an authenticated checkout.
-9. Mark ready and merge only after all milestone acceptance criteria are evidenced.
+1. Inspect the final outcome of M14 Mass Discovery run `29964808287`.
+2. If the run fails, record and reproduce the first substantive error before applying a fix.
+3. Confirm Quality remains successful on the exact final head.
+4. Review the final diff against issue #104 and the Phase 2 roadmap boundary.
+5. Confirm there are no unresolved review threads or required review feedback.
+6. Verify the real local working tree is clean from an authenticated checkout.
+7. Confirm the branch is current with `main` and remains mergeable.
+8. Mark ready and merge only after every applicable item is evidenced.
 
 ## Access and action notes
 
-- Authenticated GitHub repository, file-read, issue-search, PR-search, commit-search, and file-write access succeeded.
-- No open issue was created because no reproducible defect or authorized next milestone was verified.
-- `docs/error_log.md` and `docs/codex_fixes.md` were not modified because repository policy explicitly directs new records elsewhere.
+- Authenticated GitHub repository, roadmap, design, status-file, issue, PR, workflow, review-thread, PR-state, and file-write access succeeded.
+- No issue was created because no reproducible defect was verified.
+- `docs/error_log.md` and `docs/codex_fixes.md` were not modified because repository policy directs records elsewhere.
 - This commit changes only `docs/daily_repo_status.md`.
-- No PR was marked ready and no merge was performed.
+- PR #105 was converted to draft. It was not marked ready and was not merged.
 
 ## Coding lesson
 
-A roadmap boundary is a technical control: when the next behavior requires scientific judgment and its deterministic contract is not yet scoped, the correct implementation step is to define that contract—not to guess the feature.
+A workflow that appears unrelated to a change is evidence to inspect, not permission to speculate; verify the trigger and first failing step before altering path filters or implementation code.
