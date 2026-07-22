@@ -37,11 +37,19 @@ def _framing(
     )
 
 
-def _paper(doi: str | None = "10.1038/example") -> PaperMetadata:
-    return PaperMetadata(doi=doi, title="Example Trial of a GLP-1 Agonist")
+def _paper(paper_id: int = 7, doi: str | None = "10.1038/example") -> PaperMetadata:
+    return PaperMetadata(paper_id=paper_id, doi=doi, title="Example Trial of a GLP-1 Agonist")
 
 
-def _to_record_dict(item: DraftEvidenceItem, evidence_record_id: str = "draft-1") -> dict[str, Any]:
+def _to_record_dict(
+    item: DraftEvidenceItem,
+    evidence_record_id: str = "draft-1",
+    provenance: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a record dict from the item's own fields, plus reviewer-supplied
+    values for fields the module leaves None (evidence_record_id, provenance)
+    -- mirroring how a real reviewer would complete a draft item."""
+
     return {
         "schema_version": item.schema_version,
         "evidence_record_id": item.evidence_record_id or evidence_record_id,
@@ -63,7 +71,7 @@ def _to_record_dict(item: DraftEvidenceItem, evidence_record_id: str = "draft-1"
         "limitations": item.limitations,
         "uncertainty_notes": item.uncertainty_notes,
         "confidence_note": item.confidence_note,
-        "provenance": {"created_by": "test"},
+        "provenance": item.provenance or provenance or {"created_by": "test"},
         "created_for_milestone": item.created_for_milestone,
     }
 
@@ -79,6 +87,7 @@ def test_mechanically_derivable_fields_are_populated() -> None:
     assert item.claim_text == candidate.sentence_text
     assert item.result_summary == candidate.sentence_text
     assert item.source_span == {
+        "paper_id": 7,
         "page_number": 3,
         "section": "results",
         "start_offset": 100,
@@ -104,6 +113,7 @@ def test_fields_requiring_human_input_are_none() -> None:
     assert item.limitations is None
     assert item.uncertainty_notes is None
     assert item.confidence_note is None
+    assert item.provenance is None
     assert item.schema_version is None
     assert item.evidence_record_id is None
 
@@ -112,6 +122,16 @@ def test_paper_with_no_doi_produces_none_source_doi_not_a_guess() -> None:
     item = build_draft_evidence_item(_paper(doi=None), _framing())
 
     assert item.source_doi is None
+
+
+def test_paper_id_traces_source_span_even_when_doi_is_none() -> None:
+    """Titles are not a unique identity in this repository, so a DOI-less
+    paper's draft items must still carry a stable local identifier a
+    reviewer can use to resolve the source_span back to the exact paper."""
+
+    item = build_draft_evidence_item(_paper(paper_id=42, doi=None), _framing())
+
+    assert item.source_span["paper_id"] == 42
 
 
 def test_batch_produces_one_item_per_candidate_in_order_sharing_paper_metadata() -> None:
@@ -133,13 +153,28 @@ def test_no_framings_produces_no_items() -> None:
     assert build_draft_evidence_items(_paper(), []) == ()
 
 
+def test_draft_item_has_no_provenance_field_populated() -> None:
+    """provenance is required by _validate_evidence_record but has no
+    honest deterministic source here (created_by/created_date/license info
+    are all external to ClaimCandidate/ClaimFraming/PaperMetadata) -- it
+    must be represented on the dataclass so a reviewer knows to complete
+    it, never silently omitted or fabricated."""
+
+    item = build_draft_evidence_item(_paper(), _framing())
+
+    assert item.provenance is None
+
+
 def test_draft_item_fails_existing_evidence_validator() -> None:
     """A draft item must be genuinely incomplete, not merely labeled as such:
     the schema's own non-empty-string checks must reject it until a
-    reviewer supplies research_question and evidence_direction."""
+    reviewer supplies research_question and evidence_direction. provenance
+    is supplied here as a stand-in for what a real reviewer would add,
+    isolating this assertion to the fields the module itself must leave
+    incomplete."""
 
     item = build_draft_evidence_item(_paper(), _framing())
-    record = _to_record_dict(item)
+    record = _to_record_dict(item, provenance={"created_by": "test"})
 
     errors: list[str] = []
     _validate_evidence_record(
@@ -150,11 +185,27 @@ def test_draft_item_fails_existing_evidence_validator() -> None:
     assert any("evidence_direction is required" in error for error in errors)
 
 
+def test_draft_item_fails_validator_on_missing_provenance_too() -> None:
+    """Confirms provenance is one of the fields a reviewer must complete --
+    without the module-level docstring's claim being taken on faith."""
+
+    item = build_draft_evidence_item(_paper(), _framing())
+    record = _to_record_dict(item, provenance={"created_by": "test"})
+    record["provenance"] = None
+
+    errors: list[str] = []
+    _validate_evidence_record(
+        record, line_number=1, seen_ids=set(), errors=errors, require_review_fields=False
+    )
+
+    assert any("provenance must be a non-empty object" in error for error in errors)
+
+
 def test_draft_item_mechanically_derived_fields_pass_their_own_validator_checks() -> None:
     """The fields this module does populate must be valid, not merely present."""
 
     item = build_draft_evidence_item(_paper(), _framing())
-    record = _to_record_dict(item)
+    record = _to_record_dict(item, provenance={"created_by": "test"})
 
     errors: list[str] = []
     _validate_evidence_record(

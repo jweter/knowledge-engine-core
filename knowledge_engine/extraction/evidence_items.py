@@ -12,15 +12,17 @@ question, not derivable from a paper's own text. M18 already established
 that `evidence_direction` is defined relative to a `research_question`
 (`docs/vs7_manual_evidence_record.md`), so it cannot be honestly populated
 without one either. These fields, and every other field requiring real
-judgment (PICO, study_type, limitations, uncertainty_notes, confidence_note),
-are left explicitly `None` -- a draft item is intentionally incomplete and
-is never claimed to be a valid EvidenceRecord.
+judgment or external input (PICO, study_type, limitations,
+uncertainty_notes, confidence_note, provenance), are left explicitly
+`None` -- a draft item is intentionally incomplete and is never claimed to
+be a valid EvidenceRecord.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 from knowledge_engine.extraction.direction import ClaimFraming
 
@@ -37,8 +39,15 @@ class PaperMetadata:
 
     A plain dataclass rather than the `Paper` ORM model, so this module has
     no database dependency and stays testable with synthetic fixtures.
+
+    `paper_id` is always present and always unique (the `Paper` row's
+    primary key), unlike `doi` (nullable) or `title` (not a unique
+    identity in this repository). It is carried into `source_span` so a
+    reviewer can always resolve a draft item's offsets back to the exact
+    paper they came from, even when `doi` is `None`.
     """
 
+    paper_id: int
     doi: str | None
     title: str
 
@@ -72,6 +81,7 @@ class DraftEvidenceItem:
     limitations: list[str] | None = None
     uncertainty_notes: str | None = None
     confidence_note: str | None = None
+    provenance: dict[str, Any] | None = None
     schema_version: str | None = None
     evidence_record_id: str | None = None
 
@@ -90,6 +100,7 @@ def build_draft_evidence_item(paper: PaperMetadata, framing: ClaimFraming) -> Dr
         claim_text=candidate.sentence_text,
         result_summary=candidate.sentence_text,
         source_span={
+            "paper_id": paper.paper_id,
             "page_number": candidate.page_number,
             "section": candidate.section_type,
             "start_offset": candidate.start_offset,
