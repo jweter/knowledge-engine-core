@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Annotated, cast
 
@@ -14,12 +15,20 @@ from knowledge_engine.cli import console
 from knowledge_engine.config import build_settings
 from knowledge_engine.crossref_http import UrllibCrossrefTransport
 from knowledge_engine.crossref_provider import CrossrefProvider
-from knowledge_engine.database import Database
+from knowledge_engine.database import Database, PaperRepository
+from knowledge_engine.extraction import (
+    build_draft_evidence_items,
+    classify_claim_framing,
+    detect_claim_candidates,
+    detect_sections,
+)
+from knowledge_engine.extraction.evidence_items import PaperMetadata
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.metadata_enrichment import MetadataProvider, MetadataQuery
-from knowledge_engine.models import ImportRun
+from knowledge_engine.models import ImportRun, Paper
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
+from knowledge_engine.parser import ParsedPage
 from knowledge_engine.pmc_acquisition import (
     AcquisitionError,
     AcquisitionReceipt,
@@ -81,6 +90,14 @@ ReceiptOutputOption = Annotated[
     Path,
     typer.Option("--receipt", help="Path for the sanitized acquisition receipt."),
 ]
+PaperIdOption = Annotated[
+    int,
+    typer.Option("--paper-id", help="Persisted paper's database ID."),
+]
+ExtractionReviewOutputOption = Annotated[
+    Path,
+    typer.Option("--output", help="Path for the JSONL draft extraction review queue."),
+]
 
 
 def _crossref_provider() -> MetadataProvider:
@@ -103,8 +120,8 @@ def _pmc_acquisition_service() -> PmcOaAcquisitionService:
     return PmcOaAcquisitionService(transport)
 
 
-def _report_database() -> Database:
-    """Build the local database used by persisted run reporting."""
+def _local_database() -> Database:
+    """Build the local database used by read-only reporting and review commands."""
 
     return Database(build_settings(Path.cwd()))
 
@@ -112,13 +129,32 @@ def _report_database() -> Database:
 def _load_report_run(import_run_id: str) -> ImportRun | None:
     """Load one persisted run with its report relationships."""
 
-    database = _report_database()
+    database = _local_database()
     database.initialize()
     with database.session() as session:
         return ImportRunService(
             session,
             project_root=database.settings.project_root,
         ).get_run(import_run_id)
+
+
+def _load_paper_pages(paper_id: int) -> tuple[Paper, list[ParsedPage]] | None:
+    """Load one persisted paper and its pages, converted for extraction.
+
+    Returns None if the paper does not exist. The returned Paper is detached
+    from its session -- only its already-loaded scalar attributes
+    (id/doi/title) are safe to read afterward.
+    """
+
+    database = _local_database()
+    database.initialize()
+    with database.session() as session:
+        paper = PaperRepository(session).get(paper_id)
+        if paper is None:
+            return None
+        pages = [ParsedPage(page_number=page.page_number, text=page.text) for page in paper.pages]
+        session.expunge(paper)
+        return paper, pages
 
 
 def _validate_output(output: Path, *, force: bool) -> None:
@@ -317,3 +353,47 @@ def corpus_run_report(
         return
 
     console.print(report, markup=False)
+
+
+@app.command("extraction-review-generate")
+def extraction_review_generate(
+    paper_id: PaperIdOption,
+    output: ExtractionReviewOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Run deterministic claim extraction against one persisted paper and
+    write a draft extraction review queue -- not validated evidence."""
+
+    _validate_output(output, force=force)
+
+    loaded = _load_paper_pages(paper_id)
+    if loaded is None:
+        console.print(f"[red]Unknown paper ID:[/red] {paper_id}")
+        raise typer.Exit(1)
+    paper, pages = loaded
+
+    if not pages:
+        console.print(
+            f"[red]Paper {paper_id} has no persisted pages.[/red] Extraction requires "
+            "page-level provenance (added in M15); this paper predates that migration "
+            "or was never fully imported. No output was written."
+        )
+        raise typer.Exit(1)
+
+    sections = detect_sections(pages)
+    candidates = detect_claim_candidates(pages, sections)
+    framings = classify_claim_framing(candidates)
+    paper_metadata = PaperMetadata(paper_id=paper.id, doi=paper.doi, title=paper.title)
+    items = build_draft_evidence_items(paper_metadata, framings)
+
+    lines = [json.dumps(item.to_dict()) for item in items]
+    _write_output(output, "\n".join(lines) + ("\n" if lines else ""))
+
+    console.print(
+        f"[green]Wrote {len(items)} draft evidence item(s):[/green] {output} "
+        f"({len(pages)} page(s), {len(sections)} section(s), {len(candidates)} candidate(s))."
+    )
+    console.print(
+        "[bold]Draft items are a review queue, not validated evidence -- "
+        "research_question, evidence_direction, and PICO fields require human completion.[/bold]"
+    )

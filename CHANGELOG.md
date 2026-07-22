@@ -76,6 +76,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   valid `EvidenceRecord` and is confirmed to fail
   `_validate_evidence_record`'s existing checks until a reviewer completes
   it. No CLI command, JSONL writer, or schema change.
+- Added the `ke extraction-review-generate` CLI command (M20, issue #104):
+  runs the full deterministic Extraction Layer pipeline (M16 section
+  detection, M17 claim candidates, M18 framing classification, M19 draft
+  evidence items) against one persisted paper, identified by `--paper-id`
+  since a paper's `doi` is nullable and `title` is not a unique identity in
+  this repository, and writes the resulting draft items to a JSONL review
+  queue at `--output`. A separate, opt-in command -- never invoked by
+  `corpus-import` -- so an extraction issue can never affect import
+  success/failure semantics, resolving an explicitly open question in
+  `docs/phase2_design.md`. A paper with zero persisted pages (pre-M15, or
+  the documented `paper_pages` backfill gap) produces an explicit
+  diagnostic rather than a silently empty result; zero draft items from a
+  paper that does have pages is a valid, clearly reported outcome.
 
 ### Changed
 
