@@ -70,6 +70,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `docs/architecture/adr/0004-migrate-pmc-oa-acquisition-to-cloud-service.md`.
   Bumped the M14 adjudication ruleset to `m14-candidate-adjudication-v4` since the
   accepted PDF-URL host changed.
+- Reconciled README documentation through M17: current phase, milestone history,
+  and known issues now reflect Phase 2 progress (page/span provenance, structured-
+  section detection, claim-candidate detection) instead of stopping at M14.
 
 ### Fixed
 

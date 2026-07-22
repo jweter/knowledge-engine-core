@@ -15,9 +15,9 @@ must be able to trust.
 
 Current version: `0.2.0a1`
 
-Current phase: **Phase 1 — Focused Scientific Corpus**
+Current phase: **Phase 2 — Evidence Records** (Phase 1 ingestion complete through M14)
 
-Completed capabilities include:
+Phase 1 completed capabilities include:
 
 - PDF ingestion with PyMuPDF
 - SQLite persistence with SQLAlchemy
@@ -35,6 +35,22 @@ Completed capabilities include:
 - deterministic M13 scale-readiness assessment
 - strict mypy, Ruff formatting/linting, and pytest coverage
 
+Phase 2 completed capabilities include:
+
+- page/span-level extraction provenance (`ParsedPaper.pages`, the `paper_pages`
+  table), so an extracted claim can cite an exact page and character offset
+- evidence-record validation of `source_span` shape and required
+  `extraction_status`, and evidence renderers that display each record's real
+  `extraction_method` instead of a hardcoded manual label
+- deterministic structured-section detection
+  (`knowledge_engine.extraction.detect_sections`)
+- deterministic claim-candidate sentence detection
+  (`knowledge_engine.extraction.detect_claim_candidates`) within results/
+  conclusion sections
+
+See [docs/phase2_design.md](docs/phase2_design.md) for the Phase 2 architecture
+and milestone-by-milestone status.
+
 ### Milestone history
 
 - **M9:** connected validated local PDFs to persisted import runs and paper/FTS
@@ -49,9 +65,16 @@ Completed capabilities include:
   fresh import and a linked resume against the same manifest snapshot both
   reconciled exactly, with zero failures, zero issues, and a fully idempotent
   resume. See [docs/m14_500_paper_rehearsal_report.md](docs/m14_500_paper_rehearsal_report.md).
+- **M15:** implemented Phase 2's foundation prerequisite, page/span-level
+  extraction provenance, plus evidence-record validator and renderer fixes.
+- **M16:** implemented deterministic structured-section detection, the first
+  piece of the Phase 2 Extraction Layer.
+- **M17:** implemented deterministic claim-candidate sentence detection within
+  results/conclusion sections, the second piece of the Extraction Layer.
 
-Phase 1 ingestion is complete through M14. See
-[docs/roadmap.md](docs/roadmap.md) for the next milestone.
+Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is in
+progress through M17. See [docs/roadmap.md](docs/roadmap.md) and
+[docs/phase2_design.md](docs/phase2_design.md) for the next milestone.
 
 ## Requirements
 
@@ -244,9 +267,12 @@ or high-confidence duplicate evidence is evaluated before paper persistence.
 The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now includes
 completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
 scale-readiness, and the controlled 500-paper rehearsal
-([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work.
+([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
+[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M17:
+deterministic, rule-based claim and evidence extraction, with no LLM-based
+extraction, synthesis, or reasoning of any kind.
 
-Phase 1 must not be expanded into Alembic adoption, a new package manager,
+Neither phase should be expanded into Alembic adoption, a new package manager,
 persistent telemetry, vector search, a graph, AI reasoning, an API, web
 functionality, or unrelated refactoring without separate evidence and
 authorization.
@@ -263,7 +289,9 @@ Known issues and future fixes are tracked in
   semantics
 - FTS update/delete synchronization is not implemented
 - scholarly work/version/file/assertion identity is not yet separated
-- page-level extraction provenance is deferred until before Phase 2 evidence work
+- `paper_pages` provenance is only populated for papers imported after M15; a
+  backfill utility for pre-M15 papers is tracked as a follow-up (see
+  [docs/phase2_design.md](docs/phase2_design.md))
 
 ## Contributing
 
