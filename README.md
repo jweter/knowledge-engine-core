@@ -45,10 +45,13 @@ Completed capabilities include:
 - **M12:** completed the controlled 100-paper rehearsal.
 - **M13:** conditionally authorized one controlled 500-paper rehearsal with explicit
   measurement and stop conditions.
+- **M14:** completed the controlled 500-paper rehearsal with a `PROCEED` decision. A
+  fresh import and a linked resume against the same manifest snapshot both
+  reconciled exactly, with zero failures, zero issues, and a fully idempotent
+  resume. See [docs/m14_500_paper_rehearsal_report.md](docs/m14_500_paper_rehearsal_report.md).
 
-The next bounded milestone is the controlled 500-paper rehearsal. It must follow the
-M13 entry, measurement, stop, reconciliation, resume, and artifact-hygiene contract.
-The rehearsal has not begun.
+Phase 1 ingestion is complete through M14. See
+[docs/roadmap.md](docs/roadmap.md) for the next milestone.
 
 ## Requirements
 
@@ -239,13 +242,14 @@ or high-confidence duplicate evidence is evaluated before paper persistence.
 ## Roadmap
 
 The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now includes
-completed M9–M13 ingestion, duplicate/resume, metadata, 100-paper rehearsal, and
-scale-readiness work.
+completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
+scale-readiness, and the controlled 500-paper rehearsal
+([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work.
 
-The immediate continuation is one controlled 500-paper rehearsal. It must not be
-expanded into Alembic adoption, a new package manager, persistent telemetry, vector
-search, a graph, AI reasoning, an API, web functionality, or unrelated refactoring
-without separate evidence and authorization.
+Phase 1 must not be expanded into Alembic adoption, a new package manager,
+persistent telemetry, vector search, a graph, AI reasoning, an API, web
+functionality, or unrelated refactoring without separate evidence and
+authorization.
 
 ## Known Issues
 

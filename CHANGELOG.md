@@ -17,6 +17,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added a controlled 100-paper rehearsal report and deterministic scale-readiness
   assessment for the next bounded corpus rehearsal.
 - Added typed expected parser and duplicate-resolution failure contracts.
+- Added the controlled 500-paper rehearsal report (M14, issue #21): a fresh
+  import and a linked resume against the same manifest snapshot both reconciled
+  exactly with zero failures, zero issues, and a fully idempotent resume,
+  yielding a `PROCEED` decision.
 
 ### Changed
 
