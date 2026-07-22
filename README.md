@@ -51,6 +51,10 @@ Phase 2 completed capabilities include:
   (`knowledge_engine.extraction.classify_claim_framing`), distinct from the
   evidence-record schema's research-question-relative `evidence_direction`
   field
+- draft extraction review-item generation
+  (`knowledge_engine.extraction.build_draft_evidence_items`); an intentionally
+  incomplete draft that fails the existing evidence validator until a
+  reviewer supplies `research_question` and `evidence_direction`
 
 See [docs/phase2_design.md](docs/phase2_design.md) for the Phase 2 architecture
 and milestone-by-milestone status.
@@ -78,9 +82,13 @@ and milestone-by-milestone status.
 - **M18:** implemented deterministic claim framing-cue classification, the
   third piece of the Extraction Layer. Deliberately not the schema's
   research-question-relative `evidence_direction` field.
+- **M19:** implemented draft extraction review-item generation, the first
+  piece of the Evidence Layer. Deliberately incomplete: fields without an
+  honest deterministic source (`research_question`, `evidence_direction`,
+  PICO) are left `None`, not guessed.
 
 Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is in
-progress through M18. See [docs/roadmap.md](docs/roadmap.md) and
+progress through M19. See [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase2_design.md](docs/phase2_design.md) for the next milestone.
 
 ## Requirements
@@ -275,13 +283,14 @@ The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now inc
 completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
 scale-readiness, and the controlled 500-paper rehearsal
 ([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
-[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M18:
+[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M19:
 deterministic, rule-based structured-section detection, claim-candidate
-detection, and claim framing-cue classification. `EvidenceRecord` generation
-from these candidates, and the schema's research-question-relative
-`evidence_direction` field, are not yet implemented. All Phase 2 extraction
-is rule-based, with no LLM-based extraction, synthesis, or reasoning of any
-kind.
+detection, claim framing-cue classification, and draft extraction
+review-item generation. A valid `EvidenceRecord`, and the schema's
+research-question-relative `evidence_direction` field, are not yet
+implemented -- `research_question` acquisition has no source anywhere in
+this pipeline yet. All Phase 2 extraction is rule-based, with no LLM-based
+extraction, synthesis, or reasoning of any kind.
 
 Neither phase should be expanded into Alembic adoption, a new package manager,
 persistent telemetry, vector search, a graph, AI reasoning, an API, web
