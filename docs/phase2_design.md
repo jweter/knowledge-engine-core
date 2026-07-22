@@ -19,8 +19,8 @@ structured-section detection (`knowledge_engine.extraction.detect_sections`)
 implemented deterministic claim-candidate sentence detection
 (`knowledge_engine.extraction.detect_claim_candidates`) within `results`/
 `conclusion` sections, using a conservative quantitative/comparative signal
-match — the second piece of the Extraction Layer. M18 (issue #98, in
-progress) implements deterministic claim framing-cue classification
+match — the second piece of the Extraction Layer. M18 (issue #98, PR #99,
+merged) implemented deterministic claim framing-cue classification
 (`knowledge_engine.extraction.classify_claim_framing`) — the third piece of
 the Extraction Layer. M18 deliberately does not implement the schema's
 `evidence_direction` field: that field is defined relative to a
