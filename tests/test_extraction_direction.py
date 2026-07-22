@@ -37,12 +37,12 @@ def test_contradicts_cue_is_detected() -> None:
 
 
 def test_qualifies_cue_is_detected() -> None:
-    text = "However, the effect size was smaller than expected."
+    text = "The improvement showed a trend toward significance among the treatment group."
     classifications = classify_claim_framing([_candidate(text)])
 
     assert len(classifications) == 1
     assert classifications[0].framing == "qualifies"
-    assert classifications[0].matched_cue == "however"
+    assert classifications[0].matched_cue == "trend toward"
 
 
 def test_did_not_reach_significance_is_qualifies() -> None:
@@ -82,7 +82,7 @@ def test_multiple_candidates_classified_independently_in_order() -> None:
     candidates = [
         _candidate("Body weight decreased by 12.4% from baseline."),
         _candidate("This is consistent with prior trials."),
-        _candidate("However, the result did not reach statistical significance."),
+        _candidate("The result did not reach statistical significance."),
     ]
 
     classifications = classify_claim_framing(candidates)
@@ -102,8 +102,28 @@ def test_no_candidates_produces_no_classifications() -> None:
 
 
 def test_classification_preserves_source_candidate() -> None:
-    candidate = _candidate("However, the trend did not reach statistical significance.")
+    candidate = _candidate("The trend did not reach statistical significance.")
 
     classifications = classify_claim_framing([candidate])
 
     assert classifications[0].candidate is candidate
+
+
+def test_bare_discourse_connective_is_not_qualifies() -> None:
+    """A candidate is only ever one isolated sentence (per M17): 'however' may
+    contrast with something outside the candidate, or not qualify the result
+    at all, so it must not be treated as a local qualifying cue."""
+
+    text = "However, 87% of participants completed follow-up."
+    classifications = classify_claim_framing([_candidate(text)])
+
+    assert classifications[0].framing == "unclassified"
+    assert classifications[0].matched_cue is None
+
+
+def test_bare_although_is_not_qualifies() -> None:
+    text = "Although the study enrolled 87% of the target population, results were promising."
+    classifications = classify_claim_framing([_candidate(text)])
+
+    assert classifications[0].framing == "unclassified"
+    assert classifications[0].matched_cue is None

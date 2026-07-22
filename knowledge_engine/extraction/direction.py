@@ -53,9 +53,13 @@ _CONTEXTUALIZES_PATTERNS: dict[str, re.Pattern[str]] = {
     "similar to prior": re.compile(r"(?i)\bsimilar to (?:previous|prior|earlier)\b"),
 }
 
+# Deliberately excludes bare discourse connectives ("however", "although"):
+# a candidate is only ever one isolated sentence (M17 supplies no
+# surrounding context), so a connective's antecedent may lie outside the
+# candidate, or may not qualify the result at all. Only self-contained
+# qualifying constructions -- the hedge is stated within the same sentence
+# as the finding -- count as a local cue.
 _QUALIFIES_PATTERNS: dict[str, re.Pattern[str]] = {
-    "however": re.compile(r"(?i)\bhowever\b"),
-    "although": re.compile(r"(?i)\balthough\b"),
     "did not reach significance": re.compile(
         r"(?i)\bdid not reach (?:statistical )?significance\b"
     ),
