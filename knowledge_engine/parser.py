@@ -40,6 +40,21 @@ class MalformedDocumentError(DocumentParseError):
     """The declared document is unreadable as a structurally valid PDF."""
 
 
+class ParsedPage(BaseModel):
+    """Normalized text for one page, preserving the page boundary.
+
+    ``ParsedPaper.raw_text``/``body_text`` join every page together and
+    discard which page any substring came from. ``page_number`` is 1-indexed
+    to match how a page is normally cited (page 1 is the first page). A
+    page's ``text`` is exactly its contribution to the joined ``raw_text``,
+    so an offset computed against ``text`` is directly usable as a
+    source-span citation without a global-to-page offset mapping.
+    """
+
+    page_number: int
+    text: str
+
+
 class ParsedPaper(BaseModel):
     """Structured result returned by a document parser."""
 
@@ -53,6 +68,7 @@ class ParsedPaper(BaseModel):
     word_count: int
     raw_text: str
     body_text: str
+    pages: list[ParsedPage] = Field(default_factory=list)
 
 
 class DocumentParser:
@@ -93,7 +109,16 @@ class PyMuPDFParser(DocumentParser):
         except fitz.FileDataError as exc:
             raise MalformedDocumentError("The PDF structure could not be parsed.") from exc
 
-        raw_text = normalize_whitespace("\n\n".join(page_texts))
+        pages = [
+            ParsedPage(page_number=index + 1, text=normalize_whitespace(page_text))
+            for index, page_text in enumerate(page_texts)
+        ]
+        # Joining each page's own normalized text (skipping pages that normalize to
+        # empty) is equivalent to normalizing the whole document at once: normalize_
+        # whitespace discards blank lines regardless of which page they came from, so
+        # the only case that must be handled explicitly is a page normalizing to
+        # nothing, which must contribute no extra separator to the join.
+        raw_text = "\n\n".join(page.text for page in pages if page.text)
         title = self._extract_title(metadata, raw_text, pdf_path)
         authors = self._extract_authors(metadata)
         abstract = self._extract_abstract(raw_text)
@@ -111,6 +136,7 @@ class PyMuPDFParser(DocumentParser):
             word_count=count_words(raw_text),
             raw_text=raw_text,
             body_text=body_text,
+            pages=pages,
         )
 
     def _extract_title(self, metadata: dict[str, str], raw_text: str, path: Path) -> str:

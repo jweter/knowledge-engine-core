@@ -83,48 +83,71 @@ generative or probabilistic judgment about what a paper means.
 These follow the same non-goal boundary the manual vertical-slice prototype
 already established and that `docs/roadmap/phase2.md`'s principle requires.
 
-## Prerequisite: Page/Span-Level Extraction Provenance
+## Prerequisite: Page/Span-Level Extraction Provenance (implemented)
 
-`docs/technical_debt.md` already identifies this gap: "Page-level extraction
+`docs/technical_debt.md` already identified this gap: "Page-level extraction
 provenance is not yet retained... Phase 2 evidence extraction will need
 citations back to source pages or stable text spans... add page-level
 extraction identity before Phase 2 claim/evidence work."
 
 Confirmed directly in `knowledge_engine/parser.py`: `PyMuPDFParser.parse`
-computes `page_texts` per page internally, then immediately collapses them
-into one document-level `raw_text = "\n\n".join(page_texts)` and discards the
-page boundaries. `ParsedPaper` only ever stores `page_count` (an integer) and
-the two joined text blobs (`raw_text`, `body_text`) — there is currently no
-way to recover which page, or what character offset within that page, any
-substring of the stored text came from.
+computed `page_texts` per page internally, then immediately collapsed them
+into one document-level `raw_text = "\n\n".join(page_texts)` and discarded the
+page boundaries. `ParsedPaper` only ever stored `page_count` (an integer) and
+the two joined text blobs (`raw_text`, `body_text`) — there was no way to
+recover which page, or what character offset within that page, any substring
+of the stored text came from.
 
-This must be fixed before any extraction logic is written, because every
+This was fixed before any extraction logic was written, because every
 extracted claim or evidence record requires a `source_span` field (already
 part of `REQUIRED_EVIDENCE_FIELDS` in `knowledge_engine/cli.py`) that names an
 exact, reproducible location in the source document. Building extraction on
-top of document-level text only would force `source_span` to be a page number
-at best, which is not precise enough for a reviewer to find the sentence a
-claim came from in a multi-page paper.
+top of document-level text only would have forced `source_span` to be a page
+number at best, which is not precise enough for a reviewer to find the
+sentence a claim came from in a multi-page paper.
 
-Proposed minimum fix, scoped narrowly to this prerequisite and not the
-extraction logic itself:
+Implemented:
 
-- Extend `ParsedPaper` (or add a sibling structure) to retain per-page text
-  alongside the existing document-level `raw_text`/`body_text`, so page
-  boundaries survive parsing.
-- Define a stable, reproducible span identity — page number plus character
-  offset range within that page's text is the simplest option that needs no
-  new dependency.
-- Decide whether page/span text is persisted (a new table, keyed to
-  `papers`) or recomputed on demand from the stored PDF at extraction time.
-  Persisting avoids re-parsing but grows the database; recomputing keeps the
-  schema smaller but makes extraction depend on the original PDF file
-  remaining available, which is not guaranteed once local PDFs are pruned.
-  This is an open question below, not decided here.
+- `ParsedPaper` gained a `pages: list[ParsedPage]` field (`ParsedPage` =
+  `page_number` + normalized per-page `text`). `PyMuPDFParser` now normalizes
+  each page individually instead of normalizing the whole joined document at
+  once; `raw_text` is the join of each page's own normalized text (skipping
+  pages that normalize to empty), which is mathematically equivalent to the
+  prior single-pass normalization — verified by a dedicated regression test
+  reproducing the old formula against a real multi-page fixture including a
+  blank page.
+- Span identity: page number plus character offset range within that page's
+  own `text`. Because a page's `text` is exactly its contribution to the
+  joined `raw_text`, an offset computed against one page's text needs no
+  separate global-to-page offset mapping.
+- Persistence decided: page text is **persisted**, in a new `paper_pages`
+  table (`PaperPage` model, keyed by `(paper_id, page_number)`), not
+  recomputed on demand. Recomputing would make extraction depend on the
+  original local PDF still being present, which is not guaranteed — PDFs are
+  gitignored, kept outside the repository, and (per the M14 rehearsal
+  runbook's own artifact-hygiene rules) are treated as ephemeral working
+  files, not permanent storage. Persisting evidence rather than re-deriving
+  it on demand also matches this project's established pattern for import
+  runs, manifest snapshots, and acquisition receipts.
+- Adding a new table exposed a real, previously-latent bug in
+  `knowledge_engine/database.py`'s `migrate_schema`: it called
+  `_verify_expected_tables` (which raises if any table registered in the ORM
+  metadata is absent) *before* `Base.metadata.create_all`, for any database
+  already past schema version 0. Every prior schema change only added
+  columns (which `create_all` cannot do, hence the existing
+  `_migrate_schema_v2`/`_v3` `ALTER TABLE` functions), so this ordering had
+  never been exercised against a brand-new table before. Fixed by tracking
+  which schema version introduces each new table
+  (`_TABLES_INTRODUCED_AT_VERSION`) and exempting only those tables — not
+  every table — from the pre-creation check, so a table that is missing
+  because it is legitimately new is still created silently, while a table
+  missing because it was actually dropped or corrupted still raises rather
+  than being silently recreated as empty. Confirmed with dedicated tests for
+  both cases.
 
-This prerequisite is Phase 2's first concrete milestone. Automated claim and
+This prerequisite was Phase 2's first concrete milestone. Automated claim and
 evidence extraction cannot be reviewed for correctness — reviewers cannot
-check "does this span actually say what the claim says" — until it exists.
+check "does this span actually say what the claim says" — without it.
 
 ## Architecture
 
@@ -144,8 +167,9 @@ Parser (extended with page/span provenance)
        typed support/contradiction/qualification links between evidence
        records, reusing the direction vocabulary already used by manual
        records (supports, contradicts, qualifies, contextualizes)
-  -> existing ke evidence / ke evidence-validate / ke evidence-report /
-     ke answer --evidence commands, unmodified
+  -> ke evidence / ke evidence-validate / ke evidence-report /
+     ke answer --evidence commands (validator and renderer changes above
+     already applied; no further schema change needed for extraction output)
 ```
 
 The Reasoning Layer (synthesis, consensus, confidence scoring, human-readable
@@ -168,9 +192,15 @@ Reusing rather than duplicating the existing schema in
   given record — mirroring how `ADJUDICATION_RULES_VERSION` versions M14's
   license-adjudication rules.
 - `extraction_status`: whether the extraction succeeded, partially matched, or
-  was held for review, reusing the accepted/held/rejected vocabulary already
-  established across the M14 pipeline rather than a new one.
-- `source_span`: the page/offset identity from the prerequisite above.
+  was held for review. **Correction**: no fixed vocabulary for this field is
+  established anywhere in the codebase yet (see Validator Changes below) — a
+  closed enum should be defined once real extraction logic determines what
+  states it actually needs, not invented speculatively here.
+- `source_span`: an object compatible with the existing manual-record shape
+  (`local_pdf_path`, `page_number`, `section`, `table_or_figure`,
+  `locator_note`), with `page_number` set from the `PaperPage` provenance
+  added by this milestone's prerequisite. A future milestone may add a
+  precise offset range within that page once extraction logic needs one.
 - `population`, `intervention`, `comparator`, `outcome`, `result_summary`,
   `limitations`, `uncertainty_notes`: populated only when the deterministic
   extraction rule found explicit textual evidence for that field; left blank
@@ -180,74 +210,112 @@ Reusing rather than duplicating the existing schema in
   existing manual-record default, so the existing review workflow applies
   without a schema change.
 
-## Validator Changes
+## Validator Changes (implemented)
 
 Confirmed by inspection of `_validate_evidence_record` in
-`knowledge_engine/cli.py`: `REQUIRED_EVIDENCE_FIELDS` only requires that
+`knowledge_engine/cli.py`: `REQUIRED_EVIDENCE_FIELDS` only required that
 `source_span` and `extraction_status` be *present* (`missing_fields = sorted(
-required_fields - record.keys())`); neither field's content is validated.
-`source_span` is never checked for type or shape, so a record with
-`source_span: null` or an arbitrary string currently passes
-`ke evidence-validate`. `extraction_status` has no allowed-value check at all
-— unlike `review_status`, which is checked against `ALLOWED_REVIEW_STATUSES`.
+required_fields - record.keys())`); neither field's content was validated.
+`source_span` was never checked for type or shape, so a record with
+`source_span: null` or an arbitrary string passed `ke evidence-validate`.
+`extraction_status` had no content check at all, not even the non-empty-string
+check every sibling field (`extraction_method`, `claim_text`, etc.) already
+had.
 
-This means the exact-provenance and review-required guarantees stated in the
-Success Criteria above are not actually enforced by the current validator, and
-cannot be claimed as already covered by "the same schema." Phase 2's first
-implementation milestone (alongside the span-provenance prerequisite) must add:
+Fixed directly (not deferred to a later milestone, since both were needed to
+make the Success Criteria above true rather than aspirational):
 
-- a `source_span` shape/type check once the page/offset span identity is
-  decided (see Prerequisite and Open Questions), analogous to how `HASH_RE`
-  validates `expected_content_hash`'s format in `corpus/validation.py`;
-- an `extraction_status` allowed-value check mirroring the existing
-  `ALLOWED_REVIEW_STATUSES` pattern, once the accepted/held/rejected
-  vocabulary above is finalized.
+- `extraction_status` was added to the existing non-empty-string validation
+  loop, matching `extraction_method`'s existing check. **Correction to an
+  earlier draft of this design**: that earlier draft proposed validating
+  `extraction_status` against an "accepted/held/rejected" vocabulary by
+  analogy to M14's adjudication `decision` field. Direct inspection of the
+  real evidence-record data (`data/corpora/glp1_weight_loss/evidence_records.jsonl`)
+  showed this was unfounded — the only value ever used is the literal string
+  `draft_manual_prototype`, and no accepted/held/rejected vocabulary exists
+  anywhere for evidence records. Inventing a speculative enum before real
+  extraction logic defines meaningful states would risk exactly the kind of
+  unsupported-metadata invention this project holds itself against elsewhere;
+  a plain required-non-empty-string check is the honestly-scoped fix for this
+  foundation milestone. A closed vocabulary (mirroring `ALLOWED_REVIEW_STATUSES`)
+  can be added once real extraction status values are defined.
+- `source_span` must now be a non-empty JSON object (catches the `null` case
+  directly), and if it contains a `page_number` key, that value must be a
+  positive integer. This was also more grounded than originally drafted: real
+  evidence records (again confirmed against `evidence_records.jsonl`) already
+  store `source_span` as an object with `page_number`, `section`,
+  `table_or_figure`, and `locator_note` keys — not the bare page/offset shape
+  first sketched above. The `page_number` check is compatible with both the
+  existing manual shape and the `PaperPage.page_number` provenance added by
+  this milestone; a stricter offset-range check can be added once extraction
+  logic defines how it populates that value.
 
-## Renderer Changes
+## Renderer Changes (implemented)
 
-Confirmed by inspection: every current evidence renderer in
-`knowledge_engine/cli.py` hardcodes a manual-only label rather than reading
-`extraction_method`. `ke evidence` appends the literal suffix `" (manual)"`
-after the field value and ends with "This is manually extracted evidence.";
-`ke answer --evidence` prints the unconditional literal string
-`"Extraction method: manual"` — not even interpolating the field; and
-`ke evidence-report` labels every row `"#### Manual Evidence Record"` and
-appends `" (manual)"` to the extraction-method line. Leaving these renderers
-unmodified would directly violate this design's own requirement that
-automated and manual records "remain visibly distinct by `extraction_method`"
-— every automated record would display as manual.
+Confirmed by inspection: every evidence renderer in `knowledge_engine/cli.py`
+hardcoded a manual-only label rather than reading `extraction_method`.
+`ke evidence` appended the literal suffix `" (manual)"` after the field value
+and ended with "This is manually extracted evidence."; `ke answer --evidence`
+printed the unconditional literal string `"Extraction method: manual"` — not
+even interpolating the field; and `ke evidence-report` labeled every row
+`"#### Manual Evidence Record"` and appended `" (manual)"` to the
+extraction-method line. Left unmodified, this would have directly violated
+this design's own requirement that automated and manual records "remain
+visibly distinct by `extraction_method`" — every automated record would have
+displayed as manual.
 
-Phase 2 must update all three renderers (and the shared review-status summary
-they use) to display the record's actual `extraction_method` value instead of
-a hardcoded label, and to adjust the fixed disclaimer text so it no longer
-unconditionally asserts every record was manually extracted. This is
-renderer-only work — no schema or validator change is required for this part
-— and should land alongside the first extraction-producing milestone, not be
-deferred, since a reviewer must never see a mislabeled record.
+All three renderers (and the shared evidence-preview helper `ke answer
+--evidence` uses) now display the record's actual `extraction_method` and
+`extraction_status` values instead of a hardcoded label, and the fixed
+disclaimer text no longer asserts every record was manually extracted
+(`ke evidence`'s closing line now reads "Extraction method and status are
+recorded per record above."; `ke evidence-report`'s header is `"#### Evidence
+Record"`, not `"#### Manual Evidence Record"`). Renderer-only change — no
+schema or validator change was required for this part.
 
-## Extraction Methodology (open question, not decided here)
+## Extraction Methodology (decided)
 
-This is the largest undecided question in this design and should not be
-settled without the project owner's input, because it is a real architectural
-fork with different dependency, accuracy, and maintainability tradeoffs:
+**Decision: option 3 combined with option 1** — structured-section heuristics
+(locate methods/results/limitations sections by heading pattern) narrowing
+input to option 1's rule-based/pattern-matching extraction within each
+section. No new dependency. Decided by the project owner after weighing this
+design against `docs/roadmap/long_term_vision.md`, which separates
+`knowledge-engine-core` (document ingestion and local source vault) from a
+distinct future `knowledge-engine-ai` package (reasoning, synthesis, and
+evidence summaries) in the wider ecosystem plan. Extraction that stays fully
+rule-based and auditable line-by-line — the same standard this project already
+holds itself to for adjudication rules such as `ADJUDICATION_RULES_VERSION` —
+belongs in `core`; anything that would blur into statistical or model-based
+"reasoning" is deliberately deferred to that separate future package rather
+than adopted here as a starting assumption.
+
+The accepted tradeoff is weaker recall than a classical NLP pipeline would
+give: real papers do not always phrase results in a fixed pattern, so this
+approach will miss claims a statistical model would catch. This mirrors how
+Phase 1 started with one bounded 500-paper rehearsal rather than the full
+literature — start narrow and prove correctness before considering a richer
+approach as a separately authorized enhancement, not a starting requirement.
+
+All three options originally considered, for reference:
 
 1. **Pure rule-based / pattern matching** (regex and sentence-structure
    heuristics, no new dependency). Fully deterministic and easiest to audit
    line-by-line, but the weakest recall — many real claims do not follow a
-   fixed sentence pattern.
+   fixed sentence pattern. **Adopted**, narrowed by option 3 below.
 2. **Classical NLP pipeline** (for example spaCy, optionally with a
    scientific-text model such as scispaCy). Still fully deterministic given a
    fixed model version and fixed input — no generative or probabilistic
    "reasoning" step — but adds a real dependency with its own model-download
    and licensing footprint, which needs review against this project's offline
    -by-default and supply-chain-conscious posture (see `docs/adr` precedent
-   for how the PMC Cloud Service migration was evaluated).
+   for how the PMC Cloud Service migration was evaluated). **Deferred**; not
+   ruled out permanently, but requires separate authorization later.
 3. **Structured-section heuristics** (locate methods/results/limitations
    sections by heading pattern, then apply narrower rule-based extraction only
-   within each section). Can be combined with either option above and may
-   substantially improve precision on the well-structured papers this
-   project's obesity/metabolic-disease corpus favors (randomized trials,
-   systematic reviews).
+   within each section). May substantially improve precision on the
+   well-structured papers this project's obesity/metabolic-disease corpus
+   favors (randomized trials, systematic reviews). **Adopted**, combined with
+   option 1.
 
 No option here uses an LLM or any generative model, consistent with the
 project-wide non-goal. The choice is about how much deterministic linguistic
@@ -279,12 +347,18 @@ extraction located and categorized it correctly.
 
 ## Open Questions
 
-- Should page/span text be persisted in a new table, or recomputed on demand
-  from the stored local PDF at extraction time? (see Prerequisite section)
-- Which extraction methodology should the first milestone implement: pure
-  rule-based, a classical NLP pipeline, structured-section heuristics, or a
-  combination? (see Extraction Methodology section — requires a decision
-  before implementation begins)
+Resolved during the foundation milestone: whether page/span text is persisted
+or recomputed (persisted, see Prerequisite section), and which extraction
+methodology to use (rule-based combined with structured-section heuristics,
+see Extraction Methodology section). Remaining:
+
+- What allowed-value vocabulary should `extraction_status` use once real
+  extraction logic defines meaningful states, and should it be enforced with
+  an `ALLOWED_...` set the same way `review_status` is? (see Validator
+  Changes — deliberately left unconstrained for now, beyond non-empty-string)
+- Should a stricter `source_span` check requiring a character-offset range
+  (not just `page_number`) be added once extraction logic defines how it
+  populates one?
 - Should automated extraction run as part of `ke corpus-import`, or as a
   separate opt-in command analogous to `ke metadata-preview`, so extraction
   failures can never affect import success/failure semantics?

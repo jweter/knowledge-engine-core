@@ -20,11 +20,12 @@ from knowledge_engine.models import (
     Paper,
     PaperAuthor,
     PaperKeyword,
+    PaperPage,
     PaperText,
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
@@ -44,6 +45,10 @@ _SCHEMA_V3_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
         "review_status": "VARCHAR(32) NOT NULL DEFAULT 'clear'",
     },
+}
+
+_TABLES_INTRODUCED_AT_VERSION: dict[int, frozenset[str]] = {
+    4: frozenset({"paper_pages"}),
 }
 
 _SCHEMA_V2_INDEXES: dict[str, tuple[str, str]] = {
@@ -108,11 +113,22 @@ def migrate_schema(engine: Engine) -> None:
             )
             raise RuntimeError(msg)
 
-        if existing_version == 0:
-            Base.metadata.create_all(connection)
-        else:
-            _verify_expected_tables(connection)
-            Base.metadata.create_all(connection)
+        # A table introduced at a version strictly newer than existing_version cannot
+        # exist yet on an upgrading database; that is expected, not corruption, so it
+        # is exempted from this pre-creation check. Every other expected table must
+        # already be present, or create_all below would silently recreate a table an
+        # operator or bug had actually dropped, masking data loss instead of failing.
+        not_yet_introduced: frozenset[str] = frozenset().union(
+            *(
+                tables
+                for version, tables in _TABLES_INTRODUCED_AT_VERSION.items()
+                if existing_version < version
+            )
+        )
+        if existing_version > 0:
+            _verify_expected_tables(connection, ignore_missing=not_yet_introduced)
+
+        Base.metadata.create_all(connection)
 
         if existing_version < 2:
             _migrate_schema_v2(connection)
@@ -184,8 +200,10 @@ def _current_schema_version(connection: Connection) -> int:
     return int(version or 0)
 
 
-def _verify_expected_tables(connection: Connection) -> None:
-    expected_tables = set(Base.metadata.tables)
+def _verify_expected_tables(
+    connection: Connection, *, ignore_missing: frozenset[str] = frozenset()
+) -> None:
+    expected_tables = set(Base.metadata.tables) - ignore_missing
     existing_tables = set(
         connection.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).scalars()
     )
@@ -283,6 +301,9 @@ class PaperRepository:
             word_count=parsed.word_count,
         )
         paper.text = PaperText(raw_text=parsed.raw_text, body_text=parsed.body_text)
+        paper.pages = [
+            PaperPage(page_number=page.page_number, text=page.text) for page in parsed.pages
+        ]
         self.session.add(paper)
 
         with self.session.no_autoflush:

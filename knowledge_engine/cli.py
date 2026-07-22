@@ -327,11 +327,14 @@ def evidence(records_path: EvidenceRecordsArgument) -> None:
         console.print(f"Source span: {_safe_text(_format_record_value(record.get('source_span')))}")
         console.print(f"Provenance: {_safe_text(_format_record_value(record.get('provenance')))}")
         console.print(
-            f"Extraction method: {_safe_text(_record_value(record, 'extraction_method'))} (manual)"
+            f"Extraction method: {_safe_text(_record_value(record, 'extraction_method'))}"
+        )
+        console.print(
+            f"Extraction status: {_safe_text(_record_value(record, 'extraction_status'))}"
         )
 
     console.print()
-    console.print("[bold]This is manually extracted evidence.[/bold]")
+    console.print("[bold]Extraction method and status are recorded per record above.[/bold]")
     console.print("[bold]No scientific synthesis has been performed.[/bold]")
 
 
@@ -719,6 +722,7 @@ def _validate_evidence_record(
         "evidence_direction",
         "result_summary",
         "extraction_method",
+        "extraction_status",
     ):
         value = record.get(field)
         if not isinstance(value, str) or not value.strip():
@@ -727,6 +731,16 @@ def _validate_evidence_record(
     provenance = record.get("provenance")
     if not isinstance(provenance, dict) or not provenance:
         errors.append(f"Line {line_number}: provenance must be a non-empty object.")
+
+    source_span = record.get("source_span")
+    if not isinstance(source_span, dict) or not source_span:
+        errors.append(f"Line {line_number}: source_span must be a non-empty object.")
+    elif "page_number" in source_span:
+        page_number = source_span["page_number"]
+        if isinstance(page_number, bool) or not isinstance(page_number, int) or page_number < 1:
+            errors.append(
+                f"Line {line_number}: source_span.page_number must be a positive integer."
+            )
 
     review_status = record.get("review_status")
     if require_review_fields and (not isinstance(review_status, str) or not review_status.strip()):
@@ -832,7 +846,9 @@ def _print_evidence_preview(records: list[dict[str, Any]]) -> None:
         console.print(
             f"  Evidence record ID: {_safe_text(_record_value(record, 'evidence_record_id'))}"
         )
-        console.print("  Extraction method: manual")
+        console.print(
+            f"  Extraction method: {_safe_text(_record_value(record, 'extraction_method'))}"
+        )
         console.print(f"  Review status: {_safe_text(_review_status(record))}")
         console.print(f"  Review checklist: {_safe_text(_review_checklist_summary(record))}")
         review_notes = _review_notes(record)
@@ -884,9 +900,10 @@ def _build_evidence_report(
         "## Scope",
         "",
         "This report combines retrieval results with curated corpus metadata and "
-        "manual evidence records. It is intended for human review.",
+        "evidence records. It is intended for human review.",
         "",
-        "This is retrieval plus manually extracted evidence only.",
+        "This is retrieval plus recorded evidence only. Extraction method is shown "
+        "per evidence record.",
         "No scientific synthesis has been performed.",
         "",
         "## Evidence Review Status Summary",
@@ -912,7 +929,8 @@ def _build_evidence_report(
         [
             "## Final Disclaimer",
             "",
-            "This report is retrieval plus manually extracted evidence only.",
+            "This report is retrieval plus recorded evidence only. Extraction "
+            "method is shown per evidence record.",
             "No scientific synthesis has been performed.",
             "",
         ]
@@ -1162,13 +1180,14 @@ def _report_paper_lines(
 
 
 def _report_evidence_lines(record: dict[str, Any]) -> list[str]:
-    """Build Markdown lines for one manual evidence record."""
+    """Build Markdown lines for one evidence record."""
 
     return [
-        "#### Manual Evidence Record",
+        "#### Evidence Record",
         "",
         f"- Evidence record ID: {_report_record_value(record, 'evidence_record_id')}",
-        f"- Extraction method: {_report_record_value(record, 'extraction_method')} (manual)",
+        f"- Extraction method: {_report_record_value(record, 'extraction_method')}",
+        f"- Extraction status: {_report_record_value(record, 'extraction_status')}",
         f"- Review status: {_report_text(_review_status(record))}",
         f"- Review checklist: {_report_text(_review_checklist_summary(record))}",
         f"- Review notes: {_report_text(_review_notes(record) or 'None')}",

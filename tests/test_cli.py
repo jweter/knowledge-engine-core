@@ -497,6 +497,38 @@ def test_answer_command_displays_doi_matched_manual_evidence(
     assert "No scientific synthesis has been performed." in result.output
 
 
+def test_answer_command_displays_real_extraction_method_not_hardcoded_manual(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A non-manual extraction_method must display as-is, not as 'manual'."""
+
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    records_path = write_evidence_records(
+        tmp_path,
+        [
+            {
+                "source_doi": "https://doi.org/10.1038/s41591-022-02026-4",
+                "extraction_method": "rule_based_v1",
+            }
+        ],
+    )
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "answer",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--evidence",
+            str(records_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Extraction method: rule_based_v1" in result.output
+    assert "Extraction method: manual" not in result.output
+
+
 def test_answer_command_marks_retrieved_paper_without_manual_evidence(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -642,6 +674,43 @@ def test_evidence_report_prints_markdown_without_output(
     assert "Evidence record ID: ev-1" in result.output
     assert "Review status: draft" in result.output
     assert "No scientific synthesis has been performed." in result.output
+
+
+def test_evidence_report_displays_real_extraction_method_not_hardcoded_manual(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A non-manual extraction_method must display as-is, not be labeled manual."""
+
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(
+        tmp_path,
+        [
+            {
+                "source_doi": "10.1038/s41591-022-02026-4",
+                "extraction_method": "rule_based_v1",
+            }
+        ],
+    )
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "#### Evidence Record" in result.output
+    assert "#### Manual Evidence Record" not in result.output
+    assert "- Extraction method: rule_based_v1" in result.output
+    assert "(manual)" not in result.output
 
 
 def test_evidence_report_writes_markdown_output(
@@ -947,6 +1016,54 @@ def test_evidence_validate_fails_for_malformed_review_checklist(tmp_path: Path) 
     assert "review_checklist must be an object" in result.output
 
 
+def test_evidence_validate_fails_for_null_source_span(tmp_path: Path) -> None:
+    records_path = write_evidence_records(tmp_path, [{"source_span": None}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "source_span must be a non-empty object" in result.output
+
+
+def test_evidence_validate_fails_for_non_object_source_span(tmp_path: Path) -> None:
+    records_path = write_evidence_records(tmp_path, [{"source_span": "page 2"}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "source_span must be a non-empty object" in result.output
+
+
+def test_evidence_validate_fails_for_non_positive_source_span_page_number(
+    tmp_path: Path,
+) -> None:
+    records_path = write_evidence_records(tmp_path, [{"source_span": {"page_number": 0}}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "source_span.page_number must be a positive integer" in result.output
+
+
+def test_evidence_validate_accepts_source_span_without_page_number(tmp_path: Path) -> None:
+    records_path = write_evidence_records(
+        tmp_path, [{"source_span": {"locator_note": "coarse manual citation"}}]
+    )
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code == 0
+
+
+def test_evidence_validate_fails_for_missing_extraction_status(tmp_path: Path) -> None:
+    records_path = write_evidence_records(tmp_path, [{"extraction_status": ""}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "extraction_status is required" in result.output
+
+
 @pytest.mark.parametrize("command_name", ["evidence", "answer", "evidence-report"])
 def test_evidence_consuming_commands_reject_duplicate_evidence_ids(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command_name: str
@@ -1007,6 +1124,20 @@ def test_evidence_consuming_commands_reject_malformed_review_checklist(
     assert "review_checklist must be an object" in result.output
 
 
+def test_evidence_command_displays_real_extraction_method_not_hardcoded_manual(
+    tmp_path: Path,
+) -> None:
+    """A non-manual extraction_method must display as-is, not as 'manual'."""
+
+    records_path = write_evidence_records(tmp_path, [{"extraction_method": "rule_based_v1"}])
+
+    result = CliRunner().invoke(app, ["evidence", str(records_path)])
+
+    assert result.exit_code == 0
+    assert "Extraction method: rule_based_v1" in result.output
+    assert "Extraction method: manual" not in result.output
+
+
 def test_evidence_command_displays_manual_evidence_record(tmp_path: Path) -> None:
     records_path = tmp_path / "evidence_records.jsonl"
     records_path.write_text(
@@ -1058,8 +1189,9 @@ def test_evidence_command_displays_manual_evidence_record(tmp_path: Path) -> Non
     assert "STEP 5 trial" in result.output
     assert "Review status: draft" in result.output
     assert "Review notes: Prototype record awaiting secondary review." in result.output
-    assert "Extraction method: manual_human_review (manual)" in result.output
-    assert "This is manually extracted evidence." in result.output
+    assert "Extraction method: manual_human_review" in result.output
+    assert "Extraction status: draft_manual_prototype" in result.output
+    assert "Extraction method and status are recorded per record above." in result.output
     assert "No scientific synthesis has been performed." in result.output
 
 

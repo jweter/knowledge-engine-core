@@ -2,7 +2,7 @@ from pathlib import Path
 
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
-from knowledge_engine.parser import ParsedPaper
+from knowledge_engine.parser import ParsedPage, ParsedPaper
 from knowledge_engine.search import SearchService, build_natural_language_fts_query
 
 
@@ -50,6 +50,46 @@ def test_repository_stores_paper_and_stats(tmp_path: Path) -> None:
     assert stats["keywords"] == 1
     assert len(papers) == 1
     assert papers[0].title == "Alzheimer Disease and Metabolic Signaling"
+
+
+def test_repository_persists_no_pages_when_parser_supplied_none(tmp_path: Path) -> None:
+    """Existing callers that never set ParsedPaper.pages must not break."""
+
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(parsed_paper(tmp_path))
+        paper_id = paper.id
+
+    with database.session() as session:
+        stored = PaperRepository(session).get(paper_id)
+        assert stored is not None
+        assert stored.pages == []
+
+
+def test_repository_persists_page_boundaries(tmp_path: Path) -> None:
+    parsed = parsed_paper(tmp_path)
+    parsed = parsed.model_copy(
+        update={
+            "pages": [
+                ParsedPage(page_number=1, text="Alzheimer disease appears in the body text."),
+                ParsedPage(page_number=2, text="with metabolic signaling."),
+            ]
+        }
+    )
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(parsed)
+        paper_id = paper.id
+
+    with database.session() as session:
+        stored = PaperRepository(session).get(paper_id)
+        assert stored is not None
+        assert [(page.page_number, page.text) for page in stored.pages] == [
+            (1, "Alzheimer disease appears in the body text."),
+            (2, "with metabolic signaling."),
+        ]
 
 
 def test_search_returns_ranked_matches(tmp_path: Path) -> None:
