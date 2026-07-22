@@ -157,6 +157,44 @@ def test_oa_candidate_with_unsupported_license_is_held(tmp_path: Path) -> None:
     assert "license" in item.unresolved_ambiguities
 
 
+@pytest.mark.parametrize(
+    "restricted_license",
+    ["CC BY-NC", "CC BY-NC-ND", "CC BY-NC-SA", "CC BY-SA", "CC BY-ND"],
+)
+def test_oa_candidate_with_restricted_cc_variant_is_held(
+    tmp_path: Path, restricted_license: str
+) -> None:
+    """CC BY-NC/-ND/-SA restrict commercial use and/or derivative works and must
+    not be accepted merely because they share the "CC BY" text prefix."""
+
+    candidate = _candidate()
+    candidate["license"] = restricted_license
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "held"
+    assert item.license_rule_result == "unsupported_license_basis"
+    assert "LICENSE_EVIDENCE_INCOMPLETE_OR_UNSUPPORTED" in item.reason_codes
+
+
+@pytest.mark.parametrize("allowed_license", ["CC BY", "CC BY 4.0", "CC0", "CC0 1.0"])
+def test_oa_candidate_with_unrestricted_cc_variant_passes(
+    tmp_path: Path, allowed_license: str
+) -> None:
+    candidate = _candidate()
+    candidate["license"] = allowed_license
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.license_rule_result == "passed"
+
+
 def test_oa_candidate_with_unapproved_pdf_host_is_held(tmp_path: Path) -> None:
     candidate = _candidate()
     candidate["pdf_url"] = "https://publisher.example/article.pdf"
