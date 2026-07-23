@@ -226,6 +226,16 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (one further hit, "Experimental models in diabetes research," was
   confirmed genuinely on-topic and kept). Refreshed the corpus-library
   snapshot (241 papers total, 493 authors).
+- Grew `sources.csv` by another 78 records (the fourth discovery batch,
+  `retstart=750`). Applied both known false-positive screens proactively
+  before acquisition this time (incidental-comorbidity case reports and
+  NOD-SCID/mouse-strain-name term collisions); found and manually excluded
+  1 further incidental-comorbidity match, a BCGitis case report (a
+  granulomatous cystitis complication of intravesical BCG therapy for
+  bladder cancer) in which type 2 diabetes was purely patient background,
+  unrelated to the paper's actual topic. No mouse-strain-name collisions
+  found in this batch. Refreshed the corpus-library snapshot (319 papers
+  total, 725 authors).
 
 ### Changed
 
