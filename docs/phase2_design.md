@@ -75,7 +75,7 @@ the future `knowledge-engine-ai` layer; see
 `docs/roadmap/long_term_vision.md`'s AI Interface Layer section. The
 Relationship Layer (below) remains a `core` milestone -- not yet scoped,
 but the AI Interface Layer is built on top of it, not in place of it.
-M23 (issue #117) constrains `extraction_status` to a closed
+M23 (issue #117, PR #118, merged) constrains `extraction_status` to a closed
 `ALLOWED_EXTRACTION_STATUSES` vocabulary and adds `source_span`
 character-offset-range validation, resolving two items this design's Open
 Questions section had carried since M15 pending real extraction logic to
