@@ -30,7 +30,15 @@ from knowledge_engine.google_drive_service_account import (
     mint_access_token,
 )
 
-_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file"
+# `drive.file` (least privilege) only covers files/folders the service
+# account itself created or that were explicitly opened via a Drive picker
+# with this app -- it does NOT cover a pre-existing folder a human shares
+# with the service account through ordinary Drive ACL sharing, which is
+# exactly this tool's real usage. The broader `drive` scope is required to
+# see an ACL-shared folder at all; the actual safety boundary against
+# writing anywhere unintended remains `ConstrainedDriveAdapter`'s fail-closed
+# destination allowlist and ancestry verification, not the OAuth scope.
+_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive"
 _DESTINATION_NAME = "source_documents.pdf"
 
 

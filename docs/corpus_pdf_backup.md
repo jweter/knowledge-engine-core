@@ -35,10 +35,16 @@ ke-corpus-pdf-backup --papers-dir papers/corpora/glp1_weight_loss
 ```
 
 Internally, the key signs a short-lived JWT-bearer assertion (RFC 7523) and
-exchanges it for an OAuth access token scoped to `drive.file` -- the
-least-privilege Drive scope, granting access only to files and folders the
-service account created or that were explicitly shared with it. The token is
-minted fresh for each run and never persisted.
+exchanges it for an OAuth access token scoped to the full `drive` scope. This
+is broader than the least-privilege `drive.file` scope initially used --
+`drive.file` turned out not to cover a pre-existing folder a human shares
+with the service account through ordinary Drive ACL sharing (it only sees
+files the app itself created or that were explicitly opened via a Drive
+picker), which is exactly this tool's real usage. The actual safety boundary
+against writing anywhere unintended is `ConstrainedDriveAdapter`'s
+fail-closed destination allowlist and live ancestry verification (see
+below), not the OAuth scope. The token is minted fresh for each run and
+never persisted.
 
 ## Destination
 
