@@ -76,6 +76,33 @@ def test_extraction_review_generate_writes_draft_items(
     assert record["extraction_context"]["section_type"] == "results"
 
 
+def test_extraction_review_generate_removes_output_when_run_cannot_be_recorded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A persistence failure after a successful write must not leave an
+    unrecorded review queue behind -- the output is rolled back so a plain
+    retry (without --force) starts cleanly."""
+
+    output = tmp_path / "review.jsonl"
+    monkeypatch.setattr(
+        entrypoint, "_load_paper_pages", lambda paper_id: (_paper(), _pages_with_results_section())
+    )
+
+    def _raise(**kwargs: object) -> None:
+        raise RuntimeError("database is locked")
+
+    monkeypatch.setattr(entrypoint, "_record_extraction_run", _raise)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["extraction-review-generate", "--paper-id", "1", "--output", str(output)],
+    )
+
+    assert result.exit_code != 0
+    assert "Extraction run could not be recorded" in result.output
+    assert not output.exists()
+
+
 def test_extraction_review_generate_rejects_unknown_paper(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

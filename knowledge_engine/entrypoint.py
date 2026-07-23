@@ -431,14 +431,23 @@ def extraction_review_generate(
     lines = [json.dumps(item.to_dict()) for item in items]
     _write_output(output, "\n".join(lines) + ("\n" if lines else ""))
 
-    _record_extraction_run(
-        paper_id=paper.id,
-        output_path=output,
-        page_count=len(pages),
-        section_count=len(sections),
-        candidate_count=len(candidates),
-        draft_item_count=len(items),
-    )
+    try:
+        _record_extraction_run(
+            paper_id=paper.id,
+            output_path=output,
+            page_count=len(pages),
+            section_count=len(sections),
+            candidate_count=len(candidates),
+            draft_item_count=len(items),
+        )
+    except Exception:
+        output.unlink(missing_ok=True)
+        console.print(
+            "[red]Extraction run could not be recorded.[/red] The draft output file was "
+            "removed so a retry starts cleanly, rather than leaving an unrecorded review "
+            "queue behind."
+        )
+        raise typer.Exit(1) from None
 
     console.print(
         f"[green]Wrote {len(items)} draft evidence item(s):[/green] {output} "
