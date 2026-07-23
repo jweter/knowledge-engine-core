@@ -222,3 +222,51 @@ def test_promote_empty_input_reports_no_records(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.output
     assert "No records found in input file." in result.output
+
+
+def test_promote_rejects_identical_input_and_output_paths(tmp_path: Path) -> None:
+    """Promoting in place would leave the original draft rows mixed in with
+    promoted records, corrupting the declared evidence file."""
+
+    path = tmp_path / "review.jsonl"
+    _write_jsonl(path, [_completed_draft_item()])
+
+    result = CliRunner().invoke(
+        app,
+        ["extraction-review-promote", "--input", str(path), "--output", str(path)],
+    )
+
+    assert result.exit_code == 1
+    assert "--input and --output must not be the same file" in result.output
+    lines = path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+
+
+def test_promote_reports_non_string_evidence_record_id_instead_of_crashing(
+    tmp_path: Path,
+) -> None:
+    """A malformed evidence_record_id (e.g. a JSON array) must be reported
+    by the validator, not crash the command on an unhashable-type set
+    lookup before later records get a chance to be processed."""
+
+    input_path = tmp_path / "review.jsonl"
+    output_path = tmp_path / "evidence_records.jsonl"
+    _write_jsonl(
+        input_path,
+        [
+            _completed_draft_item(evidence_record_id=["not", "a", "string"]),
+            _completed_draft_item(claim_text="A second, well-formed record."),
+        ],
+    )
+
+    result = CliRunner().invoke(
+        app,
+        ["extraction-review-promote", "--input", str(input_path), "--output", str(output_path)],
+    )
+
+    assert result.exit_code == 1, result.output
+    assert "evidence_record_id is required" in result.output
+    assert "Promoted 1 record(s):" in result.output
+    lines = output_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    assert json.loads(lines[0])["claim_text"] == "A second, well-formed record."

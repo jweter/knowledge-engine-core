@@ -426,6 +426,14 @@ def extraction_review_promote(
         console.print(f"[red]Input file does not exist:[/red] {input_path}")
         raise typer.Exit(1)
 
+    if input_path.resolve() == output.resolve():
+        console.print(
+            "[red]--input and --output must not be the same file:[/red] "
+            "promoting in place would leave the original draft rows mixed in "
+            "with promoted evidence records."
+        )
+        raise typer.Exit(1)
+
     result = _promote_evidence_records(input_path, output)
 
     if result.promoted:
@@ -900,7 +908,7 @@ def _promote_evidence_records(input_path: Path, output_path: Path) -> PromotionR
 
         completed = _apply_promotion_defaults(record)
         record_id = completed["evidence_record_id"]
-        if record_id in existing_ids:
+        if isinstance(record_id, str) and record_id in existing_ids:
             duplicates.append(record_id)
             continue
 
