@@ -43,6 +43,52 @@ is disputed, and what remains unknown.
 It should preserve knowledge, evaluate evidence, connect ideas, identify
 contradictions, and make research more reproducible.
 
+## Minimizing Human-Typed Fields
+
+Every field in the Evidence and Relationship schemas left for a human to
+type by hand is a place human error can enter -- a mistyped sample size, a
+wrong study-type label, a relationship authored from memory rather than
+re-reading the source. The project owner's explicit preference is to
+minimize this surface area over time, not accept it as permanent.
+
+This does not change `core`'s "never decide truth" boundary; it sharpens
+it. A field belongs to deterministic, automated extraction whenever the
+fact it records is intrinsic to the paper's own text -- something a
+careful reader could point to a specific sentence and confirm, the same
+way M16-M19 already locate a claim candidate and its source span. A field
+belongs to a human (today) or the future `knowledge-engine-ai` layer
+(eventually) only when the fact is genuinely external to the paper, or
+requires judgment about what the paper means relative to something
+outside it:
+
+- **Paper-intrinsic -- should become deterministic extraction, not stay
+  human-typed:** PICO fields (population, intervention, comparator,
+  outcome), `study_type`, and `limitations` are facts a paper states about
+  itself, usually in predictable places (a Methods section, inclusion
+  criteria, an explicit "Limitations" heading) -- the same category of
+  work M16's structured-section detection and M17's signal-matching
+  already do for claims. These are extraction targets `core` should build,
+  not permanent human-review fields. See Confidence Rating Design Guidance
+  below and `docs/phase2_design.md`'s Extraction Model.
+- **Genuinely external -- correctly stays human/AI-layer territory:**
+  `research_question` is not contained in any paper -- it is supplied by
+  whoever is asking, and no amount of better extraction changes that.
+  `evidence_direction` is defined relative to a `research_question`, so it
+  inherits the same externality. A synthesized confidence *rating*
+  requires judging what a question's accumulated evidence supports, which
+  is reasoning, not extraction.
+- **Currently human-typed, worth re-examining:** the Relationship Layer's
+  first slice (M24) requires a human to author every relationship record
+  by hand -- `relationship_type`, `rationale`, and both endpoint IDs are
+  all typed, not extracted. Unlike `research_question`, a relationship
+  between two evidence records *can* have machine-checkable structure (do
+  their claims share PICO overlap? does one paper cite the other?) even
+  though deciding the relationship *type* correctly still needs care. A
+  future Relationship Layer milestone should narrow, not eliminate, human
+  involvement here -- surfacing candidate pairs automatically so a human
+  confirms rather than composes from scratch, the same conservative
+  posture M18 already uses for framing cues.
+
 ## The AI Interface Layer (Future, `knowledge-engine-ai`)
 
 `knowledge-engine-core` deliberately stops short of deciding what a piece of
@@ -92,8 +138,10 @@ This works in two levels:
 
 1. **Per-evidence-record confidence.** Computed from signals `core`'s own
    Evidence and Relationship Layers are positioned to produce: study
-   design/type and sample size (PICO fields, still not yet scoped/extracted),
-   recency (already-captured paper publication-date metadata), and any known
+   design/type and sample size (PICO fields -- an explicit near-term
+   priority for deterministic, non-human-typed extraction; see Minimizing
+   Human-Typed Fields above), recency (already-captured paper
+   publication-date metadata), and any known
    limitations/uncertainty already recorded per evidence record. A small,
    poorly designed, or old study earns a low per-record score even when its
    stated direction agrees with the eventual answer.
@@ -111,7 +159,61 @@ This works in two levels:
 This is design guidance for the future `knowledge-engine-ai` layer, not a
 formula `core` implements. But it is also not free of consequences for
 `core`: a rigorous confidence rating can only be as good as the quality
-signals `core` chose to capture on the way there. `core`'s still-unscoped
-PICO extraction and Relationship Layer milestones are this rating's specific
-future inputs, not just organizational nice-to-haves -- they should be scoped
+signals `core` chose to capture on the way there. `core`'s PICO extraction
+and Relationship Layer milestones are this rating's specific future
+inputs, not just organizational nice-to-haves -- they should be scoped
 with this consumer in mind when their time comes.
+
+### Stability Score (Future Input, Not Yet Captured)
+
+`docs/founding_vision.md`'s Confidence Framework names four per-claim
+sub-scores; three (Evidence Quality, Consensus, Recency) already have a
+clear path to real inputs once PICO extraction and the Relationship Layer
+mature. The fourth, **Stability** -- historical consistency, how often a
+claim's supporting evidence has been revised -- has no path yet. Nothing
+in `core` currently tracks a claim or evidence record's revision history
+over time. This is a Phase 4 (Knowledge Graph)-era concern: it needs
+something to revise *against*, which requires the graph to exist first.
+
+## Tracking the Unknown
+
+`docs/founding_vision.md`'s addendum -- that the system should explicitly
+track what humanity does *not* know, not only what it does -- has no
+representation in the schema today beyond the Relationship Layer's
+`contradicts` type. A missing experiment, a weak-evidence area, or an
+unanswered question are not currently first-class entities anywhere. Gaps
+are naturally graph-shaped (a missing or weak edge), so this belongs with
+the Knowledge Graph (Phase 4), not before it.
+
+## Discovery Metrics (Post-v1.0)
+
+`docs/founding_vision.md`'s Discovery Metrics (Time to Discovery, Time to
+Understanding, Time to Validation, Knowledge Coverage, Contradiction
+Resolution Rate) measure the Discovery and Decision layers' output. They
+cannot be meaningfully measured before those layers exist, so this is
+explicitly post-`v1.0.0` scope -- named here so it is not forgotten, not
+because it is actionable now.
+
+## The Discovery and Education Layers (Future, Not Yet Named)
+
+`docs/founding_vision.md`'s six-layer architecture names two layers this
+ecosystem plan has not yet given a home to:
+
+- **Discovery Engine** (identify knowledge gaps, propose hypotheses,
+  suggest experiments, estimate expected information gain). The closest
+  existing hook is the Knowledge Graph (Phase 4) -- a gap is naturally
+  something the graph can represent as a missing or weakly-supported edge
+  -- but no phase or future package currently claims this responsibility.
+  Likely home: `knowledge-engine-ai` or a dedicated
+  `knowledge-engine-agents` capability, once the Knowledge Graph exists to
+  identify gaps against.
+- **Education Engine** (adaptive explanations, personalized learning
+  paths, prerequisite mapping, expertise tracking). Not claimed by any
+  phase or ecosystem package named above. This is the largest outright gap
+  between the founding vision and the current roadmap -- it may need its
+  own future package, or a deliberate decision that it is out of scope for
+  the foreseeable roadmap. Left as an open decision here rather than a
+  silent omission.
+
+Both are explicitly deferred, not started, and not blocking any current
+`core` milestone.

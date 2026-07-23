@@ -69,12 +69,17 @@ original local PDF and persists the result only once its freshly computed
 `content_hash` matches the paper's already-persisted one -- a mismatch or
 a missing source file is reported, never silently skipped or trusted.
 `research_question` acquisition, real research-question-relative
-`evidence_direction` classification, PICO extraction, and a synthesized
-confidence rating are explicitly out of scope for `core` -- they belong to
-the future `knowledge-engine-ai` layer; see
-`docs/roadmap/long_term_vision.md`'s AI Interface Layer section. The
-Relationship Layer (below) remains a `core` milestone -- not yet scoped,
-but the AI Interface Layer is built on top of it, not in place of it.
+`evidence_direction` classification, and a synthesized confidence rating
+are explicitly out of scope for `core` -- they belong to the future
+`knowledge-engine-ai` layer; see `docs/roadmap/long_term_vision.md`'s AI
+Interface Layer section. PICO extraction was originally grouped with
+these three at M22, but is reclassified below: unlike the other three, it
+is a paper-intrinsic fact rather than judgment relative to a research
+question, so it belongs to `core` as deterministic extraction -- see
+`docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed Fields
+section and the Next Priorities note below. The Relationship Layer
+(below) remains a `core` milestone -- not yet scoped, but the AI
+Interface Layer is built on top of it, not in place of it.
 M23 (issue #117, PR #118, merged) constrains `extraction_status` to a closed
 `ALLOWED_EXTRACTION_STATUSES` vocabulary and adds `source_span`
 character-offset-range validation, resolving two items this design's Open
@@ -97,6 +102,15 @@ manual evidence records for the same claim are treated as independent
 corroborating records, never reconciled or superseded for display -- see
 Open Questions below, where this required no code change since it is
 already the codebase's real behavior.
+Next priorities, per the project owner's explicit preference to minimize
+human-typed fields (see `docs/roadmap/long_term_vision.md`'s Minimizing
+Human-Typed Fields section): deterministic, non-human-typed PICO/
+`study_type`/`limitations` extraction, extending M16-M19's methodology
+rather than adopting a new one; and expanding the Relationship Layer past
+its first slice's fully human-authored records. Tuning either against
+real data needs a real corpus far larger than the two hand-authored
+records currently committed -- see `docs/roadmap.md`'s "Scaling beyond
+500 papers for Phase 2 tuning" section.
 
 ## Mission
 
