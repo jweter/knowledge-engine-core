@@ -6,7 +6,15 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
-KNOWLEDGE_ENGINE_DRIVE_ROOT_ID = "1ygxvhp7eEmU55LkmyrE0G3XjUMkagUjX"
+# Live verification against the real Drive tree (2026-07-23) found the
+# previous root ID unreachable -- it does not correspond to any folder the
+# project's service account can see. "source_documents" ("10 - Source
+# Documents") is the actual top-level folder the project owner created and
+# shared; its own children (e.g. "source_documents.pdf") verify correctly
+# beneath it. Other logical names below this root have not been independently
+# re-verified against the live Drive tree and may need the same correction
+# before their first real use.
+KNOWLEDGE_ENGINE_DRIVE_ROOT_ID = "1p_-8Rc_g-D_-VHt0D_s4CQnfH2upL5Xh"
 
 _FOLDER_IDS = {
     "source_manifests": "1rWlSmnsuGyO4LZIaVpP1hIWcqWzFO8rQ",

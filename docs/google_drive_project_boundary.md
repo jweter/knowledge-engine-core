@@ -4,8 +4,18 @@ The connected personal Google Drive is an independent backup and human-accessibl
 
 ## Approved root
 
-- Folder name: `Knowledge Engine`
-- Folder ID: `1ygxvhp7eEmU55LkmyrE0G3XjUMkagUjX`
+- Folder name: `10 - Source Documents`
+- Folder ID: `1p_-8Rc_g-D_-VHt0D_s4CQnfH2upL5Xh`
+
+This repository originally recorded a different root (a planned `Knowledge
+Engine` folder, ID `1ygxvhp7eEmU55LkmyrE0G3XjUMkagUjX`) that live testing
+(2026-07-23) found unreachable -- it was never actually created or shared in
+the real Drive. `10 - Source Documents` is the actual top-level folder the
+project owner created and shared, and is now the approved root. Other
+logical destinations under `DRIVE_FOLDER_IDS` besides `source_documents` and
+`source_documents.pdf` have not been independently re-verified against the
+live Drive tree and may need the same correction before their first real
+use.
 
 All Knowledge Engine Drive writes must target a logical destination defined in `knowledge_engine.drive_boundary.DRIVE_FOLDER_IDS`. Callers must not accept an arbitrary folder ID, URL, or free-form path from an ingestion record.
 
