@@ -186,11 +186,13 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   clone), so nothing downloaded and parsed today would otherwise survive
   past the current session -- see `docs/roadmap.md`'s "Scaling beyond 500
   papers for Phase 2 tuning" section.
-- Grew `data/corpora/glp1_weight_loss/sources.csv` by 84 records (the first
+- Grew `data/corpora/glp1_weight_loss/sources.csv` by 81 records (the first
   small automated discovery batch, `retstart=0`, toward the project owner's
-  "at least a couple thousand papers" target) and committed the first
+  "at least a couple thousand papers" target -- 84 initially accepted, 3
+  later held once a v7 adjudication-ruleset fix corrected a pediatric-scope
+  gap) and committed the first
   `data/corpus_library/obesity_metabolic_disease_library.sqlite3` snapshot
-  (87 papers total, including the pre-existing prototype rows) produced by
+  (84 papers total, including the pre-existing prototype rows) produced by
   `ke corpus-library-export`.
 
 ### Changed

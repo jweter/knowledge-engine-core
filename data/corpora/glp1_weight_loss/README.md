@@ -62,10 +62,12 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 87 sources: the small historical GLP-1 prototype
-set (3 rows) plus 84 accepted records from the first small (`--limit 250`)
+The committed manifest holds 84 sources: the small historical GLP-1 prototype
+set (3 rows) plus 81 accepted records from the first small (`--limit 250`)
 automated discovery batch (`retstart=0`) of the project owner's larger
-corpus-building effort, following M14's rules. Accepted records proceed
+corpus-building effort, following M14's rules (a v7 ruleset correction held
+3 pediatric-titled records that a v6 gap had wrongly accepted; see
+`docs/m14_candidate_review_worksheet.md`). Accepted records proceed
 automatically; rejected and held records remain auditable but do not block
 the batch or require owner review. The corpus continues to grow in small
 batches toward a target of at least a couple thousand papers -- see
