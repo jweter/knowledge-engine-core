@@ -226,16 +226,25 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (one further hit, "Experimental models in diabetes research," was
   confirmed genuinely on-topic and kept). Refreshed the corpus-library
   snapshot (241 papers total, 493 authors).
-- Grew `sources.csv` by another 78 records (the fourth discovery batch,
+- Grew `sources.csv` by another 77 records (the fourth discovery batch,
   `retstart=750`). Applied both known false-positive screens proactively
-  before acquisition this time (incidental-comorbidity case reports and
+  before acquisition (incidental-comorbidity case reports and
   NOD-SCID/mouse-strain-name term collisions); found and manually excluded
-  1 further incidental-comorbidity match, a BCGitis case report (a
+  1 incidental-comorbidity match pre-acquisition, a BCGitis case report (a
   granulomatous cystitis complication of intravesical BCG therapy for
-  bladder cancer) in which type 2 diabetes was purely patient background,
-  unrelated to the paper's actual topic. No mouse-strain-name collisions
-  found in this batch. Refreshed the corpus-library snapshot (319 papers
-  total, 725 authors).
+  bladder cancer) in which type 2 diabetes was purely patient background.
+  No mouse-strain-name collisions found. A Codex review then caught a
+  second incidental-comorbidity record the pre-acquisition screen had
+  missed because its title didn't literally say "case report" (only its
+  venue, "JCEM case reports," did): an adrenal-insufficiency case report
+  in which obesity was one of several incidental presenting signs,
+  unrelated to the paper's actual topic (long-term high-dose
+  ethinylestradiol use). Excluded it and broadened the screen to also
+  check venue names; re-screening the rest of the batch with the
+  broadened check found two further "JCEM case reports" records, both
+  confirmed genuinely on-topic (their titles directly name tirzepatide and
+  semaglutide as the intervention) and kept. Refreshed the corpus-library
+  snapshot (318 papers total, 719 authors).
 
 ### Changed
 
