@@ -80,12 +80,12 @@ M23 (issue #117, PR #118, merged) constrains `extraction_status` to a closed
 character-offset-range validation, resolving two items this design's Open
 Questions section had carried since M15 pending real extraction logic to
 define meaningful values -- see Open Questions below for the values decided.
-M24 (issue #120) implements the Relationship Layer's first slice: a
-human-authored relationship schema and `ke relationship-validate`, reusing
-`evidence_direction`'s exact vocabulary. Automated relationship detection is
-explicitly not implemented -- deciding whether a relationship holds between
-two evidence records remains a human judgment call; see Relationship Layer
-section below.
+M24 (issue #120, PR #121, merged) implements the Relationship Layer's first
+slice: a human-authored relationship schema and `ke relationship-validate`,
+reusing `evidence_direction`'s exact vocabulary. Automated relationship
+detection is explicitly not implemented -- deciding whether a relationship
+holds between two evidence records remains a human judgment call; see
+Relationship Layer section below.
 
 ## Mission
 
