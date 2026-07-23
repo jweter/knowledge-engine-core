@@ -15,8 +15,12 @@ from knowledge_engine.cli import console
 from knowledge_engine.config import build_settings
 from knowledge_engine.crossref_http import UrllibCrossrefTransport
 from knowledge_engine.crossref_provider import CrossrefProvider
-from knowledge_engine.database import Database, PaperRepository
+from knowledge_engine.database import Database, ExtractionRunRepository, PaperRepository
 from knowledge_engine.extraction import (
+    CLAIM_CANDIDATE_RULES_VERSION,
+    CLAIM_FRAMING_RULES_VERSION,
+    DRAFT_EVIDENCE_ITEM_RULES_VERSION,
+    SECTION_DETECTION_RULES_VERSION,
     build_draft_evidence_items,
     classify_claim_framing,
     detect_claim_candidates,
@@ -160,6 +164,39 @@ def _load_paper_pages(paper_id: int) -> tuple[Paper, list[ParsedPage]] | None:
         pages = [ParsedPage(page_number=page.page_number, text=page.text) for page in paper.pages]
         session.expunge(paper)
         return paper, pages
+
+
+def _record_extraction_run(
+    *,
+    paper_id: int,
+    output_path: Path,
+    page_count: int,
+    section_count: int,
+    candidate_count: int,
+    draft_item_count: int,
+) -> None:
+    """Persist a durable record of one `extraction-review-generate` invocation.
+
+    Never re-runs or re-triggers anything -- purely observational, so a
+    paper's extraction history can be found later without re-reading every
+    JSONL file the command has ever produced.
+    """
+
+    database = _local_database()
+    database.initialize()
+    with database.session() as session:
+        ExtractionRunRepository(session).create(
+            paper_id=paper_id,
+            output_path=str(output_path),
+            page_count=page_count,
+            section_count=section_count,
+            candidate_count=candidate_count,
+            draft_item_count=draft_item_count,
+            section_detection_rules_version=SECTION_DETECTION_RULES_VERSION,
+            claim_candidate_rules_version=CLAIM_CANDIDATE_RULES_VERSION,
+            claim_framing_rules_version=CLAIM_FRAMING_RULES_VERSION,
+            draft_evidence_item_rules_version=DRAFT_EVIDENCE_ITEM_RULES_VERSION,
+        )
 
 
 def _validate_output(output: Path, *, force: bool) -> None:
@@ -393,6 +430,15 @@ def extraction_review_generate(
 
     lines = [json.dumps(item.to_dict()) for item in items]
     _write_output(output, "\n".join(lines) + ("\n" if lines else ""))
+
+    _record_extraction_run(
+        paper_id=paper.id,
+        output_path=output,
+        page_count=len(pages),
+        section_count=len(sections),
+        candidate_count=len(candidates),
+        draft_item_count=len(items),
+    )
 
     console.print(
         f"[green]Wrote {len(items)} draft evidence item(s):[/green] {output} "

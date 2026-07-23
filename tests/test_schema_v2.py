@@ -52,7 +52,7 @@ def test_fresh_database_initializes_at_current_schema_version(tmp_path: Path) ->
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
         foreign_keys_enabled = connection.execute(text("PRAGMA foreign_keys")).scalar_one()
 
-    assert version == CURRENT_SCHEMA_VERSION == 4
+    assert version == CURRENT_SCHEMA_VERSION == 5
     assert "review_status" in _column_names(database, "import_runs")
     assert foreign_keys_enabled == 1
     assert "run_mode" in _column_names(database, "import_runs")
@@ -79,7 +79,7 @@ def test_schema_version_4_migration_is_retry_safe(tmp_path: Path) -> None:
     database.initialize()
 
     with database.engine.begin() as connection:
-        connection.execute(text("UPDATE schema_versions SET version = 2 WHERE version = 4"))
+        connection.execute(text("UPDATE schema_versions SET version = 2 WHERE version = 5"))
 
     database.initialize()
     database.initialize()
@@ -91,7 +91,7 @@ def test_schema_version_4_migration_is_retry_safe(tmp_path: Path) -> None:
             ).scalars()
         )
 
-    assert versions == [2, 4]
+    assert versions == [2, 5]
     assert "run_mode" in _column_names(database, "import_runs")
     assert "duplicate_evidence_json" in _column_names(database, "import_items")
 
@@ -117,7 +117,7 @@ def test_older_version_missing_table_is_not_silently_repaired(tmp_path: Path) ->
     database.initialize()
 
     with database.engine.begin() as connection:
-        connection.execute(text("UPDATE schema_versions SET version = 2 WHERE version = 4"))
+        connection.execute(text("UPDATE schema_versions SET version = 2 WHERE version = 5"))
         connection.execute(text("DROP TABLE import_items"))
 
     with pytest.raises(RuntimeError, match="incomplete"):
@@ -156,14 +156,14 @@ def test_upgrading_older_database_adds_new_table_without_error(tmp_path: Path) -
 
     with database.engine.begin() as connection:
         connection.execute(text("DROP TABLE paper_pages"))
-        connection.execute(text("UPDATE schema_versions SET version = 3 WHERE version = 4"))
+        connection.execute(text("UPDATE schema_versions SET version = 3 WHERE version = 5"))
 
     database.initialize()
 
     assert "paper_pages" in _table_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 4
+    assert version == CURRENT_SCHEMA_VERSION == 5
 
 
 def test_dropping_paper_pages_at_current_version_is_not_silently_repaired(
@@ -183,3 +183,43 @@ def test_dropping_paper_pages_at_current_version_is_not_silently_repaired(
         database.initialize()
 
     assert "paper_pages" not in _table_names(database)
+
+
+def test_upgrading_older_database_adds_extraction_runs_table_without_error(
+    tmp_path: Path,
+) -> None:
+    """extraction_runs (introduced at version 5) must be silently added when
+    upgrading an older database, exactly like paper_pages was at version 4."""
+
+    database = _database(tmp_path)
+    database.initialize()
+
+    with database.engine.begin() as connection:
+        connection.execute(text("DROP TABLE extraction_runs"))
+        connection.execute(text("UPDATE schema_versions SET version = 4 WHERE version = 5"))
+
+    database.initialize()
+
+    assert "extraction_runs" in _table_names(database)
+    with database.engine.connect() as connection:
+        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+    assert version == CURRENT_SCHEMA_VERSION == 5
+
+
+def test_dropping_extraction_runs_at_current_version_is_not_silently_repaired(
+    tmp_path: Path,
+) -> None:
+    """Once a database is already at the version that introduced
+    extraction_runs, dropping it is corruption, not an expected absence,
+    and must not be silently recreated by create_all."""
+
+    database = _database(tmp_path)
+    database.initialize()
+
+    with database.engine.begin() as connection:
+        connection.execute(text("DROP TABLE extraction_runs"))
+
+    with pytest.raises(RuntimeError, match="incomplete"):
+        database.initialize()
+
+    assert "extraction_runs" not in _table_names(database)

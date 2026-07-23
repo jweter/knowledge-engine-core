@@ -344,3 +344,45 @@ class PaperPage(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
 
     paper: Mapped[Paper] = relationship(back_populates="pages")
+
+
+class ExtractionRun(Base):
+    """Durable record of one `ke extraction-review-generate` invocation.
+
+    Extraction rule versions (`extraction_context` in each draft item's own
+    JSONL row) are already fully captured per item, so this table does not
+    duplicate that as `extraction_items` rows -- it exists only so a paper's
+    extraction history (when it ran, against which ruleset versions, how
+    many draft items it produced, where they were written) can be found
+    without re-reading every JSONL file `ke extraction-review-generate` has
+    ever produced. `core` never re-runs extraction automatically on a
+    ruleset change; a human decides when to re-invoke the command for a
+    given paper.
+    """
+
+    __tablename__ = "extraction_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    extraction_run_id: Mapped[str] = mapped_column(
+        String(36), nullable=False, unique=True, index=True
+    )
+    paper_id: Mapped[int] = mapped_column(ForeignKey("papers.id"), nullable=False, index=True)
+    output_path: Mapped[str] = mapped_column(Text, nullable=False)
+    page_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    section_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    candidate_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    draft_item_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    section_detection_rules_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    claim_candidate_rules_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    claim_framing_rules_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    draft_evidence_item_rules_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    paper: Mapped[Paper] = relationship()
+
+    __table_args__ = (
+        CheckConstraint("page_count >= 0", name="ck_extraction_runs_page_count"),
+        CheckConstraint("section_count >= 0", name="ck_extraction_runs_section_count"),
+        CheckConstraint("candidate_count >= 0", name="ck_extraction_runs_candidate_count"),
+        CheckConstraint("draft_item_count >= 0", name="ck_extraction_runs_draft_item_count"),
+    )

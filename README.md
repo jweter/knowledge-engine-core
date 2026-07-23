@@ -75,6 +75,11 @@ Phase 2 completed capabilities include:
   schema (reusing `evidence_direction`'s vocabulary) and the `ke
   relationship-validate` CLI command; validates that a reviewer-supplied
   relationship is well-formed, never detects or suggests one automatically
+- `extraction_runs` persistence: `ke extraction-review-generate` now records
+  a durable row per invocation (paper, output path, item counts, ruleset
+  versions), so a paper's extraction history is findable without re-reading
+  every JSONL file; extraction is never automatically re-run on a ruleset
+  change
 
 See [docs/phase2_design.md](docs/phase2_design.md) for the Phase 2 architecture
 and milestone-by-milestone status.
@@ -123,9 +128,13 @@ and milestone-by-milestone status.
   human-authored relationship schema (reusing `evidence_direction`'s
   vocabulary) and `ke relationship-validate`. Automated relationship
   detection remains a human judgment call, not yet built.
+- **M25:** added `extraction_runs` persistence -- `ke
+  extraction-review-generate` now records a durable row per invocation
+  (paper, output path, item counts, ruleset versions). `core` never
+  automatically re-runs extraction on a ruleset change; a human decides.
 
 Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is in
-progress through M24. See [docs/roadmap.md](docs/roadmap.md) and
+progress through M25. See [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase2_design.md](docs/phase2_design.md) for the next milestone.
 
 ## Requirements
@@ -320,7 +329,7 @@ The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now inc
 completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
 scale-readiness, and the controlled 500-paper rehearsal
 ([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
-[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M24:
+[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M25:
 deterministic, rule-based structured-section detection, claim-candidate
 detection, claim framing-cue classification, and draft extraction
 review-item generation, runnable end-to-end via `ke
@@ -332,9 +341,13 @@ closed vocabulary and validates `source_span` offset ranges. The
 Relationship Layer's first slice -- a human-authored relationship schema and
 `ke relationship-validate` -- lets a reviewer link two evidence records with
 a typed `supports`/`contradicts`/`qualifies`/`contextualizes` relationship;
-automated relationship detection is not yet built. Automated,
-research-question-relative `evidence_direction` classification is not yet
-implemented -- `research_question` acquisition has no automated source
+automated relationship detection is not yet built. `ke
+extraction-review-generate` now records a durable `extraction_runs` row per
+invocation, so a paper's extraction history is findable without re-reading
+JSONL files; `core` never automatically re-runs extraction on a ruleset
+change. Automated, research-question-relative `evidence_direction`
+classification is not yet implemented -- `research_question` acquisition
+has no automated source
 anywhere in this pipeline yet; a human reviewer supplies it before
 promotion. All Phase 2 extraction is rule-based, with no LLM-based
 extraction, synthesis, or reasoning of any kind.

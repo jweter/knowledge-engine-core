@@ -86,6 +86,11 @@ reusing `evidence_direction`'s exact vocabulary. Automated relationship
 detection is explicitly not implemented -- deciding whether a relationship
 holds between two evidence records remains a human judgment call; see
 Relationship Layer section below.
+M25 (issue #123) adds `extraction_runs` persistence: a new table recording
+that `ke extraction-review-generate` ran against a paper, with which
+ruleset versions, and what it produced. `core` never automatically re-runs
+extraction on a ruleset change -- a human decides when to re-invoke the
+command; see Extraction Run Persistence section below.
 
 ## Mission
 
@@ -423,6 +428,46 @@ validated structurally, long before any extraction automation existed):
 - `core` never infers, suggests, or detects a relationship; it only confirms
   that a human-supplied one is well-formed and internally consistent.
 
+## Extraction Run Persistence (M25, implemented)
+
+`ke extraction-review-generate` was, until M25, entirely stateless from the
+database's perspective: it read one paper's pages, wrote a JSONL file, and
+left no durable trace that the run ever happened. That is a real asymmetry
+with `corpus-import`, which persists a full `import_runs`/`import_items`
+history -- there was no way to find out later which papers had ever had
+extraction run against them, or with which ruleset versions, without
+externally tracking JSONL output files by hand.
+
+M25 adds a new `extraction_runs` table (schema version 5) recording one row
+per invocation: `paper_id`, `output_path`, `page_count`/`section_count`/
+`candidate_count`/`draft_item_count`, and all four extraction-stage rules
+versions (`SECTION_DETECTION_RULES_VERSION`, `CLAIM_CANDIDATE_RULES_VERSION`,
+`CLAIM_FRAMING_RULES_VERSION`, `DRAFT_EVIDENCE_ITEM_RULES_VERSION`).
+
+Two deliberate scope boundaries:
+
+- **No automatic re-run.** `core` never re-triggers extraction on its own --
+  a ruleset-version bump does not cause already-processed papers to be
+  silently re-extracted, exactly as an `ADJUDICATION_RULES_VERSION` bump
+  does not automatically re-run M14 discovery. A human decides when to
+  re-invoke `ke extraction-review-generate` for a given paper; the new table
+  only makes that decision informed, never automated.
+- **No `extraction_items` table.** Unlike `import_items` (which tracks
+  per-row outcomes the database is the only durable copy of),
+  `extraction_runs` does not duplicate per-item content into the database --
+  each draft item's own JSONL row already carries its full
+  `extraction_context` (matched signal, section type, framing, matched cue,
+  and rules versions), so a second, redundant DB copy of the same
+  information was rejected as unnecessary duplication, not omitted by
+  oversight.
+
+No CLI command was added to query `extraction_runs` in this milestone --
+`ExtractionRunRepository.list_for_paper` exists for future use, but the
+reviewer-facing workflow is still entirely JSONL-file-driven. A listing or
+reporting command is a natural future addition once a real need for one
+appears, following the same pattern `import_runs` itself started from
+(persistence first, reporting commands later).
+
 ## Extraction Methodology (decided)
 
 **Decision: option 3 combined with option 1** — structured-section heuristics
@@ -523,13 +568,20 @@ constrained to a fixed enum from its first milestone, reusing
 section above for the full schema and `ke relationship-validate`. Whether
 this enum should later grow is left for a real need to justify, not decided
 speculatively now.
+Resolved in M25: extraction is not automatically re-run when a ruleset
+changes -- `core` never re-triggers anything on its own, matching how a
+`ADJUDICATION_RULES_VERSION` bump doesn't automatically re-run M14
+discovery either; a human decides when to re-invoke `ke
+extraction-review-generate` for a given paper. What M25 does add is a new
+`extraction_runs` table recording that a run happened, against which
+ruleset versions, and with what output -- so that decision can be informed
+without re-reading every JSONL file the command has ever produced. No
+`extraction_items` table: unlike `import_items`, an extraction run's
+per-item content is already fully captured in its JSONL output (including
+each item's own rules-version `extraction_context`), so a second DB copy of
+the same data would only add duplication with no new information.
 Remaining:
 
-- Should extraction be versioned and re-run against already-imported papers
-  when the ruleset changes, similar to how `ADJUDICATION_RULES_VERSION`
-  changes trigger a fresh M14 discovery run? If so, does this need an
-  `extraction_runs`/`extraction_items` persistence pattern analogous to
-  `import_runs`/`import_items`?
 - How should automated and manual evidence records for the same claim be
   reconciled if both exist — treated as independent corroborating records, or
   should one supersede the other for display purposes?
