@@ -102,19 +102,22 @@ manual evidence records for the same claim are treated as independent
 corroborating records, never reconciled or superseded for display -- see
 Open Questions below, where this required no code change since it is
 already the codebase's real behavior.
-M26 (issue #129, PR pending, in progress) implements the first slice of
+M26 (issue #129, PR #130, merged) implements the first slice of
 deterministic PICO-adjacent extraction: `study_type` classification and
 `limitations` extraction (`knowledge_engine.extraction.study_design`),
 wired into `ke extraction-review-generate` alongside M16-M19's pipeline.
 Both are paper-intrinsic facts -- an explicit study-design phrase in the
 Abstract/Methods, an explicit "Limitations" heading -- extracted the same
 conservative way M17/M18 extract claims: absence over guessing, a
-versioned ruleset (`STUDY_DESIGN_RULES_VERSION`). Full `population`/
-`intervention`/`comparator`/`outcome` extraction remains out of scope for
-M26 -- those values are typically embedded in free-form prose rather than
-signaled by a fixed heading or phrase, and need a different extraction
-approach; see the Minimizing Human-Typed Fields section for the reasoning
-and #129 for the tracked follow-on.
+versioned ruleset (`STUDY_DESIGN_RULES_VERSION`). A Codex review on #130
+found `STUDY_DESIGN_RULES_VERSION` was computed but recorded nowhere
+durable; fixed by adding it to `extraction_runs` (schema version 6) and
+each draft item's `extraction_context`. Full `population`/`intervention`/
+`comparator`/`outcome` extraction remains out of scope for M26 -- those
+values are typically embedded in free-form prose rather than signaled by
+a fixed heading or phrase, and need a different extraction approach; see
+the Minimizing Human-Typed Fields section for the reasoning. Not yet
+tracked by a numbered follow-on issue.
 Next priorities, per the project owner's explicit preference to minimize
 human-typed fields (see `docs/roadmap/long_term_vision.md`'s Minimizing
 Human-Typed Fields section): full `population`/`intervention`/
