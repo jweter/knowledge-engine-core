@@ -11,6 +11,7 @@ from typing import TypedDict
 from urllib.parse import urlparse
 
 from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST
+from knowledge_engine.sentence_split import split_sentences
 
 ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v8"
 _ALLOWED_LICENSE_PATTERN = re.compile(
@@ -90,7 +91,6 @@ prefix, so checking the title's start (case-insensitively) is a reliable,
 still-deterministic signal, unlike scanning for "correction" as a bare
 substring, which would also match a legitimate title like "Confidence
 interval correction for measurement bias in obesity studies"."""
-_SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 
 
 class CandidateReviewError(RuntimeError):
@@ -321,11 +321,7 @@ def _scientific_scope(title: str, abstract: str | None) -> str:
     has_intervention = any(term in normalized for term in _INTERVENTION_TERMS)
     if not (has_disease and has_intervention):
         return "insufficient_title_abstract_evidence"
-    if not any(
-        any(term in sentence for term in _DISEASE_TERMS)
-        and any(term in sentence for term in _INTERVENTION_TERMS)
-        for sentence in _sentences(normalized)
-    ):
+    if not _disease_and_intervention_cooccur(title, abstract):
         return "disease_and_intervention_do_not_cooccur"
 
     has_pediatric_term = any(term in normalized_title for term in _PEDIATRIC_POPULATION_TERMS)
@@ -335,17 +331,35 @@ def _scientific_scope(title: str, abstract: str | None) -> str:
     return "passed"
 
 
-def _sentences(text: str) -> list[str]:
-    """Split into coarse sentences for a same-sentence co-occurrence check.
+def _disease_and_intervention_cooccur(title: str, abstract: str | None) -> bool:
+    """Whether a disease term and an intervention term share one sentence.
 
-    This is deliberately a simpler split than M17's abbreviation-aware
-    sentence detector (`knowledge_engine.extraction.claims`) -- a stray
-    boundary from an abbreviation like "vs." only makes this check's
-    co-occurrence test slightly more permissive, never wrong in a way that
-    matters, since it is used only for a coarse relevance heuristic here,
-    not for precise span extraction like M17's use."""
+    Title and abstract are evaluated as separate fields, each split into
+    its own sentences, and never concatenated first -- joining them before
+    splitting would let a title supplying only a disease term and an
+    unrelated abstract sentence supplying only an intervention term (or
+    vice versa) count as "co-occurring" merely because a PubMed title
+    commonly carries no terminal punctuation, reintroducing the exact
+    false-positive pattern this check exists to reject. Uses the same
+    abbreviation-aware splitter M17 uses (`knowledge_engine.sentence_split`)
+    so a comparative phrase like "type 2 diabetes vs. controls after
+    metformin therapy" is not itself incorrectly split at "vs.", which
+    would wrongly hold a legitimately co-occurring sentence."""
 
-    return [s for s in _SENTENCE_SPLIT_PATTERN.split(text) if s]
+    fields = (title,) if abstract is None else (title, abstract)
+    for field in fields:
+        # Sentence boundaries are detected from a terminal .!? followed by an
+        # uppercase letter, so splitting must happen before casefolding --
+        # casefolding first would erase every uppercase letter the splitter
+        # relies on, collapsing the whole field into a single "sentence".
+        whitespace_normalized = " ".join(field.split())
+        for sentence in split_sentences(whitespace_normalized):
+            normalized_sentence = sentence.casefold()
+            has_disease = any(term in normalized_sentence for term in _DISEASE_TERMS)
+            has_intervention = any(term in normalized_sentence for term in _INTERVENTION_TERMS)
+            if has_disease and has_intervention:
+                return True
+    return False
 
 
 def _license_result(reported_license: str | None) -> str:
