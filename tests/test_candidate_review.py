@@ -143,6 +143,64 @@ def test_oa_candidate_with_insufficient_scope_evidence_is_held(tmp_path: Path) -
     assert item.unresolved_ambiguities == ("scientific_relevance",)
 
 
+def test_pediatric_titled_candidate_is_held_not_accepted(tmp_path: Path) -> None:
+    """v7 regression: a title matching disease+intervention terms used to be
+    accepted even when it announced a pediatric-only population, because no
+    rule checked population scope at all -- exclusion_criteria.md requires
+    excluding sources "limited to pediatric populations"."""
+
+    candidate = _candidate()
+    candidate["title"] = "Children's gut microbiota predicts the efficacy of obesity treatment"
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "held"
+    assert item.inclusion_rule_result == "pediatric_population_title_evidence"
+    assert item.reason_codes == ("SCIENTIFIC_SCOPE_INSUFFICIENT",)
+
+
+def test_mixed_age_title_with_adult_term_is_not_held_as_pediatric(tmp_path: Path) -> None:
+    """`exclusion_criteria.md` excludes sources "limited to" pediatric
+    populations, not merely mentioning one -- a title naming an adult
+    population too is mixed-age evidence, not pediatric-only, so the
+    pediatric-population check must not hold it."""
+
+    candidate = _candidate()
+    candidate["title"] = "Semaglutide treatment for obesity in adolescents and adults"
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "accepted"
+    assert item.inclusion_rule_result == "passed"
+
+
+def test_pediatric_term_only_in_abstract_does_not_block_acceptance(tmp_path: Path) -> None:
+    """The pediatric-population check only reads the title -- an adult study
+    whose abstract mentions pediatric research as background context is not
+    itself a pediatric-population source."""
+
+    candidate = _candidate()
+    candidate["title"] = "Semaglutide treatment for obesity in adults: a randomized trial"
+    candidate["abstract"] = (
+        "Building on prior pediatric obesity research, this trial enrolled adults "
+        "with obesity to receive semaglutide or placebo."
+    )
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "accepted"
+    assert item.inclusion_rule_result == "passed"
+
+
 def test_oa_candidate_with_unsupported_license_is_held(tmp_path: Path) -> None:
     candidate = _candidate()
     candidate["license"] = "Publisher free access"
