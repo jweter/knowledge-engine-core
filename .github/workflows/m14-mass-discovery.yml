@@ -22,6 +22,11 @@ on:
         required: true
         default: '100'
         type: string
+      select_count:
+        description: Accepted records to select and acquire
+        required: true
+        default: '500'
+        type: string
   pull_request:
     paths:
       - '.github/workflows/m14-mass-discovery.yml'
@@ -56,8 +61,9 @@ jobs:
         (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR
         liraglutide OR tirzepatide OR metformin OR "SGLT2 inhibitor") AND
         pubmed pmc open access[filter]' }}
-      DISCOVERY_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '3250' }}
+      DISCOVERY_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.limit || '150' }}
       DISCOVERY_PAGE_SIZE: ${{ github.event_name == 'workflow_dispatch' && inputs.page_size || '100' }}
+      SELECT_COUNT: ${{ github.event_name == 'workflow_dispatch' && inputs.select_count || '10' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -81,6 +87,7 @@ jobs:
 
           limit = int(os.environ['DISCOVERY_LIMIT'])
           page_size = int(os.environ['DISCOVERY_PAGE_SIZE'])
+          select_count = int(os.environ['SELECT_COUNT'])
           query = os.environ['DISCOVERY_QUERY'].strip()
           if not query:
               raise SystemExit('Discovery query must not be empty.')
@@ -88,6 +95,8 @@ jobs:
               raise SystemExit('Discovery limit must be between 150 and 5000.')
           if not 1 <= page_size <= 100:
               raise SystemExit('Page size must be between 1 and 100.')
+          if not 1 <= select_count <= limit:
+              raise SystemExit('Select count must be between 1 and the discovery limit.')
           PY
 
       - name: Run bounded mass discovery
@@ -108,35 +117,37 @@ jobs:
             --candidates work/m14/pubmed-candidates.json \
             --output work/m14/candidate-review.json
 
-      - name: Select exactly 500 accepted records
+      - name: Select bounded accepted records
         run: |
           poetry run python -m knowledge_engine.reviewed_approval_cli export \
             --worksheet work/m14/candidate-review.json \
             --output work/m14/approvals-500.json \
-            --limit 500
+            --limit "$SELECT_COUNT"
 
-      - name: Preflight exactly 500 approvals before network access
+      - name: Preflight bounded approvals before network access
         run: |
           poetry run python - <<'PY'
           import json
+          import os
           from pathlib import Path
 
+          select_count = int(os.environ['SELECT_COUNT'])
           approvals = json.loads(
               Path('work/m14/approvals-500.json').read_text(encoding='utf-8')
           )
           rows = approvals.get('approvals')
           if approvals.get('schema_version') != 1:
               raise SystemExit('Approval schema version does not reconcile.')
-          if approvals.get('selected_count') != 500:
-              raise SystemExit('Approval selected count must be exactly 500.')
-          if not isinstance(rows, list) or len(rows) != 500:
-              raise SystemExit('Approval row count must be exactly 500.')
+          if approvals.get('selected_count') != select_count:
+              raise SystemExit('Approval selected count must match the requested select count.')
+          if not isinstance(rows, list) or len(rows) != select_count:
+              raise SystemExit('Approval row count must match the requested select count.')
           for field in ('pmid', 'pmcid', 'filename'):
-              if len({row[field] for row in rows}) != 500:
+              if len({row[field] for row in rows}) != select_count:
                   raise SystemExit(f'Approval file contains duplicate {field} values.')
           PY
 
-      - name: Acquire exactly 500 approved PDFs
+      - name: Acquire bounded approved PDFs
         shell: bash
         run: |
           mkdir -p work/m14/papers
@@ -153,9 +164,11 @@ jobs:
           poetry run python - <<'PY'
           import hashlib
           import json
+          import os
           from collections import Counter
           from pathlib import Path
 
+          select_count = int(os.environ['SELECT_COUNT'])
           payload = json.loads(Path('work/m14/pubmed-candidates.json').read_text(encoding='utf-8'))
           worksheet = json.loads(Path('work/m14/candidate-review.json').read_text(encoding='utf-8'))
           approvals = json.loads(Path('work/m14/approvals-500.json').read_text(encoding='utf-8'))
@@ -195,18 +208,18 @@ jobs:
               raise SystemExit('Approval source candidate count does not reconcile.')
           if approvals.get('source_accepted_count') != decisions['accepted']:
               raise SystemExit('Approval source accepted count does not reconcile.')
-          if approvals.get('selected_count') != 500:
-              raise SystemExit('Approval selected count must be exactly 500.')
+          if approvals.get('selected_count') != select_count:
+              raise SystemExit('Approval selected count must match the requested select count.')
           approval_rows = approvals.get('approvals', [])
-          if len(approval_rows) != 500:
-              raise SystemExit('Approval row count must be exactly 500.')
-          if receipt.get('schema_version') != 1 or receipt.get('acquired_count') != 500:
-              raise SystemExit('Acquisition receipt count must be exactly 500.')
+          if len(approval_rows) != select_count:
+              raise SystemExit('Approval row count must match the requested select count.')
+          if receipt.get('schema_version') != 1 or receipt.get('acquired_count') != select_count:
+              raise SystemExit('Acquisition receipt count must match the requested select count.')
           receipt_items = receipt.get('items', [])
-          if not isinstance(receipt_items, list) or len(receipt_items) != 500:
-              raise SystemExit('Acquisition receipt item count must be exactly 500.')
+          if not isinstance(receipt_items, list) or len(receipt_items) != select_count:
+              raise SystemExit('Acquisition receipt item count must match the requested select count.')
           for field in ('pmid', 'pmcid', 'filename'):
-              if len({item[field] for item in receipt_items}) != 500:
+              if len({item[field] for item in receipt_items}) != select_count:
                   raise SystemExit(f'Acquisition receipt contains duplicate {field} values.')
           approved_by_pmid = {item['pmid']: item for item in approval_rows}
           total_pdf_bytes = 0
@@ -228,8 +241,8 @@ jobs:
               if hashlib.sha256(body).hexdigest() != item['sha256']:
                   raise SystemExit('Receipt checksum does not match the local PDF.')
               total_pdf_bytes += len(body)
-          if len(list(papers_dir.glob('*.pdf'))) != 500:
-              raise SystemExit('Local PDF directory must contain exactly 500 PDFs.')
+          if len(list(papers_dir.glob('*.pdf'))) != select_count:
+              raise SystemExit('Local PDF directory must contain exactly the requested select count of PDFs.')
           pmcid_resolution_rate = pmcid_resolved / candidate_count if candidate_count else 0.0
           oa_verification_rate = oa_verified / candidate_count if candidate_count else 0.0
           summary = (
@@ -268,7 +281,7 @@ jobs:
             --receipt work/m14/acquisition-receipt.json \
             --papers-dir work/m14/papers \
             --output work/m14/readiness-report.json \
-            --expected-count 500
+            --expected-count "$SELECT_COUNT"
 
       - name: Upload M14 evidence artifact
         if: always()
