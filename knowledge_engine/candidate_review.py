@@ -11,9 +11,8 @@ from typing import TypedDict
 from urllib.parse import urlparse
 
 from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST
-from knowledge_engine.sentence_split import split_sentences
 
-ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v8"
+ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v9"
 _ALLOWED_LICENSE_PATTERN = re.compile(
     r"^(?:CC BY(?: (?:1\.0|2\.0|2\.5|3\.0|4\.0))?|CC0(?: 1\.0)?)$"
 )
@@ -321,45 +320,12 @@ def _scientific_scope(title: str, abstract: str | None) -> str:
     has_intervention = any(term in normalized for term in _INTERVENTION_TERMS)
     if not (has_disease and has_intervention):
         return "insufficient_title_abstract_evidence"
-    if not _disease_and_intervention_cooccur(title, abstract):
-        return "disease_and_intervention_do_not_cooccur"
 
     has_pediatric_term = any(term in normalized_title for term in _PEDIATRIC_POPULATION_TERMS)
     has_adult_term = any(term in normalized_title for term in _ADULT_INCLUSION_TERMS)
     if has_pediatric_term and not has_adult_term:
         return "pediatric_population_title_evidence"
     return "passed"
-
-
-def _disease_and_intervention_cooccur(title: str, abstract: str | None) -> bool:
-    """Whether a disease term and an intervention term share one sentence.
-
-    Title and abstract are evaluated as separate fields, each split into
-    its own sentences, and never concatenated first -- joining them before
-    splitting would let a title supplying only a disease term and an
-    unrelated abstract sentence supplying only an intervention term (or
-    vice versa) count as "co-occurring" merely because a PubMed title
-    commonly carries no terminal punctuation, reintroducing the exact
-    false-positive pattern this check exists to reject. Uses the same
-    abbreviation-aware splitter M17 uses (`knowledge_engine.sentence_split`)
-    so a comparative phrase like "type 2 diabetes vs. controls after
-    metformin therapy" is not itself incorrectly split at "vs.", which
-    would wrongly hold a legitimately co-occurring sentence."""
-
-    fields = (title,) if abstract is None else (title, abstract)
-    for field in fields:
-        # Sentence boundaries are detected from a terminal .!? followed by an
-        # uppercase letter, so splitting must happen before casefolding --
-        # casefolding first would erase every uppercase letter the splitter
-        # relies on, collapsing the whole field into a single "sentence".
-        whitespace_normalized = " ".join(field.split())
-        for sentence in split_sentences(whitespace_normalized):
-            normalized_sentence = sentence.casefold()
-            has_disease = any(term in normalized_sentence for term in _DISEASE_TERMS)
-            has_intervention = any(term in normalized_sentence for term in _INTERVENTION_TERMS)
-            if has_disease and has_intervention:
-                return True
-    return False
 
 
 def _license_result(reported_license: str | None) -> str:
