@@ -26,6 +26,7 @@ from pathlib import Path
 from sqlalchemy import ColumnElement, Engine, create_engine, select
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
+from knowledge_engine.database import PaperRepository
 from knowledge_engine.models import (
     Author,
     Base,
@@ -152,7 +153,11 @@ def import_corpus_library(target_session: Session, input_path: Path) -> ImportSu
     mirroring `PaperRepository.add_parsed_paper`'s own content-hash identity.
     Journals/authors/keywords are matched by their existing natural unique
     key (name/value) or inserted; a snapshot's own primary keys are never
-    reused, since they are not portable across databases.
+    reused, since they are not portable across databases. Each newly
+    imported paper is also indexed into `paper_search`
+    (`PaperRepository.upsert_search_index`), so `ke search`/`ke answer`
+    can find it immediately -- without this, an imported paper would sit in
+    the relational tables but never surface through either command.
     """
 
     if not input_path.exists():
@@ -213,6 +218,7 @@ def import_corpus_library(target_session: Session, input_path: Path) -> ImportSu
                 new_paper.keyword_links.append(PaperKeyword(keyword=new_keyword))
 
             target_session.flush()
+            PaperRepository(target_session).upsert_search_index(new_paper)
             imported += 1
 
     return ImportSummary(imported_paper_count=imported, skipped_existing_paper_count=skipped)

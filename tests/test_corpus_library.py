@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from knowledge_engine.config import Settings
 from knowledge_engine.corpus_library import export_corpus_library, import_corpus_library
@@ -143,6 +143,24 @@ def test_import_corpus_library_hydrates_empty_database(tmp_path: Path) -> None:
         assert len(papers[0].pages) == 1
         assert len(list(session.scalars(select(Author)))) == 1
         assert len(list(session.scalars(select(Keyword)))) == 1
+
+
+def test_import_corpus_library_indexes_imported_papers_for_search(tmp_path: Path) -> None:
+    source = _database(tmp_path, "source")
+    with source.session() as session:
+        PaperRepository(session).add_parsed_paper(
+            _parsed_paper(source_path=tmp_path / "a.pdf", content_hash="a" * 64, title="Findable")
+        )
+    snapshot_path = tmp_path / "snapshot.sqlite3"
+    export_corpus_library(source.engine, snapshot_path)
+
+    target = _database(tmp_path, "target")
+    with target.session() as session:
+        import_corpus_library(session, snapshot_path)
+
+    with target.session() as session:
+        rows = list(session.execute(text("SELECT title FROM paper_search")))
+        assert [row[0] for row in rows] == ["Findable"]
 
 
 def test_import_corpus_library_skips_papers_already_present_by_content_hash(

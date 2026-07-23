@@ -13,6 +13,18 @@ from knowledge_engine.models import Paper
 from knowledge_engine.parser import ParsedPage, ParsedPaper
 
 
+def _unwrapped(output: str) -> str:
+    """Collapse Rich's line-wrapping so substring assertions survive it.
+
+    `CliRunner` output is not a real terminal, so Rich wraps at a default
+    80-column width; a long `tmp_path`-derived path in the same `console.
+    print` call can push a short trailing phrase like "1 paper(s)" onto a
+    line break between the two words.
+    """
+
+    return " ".join(output.split())
+
+
 def _database(tmp_path: Path, name: str) -> Database:
     database = Database(
         Settings(
@@ -54,8 +66,9 @@ def test_corpus_library_export_cli_writes_snapshot(
     result = CliRunner().invoke(entrypoint.app, ["corpus-library-export", "--output", str(output)])
 
     assert result.exit_code == 0, result.output
-    assert "Exported corpus library" in result.output
-    assert "1 paper(s)" in result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Exported corpus library" in unwrapped
+    assert "1 paper(s)" in unwrapped
     assert output.exists()
 
 
@@ -70,7 +83,7 @@ def test_corpus_library_export_cli_rejects_existing_output(
     result = CliRunner().invoke(entrypoint.app, ["corpus-library-export", "--output", str(output)])
 
     assert result.exit_code != 0
-    assert "already exists" in result.output
+    assert "already exists" in _unwrapped(result.output)
 
 
 def test_corpus_library_import_cli_hydrates_database(
@@ -90,8 +103,9 @@ def test_corpus_library_import_cli_hydrates_database(
     )
 
     assert result.exit_code == 0, result.output
-    assert "1 paper(s) imported" in result.output
-    assert "0 already present" in result.output
+    unwrapped = _unwrapped(result.output)
+    assert "1 paper(s) imported" in unwrapped
+    assert "0 already present" in unwrapped
 
     with target.session() as session:
         papers = list(session.scalars(select(Paper)))
@@ -110,4 +124,4 @@ def test_corpus_library_import_cli_reports_missing_input(
     )
 
     assert result.exit_code != 0
-    assert "does not exist" in result.output
+    assert "does not exist" in _unwrapped(result.output)
