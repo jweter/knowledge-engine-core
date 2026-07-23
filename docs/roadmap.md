@@ -139,7 +139,18 @@ sample may not; the project owner has set an initial target of at least a
 couple thousand papers. Following the M12->M13->M14 precedent, this needs
 its own scale-readiness assessment -- measured stop conditions and
 license/provenance validation re-checked at the new scale -- before a
-bounded discovery/acquisition run, not an unbounded scale-up. Not yet
+bounded discovery/acquisition run, not an unbounded scale-up.
+
+M27 (issue #133) addressed the other half of this gap: nothing downloaded
+survived past a session before, since this project's remote execution
+environment starts from a fresh clone every session and the working
+database is gitignored. `ke corpus-library-export`/`ke
+corpus-library-import` make the corpus's paper-intrinsic content (not raw
+PDFs -- those are archived to Google Drive instead, per the project
+owner's decision) a persisted, git-committable snapshot -- see
+`docs/m27_corpus_library.md`. Actually growing the corpus to the owner's
+"at least a couple thousand papers" target remains ongoing operational
+work using this tooling plus the existing M14 pipeline, not itself
 scheduled as a numbered milestone.
 
 ### Supporting operator durability

@@ -169,6 +169,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   each draft item's own `extraction_context` gains the same field, so a
   future study-design ruleset revision doesn't leave `study_type`/
   `limitations` provenance unrecorded at either the run or item level.
+- Added the M27 corpus-library snapshot (issue #133): `ke
+  corpus-library-export --output <path>` copies a local database's
+  paper-intrinsic content -- `papers`, their `paper_pages`/`paper_texts`,
+  and the `journals`/`authors`/`keywords` they reference -- into a fresh,
+  standalone SQLite file, deliberately excluding operational tables
+  (`import_runs`, `extraction_runs`) that describe one machine's own
+  history rather than the corpus itself. `ke corpus-library-import --input
+  <path>` hydrates a local database from a snapshot; a paper whose
+  `content_hash` already exists locally is skipped, so importing the same
+  or an overlapping snapshot twice is idempotent, and
+  journals/authors/keywords are matched by their existing natural unique
+  key rather than duplicated. This exists because the working SQLite
+  database is gitignored (large, environment-specific, and every session
+  in this project's remote execution environment starts from a fresh
+  clone), so nothing downloaded and parsed today would otherwise survive
+  past the current session -- see `docs/roadmap.md`'s "Scaling beyond 500
+  papers for Phase 2 tuning" section.
 
 ### Changed
 

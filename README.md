@@ -137,9 +137,15 @@ and milestone-by-milestone status.
   PICO-adjacent extraction. Both are paper-intrinsic facts (an explicit
   study-design phrase, an explicit "Limitations" heading), extracted the
   same conservative way as claims: a missing signal produces `None`.
+- **M27:** added `ke corpus-library-export`/`ke corpus-library-import`, a
+  portable snapshot of a local database's paper-intrinsic content (papers,
+  extracted pages/text, journals, authors, keywords) that can be committed
+  and shared, since the working database itself is gitignored and does not
+  survive a fresh clone. Idempotent, content-hash-keyed import.
 
 Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is in
-progress through M26. See [docs/roadmap.md](docs/roadmap.md) and
+progress through M26. M27 adds corpus-persistence infrastructure alongside
+it. See [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase2_design.md](docs/phase2_design.md) for the next milestone.
 
 ## Requirements
