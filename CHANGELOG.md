@@ -218,6 +218,17 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed the M14 candidate-adjudication ruleset (`ADJUDICATION_RULES_VERSION`)
+  accepting three kinds of out-of-scope or non-primary-content sources into
+  the corpus: pediatric-titled papers (v7), correction/erratum/retraction
+  notices (v8), and a case report whose abstract mentioned a disease term
+  only as an incidental, unrelated patient comorbidity (v8, via a
+  same-sentence disease/intervention co-occurrence requirement). Re-running
+  the v8 co-occurrence rule against a real 250-candidate batch showed it was
+  too strict for ordinary structured/narrative scientific writing -- it
+  dropped 44% of previously accepted, legitimately on-topic records -- so
+  v9 reverts that specific rule while keeping the pediatric and
+  correction-notice exclusions, which showed no such false-positive cost.
 - Fixed M14 bounded PubMed/PMC discovery retrying NCBI failures (including PMC
   identifier conversion) with only the steady-state request pacing interval instead
   of a real backoff; retries now use exponential backoff and failure messages
