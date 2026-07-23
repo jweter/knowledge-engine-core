@@ -102,7 +102,10 @@ class GoogleDriveHttpTransport:
         page_token: str | None = None
         while True:
             query = {
-                "q": f"'{folder_id}' in parents and trashed = false",
+                "q": (
+                    f"'{folder_id}' in parents and trashed = false "
+                    f"and mimeType != '{_FOLDER_MIME_TYPE}'"
+                ),
                 "fields": "nextPageToken,files(id,name,parents,size,appProperties,trashed)",
                 "pageSize": "1000",
                 "supportsAllDrives": "true",
@@ -117,6 +120,11 @@ class GoogleDriveHttpTransport:
             for entry in raw_files:
                 if not isinstance(entry, dict):
                     raise GoogleDriveHttpError("Google Drive returned an invalid response.")
+                # Non-binary items (native Google Docs/Sheets/Slides, shortcuts) have no
+                # `size`; they can never match a local PDF's hash, so skip them here
+                # rather than aborting the whole listing.
+                if not isinstance(entry.get("size"), str):
+                    continue
                 results.append(_file_metadata_from_payload(cast(dict[str, object], entry)))
             next_token = payload.get("nextPageToken")
             if not isinstance(next_token, str) or not next_token:

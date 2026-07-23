@@ -88,3 +88,34 @@ def test_list_files_empty_folder_returns_no_entries() -> None:
     results = GoogleDriveHttpTransport(access_token="token", opener=opener).list_files("folder-id")
 
     assert results == []
+
+
+def test_list_files_skips_entries_without_size() -> None:
+    native_doc = {
+        "id": "doc-1",
+        "name": "Untitled document",
+        "parents": ["folder-id"],
+        "appProperties": {},
+        "trashed": False,
+    }
+
+    def opener(request: Request) -> FakeResponse:
+        return FakeResponse(
+            json.dumps({"files": [native_doc, _file_payload("file-1", "a.pdf")]}).encode()
+        )
+
+    results = GoogleDriveHttpTransport(access_token="token", opener=opener).list_files("folder-id")
+
+    assert [entry.name for entry in results] == ["a.pdf"]
+
+
+def test_list_files_excludes_folders_from_query() -> None:
+    requests: list[Request] = []
+
+    def opener(request: Request) -> FakeResponse:
+        requests.append(request)
+        return FakeResponse(json.dumps({"files": []}).encode())
+
+    GoogleDriveHttpTransport(access_token="token", opener=opener).list_files("folder-id")
+
+    assert "mimeType" in requests[0].full_url

@@ -73,7 +73,9 @@ def run_corpus_pdf_backup(
         if entry.sha256
     }
 
-    local_pdfs = sorted(path for path in papers_dir.glob("*.pdf") if path.is_file())
+    local_pdfs = sorted(
+        path for path in papers_dir.iterdir() if path.is_file() and path.suffix.lower() == ".pdf"
+    )
     if not local_pdfs:
         raise CorpusPdfBackupError("No local PDF files were found to back up.")
 

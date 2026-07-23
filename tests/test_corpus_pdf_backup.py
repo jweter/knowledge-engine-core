@@ -84,6 +84,20 @@ def test_uploads_new_files_and_skips_matching_hash(tmp_path: Path) -> None:
     assert summary.failed == ()
 
 
+def test_matches_pdf_suffix_case_insensitively_and_ignores_other_files(tmp_path: Path) -> None:
+    papers_dir = tmp_path / "papers"
+    papers_dir.mkdir()
+    _write_pdf(papers_dir, "uppercase.PDF", b"uppercase suffix")
+    _write_pdf(papers_dir, "mixed.Pdf", b"mixed-case suffix")
+    (papers_dir / "notes.txt").write_bytes(b"not a pdf")
+
+    transport = FakeCorpusPdfTransport()
+
+    summary = run_corpus_pdf_backup(papers_dir=papers_dir, transport=transport)
+
+    assert set(summary.uploaded) == {"uppercase.PDF", "mixed.Pdf"}
+
+
 def test_reuploads_when_local_content_changed(tmp_path: Path) -> None:
     papers_dir = tmp_path / "papers"
     papers_dir.mkdir()
