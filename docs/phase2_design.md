@@ -51,7 +51,7 @@ A separate, opt-in command — never invoked by `corpus-import` — resolving
 this design's open question about how extraction should be triggered. A
 paper with zero persisted pages produces an explicit diagnostic, never a
 silently empty result.
-M21 (issue #107, in progress) adds the `ke extraction-review-promote` CLI
+M21 (issue #107, PR #108, merged) added the `ke extraction-review-promote` CLI
 command, closing the extraction-to-evidence loop for the first time: it
 promotes reviewer-completed draft items (M20's JSONL output, after a human
 has filled in `research_question`/`evidence_direction`/etc.) into real
