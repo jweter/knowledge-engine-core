@@ -201,6 +201,146 @@ def test_pediatric_term_only_in_abstract_does_not_block_acceptance(tmp_path: Pat
     assert item.inclusion_rule_result == "passed"
 
 
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        "Correction: ",
+        "Corrigendum: ",
+        "Erratum: ",
+        "Retraction: ",
+        "Publisher Correction: ",
+        "Author Correction: ",
+    ],
+)
+def test_correction_notice_title_is_held_not_accepted(tmp_path: Path, prefix: str) -> None:
+    """v8 regression: a correction/erratum notice for an original article is
+    not itself a scientific paper -- it typically only amends a figure,
+    table, or author list -- but used to be accepted whenever its title
+    (inherited from the original article) happened to match disease and
+    intervention terms."""
+
+    candidate = _candidate()
+    candidate["title"] = (
+        f"{prefix}SGLT2 inhibitor use and disparities in all-cause mortality "
+        "in type 2 diabetes: insights from a multi-ethnic population"
+    )
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "held"
+    assert item.inclusion_rule_result == "non_primary_content_title_evidence"
+    assert item.reason_codes == ("SCIENTIFIC_SCOPE_INSUFFICIENT",)
+
+
+def test_incidental_comorbidity_mention_does_not_satisfy_scientific_scope(
+    tmp_path: Path,
+) -> None:
+    """v8 regression: a case report whose actual topic is unrelated to the
+    corpus's metabolic-disease-therapeutics scope used to be accepted
+    whenever its abstract merely listed a disease term as one of several
+    patient comorbidities, in a different sentence from any intervention
+    term describing treatment for the paper's actual (unrelated) topic."""
+
+    candidate = _candidate()
+    candidate["title"] = (
+        "Combined percutaneous auricular vagus nerve stimulation and "
+        "ultrasound-guided phrenic nerve block for persistent hiccups: A case report"
+    )
+    candidate["abstract"] = (
+        "RATIONALE: Persistent hiccups lasting more than 48 hours are rare. "
+        "PATIENT CONCERNS: A 62-year-old male with hypertension, type 2 diabetes, "
+        "and prior tuberculosis presented with persistent hiccups. "
+        "INTERVENTIONS: A combined therapy with phrenic nerve block and vagus "
+        "nerve stimulation was administered. "
+        "LESSONS: This treatment option may help persistent hiccups unresponsive "
+        "to conventional therapy."
+    )
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "held"
+    assert item.inclusion_rule_result == "disease_and_intervention_do_not_cooccur"
+    assert item.reason_codes == ("SCIENTIFIC_SCOPE_INSUFFICIENT",)
+
+
+def test_disease_and_intervention_cooccurring_across_title_and_abstract_passes(
+    tmp_path: Path,
+) -> None:
+    """The co-occurrence check must not require both terms in the title
+    alone -- a generic title plus an abstract whose own leading sentence
+    supplies both terms still passes, exactly as
+    `test_abstract_can_supply_complete_scientific_scope_evidence` already
+    relies on. (Title and abstract are evaluated as separate fields; this
+    passes because the abstract's own first sentence has both terms, not
+    because it is merged with the title -- see the next test.)"""
+
+    candidate = _candidate()
+    candidate["title"] = "Cardiovascular outcomes in a randomized clinical trial"
+    candidate["abstract"] = (
+        "Adults with obesity received semaglutide therapy or placebo for 68 weeks. "
+        "Participants were also screened for unrelated cardiovascular risk factors."
+    )
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "accepted"
+    assert item.inclusion_rule_result == "passed"
+
+
+def test_disease_only_in_title_and_intervention_only_in_abstract_does_not_cooccur(
+    tmp_path: Path,
+) -> None:
+    """v8-fix regression (Codex review on #138): a title supplying only the
+    disease term, with an unrelated abstract supplying only the
+    intervention term, must not count as co-occurring merely because a
+    PubMed title commonly carries no terminal punctuation and the two
+    fields would otherwise merge into one synthetic "sentence" when
+    concatenated before splitting."""
+
+    candidate = _candidate()
+    candidate["title"] = "Type 2 diabetes as a patient comorbidity"
+    candidate["abstract"] = "Treatment for persistent hiccups was successful."
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "held"
+    assert item.inclusion_rule_result == "disease_and_intervention_do_not_cooccur"
+
+
+def test_comparative_abbreviation_does_not_split_a_cooccurring_sentence(
+    tmp_path: Path,
+) -> None:
+    """v8-fix regression (Codex review on #138): a naive sentence splitter
+    would treat "vs." as a sentence boundary, wrongly severing a disease
+    term from an intervention term that are genuinely in the same
+    sentence. The shared abbreviation-aware splitter must not do this."""
+
+    candidate = _candidate()
+    candidate["title"] = (
+        "Outcomes in type 2 diabetes vs. controls after metformin therapy were compared"
+    )
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "accepted"
+    assert item.inclusion_rule_result == "passed"
+
+
 def test_oa_candidate_with_unsupported_license_is_held(tmp_path: Path) -> None:
     candidate = _candidate()
     candidate["license"] = "Publisher free access"

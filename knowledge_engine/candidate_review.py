@@ -11,8 +11,9 @@ from typing import TypedDict
 from urllib.parse import urlparse
 
 from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST
+from knowledge_engine.sentence_split import split_sentences
 
-ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v7"
+ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v8"
 _ALLOWED_LICENSE_PATTERN = re.compile(
     r"^(?:CC BY(?: (?:1\.0|2\.0|2\.5|3\.0|4\.0))?|CC0(?: 1\.0)?)$"
 )
@@ -73,6 +74,23 @@ otherwise-valid adult-inclusive evidence. A title match with no adult term
 returns a non-"passed" scope result, which routes to `held` (never a silent
 rejection), matching how every other scope-insufficient title is already
 treated."""
+_NON_PRIMARY_TITLE_PREFIXES = (
+    "correction:",
+    "corrigendum:",
+    "erratum:",
+    "retraction:",
+    "retracted:",
+    "publisher correction:",
+    "author correction:",
+)
+"""A correction/erratum/retraction notice for an original article is not
+itself a scientific paper, systematic review, meta-analysis, or clinical
+research report -- it is typically a page or two amending a figure, table,
+or author list in the original. Journals mark these with a stable title
+prefix, so checking the title's start (case-insensitively) is a reliable,
+still-deterministic signal, unlike scanning for "correction" as a bare
+substring, which would also match a legitimate title like "Confidence
+interval correction for measurement bias in obesity studies"."""
 
 
 class CandidateReviewError(RuntimeError):
@@ -293,18 +311,55 @@ def _adjudicate(
 
 
 def _scientific_scope(title: str, abstract: str | None) -> str:
+    normalized_title = " ".join(title.casefold().split())
+    if normalized_title.startswith(_NON_PRIMARY_TITLE_PREFIXES):
+        return "non_primary_content_title_evidence"
+
     evidence = title if abstract is None else f"{title} {abstract}"
     normalized = " ".join(evidence.casefold().split())
     has_disease = any(term in normalized for term in _DISEASE_TERMS)
     has_intervention = any(term in normalized for term in _INTERVENTION_TERMS)
     if not (has_disease and has_intervention):
         return "insufficient_title_abstract_evidence"
-    normalized_title = " ".join(title.casefold().split())
+    if not _disease_and_intervention_cooccur(title, abstract):
+        return "disease_and_intervention_do_not_cooccur"
+
     has_pediatric_term = any(term in normalized_title for term in _PEDIATRIC_POPULATION_TERMS)
     has_adult_term = any(term in normalized_title for term in _ADULT_INCLUSION_TERMS)
     if has_pediatric_term and not has_adult_term:
         return "pediatric_population_title_evidence"
     return "passed"
+
+
+def _disease_and_intervention_cooccur(title: str, abstract: str | None) -> bool:
+    """Whether a disease term and an intervention term share one sentence.
+
+    Title and abstract are evaluated as separate fields, each split into
+    its own sentences, and never concatenated first -- joining them before
+    splitting would let a title supplying only a disease term and an
+    unrelated abstract sentence supplying only an intervention term (or
+    vice versa) count as "co-occurring" merely because a PubMed title
+    commonly carries no terminal punctuation, reintroducing the exact
+    false-positive pattern this check exists to reject. Uses the same
+    abbreviation-aware splitter M17 uses (`knowledge_engine.sentence_split`)
+    so a comparative phrase like "type 2 diabetes vs. controls after
+    metformin therapy" is not itself incorrectly split at "vs.", which
+    would wrongly hold a legitimately co-occurring sentence."""
+
+    fields = (title,) if abstract is None else (title, abstract)
+    for field in fields:
+        # Sentence boundaries are detected from a terminal .!? followed by an
+        # uppercase letter, so splitting must happen before casefolding --
+        # casefolding first would erase every uppercase letter the splitter
+        # relies on, collapsing the whole field into a single "sentence".
+        whitespace_normalized = " ".join(field.split())
+        for sentence in split_sentences(whitespace_normalized):
+            normalized_sentence = sentence.casefold()
+            has_disease = any(term in normalized_sentence for term in _DISEASE_TERMS)
+            has_intervention = any(term in normalized_sentence for term in _INTERVENTION_TERMS)
+            if has_disease and has_intervention:
+                return True
+    return False
 
 
 def _license_result(reported_license: str | None) -> str:
