@@ -2,6 +2,16 @@
 
 This file is the roadmap index. Phase-specific notes live in `docs/roadmap/`.
 
+These phases describe the near-term, buildable work inside
+`knowledge-engine-core` itself. `docs/roadmap/long_term_vision.md` describes
+the larger, multi-package ecosystem this roadmap builds toward -- including
+the future `knowledge-engine-ai` layer that will eventually consume the
+Evidence Records (Phase 2) and Knowledge Graph (Phase 4) this roadmap
+produces. Each phase below stays deliberately scoped to what `core` alone
+should own; anything that requires judgment about what evidence means, not
+just locating and validating it, is out of scope here by design -- see the
+long-term vision doc for where that responsibility lives instead.
+
 ## Phase 0: Local Source Vault
 
 - Import PDFs.
@@ -139,12 +149,17 @@ Detailed milestone records include:
 - Keep every generated structure traceable to source text spans.
 - Add automated validation and optional post-working-version human audit workflows.
 - Use `docs/phase2_design.md` as the detailed design reference. Its first
-  concrete prerequisite is adding page/span-level extraction provenance to the
-  parser (currently discarded after parsing; see `docs/technical_debt.md`),
-  which must exist before any claim/evidence extraction logic is written.
-  Extraction methodology (rule-based, classical NLP, or a combination) remains
-  an open decision pending project-owner input; see the design doc's Open
-  Questions.
+  concrete prerequisite, page/span-level extraction provenance, is implemented
+  (see `docs/technical_debt.md`). Extraction methodology was decided as
+  rule-based pattern matching combined with structured-section heuristics, no
+  new dependency; see the design doc's Extraction Methodology section.
+- Evidence Records deliberately stop short of automated,
+  research-question-relative judgment: assigning a `research_question`,
+  classifying `evidence_direction` against it, and any real confidence
+  *rating* (beyond the existing free-text `confidence_note` field) are left
+  for a human reviewer to supply. That is not a temporary gap -- it is the
+  deliberate seam where the future `knowledge-engine-ai` layer plugs in; see
+  `docs/roadmap/long_term_vision.md`'s AI Interface Layer section.
 
 ## Phase 3: Search Plus Semantics
 
@@ -156,11 +171,17 @@ Detailed milestone records include:
 
 - Model concepts, claims, citations, support, contradiction, and uncertainty.
 - Add Neo4j or another graph backend behind a repository interface.
+- Corresponds to `knowledge-engine-graph` in the long-term ecosystem; see
+  `docs/roadmap/long_term_vision.md`.
 
 ## Phase 5: Human Interface
 
 - Add API and web repositories as separate projects.
 - Provide evidence-first explanations with visible uncertainty and sources.
+- This is where the future `knowledge-engine-ai`/`-web`/`-agents` layers'
+  research-question crafting, evidence synthesis, and confidence rating
+  (see `docs/roadmap/long_term_vision.md`) actually reach a person, on top
+  of the Evidence and Knowledge Graph layers Phases 2 and 4 build.
 
 ## Release Milestones
 
@@ -182,4 +203,6 @@ Detailed milestone records include:
 - `docs/roadmap/phase0.md`
 - `docs/roadmap/phase1.md`
 - `docs/roadmap/phase2.md`
-- `docs/roadmap/long_term_vision.md`
+- `docs/roadmap/long_term_vision.md` -- the multi-package ecosystem and final
+  goal these phases build toward, including the future `knowledge-engine-ai`
+  layer's role once Phase 2's Evidence Records exist
