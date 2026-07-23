@@ -139,6 +139,17 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reported, never silently accepted). Automated relationship detection is
   explicitly not implemented -- `core` validates a human-supplied
   relationship's shape, never decides or suggests one itself.
+- Added `extraction_runs` persistence (M25, issue #123): `ke
+  extraction-review-generate` now records a durable row per invocation
+  (`paper_id`, `output_path`, page/section/candidate/draft-item counts, and
+  all four extraction-stage rules versions) in a new schema-version-5
+  `extraction_runs` table, so a paper's extraction history can be found
+  without re-reading every JSONL file the command has ever produced. `core`
+  never automatically re-runs extraction on a ruleset-version change -- a
+  human decides when to re-invoke the command for a given paper. No new
+  `extraction_items` table: each draft item's own JSONL row already carries
+  its full rules-version context, so a second database copy of the same
+  data would only duplicate it.
 
 ### Changed
 

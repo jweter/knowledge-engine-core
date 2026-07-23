@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.config import Settings
-from knowledge_engine.database import Database, PaperRepository
+from knowledge_engine.database import Database, ExtractionRunRepository, PaperRepository
 from knowledge_engine.models import Paper
 from knowledge_engine.parser import ParsedPage, ParsedPaper
 
@@ -40,6 +40,10 @@ def test_extraction_review_generate_writes_draft_items(
     monkeypatch.setattr(
         entrypoint, "_load_paper_pages", lambda paper_id: (_paper(), _pages_with_results_section())
     )
+    recorded: dict[str, object] = {}
+    monkeypatch.setattr(
+        entrypoint, "_record_extraction_run", lambda **kwargs: recorded.update(kwargs)
+    )
 
     result = CliRunner().invoke(
         entrypoint.app,
@@ -47,6 +51,12 @@ def test_extraction_review_generate_writes_draft_items(
     )
 
     assert result.exit_code == 0, result.output
+    assert recorded["paper_id"] == 1
+    assert recorded["output_path"] == output
+    assert recorded["page_count"] == 1
+    assert recorded["section_count"] == 2
+    assert recorded["candidate_count"] == 1
+    assert recorded["draft_item_count"] == 1
     assert "Wrote 1 draft evidence item(s):" in result.output
     assert "review queue, not validated evidence" in result.output
 
@@ -64,6 +74,33 @@ def test_extraction_review_generate_writes_draft_items(
     assert record["provenance"] is None
     assert record["extraction_context"]["matched_signal"] == "percentage"
     assert record["extraction_context"]["section_type"] == "results"
+
+
+def test_extraction_review_generate_removes_output_when_run_cannot_be_recorded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A persistence failure after a successful write must not leave an
+    unrecorded review queue behind -- the output is rolled back so a plain
+    retry (without --force) starts cleanly."""
+
+    output = tmp_path / "review.jsonl"
+    monkeypatch.setattr(
+        entrypoint, "_load_paper_pages", lambda paper_id: (_paper(), _pages_with_results_section())
+    )
+
+    def _raise(**kwargs: object) -> None:
+        raise RuntimeError("database is locked")
+
+    monkeypatch.setattr(entrypoint, "_record_extraction_run", _raise)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["extraction-review-generate", "--paper-id", "1", "--output", str(output)],
+    )
+
+    assert result.exit_code != 0
+    assert "Extraction run could not be recorded" in result.output
+    assert not output.exists()
 
 
 def test_extraction_review_generate_rejects_unknown_paper(
@@ -105,6 +142,7 @@ def test_extraction_review_generate_zero_candidates_is_a_successful_empty_result
     output = tmp_path / "review.jsonl"
     pages = [ParsedPage(page_number=1, text="Participants attended their scheduled visits.")]
     monkeypatch.setattr(entrypoint, "_load_paper_pages", lambda paper_id: (_paper(), pages))
+    monkeypatch.setattr(entrypoint, "_record_extraction_run", lambda **kwargs: None)
 
     result = CliRunner().invoke(
         entrypoint.app,
@@ -148,6 +186,7 @@ def test_extraction_review_generate_force_overwrites_output(
     monkeypatch.setattr(
         entrypoint, "_load_paper_pages", lambda paper_id: (_paper(), _pages_with_results_section())
     )
+    monkeypatch.setattr(entrypoint, "_record_extraction_run", lambda **kwargs: None)
 
     result = CliRunner().invoke(
         entrypoint.app,
@@ -224,3 +263,18 @@ def test_extraction_review_generate_end_to_end_against_real_database(
     record = json.loads(lines[0])
     assert record["claim_text"] == "Body weight decreased by 12.4% relative to baseline."
     assert record["source_doi"] == "10.1234/glp1"
+
+    with database.session() as session:
+        runs = ExtractionRunRepository(session).list_for_paper(paper_id)
+    assert len(runs) == 1
+    run = runs[0]
+    assert run.paper_id == paper_id
+    assert run.output_path == str(output)
+    assert run.page_count == 1
+    assert run.section_count == 1
+    assert run.candidate_count == 1
+    assert run.draft_item_count == 1
+    assert run.section_detection_rules_version
+    assert run.claim_candidate_rules_version
+    assert run.claim_framing_rules_version
+    assert run.draft_evidence_item_rules_version

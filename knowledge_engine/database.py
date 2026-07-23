@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from sqlalchemy import Engine, create_engine, event, select, text
 from sqlalchemy.engine import Connection
@@ -16,6 +17,7 @@ from knowledge_engine.config import Settings
 from knowledge_engine.models import (
     Author,
     Base,
+    ExtractionRun,
     Keyword,
     Paper,
     PaperAuthor,
@@ -25,7 +27,7 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 4
+CURRENT_SCHEMA_VERSION = 5
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
@@ -49,6 +51,7 @@ _SCHEMA_V3_COLUMNS: dict[str, dict[str, str]] = {
 
 _TABLES_INTRODUCED_AT_VERSION: dict[int, frozenset[str]] = {
     4: frozenset({"paper_pages"}),
+    5: frozenset({"extraction_runs"}),
 }
 
 _SCHEMA_V2_INDEXES: dict[str, tuple[str, str]] = {
@@ -410,6 +413,57 @@ class PaperRepository:
         self.session.add(keyword)
         self.session.flush()
         return keyword
+
+
+class ExtractionRunRepository:
+    """Persistence operations for `ke extraction-review-generate` run history."""
+
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def create(
+        self,
+        *,
+        paper_id: int,
+        output_path: str,
+        page_count: int,
+        section_count: int,
+        candidate_count: int,
+        draft_item_count: int,
+        section_detection_rules_version: str,
+        claim_candidate_rules_version: str,
+        claim_framing_rules_version: str,
+        draft_evidence_item_rules_version: str,
+    ) -> ExtractionRun:
+        """Persist a durable record of one extraction-review-generate invocation."""
+
+        run = ExtractionRun(
+            extraction_run_id=str(uuid4()),
+            paper_id=paper_id,
+            output_path=output_path,
+            page_count=page_count,
+            section_count=section_count,
+            candidate_count=candidate_count,
+            draft_item_count=draft_item_count,
+            section_detection_rules_version=section_detection_rules_version,
+            claim_candidate_rules_version=claim_candidate_rules_version,
+            claim_framing_rules_version=claim_framing_rules_version,
+            draft_evidence_item_rules_version=draft_evidence_item_rules_version,
+            created_at=_utc_now_iso(),
+        )
+        self.session.add(run)
+        self.session.flush()
+        return run
+
+    def list_for_paper(self, paper_id: int) -> list[ExtractionRun]:
+        """Return every extraction run recorded for one paper, oldest first."""
+
+        statement = (
+            select(ExtractionRun)
+            .where(ExtractionRun.paper_id == paper_id)
+            .order_by(ExtractionRun.id)
+        )
+        return list(self.session.scalars(statement))
 
 
 def database_exists(settings: Settings) -> bool:
