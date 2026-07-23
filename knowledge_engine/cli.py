@@ -809,9 +809,9 @@ def _validate_evidence_record(
                     f"Line {line_number}: source_span.page_number must be a positive integer."
                 )
 
-        start_offset = source_span.get("start_offset")
-        end_offset = source_span.get("end_offset")
-        if start_offset is not None or end_offset is not None:
+        if "start_offset" in source_span or "end_offset" in source_span:
+            start_offset = source_span.get("start_offset")
+            end_offset = source_span.get("end_offset")
             if (
                 not isinstance(start_offset, int)
                 or isinstance(start_offset, bool)

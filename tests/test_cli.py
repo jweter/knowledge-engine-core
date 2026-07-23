@@ -1121,6 +1121,19 @@ def test_evidence_validate_fails_for_partial_source_span_offset_range(tmp_path: 
     )
 
 
+def test_evidence_validate_fails_for_explicit_null_source_span_offsets(tmp_path: Path) -> None:
+    records_path = write_evidence_records(
+        tmp_path, [{"source_span": {"start_offset": None, "end_offset": None}}]
+    )
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "source_span.start_offset and end_offset must both be non-negative integers" in " ".join(
+        result.output.split()
+    )
+
+
 def test_evidence_validate_fails_for_inverted_source_span_offset_range(tmp_path: Path) -> None:
     records_path = write_evidence_records(
         tmp_path, [{"source_span": {"start_offset": 10, "end_offset": 10}}]
