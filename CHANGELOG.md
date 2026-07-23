@@ -150,6 +150,25 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `extraction_items` table: each draft item's own JSONL row already carries
   its full rules-version context, so a second database copy of the same
   data would only duplicate it.
+- Added the M26 deterministic study-type classification and limitations
+  extraction (issue #129): `knowledge_engine.extraction.study_design`
+  classifies a paper's own stated study design (randomized controlled
+  trial, meta-analysis, systematic review, cohort/case-control/
+  cross-sectional/pilot/observational study) from an explicit cue in its
+  Abstract or Methods section, and extracts a paper's own stated
+  limitations from an explicit "Limitations" heading. Both are the first
+  slice of deterministic, non-human-typed PICO-adjacent extraction (see
+  `docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed Fields
+  section) -- paper-intrinsic facts, not judgment relative to a research
+  question, extracted the same conservative way M17/M18 extract claims: a
+  missing signal produces `None`, never a guess. Wired into `ke
+  extraction-review-generate`, which now populates `study_type` and
+  `limitations` on every generated draft item when detected. Bumps the
+  database to schema version 6: `extraction_runs` gains a fifth rules-version
+  column, `study_design_rules_version`, alongside the four M25 added, and
+  each draft item's own `extraction_context` gains the same field, so a
+  future study-design ruleset revision doesn't leave `study_type`/
+  `limitations` provenance unrecorded at either the run or item level.
 
 ### Changed
 

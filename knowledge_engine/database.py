@@ -27,7 +27,7 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 5
+CURRENT_SCHEMA_VERSION = 6
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
@@ -46,6 +46,12 @@ _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
 _SCHEMA_V3_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
         "review_status": "VARCHAR(32) NOT NULL DEFAULT 'clear'",
+    },
+}
+
+_SCHEMA_V6_COLUMNS: dict[str, dict[str, str]] = {
+    "extraction_runs": {
+        "study_design_rules_version": "VARCHAR(64) NOT NULL DEFAULT 'pre-m26'",
     },
 }
 
@@ -137,6 +143,8 @@ def migrate_schema(engine: Engine) -> None:
             _migrate_schema_v2(connection)
         if existing_version < 3:
             _migrate_schema_v3(connection)
+        if existing_version < 6:
+            _migrate_schema_v6(connection)
 
         _verify_schema_complete(connection)
 
@@ -185,6 +193,19 @@ def _migrate_schema_v3(connection: Connection) -> None:
     )
 
 
+def _migrate_schema_v6(connection: Connection) -> None:
+    """Add M26 study-design rules version to extraction run history."""
+
+    for table_name, columns in _SCHEMA_V6_COLUMNS.items():
+        existing_columns = _table_columns(connection, table_name)
+        for column_name, definition in columns.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(
+                text(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {definition}')
+            )
+
+
 def _current_schema_version(connection: Connection) -> int:
     table_exists = connection.execute(
         text(
@@ -227,6 +248,11 @@ def _verify_schema_complete(connection: Connection) -> None:
             if column_name not in existing_columns:
                 missing_columns.append(f"{table_name}.{column_name}")
     for table_name, columns in _SCHEMA_V3_COLUMNS.items():
+        existing_columns = _table_columns(connection, table_name)
+        for column_name in columns:
+            if column_name not in existing_columns:
+                missing_columns.append(f"{table_name}.{column_name}")
+    for table_name, columns in _SCHEMA_V6_COLUMNS.items():
         existing_columns = _table_columns(connection, table_name)
         for column_name in columns:
             if column_name not in existing_columns:
@@ -434,6 +460,7 @@ class ExtractionRunRepository:
         claim_candidate_rules_version: str,
         claim_framing_rules_version: str,
         draft_evidence_item_rules_version: str,
+        study_design_rules_version: str,
     ) -> ExtractionRun:
         """Persist a durable record of one extraction-review-generate invocation."""
 
@@ -449,6 +476,7 @@ class ExtractionRunRepository:
             claim_candidate_rules_version=claim_candidate_rules_version,
             claim_framing_rules_version=claim_framing_rules_version,
             draft_evidence_item_rules_version=draft_evidence_item_rules_version,
+            study_design_rules_version=study_design_rules_version,
             created_at=_utc_now_iso(),
         )
         self.session.add(run)

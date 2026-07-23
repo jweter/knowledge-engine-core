@@ -102,15 +102,28 @@ manual evidence records for the same claim are treated as independent
 corroborating records, never reconciled or superseded for display -- see
 Open Questions below, where this required no code change since it is
 already the codebase's real behavior.
+M26 (issue #129, PR pending, in progress) implements the first slice of
+deterministic PICO-adjacent extraction: `study_type` classification and
+`limitations` extraction (`knowledge_engine.extraction.study_design`),
+wired into `ke extraction-review-generate` alongside M16-M19's pipeline.
+Both are paper-intrinsic facts -- an explicit study-design phrase in the
+Abstract/Methods, an explicit "Limitations" heading -- extracted the same
+conservative way M17/M18 extract claims: absence over guessing, a
+versioned ruleset (`STUDY_DESIGN_RULES_VERSION`). Full `population`/
+`intervention`/`comparator`/`outcome` extraction remains out of scope for
+M26 -- those values are typically embedded in free-form prose rather than
+signaled by a fixed heading or phrase, and need a different extraction
+approach; see the Minimizing Human-Typed Fields section for the reasoning
+and #129 for the tracked follow-on.
 Next priorities, per the project owner's explicit preference to minimize
 human-typed fields (see `docs/roadmap/long_term_vision.md`'s Minimizing
-Human-Typed Fields section): deterministic, non-human-typed PICO/
-`study_type`/`limitations` extraction, extending M16-M19's methodology
-rather than adopting a new one; and expanding the Relationship Layer past
-its first slice's fully human-authored records. Tuning either against
-real data needs a real corpus far larger than the two hand-authored
-records currently committed -- see `docs/roadmap.md`'s "Scaling beyond
-500 papers for Phase 2 tuning" section.
+Human-Typed Fields section): full `population`/`intervention`/
+`comparator`/`outcome` extraction, extending M26's methodology to
+free-form prose; and expanding the Relationship Layer past its first
+slice's fully human-authored records. Tuning either against real data
+needs a real corpus far larger than the two hand-authored records
+currently committed -- see `docs/roadmap.md`'s "Scaling beyond 500 papers
+for Phase 2 tuning" section.
 
 ## Mission
 
@@ -463,6 +476,11 @@ per invocation: `paper_id`, `output_path`, `page_count`/`section_count`/
 `candidate_count`/`draft_item_count`, and all four extraction-stage rules
 versions (`SECTION_DETECTION_RULES_VERSION`, `CLAIM_CANDIDATE_RULES_VERSION`,
 `CLAIM_FRAMING_RULES_VERSION`, `DRAFT_EVIDENCE_ITEM_RULES_VERSION`).
+M26 adds a fifth (schema version 6): `study_design_rules_version`
+(`STUDY_DESIGN_RULES_VERSION`), recorded the same way so a study-design
+ruleset revision doesn't leave `study_type`/`limitations` provenance
+unrecorded either at the run level or in each draft item's own
+`extraction_context`.
 
 Two deliberate scope boundaries:
 

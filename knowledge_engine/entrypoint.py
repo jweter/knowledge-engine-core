@@ -21,10 +21,13 @@ from knowledge_engine.extraction import (
     CLAIM_FRAMING_RULES_VERSION,
     DRAFT_EVIDENCE_ITEM_RULES_VERSION,
     SECTION_DETECTION_RULES_VERSION,
+    STUDY_DESIGN_RULES_VERSION,
     build_draft_evidence_items,
     classify_claim_framing,
+    classify_study_type,
     detect_claim_candidates,
     detect_sections,
+    extract_limitations,
 )
 from knowledge_engine.extraction.evidence_items import PaperMetadata
 from knowledge_engine.import_runs import ImportRunService
@@ -196,6 +199,7 @@ def _record_extraction_run(
             claim_candidate_rules_version=CLAIM_CANDIDATE_RULES_VERSION,
             claim_framing_rules_version=CLAIM_FRAMING_RULES_VERSION,
             draft_evidence_item_rules_version=DRAFT_EVIDENCE_ITEM_RULES_VERSION,
+            study_design_rules_version=STUDY_DESIGN_RULES_VERSION,
         )
 
 
@@ -425,8 +429,16 @@ def extraction_review_generate(
     sections = detect_sections(pages)
     candidates = detect_claim_candidates(pages, sections)
     framings = classify_claim_framing(candidates)
+    study_type = classify_study_type(pages, sections)
+    limitations = extract_limitations(pages, sections)
     paper_metadata = PaperMetadata(paper_id=paper.id, doi=paper.doi, title=paper.title)
-    items = build_draft_evidence_items(paper_metadata, framings)
+    items = build_draft_evidence_items(
+        paper_metadata,
+        framings,
+        study_type=study_type,
+        limitations=limitations,
+        study_design_rules_version=STUDY_DESIGN_RULES_VERSION,
+    )
 
     lines = [json.dumps(item.to_dict()) for item in items]
     _write_output(output, "\n".join(lines) + ("\n" if lines else ""))
@@ -451,11 +463,15 @@ def extraction_review_generate(
 
     console.print(
         f"[green]Wrote {len(items)} draft evidence item(s):[/green] {output} "
-        f"({len(pages)} page(s), {len(sections)} section(s), {len(candidates)} candidate(s))."
+        f"({len(pages)} page(s), {len(sections)} section(s), {len(candidates)} candidate(s), "
+        f"study_type: {study_type or 'not detected'}, "
+        f"limitations: {'detected' if limitations else 'not detected'})."
     )
     console.print(
         "[bold]Draft items are a review queue, not validated evidence -- "
-        "research_question, evidence_direction, and PICO fields require human completion.[/bold]"
+        "research_question, evidence_direction, and population/intervention/comparator/"
+        "outcome require human completion. study_type and limitations are populated "
+        "automatically when detected, never guessed.[/bold]"
     )
 
 

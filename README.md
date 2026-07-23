@@ -132,9 +132,14 @@ and milestone-by-milestone status.
   extraction-review-generate` now records a durable row per invocation
   (paper, output path, item counts, ruleset versions). `core` never
   automatically re-runs extraction on a ruleset change; a human decides.
+- **M26:** implemented deterministic `study_type` classification and
+  `limitations` extraction, the first slice of non-human-typed
+  PICO-adjacent extraction. Both are paper-intrinsic facts (an explicit
+  study-design phrase, an explicit "Limitations" heading), extracted the
+  same conservative way as claims: a missing signal produces `None`.
 
 Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is in
-progress through M25. See [docs/roadmap.md](docs/roadmap.md) and
+progress through M26. See [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase2_design.md](docs/phase2_design.md) for the next milestone.
 
 ## Requirements
@@ -329,7 +334,7 @@ The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now inc
 completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
 scale-readiness, and the controlled 500-paper rehearsal
 ([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
-[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M25:
+[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M26:
 deterministic, rule-based structured-section detection, claim-candidate
 detection, claim framing-cue classification, and draft extraction
 review-item generation, runnable end-to-end via `ke
@@ -345,12 +350,20 @@ automated relationship detection is not yet built. `ke
 extraction-review-generate` now records a durable `extraction_runs` row per
 invocation, so a paper's extraction history is findable without re-reading
 JSONL files; `core` never automatically re-runs extraction on a ruleset
-change. Automated, research-question-relative `evidence_direction`
+change. `ke extraction-review-generate` also now classifies a paper's own
+stated `study_type` (randomized controlled trial, meta-analysis,
+systematic review, cohort/case-control/cross-sectional/pilot/
+observational study) from an explicit cue in its Abstract or Methods, and
+extracts its own stated `limitations` from an explicit "Limitations"
+heading -- the first slice of deterministic, non-human-typed
+PICO-adjacent extraction; a missing signal produces `None`, never a
+guess. Automated, research-question-relative `evidence_direction`
 classification is not yet implemented -- `research_question` acquisition
 has no automated source
 anywhere in this pipeline yet; a human reviewer supplies it before
-promotion. All Phase 2 extraction is rule-based, with no LLM-based
-extraction, synthesis, or reasoning of any kind.
+promotion. Full `population`/`intervention`/`comparator`/`outcome`
+extraction is not yet implemented. All Phase 2 extraction is rule-based,
+with no LLM-based extraction, synthesis, or reasoning of any kind.
 
 Neither phase should be expanded into Alembic adoption, a new package manager,
 persistent telemetry, vector search, a graph, AI reasoning, an API, web
