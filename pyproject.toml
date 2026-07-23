@@ -16,6 +16,7 @@ rich = "^13.7.1"
 sqlalchemy = "^2.0.31"
 typer = "^0.12.3"
 click = ">=8.0,<8.2"
+cryptography = "^49.0.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^2.1.0"
@@ -25,6 +26,7 @@ ruff = "0.15.20"
 [tool.poetry.scripts]
 ke = "knowledge_engine.entrypoint:app"
 ke-drive-backup-pilot = "knowledge_engine.drive_backup_pilot:main"
+ke-corpus-pdf-backup = "knowledge_engine.corpus_pdf_backup:main"
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]
