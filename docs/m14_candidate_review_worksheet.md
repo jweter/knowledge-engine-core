@@ -62,13 +62,14 @@ No reviewer identifier, review note, review timestamp, or owner decision is requ
 
 ## Initial deterministic ruleset
 
-The active ruleset is `m14-candidate-adjudication-v6`.
+The active ruleset is `m14-candidate-adjudication-v7`.
 
 - `metadata_only` records are rejected for the PMC OA acquisition path with `NO_VERIFIED_REUSABLE_FULL_TEXT`.
 - Scientific evidence passes only when the combined PubMed title and abstract contain both a declared metabolic-disease term and a declared treatment or therapeutic term.
 - Disease terms include obesity, overweight, type 2 diabetes, and metabolic syndrome.
 - Therapeutic terms include general treatment language plus named GLP-1 therapies, metformin, and SGLT2 terminology.
 - Missing abstracts do not fail by themselves; title evidence may still satisfy the same two-factor rule.
+- A title containing a pediatric-population term (pediatric, paediatric, child, infant, neonat, adolescent, youth) fails scientific evidence -- `exclusion_criteria.md` requires excluding sources "limited to pediatric populations", the corpus's scope is adult treatment. Checked against the title only, not the abstract, since an adult study's abstract can mention pediatric research as background without the study itself being pediatric. (v7; a v6 gap let three pediatric-titled records be accepted before a matching age/population term happened to also satisfy every other rule.)
 - PubMed structured abstract sections are preserved in stable source order with their section labels when provided.
 - PMC OA records are accepted only when scientific title-plus-abstract evidence, PMCID identity evidence, an allowlisted CC license, and an official PMC Cloud Service HTTPS PDF URL (`pmc-oa-opendata.s3.amazonaws.com`) all pass.
 - Incomplete or unsupported OA evidence produces `held`; it does not request human intervention.

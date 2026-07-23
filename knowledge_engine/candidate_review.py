@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST
 
-ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v6"
+ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v7"
 _ALLOWED_LICENSE_PATTERN = re.compile(
     r"^(?:CC BY(?: (?:1\.0|2\.0|2\.5|3\.0|4\.0))?|CC0(?: 1\.0)?)$"
 )
@@ -51,6 +51,22 @@ _INTERVENTION_TERMS = (
     "sglt2",
     "sodium-glucose cotransporter 2",
 )
+_PEDIATRIC_POPULATION_TERMS = (
+    "pediatric",
+    "paediatric",
+    "child",
+    "infant",
+    "neonat",
+    "adolescent",
+    "youth",
+)
+"""Matches only the title -- not the abstract, unlike the disease/intervention
+terms above. An adult study's abstract can mention pediatric research as
+background context without the study itself being pediatric; a title is a
+much stronger population signal. `exclusion_criteria.md` requires excluding
+sources "limited to pediatric populations"; a title match returns a non-
+"passed" scope result, which routes to `held` (never a silent rejection),
+matching how every other scope-insufficient title is already treated."""
 
 
 class CandidateReviewError(RuntimeError):
@@ -275,7 +291,12 @@ def _scientific_scope(title: str, abstract: str | None) -> str:
     normalized = " ".join(evidence.casefold().split())
     has_disease = any(term in normalized for term in _DISEASE_TERMS)
     has_intervention = any(term in normalized for term in _INTERVENTION_TERMS)
-    return "passed" if has_disease and has_intervention else "insufficient_title_abstract_evidence"
+    if not (has_disease and has_intervention):
+        return "insufficient_title_abstract_evidence"
+    normalized_title = " ".join(title.casefold().split())
+    if any(term in normalized_title for term in _PEDIATRIC_POPULATION_TERMS):
+        return "pediatric_population_title_evidence"
+    return "passed"
 
 
 def _license_result(reported_license: str | None) -> str:
