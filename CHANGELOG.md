@@ -207,7 +207,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   excluded a second incidental-comorbidity false positive found by
   applying the same review to the already-merged `retstart=0` batch,
   leaving 155 papers -- see the `### Fixed` entry below).
-- Grew `sources.csv` by another 87 records (the third discovery batch,
+- Grew `sources.csv` by another 86 records (the third discovery batch,
   `retstart=500`, fully under the v9 ruleset). Proactively screened all 90
   automatically accepted records for the incidental-comorbidity
   false-positive pattern (a single-patient case report whose abstract
@@ -217,8 +217,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   diabetes, S. hominis endophthalmitis in a diabetic patient, and
   immune-checkpoint-inhibitor toxicity in a bladder-cancer patient with
   chronic kidney disease and diabetes -- in each case the disease term was
-  purely background, unrelated to the paper's actual intervention).
-  Refreshed the corpus-library snapshot (242 papers total, 493 authors).
+  purely background, unrelated to the paper's actual intervention). A
+  Codex review then caught a fourth, differently-shaped false positive: a
+  basic cervical-cancer biology paper whose abstract matched only because
+  it used a xenograft mouse strain literally named "non-obese diabetic
+  (NOD)-SCID," unrelated to metabolic disease -- excluded, and the rest of
+  the batch was re-checked for the same mouse-strain-name term collision
+  (one further hit, "Experimental models in diabetes research," was
+  confirmed genuinely on-topic and kept). Refreshed the corpus-library
+  snapshot (241 papers total, 493 authors).
 
 ### Changed
 
