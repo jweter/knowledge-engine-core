@@ -11,11 +11,17 @@ codebase -- it is inherently supplied by whoever compiles a corpus around a
 question, not derivable from a paper's own text. M18 already established
 that `evidence_direction` is defined relative to a `research_question`
 (`docs/vs7_manual_evidence_record.md`), so it cannot be honestly populated
-without one either. These fields, and every other field requiring real
-judgment or external input (PICO, study_type, limitations,
-uncertainty_notes, confidence_note, provenance), are left explicitly
-`None` -- a draft item is intentionally incomplete and is never claimed to
-be a valid EvidenceRecord.
+without one either. Those two fields, PICO's population/intervention/
+comparator/outcome, `uncertainty_notes`, `confidence_note`, and
+`provenance` require real judgment or external input and are left
+explicitly `None`. `study_type` and `limitations` are different: M26's
+deterministic study-design classification and limitations extraction
+(`knowledge_engine.extraction.study_design`) populate them from the
+paper's own text when a caller supplies them, since both are paper-intrinsic
+facts, not judgment relative to a research question -- see
+`docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed Fields section.
+A draft item is intentionally incomplete and is never claimed to be a
+valid EvidenceRecord.
 """
 
 from __future__ import annotations
@@ -130,8 +136,20 @@ class DraftEvidenceItem:
         }
 
 
-def build_draft_evidence_item(paper: PaperMetadata, framing: ClaimFraming) -> DraftEvidenceItem:
-    """Build one draft evidence item from a paper and a classified candidate."""
+def build_draft_evidence_item(
+    paper: PaperMetadata,
+    framing: ClaimFraming,
+    *,
+    study_type: str | None = None,
+    limitations: list[str] | None = None,
+) -> DraftEvidenceItem:
+    """Build one draft evidence item from a paper and a classified candidate.
+
+    `study_type`/`limitations` are paper-level facts (the same value applies
+    to every candidate from the same paper), so the caller computes them
+    once per paper -- typically via `classify_study_type`/
+    `extract_limitations` -- rather than this function deriving them itself.
+    """
 
     candidate = framing.candidate
     return DraftEvidenceItem(
@@ -151,12 +169,21 @@ def build_draft_evidence_item(paper: PaperMetadata, framing: ClaimFraming) -> Dr
             "end_offset": candidate.end_offset,
         },
         created_for_milestone=_CREATED_FOR_MILESTONE,
+        study_type=study_type,
+        limitations=limitations,
     )
 
 
 def build_draft_evidence_items(
-    paper: PaperMetadata, framings: Sequence[ClaimFraming]
+    paper: PaperMetadata,
+    framings: Sequence[ClaimFraming],
+    *,
+    study_type: str | None = None,
+    limitations: list[str] | None = None,
 ) -> tuple[DraftEvidenceItem, ...]:
     """Build one draft evidence item per classified candidate, order preserved."""
 
-    return tuple(build_draft_evidence_item(paper, framing) for framing in framings)
+    return tuple(
+        build_draft_evidence_item(paper, framing, study_type=study_type, limitations=limitations)
+        for framing in framings
+    )

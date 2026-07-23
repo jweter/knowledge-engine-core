@@ -76,6 +76,39 @@ def test_extraction_review_generate_writes_draft_items(
     assert record["extraction_context"]["section_type"] == "results"
 
 
+def test_extraction_review_generate_populates_study_type_and_limitations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "review.jsonl"
+    text = (
+        "Methods\n\nThis was a randomized, double-blind, placebo-controlled trial "
+        "of adults with obesity.\n\n"
+        "Results\n\nThe primary endpoint was body weight change. "
+        "Body weight decreased by 12.4% relative to baseline.\n\n"
+        "Limitations\n\nThe sample size was small and follow-up was short."
+    )
+    pages = [ParsedPage(page_number=1, text=text)]
+    monkeypatch.setattr(entrypoint, "_load_paper_pages", lambda paper_id: (_paper(), pages))
+    monkeypatch.setattr(entrypoint, "_record_extraction_run", lambda **kwargs: None)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["extraction-review-generate", "--paper-id", "1", "--output", str(output)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "study_type: randomized_controlled_trial" in result.output
+    assert "limitations: detected" in result.output
+
+    lines = output.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["study_type"] == "randomized_controlled_trial"
+    assert record["limitations"] == ["The sample size was small and follow-up was short."]
+    assert record["research_question"] is None
+    assert record["population"] is None
+
+
 def test_extraction_review_generate_removes_output_when_run_cannot_be_recorded(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

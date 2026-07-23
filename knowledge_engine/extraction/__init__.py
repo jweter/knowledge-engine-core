@@ -23,6 +23,11 @@ from knowledge_engine.extraction.sections import (
     SectionSpan,
     detect_sections,
 )
+from knowledge_engine.extraction.study_design import (
+    STUDY_DESIGN_RULES_VERSION,
+    classify_study_type,
+    extract_limitations,
+)
 
 __all__ = [
     "CLAIM_CANDIDATE_RULES_VERSION",
@@ -30,6 +35,7 @@ __all__ = [
     "DRAFT_EVIDENCE_ITEM_RULES_VERSION",
     "SECTION_DETECTION_RULES_VERSION",
     "SECTION_TYPES",
+    "STUDY_DESIGN_RULES_VERSION",
     "ClaimCandidate",
     "ClaimFraming",
     "DraftEvidenceItem",
@@ -38,6 +44,8 @@ __all__ = [
     "build_draft_evidence_item",
     "build_draft_evidence_items",
     "classify_claim_framing",
+    "classify_study_type",
     "detect_claim_candidates",
     "detect_sections",
+    "extract_limitations",
 ]
