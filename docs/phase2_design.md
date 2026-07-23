@@ -42,7 +42,7 @@ PICO fields, `study_type`, `limitations`, `uncertainty_notes`,
 `confidence_note`, `provenance`) explicitly `None`. It is not a valid
 `EvidenceRecord` and is confirmed to fail the existing validator's checks
 until a reviewer completes it.
-M20 (issue #104, in progress) adds the `ke extraction-review-generate` CLI
+M20 (issue #104, PR #105, merged) added the `ke extraction-review-generate` CLI
 command, wiring M16-M19 into an actually runnable pipeline for the first
 time: given a persisted paper's `--paper-id`, it runs section detection,
 claim-candidate detection, framing classification, and draft-item
