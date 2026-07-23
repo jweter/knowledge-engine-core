@@ -95,6 +95,43 @@ class GoogleDriveHttpTransport:
         )
         return _required_string(response, "id")
 
+    def list_files(self, folder_id: str) -> list[DriveFileMetadata]:
+        """List every non-trashed file directly inside one folder."""
+
+        results: list[DriveFileMetadata] = []
+        page_token: str | None = None
+        while True:
+            query = {
+                "q": (
+                    f"'{folder_id}' in parents and trashed = false "
+                    f"and mimeType != '{_FOLDER_MIME_TYPE}'"
+                ),
+                "fields": "nextPageToken,files(id,name,parents,size,appProperties,trashed)",
+                "pageSize": "1000",
+                "supportsAllDrives": "true",
+                "includeItemsFromAllDrives": "true",
+            }
+            if page_token:
+                query["pageToken"] = page_token
+            payload = self._request_json(f"{_DRIVE_API}/files?" + urlencode(query))
+            raw_files = payload.get("files")
+            if not isinstance(raw_files, list):
+                raise GoogleDriveHttpError("Google Drive returned an invalid response.")
+            for entry in raw_files:
+                if not isinstance(entry, dict):
+                    raise GoogleDriveHttpError("Google Drive returned an invalid response.")
+                # Non-binary items (native Google Docs/Sheets/Slides, shortcuts) have no
+                # `size`; they can never match a local PDF's hash, so skip them here
+                # rather than aborting the whole listing.
+                if not isinstance(entry.get("size"), str):
+                    continue
+                results.append(_file_metadata_from_payload(cast(dict[str, object], entry)))
+            next_token = payload.get("nextPageToken")
+            if not isinstance(next_token, str) or not next_token:
+                break
+            page_token = next_token
+        return results
+
     def get_file_metadata(self, file_id: str) -> DriveFileMetadata:
         payload = self._request_json(
             f"{_DRIVE_API}/files/{quote(file_id, safe='')}?"
@@ -107,26 +144,7 @@ class GoogleDriveHttpTransport:
         )
         if bool(payload.get("trashed", False)):
             raise GoogleDriveHttpError("Google Drive uploaded file is unavailable.")
-        properties = payload.get("appProperties")
-        if not isinstance(properties, dict):
-            properties = {}
-        sha256 = properties.get(_SHA256_PROPERTY)
-        if not isinstance(sha256, str):
-            sha256 = ""
-        size = payload.get("size")
-        if not isinstance(size, str):
-            raise GoogleDriveHttpError("Google Drive file metadata is incomplete.")
-        try:
-            byte_count = int(size)
-        except ValueError:
-            raise GoogleDriveHttpError("Google Drive file metadata is incomplete.") from None
-        return DriveFileMetadata(
-            file_id=_required_string(payload, "id"),
-            name=_required_string(payload, "name"),
-            parent_ids=tuple(_string_list(payload.get("parents"))),
-            byte_count=byte_count,
-            sha256=sha256,
-        )
+        return _file_metadata_from_payload(payload)
 
     def download_bytes(self, file_id: str) -> bytes:
         return self._request_bytes(
@@ -177,6 +195,29 @@ class GoogleDriveHttpTransport:
                 return response.read()
         except (HTTPError, URLError, OSError):
             raise GoogleDriveHttpError("Google Drive request failed.") from None
+
+
+def _file_metadata_from_payload(payload: dict[str, object]) -> DriveFileMetadata:
+    properties = payload.get("appProperties")
+    if not isinstance(properties, dict):
+        properties = {}
+    sha256 = properties.get(_SHA256_PROPERTY)
+    if not isinstance(sha256, str):
+        sha256 = ""
+    size = payload.get("size")
+    if not isinstance(size, str):
+        raise GoogleDriveHttpError("Google Drive file metadata is incomplete.")
+    try:
+        byte_count = int(size)
+    except ValueError:
+        raise GoogleDriveHttpError("Google Drive file metadata is incomplete.") from None
+    return DriveFileMetadata(
+        file_id=_required_string(payload, "id"),
+        name=_required_string(payload, "name"),
+        parent_ids=tuple(_string_list(payload.get("parents"))),
+        byte_count=byte_count,
+        sha256=sha256,
+    )
 
 
 def _required_string(payload: dict[str, object], key: str) -> str:

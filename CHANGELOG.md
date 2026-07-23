@@ -186,6 +186,24 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   clone), so nothing downloaded and parsed today would otherwise survive
   past the current session -- see `docs/roadmap.md`'s "Scaling beyond 500
   papers for Phase 2 tuning" section.
+- Added the `ke-corpus-pdf-backup` CLI command and `docs/corpus_pdf_backup.md`:
+  a skip-existing bulk backup of local corpus PDFs to the allowlisted
+  `source_documents.pdf` Google Drive folder, addressing the same
+  gitignored-PDFs-don't-survive-the-session gap as the corpus-library
+  snapshot above, for the raw PDFs themselves. Authorizes with a
+  service-account JSON key (never committed, kept outside the repository)
+  exchanged for a short-lived `drive.file`-scoped OAuth token via a
+  hand-rolled JWT-bearer flow (`knowledge_engine.google_drive_service_account`,
+  using `cryptography` for RS256 signing) rather than the full
+  `google-api-python-client`/`google-auth` SDKs, matching
+  `google_drive_http.py`'s existing minimal-dependency Drive transport.
+  Reuses the existing `ConstrainedDriveAdapter` for destination-ancestry and
+  upload-readback verification and adds a new paginated
+  `GoogleDriveHttpTransport.list_files` method; a local PDF is skipped only
+  when its filename and SHA-256 both already match a Drive file, so a
+  changed file with the same name is re-uploaded rather than silently
+  skipped. One file's upload failure does not abort the run; the command
+  uploads everything it can and reports failures in its summary.
 - Grew `data/corpora/glp1_weight_loss/sources.csv` by 81 records (the first
   small automated discovery batch, `retstart=0`, toward the project owner's
   "at least a couple thousand papers" target -- 84 initially accepted, 3
