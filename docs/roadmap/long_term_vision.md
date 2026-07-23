@@ -1,7 +1,9 @@
 # Long-Term Vision
 
 Knowledge Engine aims to become an open scientific operating system for human
-knowledge.
+knowledge. `docs/founding_vision.md` is the project's original founding
+proposal, preserved verbatim; this document translates that ambition into
+the concrete, multi-package ecosystem plan below.
 
 Long term, the ecosystem may include:
 
