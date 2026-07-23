@@ -76,3 +76,40 @@ trustworthy, source-linked, deterministic, and never silently guessed. This
 layer's responsibility is everything that requires judgment about what that
 evidence means. Building this into `core` itself, or blurring the seam
 between the two, is explicitly out of scope for every `core` milestone.
+
+### Confidence Rating Design Guidance
+
+The confidence rating above should be a real, hard number, not a vague
+qualitative label -- and it must be earned from actual per-paper quality
+signals, not a naive count of how many papers say the same thing. A large,
+well-designed, recent trial and a small, poorly controlled, decade-old one
+must never contribute equally to an answer just because both nominally
+"support" it.
+
+This works in two levels:
+
+1. **Per-evidence-record confidence.** Computed from signals `core`'s own
+   Evidence and Relationship Layers are positioned to produce: study
+   design/type and sample size (PICO fields, still not yet scoped/extracted),
+   recency (already-captured paper publication-date metadata), and any known
+   limitations/uncertainty already recorded per evidence record. A small,
+   poorly designed, or old study earns a low per-record score even when its
+   stated direction agrees with the eventual answer.
+2. **Compounded, question-level confidence.** For one research question, the
+   AI layer combines the per-record confidence of every relevant evidence
+   record -- weighted, not simply counted -- using the Relationship Layer's
+   typed links (supports/contradicts/qualifies/contextualizes) to decide how
+   records reinforce or offset each other, producing one aggregate rating for
+   that question's report. Several strong, independent, agreeing studies
+   should compound toward high confidence; a single strong study, a handful of
+   weak studies, or strong agreement offset by weak contradiction should each
+   produce a visibly different, lower rating -- never collapsed to the same
+   number.
+
+This is design guidance for the future `knowledge-engine-ai` layer, not a
+formula `core` implements. But it is also not free of consequences for
+`core`: a rigorous confidence rating can only be as good as the quality
+signals `core` chose to capture on the way there. `core`'s still-unscoped
+PICO extraction and Relationship Layer milestones are this rating's specific
+future inputs, not just organizational nice-to-haves -- they should be scoped
+with this consumer in mind when their time comes.
