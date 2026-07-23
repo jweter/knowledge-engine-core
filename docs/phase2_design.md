@@ -97,6 +97,15 @@ manual evidence records for the same claim are treated as independent
 corroborating records, never reconciled or superseded for display -- see
 Open Questions below, where this required no code change since it is
 already the codebase's real behavior.
+Next priorities, per the project owner's explicit preference to minimize
+human-typed fields (see `docs/roadmap/long_term_vision.md`'s Minimizing
+Human-Typed Fields section): deterministic, non-human-typed PICO/
+`study_type`/`limitations` extraction, extending M16-M19's methodology
+rather than adopting a new one; and expanding the Relationship Layer past
+its first slice's fully human-authored records. Tuning either against
+real data needs a real corpus far larger than the two hand-authored
+records currently committed -- see `docs/roadmap.md`'s "Scaling beyond
+500 papers for Phase 2 tuning" section.
 
 ## Mission
 

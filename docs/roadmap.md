@@ -125,6 +125,23 @@ revision must preserve its query, offset, rules version, decision counts, and
 provider provenance. Unrelated scientific domains require a separate roadmap
 amendment rather than silent corpus mixing.
 
+### Scaling beyond 500 papers for Phase 2 tuning
+
+Phase 2's automated extraction (M16-M25) has been built and unit-tested
+against synthetic fixtures, but never run at scale against real papers --
+the real corpus currently has exactly two evidence records, both
+hand-authored before automated extraction existed. Tuning deterministic
+extraction rules (structured-section detection, claim-candidate signals,
+and the PICO/study-type/limitations extraction named in
+`docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed Fields
+section) needs a real corpus large enough to reveal patterns a 500-paper
+sample may not; the project owner has set an initial target of at least a
+couple thousand papers. Following the M12->M13->M14 precedent, this needs
+its own scale-readiness assessment -- measured stop conditions and
+license/provenance validation re-checked at the new scale -- before a
+bounded discovery/acquisition run, not an unbounded scale-up. Not yet
+scheduled as a numbered milestone.
+
 ### Supporting operator durability
 
 The Google Drive backup subsystem is supporting operator infrastructure for
@@ -165,6 +182,14 @@ Detailed milestone records include:
   for a human reviewer to supply. That is not a temporary gap -- it is the
   deliberate seam where the future `knowledge-engine-ai` layer plugs in; see
   `docs/roadmap/long_term_vision.md`'s AI Interface Layer section.
+- PICO fields (population, intervention, comparator, outcome),
+  `study_type`, and `limitations` are a different case: paper-intrinsic
+  facts, not judgment relative to a research question, so they are an
+  explicit near-term priority for deterministic, non-human-typed
+  extraction rather than an indefinitely deferred human-review field --
+  see `docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed Fields
+  section. Tuning this extraction needs the larger corpus described above
+  under Phase 1.
 
 ## Phase 3: Search Plus Semantics
 
@@ -178,6 +203,11 @@ Detailed milestone records include:
 - Add Neo4j or another graph backend behind a repository interface.
 - Corresponds to `knowledge-engine-graph` in the long-term ecosystem; see
   `docs/roadmap/long_term_vision.md`.
+- This is also the natural home for `docs/roadmap/long_term_vision.md`'s
+  Stability Score (claim revision history) and Tracking the Unknown
+  (missing experiments, weak-evidence areas, and unanswered questions as
+  first-class, graph-shaped entities) -- neither has a path before the
+  graph exists to hold them.
 
 ## Phase 5: Human Interface
 
@@ -187,6 +217,10 @@ Detailed milestone records include:
   research-question crafting, evidence synthesis, and confidence rating
   (see `docs/roadmap/long_term_vision.md`) actually reach a person, on top
   of the Evidence and Knowledge Graph layers Phases 2 and 4 build.
+- `docs/roadmap/long_term_vision.md`'s Discovery Engine (hypothesis
+  generation, experiment suggestion) and Education Engine (adaptive
+  explanations, learning paths) are not yet claimed by any phase or
+  package here -- an open decision, not a silent omission.
 
 ## Release Milestones
 
@@ -205,6 +239,11 @@ Detailed milestone records include:
   `docs/roadmap/long_term_vision.md`.
 - `v0.9.0`: Feature-complete beta.
 - `v1.0.0`: Stable public release.
+- Post-`v1.0.0`: `docs/roadmap/long_term_vision.md`'s Discovery Metrics
+  (Time to Discovery, Knowledge Coverage, Contradiction Resolution Rate,
+  and related measures) become meaningful only once the Discovery and
+  Decision layers they measure exist -- named here so they are not
+  forgotten, not because they are actionable before then.
 
 ## Detailed Roadmaps
 
