@@ -43,6 +43,20 @@ EvidenceRecordsArgument = Annotated[
     Path,
     typer.Argument(help="JSONL file containing manual evidence records."),
 ]
+RelationshipRecordsArgument = Annotated[
+    Path,
+    typer.Argument(help="JSONL file containing evidence relationship records."),
+]
+RelationshipEvidenceOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--evidence",
+        help=("Optional evidence records JSONL file to check relationship references against."),
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
 SearchLimitOption = Annotated[int, typer.Option("--limit", "-n", min=1, max=100)]
 SourcesCsvOption = Annotated[
     Path | None,
@@ -116,6 +130,7 @@ PromotionOutputOption = Annotated[
 ]
 ALLOWED_REVIEW_STATUSES = {"draft", "reviewed", "needs_revision", "rejected"}
 ALLOWED_EXTRACTION_STATUSES = {"draft_review_required", "draft_manual_prototype"}
+ALLOWED_RELATIONSHIP_TYPES = {"supports", "contradicts", "qualifies", "contextualizes"}
 EVIDENCE_SCHEMA_VERSION = "0.1"
 REQUIRED_EVIDENCE_FIELDS = {
     "schema_version",
@@ -142,6 +157,16 @@ REQUIRED_EVIDENCE_FIELDS = {
     "created_for_milestone",
 }
 REVIEW_EVIDENCE_FIELDS = {"review_status", "review_checklist", "review_notes"}
+REQUIRED_RELATIONSHIP_FIELDS = {
+    "schema_version",
+    "relationship_id",
+    "source_evidence_record_id",
+    "target_evidence_record_id",
+    "relationship_type",
+    "rationale",
+    "provenance",
+    "created_for_milestone",
+}
 
 
 @dataclass(frozen=True)
@@ -160,6 +185,14 @@ class CorpusSourceMetadata:
 @dataclass(frozen=True)
 class EvidenceValidationResult:
     """Result of validating an evidence records JSONL file."""
+
+    records: list[dict[str, Any]]
+    errors: list[str]
+
+
+@dataclass(frozen=True)
+class RelationshipValidationResult:
+    """Result of validating an evidence relationship records JSONL file."""
 
     records: list[dict[str, Any]]
     errors: list[str]
@@ -452,6 +485,45 @@ def extraction_review_promote(
 
     if not result.promoted and not result.duplicates:
         console.print("[yellow]No records found in input file.[/yellow]")
+
+
+@app.command("relationship-validate")
+def relationship_validate(
+    records_path: RelationshipRecordsArgument,
+    evidence: RelationshipEvidenceOption = None,
+) -> None:
+    """Validate human-authored evidence relationship records in a JSONL file.
+
+    Never infers or detects a relationship -- validates only that a
+    reviewer-authored `supports`/`contradicts`/`qualifies`/`contextualizes`
+    link between two evidence records is well-formed. Deciding whether a
+    relationship actually holds remains a human judgment call.
+    """
+
+    known_evidence_ids: set[str] | None = None
+    if evidence is not None:
+        evidence_result = _validate_evidence_records(evidence, require_review_fields=True)
+        if evidence_result.errors:
+            console.print(f"[red]Referenced evidence file is invalid:[/red] {evidence}")
+            for error in evidence_result.errors:
+                console.print(f"- {error}")
+            raise typer.Exit(1)
+        known_evidence_ids = {record["evidence_record_id"] for record in evidence_result.records}
+
+    result = _validate_relationship_records(records_path, known_evidence_ids=known_evidence_ids)
+    if result.errors:
+        console.print("[red]Relationship validation failed.[/red]")
+        for error in result.errors:
+            console.print(f"- {error}")
+        raise typer.Exit(1)
+
+    console.print("[green]Relationship validation passed.[/green]")
+    console.print(f"Relationships validated: {len(result.records)}")
+    if evidence is None:
+        console.print(
+            "[yellow]No --evidence file given: relationship references were not checked "
+            "against real evidence records.[/yellow]"
+        )
 
 
 @app.command("corpus-validate")
@@ -852,6 +924,130 @@ def _validate_evidence_record(
     review_notes = record.get("review_notes")
     if (require_review_fields or review_notes is not None) and not isinstance(review_notes, str):
         errors.append(f"Line {line_number}: review_notes must be a string.")
+
+
+def _validate_relationship_records(
+    path: Path, *, known_evidence_ids: set[str] | None
+) -> RelationshipValidationResult:
+    """Validate evidence relationship records for the Relationship Layer's first slice.
+
+    `known_evidence_ids`, when given, cross-checks that both endpoints of
+    every relationship actually exist in an already-validated evidence file
+    -- a dangling reference is reported, never silently accepted. `None`
+    skips this cross-check (structural validation only).
+    """
+
+    errors: list[str] = []
+    records: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+
+    if not path.exists():
+        return RelationshipValidationResult(
+            records=[],
+            errors=[f"Relationship records file does not exist: {path}"],
+        )
+
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if not any(line.strip() for line in lines):
+        return RelationshipValidationResult(
+            records=[],
+            errors=["Relationship records file contains no relationship records."],
+        )
+
+    for line_number, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        try:
+            record = json.loads(stripped)
+        except JSONDecodeError:
+            errors.append(f"Line {line_number}: invalid JSON.")
+            continue
+
+        if not isinstance(record, dict):
+            errors.append(f"Line {line_number}: relationship record must be a JSON object.")
+            continue
+
+        records.append(record)
+        _validate_evidence_relationship(
+            record, line_number, seen_ids, errors, known_evidence_ids=known_evidence_ids
+        )
+
+    return RelationshipValidationResult(records=records, errors=errors)
+
+
+def _validate_evidence_relationship(
+    record: dict[str, Any],
+    line_number: int,
+    seen_ids: set[str],
+    errors: list[str],
+    *,
+    known_evidence_ids: set[str] | None,
+) -> None:
+    """Validate one evidence relationship record and append errors."""
+
+    missing_fields = sorted(REQUIRED_RELATIONSHIP_FIELDS - record.keys())
+    if missing_fields:
+        missing = ", ".join(missing_fields)
+        errors.append(f"Line {line_number}: missing required field(s): {missing}.")
+
+    relationship_id = record.get("relationship_id")
+    if not isinstance(relationship_id, str) or not relationship_id.strip():
+        errors.append(f"Line {line_number}: relationship_id is required.")
+    elif relationship_id in seen_ids:
+        errors.append(f"Line {line_number}: duplicate relationship_id: {relationship_id}.")
+    else:
+        seen_ids.add(relationship_id)
+
+    for field in (
+        "schema_version",
+        "rationale",
+        "created_for_milestone",
+    ):
+        value = record.get(field)
+        if not isinstance(value, str) or not value.strip():
+            errors.append(f"Line {line_number}: {field} is required.")
+
+    relationship_type = record.get("relationship_type")
+    if not isinstance(relationship_type, str) or not relationship_type.strip():
+        errors.append(f"Line {line_number}: relationship_type is required.")
+    elif relationship_type not in ALLOWED_RELATIONSHIP_TYPES:
+        allowed = ", ".join(sorted(ALLOWED_RELATIONSHIP_TYPES))
+        errors.append(
+            f"Line {line_number}: invalid relationship_type '{relationship_type}'. "
+            f"Allowed values: {allowed}."
+        )
+
+    provenance = record.get("provenance")
+    if not isinstance(provenance, dict) or not provenance:
+        errors.append(f"Line {line_number}: provenance must be a non-empty object.")
+
+    source_id = record.get("source_evidence_record_id")
+    target_id = record.get("target_evidence_record_id")
+    valid_source = isinstance(source_id, str) and bool(source_id.strip())
+    valid_target = isinstance(target_id, str) and bool(target_id.strip())
+    if not valid_source:
+        errors.append(f"Line {line_number}: source_evidence_record_id is required.")
+    if not valid_target:
+        errors.append(f"Line {line_number}: target_evidence_record_id is required.")
+    if valid_source and valid_target:
+        if source_id == target_id:
+            errors.append(
+                f"Line {line_number}: source_evidence_record_id and "
+                "target_evidence_record_id must not be the same record."
+            )
+        elif known_evidence_ids is not None:
+            if source_id not in known_evidence_ids:
+                errors.append(
+                    f"Line {line_number}: source_evidence_record_id '{source_id}' does not "
+                    "match any record in the referenced evidence file."
+                )
+            if target_id not in known_evidence_ids:
+                errors.append(
+                    f"Line {line_number}: target_evidence_record_id '{target_id}' does not "
+                    "match any record in the referenced evidence file."
+                )
 
 
 @dataclass(frozen=True)

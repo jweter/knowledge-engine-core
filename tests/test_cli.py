@@ -1155,6 +1155,118 @@ def test_evidence_validate_accepts_valid_source_span_offset_range(tmp_path: Path
     assert result.exit_code == 0
 
 
+def test_relationship_validate_accepts_well_formed_record(tmp_path: Path) -> None:
+    records_path = write_relationship_records(tmp_path, [{}])
+
+    result = CliRunner().invoke(app, ["relationship-validate", str(records_path)])
+
+    assert result.exit_code == 0
+    assert "Relationships validated: 1" in result.output
+    assert "were not checked against real evidence records" in " ".join(result.output.split())
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "schema_version",
+        "relationship_id",
+        "source_evidence_record_id",
+        "target_evidence_record_id",
+        "relationship_type",
+        "rationale",
+        "created_for_milestone",
+    ],
+)
+def test_relationship_validate_fails_for_missing_required_field(tmp_path: Path, field: str) -> None:
+    records_path = write_relationship_records(tmp_path, [{field: ""}])
+
+    result = CliRunner().invoke(app, ["relationship-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert f"{field} is required" in result.output
+
+
+def test_relationship_validate_fails_for_missing_provenance(tmp_path: Path) -> None:
+    records_path = write_relationship_records(tmp_path, [{"provenance": {}}])
+
+    result = CliRunner().invoke(app, ["relationship-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "provenance must be a non-empty object" in result.output
+
+
+def test_relationship_validate_fails_for_invalid_relationship_type(tmp_path: Path) -> None:
+    records_path = write_relationship_records(tmp_path, [{"relationship_type": "agrees_with"}])
+
+    result = CliRunner().invoke(app, ["relationship-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "invalid relationship_type 'agrees_with'" in result.output
+
+
+def test_relationship_validate_fails_for_self_referential_link(tmp_path: Path) -> None:
+    records_path = write_relationship_records(tmp_path, [{"target_evidence_record_id": "ev-1"}])
+
+    result = CliRunner().invoke(app, ["relationship-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "must not be the same record" in " ".join(result.output.split())
+
+
+def test_relationship_validate_fails_for_duplicate_relationship_id(tmp_path: Path) -> None:
+    records_path = write_relationship_records(
+        tmp_path,
+        [{"relationship_id": "duplicate"}, {"relationship_id": "duplicate"}],
+    )
+
+    result = CliRunner().invoke(app, ["relationship-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "duplicate relationship_id: duplicate" in result.output
+
+
+def test_relationship_validate_checks_references_against_evidence_file(
+    tmp_path: Path,
+) -> None:
+    evidence_path = write_evidence_records(tmp_path, [{}, {}])
+    records_path = write_relationship_records(tmp_path, [{}])
+
+    result = CliRunner().invoke(
+        app, ["relationship-validate", str(records_path), "--evidence", str(evidence_path)]
+    )
+
+    assert result.exit_code == 0
+    assert "were not checked" not in result.output
+
+
+def test_relationship_validate_rejects_dangling_evidence_reference(tmp_path: Path) -> None:
+    evidence_path = write_evidence_records(tmp_path, [{}])
+    records_path = write_relationship_records(
+        tmp_path, [{"target_evidence_record_id": "ev-does-not-exist"}]
+    )
+
+    result = CliRunner().invoke(
+        app, ["relationship-validate", str(records_path), "--evidence", str(evidence_path)]
+    )
+
+    assert result.exit_code != 0
+    assert "does not match any record in the referenced evidence file" in " ".join(
+        result.output.split()
+    )
+
+
+def test_relationship_validate_rejects_invalid_evidence_file(tmp_path: Path) -> None:
+    evidence_path = write_evidence_records(tmp_path, [{"review_status": "approved"}])
+    records_path = write_relationship_records(tmp_path, [{}])
+
+    result = CliRunner().invoke(
+        app, ["relationship-validate", str(records_path), "--evidence", str(evidence_path)]
+    )
+
+    assert result.exit_code != 0
+    assert "Referenced evidence file is invalid" in result.output
+
+
 @pytest.mark.parametrize("command_name", ["evidence", "answer", "evidence-report"])
 def test_evidence_consuming_commands_reject_duplicate_evidence_ids(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command_name: str
@@ -1433,6 +1545,30 @@ def write_evidence_records(tmp_path: Path, overrides: list[dict[str, object]]) -
             "uncertainty_notes": "One paper only.",
             "confidence_note": "Source-linked manual record.",
             "source_span": {"page_number": 2, "section": "Results"},
+            "provenance": {"created_by": "manual review"},
+            "created_for_milestone": "test",
+        }
+        record.update(override)
+        records.append(record)
+
+    records_path.write_text(
+        "\n".join(json.dumps(record) for record in records) + "\n",
+        encoding="utf-8",
+    )
+    return records_path
+
+
+def write_relationship_records(tmp_path: Path, overrides: list[dict[str, object]]) -> Path:
+    records_path = tmp_path / "relationship_records.jsonl"
+    records = []
+    for index, override in enumerate(overrides, start=1):
+        record: dict[str, object] = {
+            "schema_version": "0.1",
+            "relationship_id": f"rel-{index}",
+            "source_evidence_record_id": "ev-1",
+            "target_evidence_record_id": "ev-2",
+            "relationship_type": "supports",
+            "rationale": "Both records report the same weight-reduction effect direction.",
             "provenance": {"created_by": "manual review"},
             "created_for_milestone": "test",
         }
