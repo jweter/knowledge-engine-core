@@ -194,6 +194,16 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `data/corpus_library/obesity_metabolic_disease_library.sqlite3` snapshot
   (84 papers total, including the pre-existing prototype rows) produced by
   `ke corpus-library-export`.
+- Grew `sources.csv` by another 72 records (the second discovery batch,
+  `retstart=250`, under the v7 pediatric-scope ruleset from the start; the
+  v8/v9 correction-notice and co-occurrence rules landed afterward and this
+  batch was re-adjudicated under v9, holding 1 further correction-notice
+  record; a further single record, a persistent-hiccups case report whose
+  abstract named type 2 diabetes only as an incidental unrelated
+  comorbidity, was manually excluded after Codex review flagged it, since
+  v9 deliberately reverted the automated same-sentence co-occurrence rule
+  that would otherwise have caught it) and refreshed the corpus-library
+  snapshot (156 papers total).
 
 ### Changed
 
