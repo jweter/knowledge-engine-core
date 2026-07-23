@@ -1,87 +1,83 @@
 # Daily Repository Status
 
-**Date:** 2026-07-23 01:29 CEST  
+**Date:** 2026-07-23 06:26 CEST  
 **Repository:** `jweter/knowledge-engine-core`  
-**Branch inspected:** `claude/m14-pmc-conversion-error-urqzob`  
-**Current draft PR:** #105 — `feat: M20 extraction-review-generate CLI command`  
-**Current milestone:** M20 — extraction-review-generate CLI command
+**Branch inspected:** `main`  
+**Current open PR:** #105 — `feat: M20 extraction-review-generate CLI command`  
+**Current milestone:** M20 — extraction-review generation CLI, authorized by issue #104
 
 ## Roadmap authorization
 
-`docs/roadmap.md` authorizes Phase 2 work to extract evidence structures while preserving exact source-span traceability. `docs/phase2_design.md` and issue #104 specifically authorize M20 as CLI plumbing over the already implemented M16–M19 extraction pipeline. The command is a separate opt-in operation and does not change `corpus-import`, the evidence schema, or scientific-judgment fields.
+`docs/roadmap.md` authorizes Phase 2 Evidence Records work to extract scientific structures while preserving exact page/span traceability. `docs/phase2_design.md` records M15 through M19 as completed on `main` and leaves research-question acquisition, research-question-relative `evidence_direction`, and PICO extraction as later, not-yet-scoped milestones.
 
-## Current repository and PR state
+Issue #104 authorizes M20 as a narrow CLI-plumbing milestone: run the existing deterministic M16–M19 pipeline against one persisted paper and write draft review items to a separate JSONL review queue. It does not authorize new extraction semantics, schema changes, automatic evidence validation, or changes to `corpus-import`.
 
-- PR #105 is open, mergeable, and was converted back to draft during this run because all observed workflows had not yet completed.
-- Head commit inspected: `4e2def84f5d7d46b90ea8d2366e1dbff41ed5676`.
-- Base commit recorded by the PR: `1a4ab716088261c37e1ef97c03a717e833cfa26c` on `main`.
-- Changed files are limited to `CHANGELOG.md`, `README.md`, `docs/phase2_design.md`, `knowledge_engine/entrypoint.py`, `knowledge_engine/extraction/evidence_items.py`, and `tests/test_extraction_review_generate_cli.py`.
-- No unresolved inline review thread was returned by the connected GitHub review-thread query.
-- Local `git status`, uncommitted changes, untracked files, and local working-tree cleanliness are not exposed by the connected GitHub app and remain unverified.
+## Current repository state
 
-## Completed work
+- PR #105 is open, draft, mergeable, and targets `main`.
+- PR #105 head is `5b12ae0a89a2bbc82f3cd250dc2bd60a9a896c9e` on branch `claude/m14-pmc-conversion-error-urqzob`.
+- Issue #104 remains open and is the authoritative M20 tracker.
+- The latest verified commit on `main` before this status update was `1a4ab716088261c37e1ef97c03a717e833cfa26c`.
+- Local `git status`, uncommitted changes, untracked files, and local working-tree cleanliness are not visible through the connected GitHub app.
 
-- M20 issue #104 defines a separate opt-in `ke extraction-review-generate` command.
-- The PR wires persisted `PaperPage` records through section detection, claim-candidate detection, framing classification, and draft evidence-item generation.
-- Output is a distinct JSONL review queue, not a validated `EvidenceRecord` file.
-- Unknown-paper, zero-page, zero-candidate, overwrite-protection, and real repository round-trip cases are documented as covered by tests in the PR.
-- PR #105 was restored to draft state in this run; no merge or ready-for-review action was performed.
+## Stand-down decision
 
-## Tests and checks actually observed
+An open pull request exists. Under the repository automation stand-down policy, this run treated PR #105 as another contributor's active work in progress. No implementation was attempted, no competing branch or pull request was created, and no commit was pushed to PR #105.
 
-- GitHub Actions Quality run `29964808290` completed successfully on head `4e2def84f5d7d46b90ea8d2366e1dbff41ed5676`.
-- M14 Mass Discovery run `29964808287` was still in progress when inspected. This workflow was observed but no result is claimed.
-- The PR description reports local Ruff formatting, Ruff lint, strict mypy, and pytest with `559 passed`, including seven new tests. Those are author-reported results; this status report did not rerun them locally.
-- No local Git, Ruff, mypy, pytest, or application command was executed by this report task.
+## Verified work in progress
+
+PR #105 proposes:
+
+- `ke extraction-review-generate --paper-id <int> --output <path> [--force]`;
+- deterministic execution of M16 section detection, M17 claim-candidate detection, M18 framing classification, and M19 draft-item generation;
+- explicit diagnostics for unknown papers and papers with no persisted page provenance;
+- a distinct draft-review JSONL artifact that is not a validated `EvidenceRecord` file;
+- documentation and tests scoped to the M20 command.
+
+## Tests and checks observed
+
+For PR #105 head `5b12ae0a89a2bbc82f3cd250dc2bd60a9a896c9e`:
+
+- Quality workflow run `29966324961`: **success**.
+- M14 Mass Discovery workflow run `29966324967`: **success**.
+
+No local Ruff, mypy, pytest, Git, or application command was executed in this stand-down run.
 
 ## Current errors, issues, blockers, and risks
 
-### 1. No reproducible M20 defect is currently verified
+### 1. No new defect was investigated
 
-No open GitHub issue labeled `bug`, failing Quality result, or unresolved review thread was returned. `docs/error_log.md` and `docs/codex_fixes.md` are compatibility pointers and must not receive new entries; unresolved defects belong in GitHub issues and verified resolutions belong in `docs/error_resolution_ledger.md`.
+Because PR #105 is open, the stand-down rule prohibited competing implementation or defect work. No new `bug` issue was filed without independently reproduced evidence.
 
-**Confidence:** High for connected GitHub state; local-only defects remain outside connector visibility.
+### 2. Human or contributor review remains required
 
-### 2. One workflow result remains incomplete
+PR #105 is intentionally left as draft. Its roadmap fit, final diff, command behavior, documentation claims, and acceptance criteria still require review by the active contributor or a human maintainer.
 
-The M14 Mass Discovery workflow associated with the M20 head was still running when inspected. The PR states that M20 does not touch M14-watched paths, so the reason that workflow was triggered has not been independently established in this run.
+### 3. Local working-tree state is unavailable
 
-**Likely cause:** Workflow path-filter or repository event configuration may be broader than the PR author expected, but this is not yet a verified defect.  
-**Confidence:** Low until the workflow completes and its trigger context is inspected.
-
-### 3. Working-tree cleanliness is unverified
-
-The connector exposes committed GitHub state but not the active Codex checkout.
-
-**Confidence:** High.
+The connected GitHub app exposes committed remote state but cannot verify the active contributor's local checkout or cleanliness.
 
 ## Exact continuation point
 
-Inspect completion of M14 Mass Discovery run `29964808287`. If it succeeds and no new review feedback appears, verify the final PR diff and exact-head Quality evidence. If it fails, capture the first failing step and exact sanitized evidence before changing code or workflow configuration.
+Continue review of draft PR #105 from head `5b12ae0a89a2bbc82f3cd250dc2bd60a9a896c9e`. Verify that the command remains strictly within issue #104 and does not produce or imply validated evidence records.
 
-## Next smallest task
+## Remaining steps
 
-Perform a read-only inspection of workflow run `29964808287` after completion. Do not broaden M20 into research-question acquisition, evidence-direction classification, PICO extraction, database schema changes, or import integration.
-
-## Steps remaining before PR #105 can be marked ready and merged
-
-1. Inspect the final outcome of M14 Mass Discovery run `29964808287`.
-2. If the run fails, record and reproduce the first substantive error before applying a fix.
-3. Confirm Quality remains successful on the exact final head.
-4. Review the final diff against issue #104 and the Phase 2 roadmap boundary.
-5. Confirm there are no unresolved review threads or required review feedback.
-6. Verify the real local working tree is clean from an authenticated checkout.
-7. Confirm the branch is current with `main` and remains mergeable.
-8. Mark ready and merge only after every applicable item is evidenced.
+1. Review PR #105's complete diff against issue #104 and `docs/phase2_design.md`.
+2. Confirm the draft-review JSONL output is clearly distinct from validated `evidence_records.jsonl`.
+3. Confirm zero-page, unknown-paper, zero-candidate, overwrite-protection, and normal-output behavior are covered.
+4. Confirm no extraction semantics, schema contracts, or `corpus-import` behavior changed outside M20 scope.
+5. Confirm there are no unresolved review threads or required review changes.
+6. Independently verify a clean local working tree.
+7. Keep PR #105 draft until a human or active contributor decides it is ready; this automation must not mark it ready or merge it.
 
 ## Access and action notes
 
-- Authenticated GitHub repository, roadmap, design, status-file, issue, PR, workflow, review-thread, PR-state, and file-write access succeeded.
-- No issue was created because no reproducible defect was verified.
-- `docs/error_log.md` and `docs/codex_fixes.md` were not modified because repository policy directs records elsewhere.
-- This commit changes only `docs/daily_repo_status.md`.
-- PR #105 was converted to draft. It was not marked ready and was not merged.
+- Authenticated GitHub PR, issue, file-read, workflow-read, and file-write access succeeded.
+- This run changed only `docs/daily_repo_status.md` on `main`.
+- No implementation branch, issue, or pull request was created.
+- No existing PR was modified, marked ready, or merged.
 
 ## Coding lesson
 
-A workflow that appears unrelated to a change is evidence to inspect, not permission to speculate; verify the trigger and first failing step before altering path filters or implementation code.
+A stand-down rule is concurrency control: when another branch already owns a milestone, the safest contribution is accurate state reporting rather than parallel edits that create conflicts or duplicate decisions.
