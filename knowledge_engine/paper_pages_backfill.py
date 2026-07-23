@@ -87,7 +87,7 @@ def backfill_paper(
 
     try:
         parsed = parser.parse(source_path)
-    except (DocumentParseError, FileNotFoundError) as exc:
+    except (DocumentParseError, OSError) as exc:
         return (
             BackfillOutcome(
                 paper_id=paper.id,

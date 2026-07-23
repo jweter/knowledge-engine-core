@@ -113,6 +113,26 @@ def test_backfill_paper_reports_parse_failure(tmp_path: Path) -> None:
     assert parsed is None
 
 
+def test_backfill_paper_reports_os_error_as_parse_failure_not_a_crash(tmp_path: Path) -> None:
+    """A source file can pass the existence check and still become
+    inaccessible (deleted mid-race, permission denied, I/O error) by the
+    time it's actually opened -- PyMuPDF/the OS raise a plain OSError for
+    this, not DocumentParseError or FileNotFoundError specifically. This
+    must be reported per-paper, never allowed to escape and abort the
+    batch."""
+
+    source_path = tmp_path / "paper.pdf"
+    source_path.write_bytes(b"placeholder")
+    paper = _paper(source_path=str(source_path))
+    parser = _FakeParser(PermissionError("permission denied"))
+
+    outcome, parsed = backfill_paper(paper, parser)
+
+    assert outcome.status == "parse_failed"
+    assert parsed is None
+    assert outcome.detail == "permission denied"
+
+
 def test_backfill_paper_returns_parsed_on_success(tmp_path: Path) -> None:
     source_path = tmp_path / "paper.pdf"
     source_path.write_bytes(b"placeholder")
