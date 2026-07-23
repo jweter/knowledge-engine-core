@@ -13,6 +13,26 @@ Long term, the ecosystem may include:
 - `knowledge-engine-graph`: citation and knowledge graph
 - `knowledge-engine-models`: trained and evaluated models
 
+## The Finished Product Is Not an Offline PDF Archive
+
+`docs/roadmap.md`'s Phase 0 goal of running `knowledge-engine-core` fully
+offline, and its framing as a "local source vault," describe `core`'s own
+engineering properties -- testable and operable without a network dependency,
+safe to run in isolation -- not the shape of the product a person eventually
+uses. Those properties keep `core` trustworthy and reproducible; they are not
+a claim that the finished ecosystem is a local folder of hoarded PDFs someone
+has to search themselves.
+
+The finished product is a live, AI-powered search and discovery engine. A
+person asks a real research question; the system searches and reasons across
+the evidence `core` has validated and the connections the Knowledge Graph
+(Phase 4) has modeled, and returns a report scoped to that specific
+question -- with an explicit confidence rating, not just a list of matching
+papers. `core` is the trustworthy, source-linked, deterministic foundation
+underneath that experience; it is not the experience itself. The AI Interface
+Layer described below is what turns that foundation into the product a person
+actually uses.
+
 ## Guiding Idea
 
 The system should help humans understand what is known, what is uncertain, what
