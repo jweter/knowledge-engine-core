@@ -61,9 +61,17 @@ fields a promotion tool owns (`schema_version`, a deterministic
 `evidence_record_id`, default `review_status`/`review_checklist`/
 `review_notes`) are filled in automatically; an incomplete record is never
 promoted. Promotion is idempotent and append-only.
+M22 (issue #110, in progress) adds the `ke paper-pages-backfill` CLI
+command, closing the M15 "Known gap" below exactly as originally scoped in
+issue #89: papers imported before M15 have zero `paper_pages` rows and
+cannot be extracted at all. Backfill re-parses a paper's still-present
+original local PDF and persists the result only once its freshly computed
+`content_hash` matches the paper's already-persisted one -- a mismatch or
+a missing source file is reported, never silently skipped or trusted.
 `research_question` acquisition and real research-question-relative
 `evidence_direction` classification (i.e. automatically, rather than by
-human review) and PICO extraction remain later, not-yet-scoped milestones.
+human review), PICO extraction, and the Relationship Layer remain later,
+not-yet-scoped milestones.
 
 ## Mission
 
@@ -201,24 +209,25 @@ Implemented:
   both cases.
 
 **Known gap, found by Codex automated review, deliberately not fixed in this
-milestone**: `paper_pages` is only populated going forward, by
-`PaperRepository.add_parsed_paper`. A paper imported before this migration has
-zero page rows after upgrading, and cannot simply be re-imported to backfill
-them — `papers.source_path`/`doi`/`content_hash` uniqueness rejects a repeat
-import of the same file. This matches how every prior additive schema change
-in this codebase works (v2/v3 added columns that start empty for pre-existing
-rows and are populated only by new operations going forward), but with one
-real difference: a genuine backfill *is* possible for `paper_pages` specifically
+milestone (resolved by M22, see Status above)**: `paper_pages` is only
+populated going forward, by `PaperRepository.add_parsed_paper`. A paper
+imported before this migration has zero page rows after upgrading, and
+cannot simply be re-imported to backfill them — `papers.source_path`/`doi`/
+`content_hash` uniqueness rejects a repeat import of the same file. This
+matches how every prior additive schema change in this codebase works
+(v2/v3 added columns that start empty for pre-existing rows and are
+populated only by new operations going forward), but with one real
+difference: a genuine backfill *is* possible for `paper_pages` specifically
 (re-parse the paper's original local PDF, since the same per-page normalization
 logic in `PyMuPDFParser` is deterministic), but only as long as that PDF file
 is still present — and it may not be, since local PDFs are treated as
-ephemeral working files throughout this project, not permanent storage. A
-backfill CLI command is real, separately-scoped work (locating papers with a
-still-present source file, re-parsing, upserting page rows, and reporting
-which papers could not be backfilled) — tracked as a follow-up in issue #89,
-not implemented here. `PaperPage`'s docstring documents that extraction logic
-must treat an empty `pages` list as "no page provenance available," not
-assume every paper has one.
+ephemeral working files throughout this project, not permanent storage.
+M22's `ke paper-pages-backfill` command implements exactly this: locating
+papers with a still-present source file, re-parsing, upserting page rows,
+and reporting which papers could not be backfilled. `PaperPage`'s docstring
+documents that extraction logic must treat an empty `pages` list as "no
+page provenance available," not assume every paper has one -- true for any
+paper whose source file is no longer present, even after backfill runs.
 
 This prerequisite was Phase 2's first concrete milestone. Automated claim and
 evidence extraction cannot be reviewed for correctness — reviewers cannot

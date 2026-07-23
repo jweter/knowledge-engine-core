@@ -63,6 +63,10 @@ Phase 2 completed capabilities include:
   reviewer-completed draft items into real `EvidenceRecord` rows, reusing
   the existing evidence validator unchanged; idempotent, append-only, and
   adds zero new judgment logic
+- the `ke paper-pages-backfill` CLI command, which backfills `paper_pages`
+  rows for papers imported before M15 by re-parsing a still-present local
+  PDF, only trusting the result once its content hash matches what was
+  originally persisted
 
 See [docs/phase2_design.md](docs/phase2_design.md) for the Phase 2 architecture
 and milestone-by-milestone status.
@@ -100,9 +104,13 @@ and milestone-by-milestone status.
 - **M21:** added the `ke extraction-review-promote` CLI command, closing the
   extraction-to-evidence loop: promotes reviewer-completed draft items into
   real `EvidenceRecord` rows using the existing validator unchanged.
+- **M22:** added the `ke paper-pages-backfill` CLI command, closing the M15
+  "Known gap" tracked since issue #89: pre-M15 papers can now become
+  extractable again, but only when a re-parse's content hash matches what
+  was originally persisted.
 
 Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is in
-progress through M21. See [docs/roadmap.md](docs/roadmap.md) and
+progress through M22. See [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase2_design.md](docs/phase2_design.md) for the next milestone.
 
 ## Requirements
@@ -297,17 +305,18 @@ The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now inc
 completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
 scale-readiness, and the controlled 500-paper rehearsal
 ([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
-[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M21:
+[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M22:
 deterministic, rule-based structured-section detection, claim-candidate
 detection, claim framing-cue classification, and draft extraction
 review-item generation, runnable end-to-end via `ke
 extraction-review-generate`, with a reviewer-completed draft now
 promotable into a real `EvidenceRecord` via `ke extraction-review-promote`.
-Automated, research-question-relative `evidence_direction` classification
-is not yet implemented -- `research_question` acquisition has no automated
-source anywhere in this pipeline yet; a human reviewer supplies it before
-promotion. All Phase 2 extraction is rule-based, with no LLM-based
-extraction, synthesis, or reasoning of any kind.
+`ke paper-pages-backfill` restores extractability for papers imported
+before M15. Automated, research-question-relative `evidence_direction`
+classification is not yet implemented -- `research_question` acquisition
+has no automated source anywhere in this pipeline yet; a human reviewer
+supplies it before promotion. All Phase 2 extraction is rule-based, with
+no LLM-based extraction, synthesis, or reasoning of any kind.
 
 Neither phase should be expanded into Alembic adoption, a new package manager,
 persistent telemetry, vector search, a graph, AI reasoning, an API, web
@@ -326,9 +335,6 @@ Known issues and future fixes are tracked in
   semantics
 - FTS update/delete synchronization is not implemented
 - scholarly work/version/file/assertion identity is not yet separated
-- `paper_pages` provenance is only populated for papers imported after M15; a
-  backfill utility for pre-M15 papers is tracked as a follow-up (see
-  [docs/phase2_design.md](docs/phase2_design.md))
 
 ## Contributing
 
