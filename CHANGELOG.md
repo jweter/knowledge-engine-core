@@ -194,6 +194,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `data/corpus_library/obesity_metabolic_disease_library.sqlite3` snapshot
   (84 papers total, including the pre-existing prototype rows) produced by
   `ke corpus-library-export`.
+- Grew `sources.csv` by another 74 records (the second discovery batch,
+  `retstart=250`, under the corrected v7 ruleset from the start) and
+  refreshed the corpus-library snapshot (158 papers total).
 
 ### Changed
 
