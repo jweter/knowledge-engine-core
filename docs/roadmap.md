@@ -193,7 +193,11 @@ Detailed milestone records include:
 - `v0.3.0`: Expanded metadata enrichment and citation capture.
 - `v0.4.0`: Knowledge graph foundation.
 - `v0.5.0`: Vector search.
-- `v0.6.0`: AI-assisted reasoning experiments.
+- `v0.6.0`: Stabilize `core`'s Evidence and Knowledge Graph output as a
+  consumable interface (not new reasoning logic in `core` itself) so the
+  separately versioned `knowledge-engine-ai` package can begin its own
+  reasoning experiments on top of it; see
+  `docs/roadmap/long_term_vision.md`.
 - `v0.9.0`: Feature-complete beta.
 - `v1.0.0`: Stable public release.
 
