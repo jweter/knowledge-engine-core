@@ -69,10 +69,12 @@ original local PDF and persists the result only once its freshly computed
 `content_hash` matches the paper's already-persisted one -- a mismatch or
 a missing source file is reported, never silently skipped or trusted.
 `research_question` acquisition, real research-question-relative
-`evidence_direction` classification, PICO extraction, a synthesized
-confidence rating, and the Relationship Layer are explicitly out of scope
-for `core` -- they belong to the future `knowledge-engine-ai` layer; see
-`docs/roadmap/long_term_vision.md`'s AI Interface Layer section.
+`evidence_direction` classification, PICO extraction, and a synthesized
+confidence rating are explicitly out of scope for `core` -- they belong to
+the future `knowledge-engine-ai` layer; see
+`docs/roadmap/long_term_vision.md`'s AI Interface Layer section. The
+Relationship Layer (below) remains a `core` milestone -- not yet scoped,
+but the AI Interface Layer is built on top of it, not in place of it.
 
 ## Mission
 
