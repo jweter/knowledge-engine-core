@@ -75,6 +75,11 @@ the future `knowledge-engine-ai` layer; see
 `docs/roadmap/long_term_vision.md`'s AI Interface Layer section. The
 Relationship Layer (below) remains a `core` milestone -- not yet scoped,
 but the AI Interface Layer is built on top of it, not in place of it.
+M23 (issue #117) constrains `extraction_status` to a closed
+`ALLOWED_EXTRACTION_STATUSES` vocabulary and adds `source_span`
+character-offset-range validation, resolving two items this design's Open
+Questions section had carried since M15 pending real extraction logic to
+define meaningful values -- see Open Questions below for the values decided.
 
 ## Mission
 
@@ -337,6 +342,13 @@ make the Success Criteria above true rather than aspirational):
   this milestone; a stricter offset-range check can be added once extraction
   logic defines how it populates that value.
 
+**M23 follow-up (implemented)**: with M16-M22's real pipeline now defining
+real values, `extraction_status` is constrained to a closed
+`ALLOWED_EXTRACTION_STATUSES` set (mirroring `ALLOWED_REVIEW_STATUSES`), and
+`source_span.start_offset`/`end_offset` are validated as a non-negative,
+correctly ordered integer pair when present -- see Open Questions below for
+the exact values and rationale.
+
 ## Renderer Changes (implemented)
 
 Confirmed by inspection: every evidence renderer in `knowledge_engine/cli.py`
@@ -441,15 +453,20 @@ see Extraction Methodology section). Resolved in M20: automated extraction
 runs as a separate, opt-in command (`ke extraction-review-generate`),
 analogous to `ke metadata-preview`, never as part of `ke corpus-import` — so
 an extraction issue can never affect import success/failure semantics.
+Resolved in M23, now that M16-M22's real pipeline defines real values instead
+of speculative ones: `extraction_status` is constrained to
+`ALLOWED_EXTRACTION_STATUSES = {"draft_review_required",
+"draft_manual_prototype"}` — the two, and only two, values anything in this
+codebase actually produces (`draft_review_required` for every M19-generated
+draft, unconditionally, including after M21 promotion, since promotion never
+overwrites it; `draft_manual_prototype` for the existing manual prototype
+records) — enforced with the same `ALLOWED_...` pattern `review_status`
+already uses. `source_span` now also validates `start_offset`/`end_offset`
+when present: both must be given together, as non-negative integers, with
+`start_offset < end_offset`, matching how `build_draft_evidence_item` (M19)
+already populates them from `ClaimCandidate.start_offset`/`end_offset`.
 Remaining:
 
-- What allowed-value vocabulary should `extraction_status` use once real
-  extraction logic defines meaningful states, and should it be enforced with
-  an `ALLOWED_...` set the same way `review_status` is? (see Validator
-  Changes — deliberately left unconstrained for now, beyond non-empty-string)
-- Should a stricter `source_span` check requiring a character-offset range
-  (not just `page_number`) be added once extraction logic defines how it
-  populates one?
 - What is the minimum viable relationship vocabulary for the Relationship
   Layer, and should it be constrained to a fixed enum from the first
   milestone (as `evidence_direction` already is) or allowed to grow?

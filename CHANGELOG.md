@@ -118,6 +118,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   skipped, and one paper's parse failure never aborts the rest of the
   batch. Supports `--dry-run`. Idempotent: a paper that already has pages
   is never reprocessed by a repeated run.
+- Constrained `extraction_status` to a closed vocabulary (M23, issue #117):
+  `ke evidence-validate` now rejects any `extraction_status` value outside
+  `ALLOWED_EXTRACTION_STATUSES = {"draft_review_required",
+  "draft_manual_prototype"}` -- the only two values anything in this
+  codebase actually produces -- instead of accepting any non-empty string.
+  Also validates `source_span.start_offset`/`end_offset` when present: both
+  must be given together, as non-negative integers, with
+  `start_offset < end_offset`, matching how the M19 extraction pipeline
+  already populates them.
 
 ### Changed
 
