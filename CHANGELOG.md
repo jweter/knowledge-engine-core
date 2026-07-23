@@ -252,6 +252,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   on-topic (their titles directly name tirzepatide and semaglutide as the
   intervention) and kept. Refreshed the corpus-library snapshot (317
   papers total, 718 authors).
+- Grew `sources.csv` by another 73 records (the fifth discovery batch,
+  `retstart=1000`). Individually read every case-report-style accepted
+  record (by title or venue) and every NOD-SCID/mouse-strain-name
+  collision before acquisition, per the process established in the
+  `retstart=750` batch. Found and excluded 1 incidental-comorbidity match:
+  a case report on apremilast treatment for a rare skin disorder (acquired
+  reactive perforating collagenosis) in which type 2 diabetes was one of
+  several stable, unrelated patient comorbidities. Confirmed 4 other
+  flagged rows genuinely on-topic and kept them, including a type 1
+  diabetes multi-omics paper that references "non-obese diabetic (NOD)"
+  mice as a real T1D research model (not an incidental term collision --
+  its actual topic is type 1 diabetes pathogenesis and drug candidates).
+  Refreshed the corpus-library snapshot (390 papers total, 873 authors).
 
 ### Changed
 
