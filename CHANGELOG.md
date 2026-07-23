@@ -239,6 +239,16 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   dropped 44% of previously accepted, legitimately on-topic records -- so
   v9 reverts that specific rule while keeping the pediatric and
   correction-notice exclusions, which showed no such false-positive cost.
+- Manually excluded a second incidental-comorbidity false positive from the
+  already-merged `retstart=0` batch: a kidney-stone-treatment case report
+  (`pmc-13262153`) whose abstract named obesity only as an unrelated patient
+  comorbidity, found by applying the same review pattern that caught a
+  near-identical case (a persistent-hiccups case report naming type 2
+  diabetes as an incidental comorbidity) in the `retstart=250` batch. Since
+  v9 deliberately has no automated rule for this pattern, both records were
+  excluded by direct manual review rather than by another ruleset change.
+  `sources.csv` now holds 83 sources (80 from `retstart=0`, down from 81);
+  refreshed the corpus-library snapshot (83 papers, 136 authors).
 - Fixed M14 bounded PubMed/PMC discovery retrying NCBI failures (including PMC
   identifier conversion) with only the steady-state request pacing interval instead
   of a real backoff; retries now use exponential backoff and failure messages
