@@ -62,16 +62,17 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 155 sources: the small historical GLP-1
-prototype set (3 rows) plus 152 accepted records from the first two small
-(`--limit 250`) automated discovery batches (`retstart=0`, 80 records, and
-`retstart=250`, 72 records) of the project owner's larger corpus-building
-effort, following M14's rules. Ruleset corrections along the way held 3
-pediatric-titled records and 1 correction-notice record that earlier rule
-versions had wrongly accepted. A further two records -- single-patient case
-reports whose abstracts named a target disease term (type 2 diabetes,
-obesity) only as an incidental, unrelated patient comorbidity, unrelated to
-the paper's actual topic -- were manually excluded after review, since v9
+The committed manifest holds 242 sources: the small historical GLP-1
+prototype set (3 rows) plus 239 accepted records from the first three small
+(`--limit 250`) automated discovery batches (`retstart=0`, 80 records;
+`retstart=250`, 72 records; `retstart=500`, 87 records) of the project
+owner's larger corpus-building effort, following M14's rules. Ruleset
+corrections along the way held 3 pediatric-titled records and 1
+correction-notice record that earlier rule versions had wrongly accepted.
+A further five records -- single-patient case reports whose abstracts named
+a target disease term (type 2 diabetes, obesity, chronic kidney disease)
+only as an incidental, unrelated patient comorbidity, unrelated to the
+paper's actual topic -- were manually excluded after review, since v9
 deliberately reverted the automated same-sentence co-occurrence rule that
 would otherwise have caught this pattern (real-data validation showed that
 rule cost far more legitimate records than the false positives it fixed).

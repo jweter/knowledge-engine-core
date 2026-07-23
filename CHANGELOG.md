@@ -203,7 +203,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   comorbidity, was manually excluded after Codex review flagged it, since
   v9 deliberately reverted the automated same-sentence co-occurrence rule
   that would otherwise have caught it) and refreshed the corpus-library
-  snapshot (156 papers total).
+  snapshot (156 papers total; a follow-up correction PR then manually
+  excluded a second incidental-comorbidity false positive found by
+  applying the same review to the already-merged `retstart=0` batch,
+  leaving 155 papers -- see the `### Fixed` entry below).
+- Grew `sources.csv` by another 87 records (the third discovery batch,
+  `retstart=500`, fully under the v9 ruleset). Proactively screened all 90
+  automatically accepted records for the incidental-comorbidity
+  false-positive pattern (a single-patient case report whose abstract
+  names a target disease term only as unrelated patient background) before
+  acquisition, since v9 has no automated rule for it; found and manually
+  excluded 3 further matches (TB peritonitis in a dialysis patient with
+  diabetes, S. hominis endophthalmitis in a diabetic patient, and
+  immune-checkpoint-inhibitor toxicity in a bladder-cancer patient with
+  chronic kidney disease and diabetes -- in each case the disease term was
+  purely background, unrelated to the paper's actual intervention).
+  Refreshed the corpus-library snapshot (242 papers total, 493 authors).
 
 ### Changed
 
