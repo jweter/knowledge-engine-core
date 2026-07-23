@@ -80,6 +80,7 @@ class DraftEvidenceItem:
     research_question: str | None = None
     evidence_direction: str | None = None
     study_type: str | None = None
+    study_design_rules_version: str | None = None
     population: str | None = None
     intervention: str | None = None
     comparator: str | None = None
@@ -132,6 +133,7 @@ class DraftEvidenceItem:
                 "matched_cue": self.claim_framing.matched_cue,
                 "candidate_rules_version": candidate.rules_version,
                 "framing_rules_version": self.claim_framing.rules_version,
+                "study_design_rules_version": self.study_design_rules_version,
             },
         }
 
@@ -142,6 +144,7 @@ def build_draft_evidence_item(
     *,
     study_type: str | None = None,
     limitations: list[str] | None = None,
+    study_design_rules_version: str | None = None,
 ) -> DraftEvidenceItem:
     """Build one draft evidence item from a paper and a classified candidate.
 
@@ -149,6 +152,10 @@ def build_draft_evidence_item(
     to every candidate from the same paper), so the caller computes them
     once per paper -- typically via `classify_study_type`/
     `extract_limitations` -- rather than this function deriving them itself.
+    `study_design_rules_version` records which ruleset produced them (or
+    found nothing), mirroring `candidate_rules_version`/
+    `framing_rules_version`, so a later ruleset revision doesn't leave a
+    draft item's `study_type`/`limitations` provenance unrecorded.
     """
 
     candidate = framing.candidate
@@ -171,6 +178,7 @@ def build_draft_evidence_item(
         created_for_milestone=_CREATED_FOR_MILESTONE,
         study_type=study_type,
         limitations=limitations,
+        study_design_rules_version=study_design_rules_version,
     )
 
 
@@ -180,10 +188,17 @@ def build_draft_evidence_items(
     *,
     study_type: str | None = None,
     limitations: list[str] | None = None,
+    study_design_rules_version: str | None = None,
 ) -> tuple[DraftEvidenceItem, ...]:
     """Build one draft evidence item per classified candidate, order preserved."""
 
     return tuple(
-        build_draft_evidence_item(paper, framing, study_type=study_type, limitations=limitations)
+        build_draft_evidence_item(
+            paper,
+            framing,
+            study_type=study_type,
+            limitations=limitations,
+            study_design_rules_version=study_design_rules_version,
+        )
         for framing in framings
     )

@@ -21,6 +21,7 @@ from knowledge_engine.extraction import (
     CLAIM_FRAMING_RULES_VERSION,
     DRAFT_EVIDENCE_ITEM_RULES_VERSION,
     SECTION_DETECTION_RULES_VERSION,
+    STUDY_DESIGN_RULES_VERSION,
     build_draft_evidence_items,
     classify_claim_framing,
     classify_study_type,
@@ -198,6 +199,7 @@ def _record_extraction_run(
             claim_candidate_rules_version=CLAIM_CANDIDATE_RULES_VERSION,
             claim_framing_rules_version=CLAIM_FRAMING_RULES_VERSION,
             draft_evidence_item_rules_version=DRAFT_EVIDENCE_ITEM_RULES_VERSION,
+            study_design_rules_version=STUDY_DESIGN_RULES_VERSION,
         )
 
 
@@ -431,7 +433,11 @@ def extraction_review_generate(
     limitations = extract_limitations(pages, sections)
     paper_metadata = PaperMetadata(paper_id=paper.id, doi=paper.doi, title=paper.title)
     items = build_draft_evidence_items(
-        paper_metadata, framings, study_type=study_type, limitations=limitations
+        paper_metadata,
+        framings,
+        study_type=study_type,
+        limitations=limitations,
+        study_design_rules_version=STUDY_DESIGN_RULES_VERSION,
     )
 
     lines = [json.dumps(item.to_dict()) for item in items]

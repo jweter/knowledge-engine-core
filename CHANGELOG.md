@@ -163,7 +163,12 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   question, extracted the same conservative way M17/M18 extract claims: a
   missing signal produces `None`, never a guess. Wired into `ke
   extraction-review-generate`, which now populates `study_type` and
-  `limitations` on every generated draft item when detected.
+  `limitations` on every generated draft item when detected. Bumps the
+  database to schema version 6: `extraction_runs` gains a fifth rules-version
+  column, `study_design_rules_version`, alongside the four M25 added, and
+  each draft item's own `extraction_context` gains the same field, so a
+  future study-design ruleset revision doesn't leave `study_type`/
+  `limitations` provenance unrecorded at either the run or item level.
 
 ### Changed
 

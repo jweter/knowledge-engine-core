@@ -476,6 +476,11 @@ per invocation: `paper_id`, `output_path`, `page_count`/`section_count`/
 `candidate_count`/`draft_item_count`, and all four extraction-stage rules
 versions (`SECTION_DETECTION_RULES_VERSION`, `CLAIM_CANDIDATE_RULES_VERSION`,
 `CLAIM_FRAMING_RULES_VERSION`, `DRAFT_EVIDENCE_ITEM_RULES_VERSION`).
+M26 adds a fifth (schema version 6): `study_design_rules_version`
+(`STUDY_DESIGN_RULES_VERSION`), recorded the same way so a study-design
+ruleset revision doesn't leave `study_type`/`limitations` provenance
+unrecorded either at the run level or in each draft item's own
+`extraction_context`.
 
 Two deliberate scope boundaries:
 

@@ -311,3 +311,4 @@ def test_extraction_review_generate_end_to_end_against_real_database(
     assert run.claim_candidate_rules_version
     assert run.claim_framing_rules_version
     assert run.draft_evidence_item_rules_version
+    assert run.study_design_rules_version

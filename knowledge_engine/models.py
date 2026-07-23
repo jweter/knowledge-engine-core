@@ -376,6 +376,7 @@ class ExtractionRun(Base):
     claim_candidate_rules_version: Mapped[str] = mapped_column(String(64), nullable=False)
     claim_framing_rules_version: Mapped[str] = mapped_column(String(64), nullable=False)
     draft_evidence_item_rules_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    study_design_rules_version: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[str] = mapped_column(String(32), nullable=False)
 
     paper: Mapped[Paper] = relationship()
