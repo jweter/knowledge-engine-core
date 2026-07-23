@@ -62,27 +62,28 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 318 sources: the small historical GLP-1
-prototype set (3 rows) plus 315 accepted records from the first four small
+The committed manifest holds 317 sources: the small historical GLP-1
+prototype set (3 rows) plus 314 accepted records from the first four small
 (`--limit 250`) automated discovery batches (`retstart=0`, 80 records;
-`retstart=250`, 72 records; `retstart=500`, 86 records; `retstart=750`, 77
+`retstart=250`, 72 records; `retstart=500`, 86 records; `retstart=750`, 76
 records) of the project owner's larger corpus-building effort, following
 M14's rules. Ruleset corrections along the way held 3 pediatric-titled
 records and 1 correction-notice record that earlier rule versions had
-wrongly accepted. A further eight records were manually excluded after
+wrongly accepted. A further nine records were manually excluded after
 review, since v9's disease/intervention keyword match has no automated way
-to catch either pattern: seven single-patient case reports whose abstracts
+to catch either pattern: eight single-patient case reports whose abstracts
 named a target disease term (type 2 diabetes, obesity, chronic kidney
-disease) only as an incidental, unrelated patient comorbidity; and one
-basic cancer biology paper (a cervical-cancer proliferation mechanism
-study, flagged by a Codex review) whose abstract matched only because it
-used a xenograft mouse strain literally named "non-obese diabetic
-(NOD)-SCID," unrelated to metabolic disease. Each new batch is now
-proactively screened for both patterns before PDF acquisition, checking
-both title and venue name for case-report signals after a Codex review
-caught one whose title didn't literally say "case report." See
-`docs/m14_candidate_review_worksheet.md` for the full v6-v9 rules history.
-Accepted records proceed
+disease) only as an incidental, unrelated patient comorbidity -- including
+one whose title named the disease term directly, showing that title
+presence alone doesn't rule out an incidental mention; and one basic
+cancer biology paper (a cervical-cancer proliferation mechanism study,
+flagged by a Codex review) whose abstract matched only because it used a
+xenograft mouse strain literally named "non-obese diabetic (NOD)-SCID,"
+unrelated to metabolic disease. Every case-report-style accepted record
+(by title or venue) in a new batch is now individually read and judged,
+rather than filtered by title keyword alone, after two Codex-caught misses
+in the same batch. See `docs/m14_candidate_review_worksheet.md` for the
+full v6-v9 rules history. Accepted records proceed
 automatically; rejected and held records remain auditable but do not block
 the batch or require owner review. The corpus continues to grow in small
 batches toward a target of at least a couple thousand papers -- see

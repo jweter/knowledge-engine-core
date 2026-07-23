@@ -226,7 +226,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (one further hit, "Experimental models in diabetes research," was
   confirmed genuinely on-topic and kept). Refreshed the corpus-library
   snapshot (241 papers total, 493 authors).
-- Grew `sources.csv` by another 77 records (the fourth discovery batch,
+- Grew `sources.csv` by another 76 records (the fourth discovery batch,
   `retstart=750`). Applied both known false-positive screens proactively
   before acquisition (incidental-comorbidity case reports and
   NOD-SCID/mouse-strain-name term collisions); found and manually excluded
@@ -240,11 +240,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in which obesity was one of several incidental presenting signs,
   unrelated to the paper's actual topic (long-term high-dose
   ethinylestradiol use). Excluded it and broadened the screen to also
-  check venue names; re-screening the rest of the batch with the
-  broadened check found two further "JCEM case reports" records, both
-  confirmed genuinely on-topic (their titles directly name tirzepatide and
-  semaglutide as the intervention) and kept. Refreshed the corpus-library
-  snapshot (318 papers total, 719 authors).
+  check venue names. Individually re-reading every case-report-style
+  accepted record in the batch (rather than relying on the title-keyword
+  filter alone) found one further miss: a title that names the disease
+  term directly ("Case Report: Uremia secondary to acute pyelonephritis in
+  a patient with type 2 diabetes mellitus") does not guarantee the mention
+  is central rather than incidental -- the patient's diabetes was
+  well-controlled background, unrelated to the paper's actual topic
+  (glucocorticoid-treated tubulointerstitial nephritis). Excluded it; the
+  remaining two "JCEM case reports" records were confirmed genuinely
+  on-topic (their titles directly name tirzepatide and semaglutide as the
+  intervention) and kept. Refreshed the corpus-library snapshot (317
+  papers total, 718 authors).
 
 ### Changed
 
