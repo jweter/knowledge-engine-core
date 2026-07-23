@@ -92,6 +92,11 @@ with which ruleset versions, and what it produced. `core` never
 automatically re-runs extraction on a ruleset change -- a human decides
 when to re-invoke the command; see Extraction Run Persistence section
 below.
+The project owner decided the design's last open question: automated and
+manual evidence records for the same claim are treated as independent
+corroborating records, never reconciled or superseded for display -- see
+Open Questions below, where this required no code change since it is
+already the codebase's real behavior.
 
 ## Mission
 
@@ -581,11 +586,25 @@ without re-reading every JSONL file the command has ever produced. No
 per-item content is already fully captured in its JSONL output (including
 each item's own rules-version `extraction_context`), so a second DB copy of
 the same data would only add duplication with no new information.
-Remaining:
+Decided by the project owner: automated and manual evidence records for the
+same claim are treated as independent corroborating records, never
+reconciled or superseded for display -- the simpler of the two options
+considered, requiring no new "same claim" identity-matching logic (which
+would itself have been a real design question: DOI match? claim-text
+similarity? source-span overlap?) and consistent with this project's
+existing "never silently discard evidence" stance. Confirmed by inspection
+that this is already the codebase's actual behavior:
+`_index_evidence_records_by_doi` groups every record sharing a DOI into a
+list without collapsing or ranking them, `_find_evidence_records` returns
+that full list, and
+`_validate_evidence_records`'s only duplicate check is an exact
+`evidence_record_id` collision (an integrity check, not a same-claim
+merge) -- so `ke evidence`, `ke evidence-report`, and `ke answer
+--evidence` already display every valid record independently regardless of
+`extraction_method`. No code change was required to implement this
+decision; only documenting it.
 
-- How should automated and manual evidence records for the same claim be
-  reconciled if both exist — treated as independent corroborating records, or
-  should one supersede the other for display purposes?
+This closes every item this design's Open Questions section had open.
 
 ## Potential Risks
 
