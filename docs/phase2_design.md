@@ -86,11 +86,12 @@ reusing `evidence_direction`'s exact vocabulary. Automated relationship
 detection is explicitly not implemented -- deciding whether a relationship
 holds between two evidence records remains a human judgment call; see
 Relationship Layer section below.
-M25 (issue #123) adds `extraction_runs` persistence: a new table recording
-that `ke extraction-review-generate` ran against a paper, with which
-ruleset versions, and what it produced. `core` never automatically re-runs
-extraction on a ruleset change -- a human decides when to re-invoke the
-command; see Extraction Run Persistence section below.
+M25 (issue #123, PR #124, merged) adds `extraction_runs` persistence: a new
+table recording that `ke extraction-review-generate` ran against a paper,
+with which ruleset versions, and what it produced. `core` never
+automatically re-runs extraction on a ruleset change -- a human decides
+when to re-invoke the command; see Extraction Run Persistence section
+below.
 
 ## Mission
 
