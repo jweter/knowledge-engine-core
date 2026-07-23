@@ -51,10 +51,19 @@ A separate, opt-in command — never invoked by `corpus-import` — resolving
 this design's open question about how extraction should be triggered. A
 paper with zero persisted pages produces an explicit diagnostic, never a
 silently empty result.
-`research_question` acquisition, real research-question-relative
-`evidence_direction` classification, PICO extraction, and a workflow for
-turning a draft item into a real `EvidenceRecord` remain later,
-not-yet-scoped milestones.
+M21 (issue #107, in progress) adds the `ke extraction-review-promote` CLI
+command, closing the extraction-to-evidence loop for the first time: it
+promotes reviewer-completed draft items (M20's JSONL output, after a human
+has filled in `research_question`/`evidence_direction`/etc.) into real
+`EvidenceRecord` rows, reusing `_validate_evidence_record` unchanged as the
+sole correctness gate and adding zero new judgment logic. Administrative
+fields a promotion tool owns (`schema_version`, a deterministic
+`evidence_record_id`, default `review_status`/`review_checklist`/
+`review_notes`) are filled in automatically; an incomplete record is never
+promoted. Promotion is idempotent and append-only.
+`research_question` acquisition and real research-question-relative
+`evidence_direction` classification (i.e. automatically, rather than by
+human review) and PICO extraction remain later, not-yet-scoped milestones.
 
 ## Mission
 

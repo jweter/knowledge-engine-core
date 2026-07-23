@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import unicodedata
 from collections import Counter
@@ -105,7 +106,16 @@ RetryFailedFromOption = Annotated[
         help="Create an immutable retry run for failed items from this run UUID.",
     ),
 ]
+PromotionInputOption = Annotated[
+    Path,
+    typer.Option("--input", help="Reviewer-completed draft extraction JSONL file."),
+]
+PromotionOutputOption = Annotated[
+    Path,
+    typer.Option("--output", help="Evidence records JSONL file to append promoted records to."),
+]
 ALLOWED_REVIEW_STATUSES = {"draft", "reviewed", "needs_revision", "rejected"}
+EVIDENCE_SCHEMA_VERSION = "0.1"
 REQUIRED_EVIDENCE_FIELDS = {
     "schema_version",
     "evidence_record_id",
@@ -398,6 +408,49 @@ def evidence_report(
         return
 
     console.print(report, markup=False)
+
+
+@app.command("extraction-review-promote")
+def extraction_review_promote(
+    input_path: PromotionInputOption,
+    output: PromotionOutputOption,
+) -> None:
+    """Promote reviewer-completed draft extraction items into evidence records.
+
+    Never infers or classifies a field -- validates and persists only what a
+    human reviewer has already supplied, using the same validator as
+    `ke evidence-validate`.
+    """
+
+    if not input_path.exists():
+        console.print(f"[red]Input file does not exist:[/red] {input_path}")
+        raise typer.Exit(1)
+
+    if input_path.resolve() == output.resolve():
+        console.print(
+            "[red]--input and --output must not be the same file:[/red] "
+            "promoting in place would leave the original draft rows mixed in "
+            "with promoted evidence records."
+        )
+        raise typer.Exit(1)
+
+    result = _promote_evidence_records(input_path, output)
+
+    if result.promoted:
+        console.print(f"[green]Promoted {len(result.promoted)} record(s):[/green] {output}")
+    if result.duplicates:
+        console.print(
+            f"[yellow]Skipped {len(result.duplicates)} already-promoted record(s).[/yellow]"
+        )
+    if result.rejected:
+        console.print(f"[red]Rejected {len(result.rejected)} incomplete record(s):[/red]")
+        for _line_number, errors in result.rejected:
+            for error in errors:
+                console.print(f"- {escape(error)}")
+        raise typer.Exit(1)
+
+    if not result.promoted and not result.duplicates:
+        console.print("[yellow]No records found in input file.[/yellow]")
 
 
 @app.command("corpus-validate")
@@ -765,6 +818,117 @@ def _validate_evidence_record(
     review_notes = record.get("review_notes")
     if (require_review_fields or review_notes is not None) and not isinstance(review_notes, str):
         errors.append(f"Line {line_number}: review_notes must be a string.")
+
+
+@dataclass(frozen=True)
+class PromotionResult:
+    """Outcome of promoting reviewer-completed draft items to evidence records."""
+
+    promoted: list[dict[str, Any]]
+    duplicates: list[str]
+    rejected: list[tuple[int, list[str]]]
+
+
+def _generate_evidence_record_id(record: dict[str, Any]) -> str:
+    """Derive a stable ID from source identity and claim text.
+
+    Deterministic so promoting the same completed record twice produces the
+    same ID, not a fresh one each run -- promotion stays idempotent.
+    """
+
+    source_identity = record.get("source_doi") or record.get("source_title") or ""
+    claim_text = record.get("claim_text") or ""
+    identity = f"{source_identity}|{claim_text}"
+    digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:16]
+    return f"auto-{digest}"
+
+
+def _apply_promotion_defaults(record: dict[str, Any]) -> dict[str, Any]:
+    """Fill in administrative fields a promotion tool -- not a reviewer -- owns.
+
+    Never overwrites a value the reviewer (or an earlier promotion run)
+    already supplied.
+    """
+
+    completed = dict(record)
+    if not completed.get("schema_version"):
+        completed["schema_version"] = EVIDENCE_SCHEMA_VERSION
+    if not completed.get("evidence_record_id"):
+        completed["evidence_record_id"] = _generate_evidence_record_id(record)
+    if not completed.get("review_status"):
+        completed["review_status"] = "draft"
+    if not completed.get("review_checklist"):
+        completed["review_checklist"] = {}
+    if not completed.get("review_notes"):
+        completed["review_notes"] = ""
+    return completed
+
+
+def _promote_evidence_records(input_path: Path, output_path: Path) -> PromotionResult:
+    """Validate and append reviewer-completed draft items to an evidence file.
+
+    Reuses `_validate_evidence_record` unchanged as the sole correctness
+    gate -- this function adds no parallel validation logic.
+    """
+
+    existing_ids: set[str] = set()
+    if output_path.exists():
+        for line in output_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                existing_record = json.loads(stripped)
+            except JSONDecodeError:
+                continue
+            if isinstance(existing_record, dict):
+                existing_id = existing_record.get("evidence_record_id")
+                if isinstance(existing_id, str):
+                    existing_ids.add(existing_id)
+
+    lines = input_path.read_text(encoding="utf-8").splitlines() if input_path.exists() else []
+    promoted: list[dict[str, Any]] = []
+    duplicates: list[str] = []
+    rejected: list[tuple[int, list[str]]] = []
+    seen_ids: set[str] = set(existing_ids)
+
+    for line_number, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        try:
+            record = json.loads(stripped)
+        except JSONDecodeError:
+            rejected.append((line_number, [f"Line {line_number}: invalid JSON."]))
+            continue
+        if not isinstance(record, dict):
+            rejected.append((line_number, [f"Line {line_number}: record must be a JSON object."]))
+            continue
+
+        completed = _apply_promotion_defaults(record)
+        record_id = completed["evidence_record_id"]
+        if isinstance(record_id, str) and record_id in existing_ids:
+            duplicates.append(record_id)
+            continue
+
+        errors: list[str] = []
+        _validate_evidence_record(
+            completed, line_number, seen_ids, errors, require_review_fields=True
+        )
+        if errors:
+            rejected.append((line_number, errors))
+            continue
+
+        promoted.append(completed)
+        existing_ids.add(record_id)
+
+    if promoted:
+        new_lines = "\n".join(json.dumps(record) for record in promoted) + "\n"
+        with output_path.open("a", encoding="utf-8") as handle:
+            handle.write(new_lines)
+
+    return PromotionResult(promoted=promoted, duplicates=duplicates, rejected=rejected)
 
 
 def _index_evidence_records_by_doi(
