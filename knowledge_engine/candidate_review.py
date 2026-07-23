@@ -60,13 +60,19 @@ _PEDIATRIC_POPULATION_TERMS = (
     "adolescent",
     "youth",
 )
+_ADULT_INCLUSION_TERMS = ("adult",)
 """Matches only the title -- not the abstract, unlike the disease/intervention
 terms above. An adult study's abstract can mention pediatric research as
 background context without the study itself being pediatric; a title is a
 much stronger population signal. `exclusion_criteria.md` requires excluding
-sources "limited to pediatric populations"; a title match returns a non-
-"passed" scope result, which routes to `held` (never a silent rejection),
-matching how every other scope-insufficient title is already treated."""
+sources "limited to" pediatric populations, not merely mentioning one -- a
+title also naming an adult population (e.g. "...in adolescents and adults")
+is evidence of a mixed-age study, not one limited to pediatric, so
+`_ADULT_INCLUSION_TERMS` overrides the pediatric match rather than holding
+otherwise-valid adult-inclusive evidence. A title match with no adult term
+returns a non-"passed" scope result, which routes to `held` (never a silent
+rejection), matching how every other scope-insufficient title is already
+treated."""
 
 
 class CandidateReviewError(RuntimeError):
@@ -294,7 +300,9 @@ def _scientific_scope(title: str, abstract: str | None) -> str:
     if not (has_disease and has_intervention):
         return "insufficient_title_abstract_evidence"
     normalized_title = " ".join(title.casefold().split())
-    if any(term in normalized_title for term in _PEDIATRIC_POPULATION_TERMS):
+    has_pediatric_term = any(term in normalized_title for term in _PEDIATRIC_POPULATION_TERMS)
+    has_adult_term = any(term in normalized_title for term in _ADULT_INCLUSION_TERMS)
+    if has_pediatric_term and not has_adult_term:
         return "pediatric_population_title_evidence"
     return "passed"
 

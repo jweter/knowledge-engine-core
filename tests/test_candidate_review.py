@@ -162,6 +162,24 @@ def test_pediatric_titled_candidate_is_held_not_accepted(tmp_path: Path) -> None
     assert item.reason_codes == ("SCIENTIFIC_SCOPE_INSUFFICIENT",)
 
 
+def test_mixed_age_title_with_adult_term_is_not_held_as_pediatric(tmp_path: Path) -> None:
+    """`exclusion_criteria.md` excludes sources "limited to" pediatric
+    populations, not merely mentioning one -- a title naming an adult
+    population too is mixed-age evidence, not pediatric-only, so the
+    pediatric-population check must not hold it."""
+
+    candidate = _candidate()
+    candidate["title"] = "Semaglutide treatment for obesity in adolescents and adults"
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "accepted"
+    assert item.inclusion_rule_result == "passed"
+
+
 def test_pediatric_term_only_in_abstract_does_not_block_acceptance(tmp_path: Path) -> None:
     """The pediatric-population check only reads the title -- an adult study
     whose abstract mentions pediatric research as background context is not
