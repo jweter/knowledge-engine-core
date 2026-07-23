@@ -235,101 +235,38 @@ def test_correction_notice_title_is_held_not_accepted(tmp_path: Path, prefix: st
     assert item.reason_codes == ("SCIENTIFIC_SCOPE_INSUFFICIENT",)
 
 
-def test_incidental_comorbidity_mention_does_not_satisfy_scientific_scope(
+def test_disease_and_intervention_evidence_from_separate_sentences_still_passes(
     tmp_path: Path,
 ) -> None:
-    """v8 regression: a case report whose actual topic is unrelated to the
-    corpus's metabolic-disease-therapeutics scope used to be accepted
-    whenever its abstract merely listed a disease term as one of several
-    patient comorbidities, in a different sentence from any intervention
-    term describing treatment for the paper's actual (unrelated) topic."""
+    """v9: a same-sentence disease/intervention co-occurrence requirement
+    (v8) was tried and reverted. It correctly held one real false positive
+    Codex flagged (a case report whose abstract listed a disease only as an
+    incidental patient comorbidity, unrelated to the paper's actual topic),
+    but re-adjudicating a real 250-candidate discovery batch under it
+    dropped 33 of 74 previously accepted records (44%) -- almost all
+    legitimately on-topic papers whose structured or narrative abstracts
+    simply name the disease in one sentence and describe treatment in
+    another, which is routine scientific writing style, not evidence the
+    paper is off-topic. The net effect was far worse than the single false
+    positive it fixed, so v9 reverts to evidence anywhere in the combined
+    title/abstract text, accepting that rare incidental-comorbidity false
+    positives (like the hiccups case) can occasionally still pass -- this
+    is judged a materially smaller cost than losing large amounts of
+    legitimate corpus content, in a system that lacks a subtler
+    (deterministic, non-ML) way to tell the two cases apart."""
 
     candidate = _candidate()
     candidate["title"] = (
-        "Combined percutaneous auricular vagus nerve stimulation and "
-        "ultrasound-guided phrenic nerve block for persistent hiccups: A case report"
+        "The impact of automated insulin delivery on glucose management in "
+        "people with diabetes and advanced chronic kidney disease"
     )
     candidate["abstract"] = (
-        "RATIONALE: Persistent hiccups lasting more than 48 hours are rare. "
-        "PATIENT CONCERNS: A 62-year-old male with hypertension, type 2 diabetes, "
-        "and prior tuberculosis presented with persistent hiccups. "
-        "INTERVENTIONS: A combined therapy with phrenic nerve block and vagus "
-        "nerve stimulation was administered. "
-        "LESSONS: This treatment option may help persistent hiccups unresponsive "
-        "to conventional therapy."
-    )
-    candidates = tmp_path / "candidates.json"
-    _write_candidates(candidates, [candidate])
-
-    worksheet = prepare_candidate_review(candidates)
-
-    item = worksheet.items[0]
-    assert item.decision == "held"
-    assert item.inclusion_rule_result == "disease_and_intervention_do_not_cooccur"
-    assert item.reason_codes == ("SCIENTIFIC_SCOPE_INSUFFICIENT",)
-
-
-def test_disease_and_intervention_cooccurring_across_title_and_abstract_passes(
-    tmp_path: Path,
-) -> None:
-    """The co-occurrence check must not require both terms in the title
-    alone -- a generic title plus an abstract whose own leading sentence
-    supplies both terms still passes, exactly as
-    `test_abstract_can_supply_complete_scientific_scope_evidence` already
-    relies on. (Title and abstract are evaluated as separate fields; this
-    passes because the abstract's own first sentence has both terms, not
-    because it is merged with the title -- see the next test.)"""
-
-    candidate = _candidate()
-    candidate["title"] = "Cardiovascular outcomes in a randomized clinical trial"
-    candidate["abstract"] = (
-        "Adults with obesity received semaglutide therapy or placebo for 68 weeks. "
-        "Participants were also screened for unrelated cardiovascular risk factors."
-    )
-    candidates = tmp_path / "candidates.json"
-    _write_candidates(candidates, [candidate])
-
-    worksheet = prepare_candidate_review(candidates)
-
-    item = worksheet.items[0]
-    assert item.decision == "accepted"
-    assert item.inclusion_rule_result == "passed"
-
-
-def test_disease_only_in_title_and_intervention_only_in_abstract_does_not_cooccur(
-    tmp_path: Path,
-) -> None:
-    """v8-fix regression (Codex review on #138): a title supplying only the
-    disease term, with an unrelated abstract supplying only the
-    intervention term, must not count as co-occurring merely because a
-    PubMed title commonly carries no terminal punctuation and the two
-    fields would otherwise merge into one synthetic "sentence" when
-    concatenated before splitting."""
-
-    candidate = _candidate()
-    candidate["title"] = "Type 2 diabetes as a patient comorbidity"
-    candidate["abstract"] = "Treatment for persistent hiccups was successful."
-    candidates = tmp_path / "candidates.json"
-    _write_candidates(candidates, [candidate])
-
-    worksheet = prepare_candidate_review(candidates)
-
-    item = worksheet.items[0]
-    assert item.decision == "held"
-    assert item.inclusion_rule_result == "disease_and_intervention_do_not_cooccur"
-
-
-def test_comparative_abbreviation_does_not_split_a_cooccurring_sentence(
-    tmp_path: Path,
-) -> None:
-    """v8-fix regression (Codex review on #138): a naive sentence splitter
-    would treat "vs." as a sentence boundary, wrongly severing a disease
-    term from an intervention term that are genuinely in the same
-    sentence. The shared abbreviation-aware splitter must not do this."""
-
-    candidate = _candidate()
-    candidate["title"] = (
-        "Outcomes in type 2 diabetes vs. controls after metformin therapy were compared"
+        "AIMS: Chronic kidney disease complicates insulin dosing and increases "
+        "glycaemic instability in diabetes. METHODS: We conducted a randomised "
+        "crossover trial. Adults with type 2 diabetes and advanced chronic "
+        "kidney disease were eligible. RESULTS: Automated insulin delivery "
+        "improved time in range. CONCLUSION: This treatment approach was safe "
+        "and effective."
     )
     candidates = tmp_path / "candidates.json"
     _write_candidates(candidates, [candidate])
