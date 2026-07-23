@@ -13,6 +13,26 @@ Long term, the ecosystem may include:
 - `knowledge-engine-graph`: citation and knowledge graph
 - `knowledge-engine-models`: trained and evaluated models
 
+## The Finished Product Is Not an Offline PDF Archive
+
+`docs/roadmap.md`'s Phase 0 goal of running `knowledge-engine-core` fully
+offline, and its framing as a "local source vault," describe `core`'s own
+engineering properties -- testable and operable without a network dependency,
+safe to run in isolation -- not the shape of the product a person eventually
+uses. Those properties keep `core` trustworthy and reproducible; they are not
+a claim that the finished ecosystem is a local folder of hoarded PDFs someone
+has to search themselves.
+
+The finished product is a live, AI-powered search and discovery engine. A
+person asks a real research question; the system searches and reasons across
+the evidence `core` has validated and the connections the Knowledge Graph
+(Phase 4) has modeled, and returns a report scoped to that specific
+question -- with an explicit confidence rating, not just a list of matching
+papers. `core` is the trustworthy, source-linked, deterministic foundation
+underneath that experience; it is not the experience itself. The AI Interface
+Layer described below is what turns that foundation into the product a person
+actually uses.
+
 ## Guiding Idea
 
 The system should help humans understand what is known, what is uncertain, what
@@ -56,3 +76,40 @@ trustworthy, source-linked, deterministic, and never silently guessed. This
 layer's responsibility is everything that requires judgment about what that
 evidence means. Building this into `core` itself, or blurring the seam
 between the two, is explicitly out of scope for every `core` milestone.
+
+### Confidence Rating Design Guidance
+
+The confidence rating above should be a real, hard number, not a vague
+qualitative label -- and it must be earned from actual per-paper quality
+signals, not a naive count of how many papers say the same thing. A large,
+well-designed, recent trial and a small, poorly controlled, decade-old one
+must never contribute equally to an answer just because both nominally
+"support" it.
+
+This works in two levels:
+
+1. **Per-evidence-record confidence.** Computed from signals `core`'s own
+   Evidence and Relationship Layers are positioned to produce: study
+   design/type and sample size (PICO fields, still not yet scoped/extracted),
+   recency (already-captured paper publication-date metadata), and any known
+   limitations/uncertainty already recorded per evidence record. A small,
+   poorly designed, or old study earns a low per-record score even when its
+   stated direction agrees with the eventual answer.
+2. **Compounded, question-level confidence.** For one research question, the
+   AI layer combines the per-record confidence of every relevant evidence
+   record -- weighted, not simply counted -- using the Relationship Layer's
+   typed links (supports/contradicts/qualifies/contextualizes) to decide how
+   records reinforce or offset each other, producing one aggregate rating for
+   that question's report. Several strong, independent, agreeing studies
+   should compound toward high confidence; a single strong study, a handful of
+   weak studies, or strong agreement offset by weak contradiction should each
+   produce a visibly different, lower rating -- never collapsed to the same
+   number.
+
+This is design guidance for the future `knowledge-engine-ai` layer, not a
+formula `core` implements. But it is also not free of consequences for
+`core`: a rigorous confidence rating can only be as good as the quality
+signals `core` chose to capture on the way there. `core`'s still-unscoped
+PICO extraction and Relationship Layer milestones are this rating's specific
+future inputs, not just organizational nice-to-haves -- they should be scoped
+with this consumer in mind when their time comes.

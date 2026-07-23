@@ -22,6 +22,11 @@ long-term vision doc for where that responsibility lives instead.
 - Establish open-source project hygiene, governance files, issue templates, and
   automated quality checks.
 
+"Run fully offline" and "local source vault" describe `core`'s own engineering
+properties, not the shape of the finished product -- see
+`docs/roadmap/long_term_vision.md`'s "The Finished Product Is Not an Offline
+PDF Archive" section.
+
 ## Phase 1: Focused Scientific Corpus
 
 - Choose one domain, such as obesity and metabolic disease.
