@@ -9,7 +9,7 @@
     "text": "Do GLP-1 receptor agonists reduce body weight in adults with overweight or obesity?"
   },
   "created_at": "2026-07-07",
-  "updated_at": "2026-07-11",
+  "updated_at": "2026-07-23",
   "license_policy": "license_policy.md",
   "source_manifest": "sources.csv",
   "default_local_papers_directory": "papers/corpora/glp1_weight_loss",
