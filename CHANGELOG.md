@@ -270,6 +270,28 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   on-topic (their titles directly name tirzepatide and semaglutide as the
   intervention) and kept. Refreshed the corpus-library snapshot (317
   papers total, 718 authors).
+- Grew `sources.csv` by another 70 records (the fifth discovery batch,
+  `retstart=1000`). Individually read every case-report-style accepted
+  record (by title or venue) and every NOD-SCID/mouse-strain-name
+  collision before acquisition, per the process established in the
+  `retstart=750` batch. Found and excluded 1 incidental-comorbidity match:
+  a case report on apremilast treatment for a rare skin disorder (acquired
+  reactive perforating collagenosis) in which type 2 diabetes was one of
+  several stable, unrelated patient comorbidities. Initially judged a type
+  1 diabetes multi-omics paper (referencing "non-obese diabetic (NOD)"
+  mice as a real T1D research model, not an incidental term collision) as
+  on-topic and kept it -- Codex reviews on the PR then caught three
+  further problems this narrower check had missed: that same T1D paper
+  should have been held under `exclusion_criteria.md`'s explicit "type 1
+  diabetes-specific without evidence applicable to the committed Phase 1
+  scope" rule regardless of the NOD-mice question; a lymphoma
+  drug-resistance study matched only because "FTO" expands to "fat mass
+  and obesity-associated," a gene name unrelated to metabolic disease; and
+  a rare-genetic-disease EHR mapping study whose only type-2-diabetes
+  mention was one incidental example finding about an unrelated disease
+  (myotonic dystrophy). Excluded all three. Net: 70 of 74 automatically
+  accepted records remain. Refreshed the corpus-library snapshot (387
+  papers total, 871 authors).
 
 ### Changed
 
