@@ -13,6 +13,7 @@ from rich.table import Table
 from knowledge_engine.cli import app as app
 from knowledge_engine.cli import console
 from knowledge_engine.config import build_settings
+from knowledge_engine.corpus_library import export_corpus_library, import_corpus_library
 from knowledge_engine.crossref_http import UrllibCrossrefTransport
 from knowledge_engine.crossref_provider import CrossrefProvider
 from knowledge_engine.database import Database, ExtractionRunRepository, PaperRepository
@@ -109,6 +110,14 @@ ExtractionReviewOutputOption = Annotated[
 DryRunOption = Annotated[
     bool,
     typer.Option("--dry-run", help="Report what would happen without writing anything."),
+]
+CorpusLibraryOutputOption = Annotated[
+    Path,
+    typer.Option("--output", help="Path for the new corpus-library snapshot file."),
+]
+CorpusLibraryInputOption = Annotated[
+    Path,
+    typer.Option("--input", help="Corpus-library snapshot file to import."),
 ]
 
 
@@ -524,3 +533,48 @@ def paper_pages_backfill(dry_run: DryRunOption = False) -> None:
     )
     if counts.get("backfilled", 0) < len(papers):
         raise typer.Exit(1)
+
+
+@app.command("corpus-library-export")
+def corpus_library_export(output: CorpusLibraryOutputOption) -> None:
+    """Export the local database's corpus content to a standalone snapshot.
+
+    Only paper-intrinsic content is copied (papers, their extracted pages
+    and text, journals, authors, keywords) -- never operational history like
+    import runs or extraction runs. The output file must not already exist.
+    """
+
+    database = _local_database()
+    database.initialize()
+    try:
+        summary = export_corpus_library(database.engine, output)
+    except FileExistsError as exc:
+        console.print(f"[red]{escape(str(exc))}[/red]")
+        raise typer.Exit(1) from None
+    console.print(
+        f"[green]Exported corpus library:[/green] {output} "
+        f"({summary.paper_count} paper(s), {summary.journal_count} journal(s), "
+        f"{summary.author_count} author(s), {summary.keyword_count} keyword(s))."
+    )
+
+
+@app.command("corpus-library-import")
+def corpus_library_import(input_path: CorpusLibraryInputOption) -> None:
+    """Hydrate the local database's corpus content from a snapshot.
+
+    A paper whose content hash already exists locally is skipped, so
+    importing the same or an overlapping snapshot twice is idempotent.
+    """
+
+    database = _local_database()
+    database.initialize()
+    try:
+        with database.session() as session:
+            summary = import_corpus_library(session, input_path)
+    except FileNotFoundError as exc:
+        console.print(f"[red]{escape(str(exc))}[/red]")
+        raise typer.Exit(1) from None
+    console.print(
+        f"[green]Imported corpus library:[/green] {summary.imported_paper_count} paper(s) "
+        f"imported, {summary.skipped_existing_paper_count} already present and skipped."
+    )
