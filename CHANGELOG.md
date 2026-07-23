@@ -106,6 +106,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   promoted; it is reported with the exact validation errors and the command
   exits non-zero, while any other valid records in the same input are still
   promoted.
+- Added the `ke paper-pages-backfill` CLI command (M22, issue #110):
+  backfills `paper_pages` rows for papers imported before M15, exactly as
+  scoped in that milestone's tracked follow-up (issue #89). Re-parses a
+  paper's original local PDF using the same deterministic `PyMuPDFParser`
+  normalization already trusted at import time, but only persists the
+  result once the freshly computed `content_hash` matches the paper's
+  already-persisted one -- a mismatch (the file at `source_path` may have
+  changed since import) is reported, never silently backfilled. A missing
+  source file is reported with a clear reason rather than silently
+  skipped, and one paper's parse failure never aborts the rest of the
+  batch. Supports `--dry-run`. Idempotent: a paper that already has pages
+  is never reprocessed by a repeated run.
 
 ### Changed
 

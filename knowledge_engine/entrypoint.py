@@ -26,9 +26,10 @@ from knowledge_engine.extraction.evidence_items import PaperMetadata
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.metadata_enrichment import MetadataProvider, MetadataQuery
-from knowledge_engine.models import ImportRun, Paper
+from knowledge_engine.models import ImportRun, Paper, PaperPage
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
-from knowledge_engine.parser import ParsedPage
+from knowledge_engine.paper_pages_backfill import backfill_paper
+from knowledge_engine.parser import ParsedPage, PyMuPDFParser
 from knowledge_engine.pmc_acquisition import (
     AcquisitionError,
     AcquisitionReceipt,
@@ -97,6 +98,10 @@ PaperIdOption = Annotated[
 ExtractionReviewOutputOption = Annotated[
     Path,
     typer.Option("--output", help="Path for the JSONL draft extraction review queue."),
+]
+DryRunOption = Annotated[
+    bool,
+    typer.Option("--dry-run", help="Report what would happen without writing anything."),
 ]
 
 
@@ -397,3 +402,54 @@ def extraction_review_generate(
         "[bold]Draft items are a review queue, not validated evidence -- "
         "research_question, evidence_direction, and PICO fields require human completion.[/bold]"
     )
+
+
+@app.command("paper-pages-backfill")
+def paper_pages_backfill(dry_run: DryRunOption = False) -> None:
+    """Backfill paper_pages rows for papers imported before M15.
+
+    Only papers whose original local PDF is still present, and whose
+    freshly re-parsed content hash matches the persisted one, are
+    backfilled. A missing or changed source file is reported, never
+    silently skipped.
+    """
+
+    database = _local_database()
+    database.initialize()
+    parser = PyMuPDFParser()
+
+    counts: dict[str, int] = {}
+    with database.session() as session:
+        repository = PaperRepository(session)
+        papers = repository.list_papers_without_pages()
+
+        if not papers:
+            console.print("[green]No papers need backfilling.[/green]")
+            return
+
+        for paper in papers:
+            outcome, parsed = backfill_paper(paper, parser)
+            counts[outcome.status] = counts.get(outcome.status, 0) + 1
+
+            if outcome.status == "backfilled" and parsed is not None:
+                if not dry_run:
+                    paper.pages = [
+                        PaperPage(page_number=page.page_number, text=page.text)
+                        for page in parsed.pages
+                    ]
+                console.print(f"[green]Backfilled paper {paper.id}:[/green] {escape(paper.title)}")
+            else:
+                console.print(
+                    f"[yellow]Skipped paper {paper.id} ({outcome.status}):[/yellow] "
+                    f"{escape(outcome.detail or '')}"
+                )
+
+    prefix = "[bold]Dry run --[/bold] no changes were written. " if dry_run else ""
+    console.print(
+        f"{prefix}Backfilled: {counts.get('backfilled', 0)}, "
+        f"missing source file: {counts.get('missing_source_file', 0)}, "
+        f"hash mismatch: {counts.get('hash_mismatch', 0)}, "
+        f"parse failed: {counts.get('parse_failed', 0)}."
+    )
+    if counts.get("backfilled", 0) < len(papers):
+        raise typer.Exit(1)

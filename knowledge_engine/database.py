@@ -360,6 +360,22 @@ class PaperRepository:
 
         return self.session.get(Paper, paper_id)
 
+    def list_papers_without_pages(self) -> list[Paper]:
+        """Return papers with zero persisted `PaperPage` rows.
+
+        A paper that already has any page rows -- from `add_parsed_paper`
+        or a prior backfill run -- is never returned, so repeated backfill
+        runs are idempotent.
+        """
+
+        statement = (
+            select(Paper)
+            .outerjoin(PaperPage, PaperPage.paper_id == Paper.id)
+            .where(PaperPage.paper_id.is_(None))
+            .order_by(Paper.id)
+        )
+        return list(self.session.scalars(statement))
+
     def stats(self) -> dict[str, int]:
         """Return simple collection statistics."""
 
