@@ -61,17 +61,18 @@ fields a promotion tool owns (`schema_version`, a deterministic
 `evidence_record_id`, default `review_status`/`review_checklist`/
 `review_notes`) are filled in automatically; an incomplete record is never
 promoted. Promotion is idempotent and append-only.
-M22 (issue #110, in progress) adds the `ke paper-pages-backfill` CLI
+M22 (issue #110, PR #111, merged) added the `ke paper-pages-backfill` CLI
 command, closing the M15 "Known gap" below exactly as originally scoped in
 issue #89: papers imported before M15 have zero `paper_pages` rows and
 cannot be extracted at all. Backfill re-parses a paper's still-present
 original local PDF and persists the result only once its freshly computed
 `content_hash` matches the paper's already-persisted one -- a mismatch or
 a missing source file is reported, never silently skipped or trusted.
-`research_question` acquisition and real research-question-relative
-`evidence_direction` classification (i.e. automatically, rather than by
-human review), PICO extraction, and the Relationship Layer remain later,
-not-yet-scoped milestones.
+`research_question` acquisition, real research-question-relative
+`evidence_direction` classification, PICO extraction, a synthesized
+confidence rating, and the Relationship Layer are explicitly out of scope
+for `core` -- they belong to the future `knowledge-engine-ai` layer; see
+`docs/roadmap/long_term_vision.md`'s AI Interface Layer section.
 
 ## Mission
 
