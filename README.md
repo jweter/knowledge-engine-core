@@ -55,6 +55,10 @@ Phase 2 completed capabilities include:
   (`knowledge_engine.extraction.build_draft_evidence_items`); an intentionally
   incomplete draft that fails the existing evidence validator until a
   reviewer supplies `research_question` and `evidence_direction`
+- the `ke extraction-review-generate` CLI command, which runs the full
+  deterministic pipeline against one persisted paper (`--paper-id`) and
+  writes a JSONL draft review queue (`--output`); a separate, opt-in command
+  that never runs as part of `corpus-import`
 
 See [docs/phase2_design.md](docs/phase2_design.md) for the Phase 2 architecture
 and milestone-by-milestone status.
@@ -86,9 +90,12 @@ and milestone-by-milestone status.
   piece of the Evidence Layer. Deliberately incomplete: fields without an
   honest deterministic source (`research_question`, `evidence_direction`,
   PICO) are left `None`, not guessed.
+- **M20:** added the `ke extraction-review-generate` CLI command, wiring
+  M16-M19 into an actually runnable pipeline for the first time. Opt-in,
+  separate from `corpus-import`.
 
 Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is in
-progress through M19. See [docs/roadmap.md](docs/roadmap.md) and
+progress through M20. See [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase2_design.md](docs/phase2_design.md) for the next milestone.
 
 ## Requirements
@@ -283,10 +290,11 @@ The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now inc
 completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
 scale-readiness, and the controlled 500-paper rehearsal
 ([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
-[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M19:
+[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M20:
 deterministic, rule-based structured-section detection, claim-candidate
 detection, claim framing-cue classification, and draft extraction
-review-item generation. A valid `EvidenceRecord`, and the schema's
+review-item generation, now runnable end-to-end via `ke
+extraction-review-generate`. A valid `EvidenceRecord`, and the schema's
 research-question-relative `evidence_direction` field, are not yet
 implemented -- `research_question` acquisition has no source anywhere in
 this pipeline yet. All Phase 2 extraction is rule-based, with no LLM-based

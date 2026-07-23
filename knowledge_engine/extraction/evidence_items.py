@@ -85,6 +85,50 @@ class DraftEvidenceItem:
     schema_version: str | None = None
     evidence_record_id: str | None = None
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a JSON-ready dict for a review-queue file.
+
+        Every schema field is present, including the `None`-valued ones, so
+        a reviewer sees exactly what still needs completing. `extraction_context`
+        is not part of `REQUIRED_EVIDENCE_FIELDS` -- it carries the M17/M18
+        audit trail (matched signal, framing, matched cue, rule versions) a
+        reviewer needs to judge the extraction without re-deriving it.
+        """
+
+        candidate = self.claim_framing.candidate
+        return {
+            "schema_version": self.schema_version,
+            "evidence_record_id": self.evidence_record_id,
+            "extraction_method": self.extraction_method,
+            "extraction_status": self.extraction_status,
+            "source_doi": self.source_doi,
+            "source_title": self.source_title,
+            "source_type": self.source_type,
+            "study_type": self.study_type,
+            "research_question": self.research_question,
+            "claim_text": self.claim_text,
+            "evidence_direction": self.evidence_direction,
+            "population": self.population,
+            "intervention": self.intervention,
+            "comparator": self.comparator,
+            "outcome": self.outcome,
+            "result_summary": self.result_summary,
+            "source_span": self.source_span,
+            "limitations": self.limitations,
+            "uncertainty_notes": self.uncertainty_notes,
+            "confidence_note": self.confidence_note,
+            "provenance": self.provenance,
+            "created_for_milestone": self.created_for_milestone,
+            "extraction_context": {
+                "matched_signal": candidate.matched_signal,
+                "section_type": candidate.section_type,
+                "framing": self.claim_framing.framing,
+                "matched_cue": self.claim_framing.matched_cue,
+                "candidate_rules_version": candidate.rules_version,
+                "framing_rules_version": self.claim_framing.rules_version,
+            },
+        }
+
 
 def build_draft_evidence_item(paper: PaperMetadata, framing: ClaimFraming) -> DraftEvidenceItem:
     """Build one draft evidence item from a paper and a classified candidate."""

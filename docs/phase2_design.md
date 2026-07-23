@@ -41,10 +41,19 @@ real judgment or external input (`research_question`, `evidence_direction`,
 PICO fields, `study_type`, `limitations`, `uncertainty_notes`,
 `confidence_note`, `provenance`) explicitly `None`. It is not a valid
 `EvidenceRecord` and is confirmed to fail the existing validator's checks
-until a reviewer completes it — no CLI command or JSONL writer exists yet
-to consume it.
+until a reviewer completes it.
+M20 (issue #104, in progress) adds the `ke extraction-review-generate` CLI
+command, wiring M16-M19 into an actually runnable pipeline for the first
+time: given a persisted paper's `--paper-id`, it runs section detection,
+claim-candidate detection, framing classification, and draft-item
+generation, then writes the results to a JSONL review queue at `--output`.
+A separate, opt-in command — never invoked by `corpus-import` — resolving
+this design's open question about how extraction should be triggered. A
+paper with zero persisted pages produces an explicit diagnostic, never a
+silently empty result.
 `research_question` acquisition, real research-question-relative
-`evidence_direction` classification, and PICO extraction remain later,
+`evidence_direction` classification, PICO extraction, and a workflow for
+turning a draft item into a real `EvidenceRecord` remain later,
 not-yet-scoped milestones.
 
 ## Mission
@@ -407,7 +416,11 @@ extraction located and categorized it correctly.
 Resolved during the foundation milestone: whether page/span text is persisted
 or recomputed (persisted, see Prerequisite section), and which extraction
 methodology to use (rule-based combined with structured-section heuristics,
-see Extraction Methodology section). Remaining:
+see Extraction Methodology section). Resolved in M20: automated extraction
+runs as a separate, opt-in command (`ke extraction-review-generate`),
+analogous to `ke metadata-preview`, never as part of `ke corpus-import` — so
+an extraction issue can never affect import success/failure semantics.
+Remaining:
 
 - What allowed-value vocabulary should `extraction_status` use once real
   extraction logic defines meaningful states, and should it be enforced with
@@ -416,9 +429,6 @@ see Extraction Methodology section). Remaining:
 - Should a stricter `source_span` check requiring a character-offset range
   (not just `page_number`) be added once extraction logic defines how it
   populates one?
-- Should automated extraction run as part of `ke corpus-import`, or as a
-  separate opt-in command analogous to `ke metadata-preview`, so extraction
-  failures can never affect import success/failure semantics?
 - What is the minimum viable relationship vocabulary for the Relationship
   Layer, and should it be constrained to a fixed enum from the first
   milestone (as `evidence_direction` already is) or allowed to grow?
