@@ -67,6 +67,10 @@ Phase 2 completed capabilities include:
   rows for papers imported before M15 by re-parsing a still-present local
   PDF, only trusting the result once its content hash matches what was
   originally persisted
+- a closed `extraction_status` vocabulary and `source_span` offset-range
+  validation in `ke evidence-validate`, replacing the earlier
+  any-non-empty-string check now that real extraction logic defines real
+  values
 
 See [docs/phase2_design.md](docs/phase2_design.md) for the Phase 2 architecture
 and milestone-by-milestone status.
@@ -108,9 +112,12 @@ and milestone-by-milestone status.
   "Known gap" tracked since issue #89: pre-M15 papers can now become
   extractable again, but only when a re-parse's content hash matches what
   was originally persisted.
+- **M23:** constrained `extraction_status` to a closed vocabulary and added
+  `source_span` character-offset-range validation, resolving two questions
+  left open since M15 pending real extraction logic to define real values.
 
 Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is in
-progress through M22. See [docs/roadmap.md](docs/roadmap.md) and
+progress through M23. See [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase2_design.md](docs/phase2_design.md) for the next milestone.
 
 ## Requirements
@@ -305,18 +312,20 @@ The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now inc
 completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
 scale-readiness, and the controlled 500-paper rehearsal
 ([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
-[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M22:
+[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M23:
 deterministic, rule-based structured-section detection, claim-candidate
 detection, claim framing-cue classification, and draft extraction
 review-item generation, runnable end-to-end via `ke
 extraction-review-generate`, with a reviewer-completed draft now
 promotable into a real `EvidenceRecord` via `ke extraction-review-promote`.
 `ke paper-pages-backfill` restores extractability for papers imported
-before M15. Automated, research-question-relative `evidence_direction`
-classification is not yet implemented -- `research_question` acquisition
-has no automated source anywhere in this pipeline yet; a human reviewer
-supplies it before promotion. All Phase 2 extraction is rule-based, with
-no LLM-based extraction, synthesis, or reasoning of any kind.
+before M15. `ke evidence-validate` now constrains `extraction_status` to a
+closed vocabulary and validates `source_span` offset ranges. Automated,
+research-question-relative `evidence_direction` classification is not yet
+implemented -- `research_question` acquisition has no automated source
+anywhere in this pipeline yet; a human reviewer supplies it before
+promotion. All Phase 2 extraction is rule-based, with no LLM-based
+extraction, synthesis, or reasoning of any kind.
 
 Neither phase should be expanded into Alembic adoption, a new package manager,
 persistent telemetry, vector search, a graph, AI reasoning, an API, web

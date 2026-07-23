@@ -1064,6 +1064,97 @@ def test_evidence_validate_fails_for_missing_extraction_status(tmp_path: Path) -
     assert "extraction_status is required" in result.output
 
 
+def test_evidence_validate_fails_for_invalid_extraction_status(tmp_path: Path) -> None:
+    records_path = write_evidence_records(tmp_path, [{"extraction_status": "approved"}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "invalid extraction_status 'approved'" in result.output
+
+
+@pytest.mark.parametrize("extraction_status", ["draft_review_required", "draft_manual_prototype"])
+def test_evidence_validate_accepts_known_extraction_statuses(
+    tmp_path: Path, extraction_status: str
+) -> None:
+    records_path = write_evidence_records(tmp_path, [{"extraction_status": extraction_status}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code == 0
+
+
+def test_evidence_validate_fails_for_non_integer_source_span_offset(tmp_path: Path) -> None:
+    records_path = write_evidence_records(
+        tmp_path, [{"source_span": {"start_offset": "0", "end_offset": 10}}]
+    )
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "source_span.start_offset and end_offset must both be non-negative integers" in " ".join(
+        result.output.split()
+    )
+
+
+def test_evidence_validate_fails_for_negative_source_span_offset(tmp_path: Path) -> None:
+    records_path = write_evidence_records(
+        tmp_path, [{"source_span": {"start_offset": -1, "end_offset": 10}}]
+    )
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "source_span.start_offset and end_offset must both be non-negative integers" in " ".join(
+        result.output.split()
+    )
+
+
+def test_evidence_validate_fails_for_partial_source_span_offset_range(tmp_path: Path) -> None:
+    records_path = write_evidence_records(tmp_path, [{"source_span": {"start_offset": 0}}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "source_span.start_offset and end_offset must both be non-negative integers" in " ".join(
+        result.output.split()
+    )
+
+
+def test_evidence_validate_fails_for_explicit_null_source_span_offsets(tmp_path: Path) -> None:
+    records_path = write_evidence_records(
+        tmp_path, [{"source_span": {"start_offset": None, "end_offset": None}}]
+    )
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "source_span.start_offset and end_offset must both be non-negative integers" in " ".join(
+        result.output.split()
+    )
+
+
+def test_evidence_validate_fails_for_inverted_source_span_offset_range(tmp_path: Path) -> None:
+    records_path = write_evidence_records(
+        tmp_path, [{"source_span": {"start_offset": 10, "end_offset": 10}}]
+    )
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "source_span.start_offset must be less than end_offset" in result.output
+
+
+def test_evidence_validate_accepts_valid_source_span_offset_range(tmp_path: Path) -> None:
+    records_path = write_evidence_records(
+        tmp_path, [{"source_span": {"page_number": 2, "start_offset": 0, "end_offset": 10}}]
+    )
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code == 0
+
+
 @pytest.mark.parametrize("command_name", ["evidence", "answer", "evidence-report"])
 def test_evidence_consuming_commands_reject_duplicate_evidence_ids(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command_name: str

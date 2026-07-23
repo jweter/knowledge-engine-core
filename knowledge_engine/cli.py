@@ -115,6 +115,7 @@ PromotionOutputOption = Annotated[
     typer.Option("--output", help="Evidence records JSONL file to append promoted records to."),
 ]
 ALLOWED_REVIEW_STATUSES = {"draft", "reviewed", "needs_revision", "rejected"}
+ALLOWED_EXTRACTION_STATUSES = {"draft_review_required", "draft_manual_prototype"}
 EVIDENCE_SCHEMA_VERSION = "0.1"
 REQUIRED_EVIDENCE_FIELDS = {
     "schema_version",
@@ -781,6 +782,18 @@ def _validate_evidence_record(
         if not isinstance(value, str) or not value.strip():
             errors.append(f"Line {line_number}: {field} is required.")
 
+    extraction_status = record.get("extraction_status")
+    if (
+        isinstance(extraction_status, str)
+        and extraction_status
+        and extraction_status not in ALLOWED_EXTRACTION_STATUSES
+    ):
+        allowed = ", ".join(sorted(ALLOWED_EXTRACTION_STATUSES))
+        errors.append(
+            f"Line {line_number}: invalid extraction_status '{extraction_status}'. "
+            f"Allowed values: {allowed}."
+        )
+
     provenance = record.get("provenance")
     if not isinstance(provenance, dict) or not provenance:
         errors.append(f"Line {line_number}: provenance must be a non-empty object.")
@@ -788,12 +801,33 @@ def _validate_evidence_record(
     source_span = record.get("source_span")
     if not isinstance(source_span, dict) or not source_span:
         errors.append(f"Line {line_number}: source_span must be a non-empty object.")
-    elif "page_number" in source_span:
-        page_number = source_span["page_number"]
-        if isinstance(page_number, bool) or not isinstance(page_number, int) or page_number < 1:
-            errors.append(
-                f"Line {line_number}: source_span.page_number must be a positive integer."
-            )
+    else:
+        if "page_number" in source_span:
+            page_number = source_span["page_number"]
+            if isinstance(page_number, bool) or not isinstance(page_number, int) or page_number < 1:
+                errors.append(
+                    f"Line {line_number}: source_span.page_number must be a positive integer."
+                )
+
+        if "start_offset" in source_span or "end_offset" in source_span:
+            start_offset = source_span.get("start_offset")
+            end_offset = source_span.get("end_offset")
+            if (
+                not isinstance(start_offset, int)
+                or isinstance(start_offset, bool)
+                or start_offset < 0
+                or not isinstance(end_offset, int)
+                or isinstance(end_offset, bool)
+                or end_offset < 0
+            ):
+                errors.append(
+                    f"Line {line_number}: source_span.start_offset and end_offset must both be "
+                    "non-negative integers."
+                )
+            elif start_offset >= end_offset:
+                errors.append(
+                    f"Line {line_number}: source_span.start_offset must be less than end_offset."
+                )
 
     review_status = record.get("review_status")
     if require_review_fields and (not isinstance(review_status, str) or not review_status.strip()):
