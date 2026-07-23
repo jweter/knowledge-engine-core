@@ -89,6 +89,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the documented `paper_pages` backfill gap) produces an explicit
   diagnostic rather than a silently empty result; zero draft items from a
   paper that does have pages is a valid, clearly reported outcome.
+- Added the `ke extraction-review-promote` CLI command (M21, issue #107):
+  promotes reviewer-completed draft extraction items (M20's JSONL output,
+  after a human has filled in `research_question`/`evidence_direction`/etc.)
+  into real `EvidenceRecord` rows, closing the extraction-to-evidence loop
+  for the first time. Adds zero new judgment logic -- it validates and
+  persists only what a reviewer already supplied, reusing
+  `_validate_evidence_record` (the same validator `ke evidence-validate`
+  uses) unchanged. Administrative fields a promotion tool -- not a
+  reviewer -- owns (`schema_version`, a deterministic `evidence_record_id`,
+  and default `review_status`/`review_checklist`/`review_notes`) are
+  filled in automatically, never overwriting a value already supplied.
+  Promotion is idempotent (re-running on the same completed input does not
+  create duplicate rows) and append-only (an existing `evidence_records.jsonl`
+  is never overwritten or truncated). An incomplete record is never
+  promoted; it is reported with the exact validation errors and the command
+  exits non-zero, while any other valid records in the same input are still
+  promoted.
 
 ### Changed
 
