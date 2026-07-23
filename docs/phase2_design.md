@@ -80,6 +80,12 @@ M23 (issue #117, PR #118, merged) constrains `extraction_status` to a closed
 character-offset-range validation, resolving two items this design's Open
 Questions section had carried since M15 pending real extraction logic to
 define meaningful values -- see Open Questions below for the values decided.
+M24 (issue #120) implements the Relationship Layer's first slice: a
+human-authored relationship schema and `ke relationship-validate`, reusing
+`evidence_direction`'s exact vocabulary. Automated relationship detection is
+explicitly not implemented -- deciding whether a relationship holds between
+two evidence records remains a human judgment call; see Relationship Layer
+section below.
 
 ## Mission
 
@@ -255,10 +261,16 @@ Parser (extended with page/span provenance)
        EvidenceRecord rows satisfying the existing REQUIRED_EVIDENCE_FIELDS
        contract, with extraction_method identifying the automated rule/pattern
        that produced them instead of "manual"
-  -> Relationship Layer (new)
+  -> Relationship Layer (M24 first slice implemented; automated detection
+     not yet built)
        typed support/contradiction/qualification links between evidence
        records, reusing the direction vocabulary already used by manual
-       records (supports, contradicts, qualifies, contextualizes)
+       records (supports, contradicts, qualifies, contextualizes). M24
+       added the schema and `ke relationship-validate`, but only for
+       human-authored links -- deciding *whether* a relationship holds
+       between two records remains a human judgment call, same boundary
+       as `evidence_direction`/`research_question`; see Relationship
+       Layer section below.
   -> ke evidence / ke evidence-validate / ke evidence-report /
      ke answer --evidence commands (validator and renderer changes above
      already applied; no further schema change needed for extraction output)
@@ -372,6 +384,45 @@ recorded per record above."; `ke evidence-report`'s header is `"#### Evidence
 Record"`, not `"#### Manual Evidence Record"`). Renderer-only change — no
 schema or validator change was required for this part.
 
+## Relationship Layer (M24 first slice, implemented)
+
+The Relationship Layer had remained entirely unbuilt since the Architecture
+section above first sketched it -- the last of the Extraction/Evidence/
+Relationship pipeline with zero implementation, and the direct prerequisite
+for the future `knowledge-engine-ai` layer's confidence-rating compounding
+(`docs/roadmap/long_term_vision.md`'s Confidence Rating Design Guidance:
+per-evidence-record confidence is combined "using the Relationship Layer's
+typed links... to decide how records reinforce or offset each other" —
+`core` currently has nothing structured for that future layer to compound
+over).
+
+M24 implements a first slice, not the full layer: full automated
+relationship detection (deciding *whether* two evidence records support,
+contradict, qualify, or contextualize each other) requires real judgment
+about scientific content, the same "never decide truth" boundary that keeps
+`evidence_direction` and `research_question` human-supplied today. Instead,
+mirroring exactly how manual evidence records started (human-authored JSONL,
+validated structurally, long before any extraction automation existed):
+
+- A relationship record's schema reuses `evidence_direction`'s exact
+  vocabulary: `ALLOWED_RELATIONSHIP_TYPES = {"supports", "contradicts",
+  "qualifies", "contextualizes"}`.
+- Required fields: `schema_version`, `relationship_id`,
+  `source_evidence_record_id`, `target_evidence_record_id`,
+  `relationship_type`, `rationale` (the reviewer's stated reason -- a link is
+  never justification-free), `provenance`, `created_for_milestone`.
+- `ke relationship-validate <path> [--evidence <evidence_records.jsonl>]`
+  validates structurally always (required fields present and non-empty,
+  `relationship_id` unique within the file, `relationship_type` in the
+  allowed set, `source_evidence_record_id != target_evidence_record_id` --
+  no self-links, `provenance` a non-empty object), and validates
+  referentially when `--evidence` is given (both endpoints must actually
+  exist among that file's evidence records, reusing the existing evidence
+  validator rather than duplicating it -- a dangling reference is reported,
+  never silently accepted).
+- `core` never infers, suggests, or detects a relationship; it only confirms
+  that a human-supplied one is well-formed and internally consistent.
+
 ## Extraction Methodology (decided)
 
 **Decision: option 3 combined with option 1** — structured-section heuristics
@@ -465,11 +516,15 @@ already uses. `source_span` now also validates `start_offset`/`end_offset`
 when present: both must be given together, as non-negative integers, with
 `start_offset < end_offset`, matching how `build_draft_evidence_item` (M19)
 already populates them from `ClaimCandidate.start_offset`/`end_offset`.
+Resolved in M24: the Relationship Layer's minimum viable vocabulary is
+constrained to a fixed enum from its first milestone, reusing
+`evidence_direction`'s exact set (`supports`, `contradicts`, `qualifies`,
+`contextualizes`) rather than a separate one -- see Relationship Layer
+section above for the full schema and `ke relationship-validate`. Whether
+this enum should later grow is left for a real need to justify, not decided
+speculatively now.
 Remaining:
 
-- What is the minimum viable relationship vocabulary for the Relationship
-  Layer, and should it be constrained to a fixed enum from the first
-  milestone (as `evidence_direction` already is) or allowed to grow?
 - Should extraction be versioned and re-run against already-imported papers
   when the ruleset changes, similar to how `ADJUDICATION_RULES_VERSION`
   changes trigger a fresh M14 discovery run? If so, does this need an

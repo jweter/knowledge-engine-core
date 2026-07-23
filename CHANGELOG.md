@@ -127,6 +127,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   must be given together, as non-negative integers, with
   `start_offset < end_offset`, matching how the M19 extraction pipeline
   already populates them.
+- Added the Relationship Layer's first slice (M24, issue #120): a
+  human-authored evidence-relationship schema and the `ke
+  relationship-validate` CLI command. Reuses `evidence_direction`'s exact
+  vocabulary (`ALLOWED_RELATIONSHIP_TYPES = {"supports", "contradicts",
+  "qualifies", "contextualizes"}`). Validates structurally always (required
+  fields, unique `relationship_id`, allowed `relationship_type`, no
+  self-referential links, non-empty `provenance`) and, when an `--evidence`
+  file is given, validates referentially (both endpoints of a relationship
+  must actually exist in that evidence file; a dangling reference is
+  reported, never silently accepted). Automated relationship detection is
+  explicitly not implemented -- `core` validates a human-supplied
+  relationship's shape, never decides or suggests one itself.
 
 ### Changed
 
