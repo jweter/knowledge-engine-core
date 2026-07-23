@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST
 
-ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v7"
+ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v8"
 _ALLOWED_LICENSE_PATTERN = re.compile(
     r"^(?:CC BY(?: (?:1\.0|2\.0|2\.5|3\.0|4\.0))?|CC0(?: 1\.0)?)$"
 )
@@ -73,6 +73,24 @@ otherwise-valid adult-inclusive evidence. A title match with no adult term
 returns a non-"passed" scope result, which routes to `held` (never a silent
 rejection), matching how every other scope-insufficient title is already
 treated."""
+_NON_PRIMARY_TITLE_PREFIXES = (
+    "correction:",
+    "corrigendum:",
+    "erratum:",
+    "retraction:",
+    "retracted:",
+    "publisher correction:",
+    "author correction:",
+)
+"""A correction/erratum/retraction notice for an original article is not
+itself a scientific paper, systematic review, meta-analysis, or clinical
+research report -- it is typically a page or two amending a figure, table,
+or author list in the original. Journals mark these with a stable title
+prefix, so checking the title's start (case-insensitively) is a reliable,
+still-deterministic signal, unlike scanning for "correction" as a bare
+substring, which would also match a legitimate title like "Confidence
+interval correction for measurement bias in obesity studies"."""
+_SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 
 
 class CandidateReviewError(RuntimeError):
@@ -293,18 +311,41 @@ def _adjudicate(
 
 
 def _scientific_scope(title: str, abstract: str | None) -> str:
+    normalized_title = " ".join(title.casefold().split())
+    if normalized_title.startswith(_NON_PRIMARY_TITLE_PREFIXES):
+        return "non_primary_content_title_evidence"
+
     evidence = title if abstract is None else f"{title} {abstract}"
     normalized = " ".join(evidence.casefold().split())
     has_disease = any(term in normalized for term in _DISEASE_TERMS)
     has_intervention = any(term in normalized for term in _INTERVENTION_TERMS)
     if not (has_disease and has_intervention):
         return "insufficient_title_abstract_evidence"
-    normalized_title = " ".join(title.casefold().split())
+    if not any(
+        any(term in sentence for term in _DISEASE_TERMS)
+        and any(term in sentence for term in _INTERVENTION_TERMS)
+        for sentence in _sentences(normalized)
+    ):
+        return "disease_and_intervention_do_not_cooccur"
+
     has_pediatric_term = any(term in normalized_title for term in _PEDIATRIC_POPULATION_TERMS)
     has_adult_term = any(term in normalized_title for term in _ADULT_INCLUSION_TERMS)
     if has_pediatric_term and not has_adult_term:
         return "pediatric_population_title_evidence"
     return "passed"
+
+
+def _sentences(text: str) -> list[str]:
+    """Split into coarse sentences for a same-sentence co-occurrence check.
+
+    This is deliberately a simpler split than M17's abbreviation-aware
+    sentence detector (`knowledge_engine.extraction.claims`) -- a stray
+    boundary from an abbreviation like "vs." only makes this check's
+    co-occurrence test slightly more permissive, never wrong in a way that
+    matters, since it is used only for a coarse relevance heuristic here,
+    not for precise span extraction like M17's use."""
+
+    return [s for s in _SENTENCE_SPLIT_PATTERN.split(text) if s]
 
 
 def _license_result(reported_license: str | None) -> str:

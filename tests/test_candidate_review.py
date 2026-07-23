@@ -201,6 +201,100 @@ def test_pediatric_term_only_in_abstract_does_not_block_acceptance(tmp_path: Pat
     assert item.inclusion_rule_result == "passed"
 
 
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        "Correction: ",
+        "Corrigendum: ",
+        "Erratum: ",
+        "Retraction: ",
+        "Publisher Correction: ",
+        "Author Correction: ",
+    ],
+)
+def test_correction_notice_title_is_held_not_accepted(tmp_path: Path, prefix: str) -> None:
+    """v8 regression: a correction/erratum notice for an original article is
+    not itself a scientific paper -- it typically only amends a figure,
+    table, or author list -- but used to be accepted whenever its title
+    (inherited from the original article) happened to match disease and
+    intervention terms."""
+
+    candidate = _candidate()
+    candidate["title"] = (
+        f"{prefix}SGLT2 inhibitor use and disparities in all-cause mortality "
+        "in type 2 diabetes: insights from a multi-ethnic population"
+    )
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "held"
+    assert item.inclusion_rule_result == "non_primary_content_title_evidence"
+    assert item.reason_codes == ("SCIENTIFIC_SCOPE_INSUFFICIENT",)
+
+
+def test_incidental_comorbidity_mention_does_not_satisfy_scientific_scope(
+    tmp_path: Path,
+) -> None:
+    """v8 regression: a case report whose actual topic is unrelated to the
+    corpus's metabolic-disease-therapeutics scope used to be accepted
+    whenever its abstract merely listed a disease term as one of several
+    patient comorbidities, in a different sentence from any intervention
+    term describing treatment for the paper's actual (unrelated) topic."""
+
+    candidate = _candidate()
+    candidate["title"] = (
+        "Combined percutaneous auricular vagus nerve stimulation and "
+        "ultrasound-guided phrenic nerve block for persistent hiccups: A case report"
+    )
+    candidate["abstract"] = (
+        "RATIONALE: Persistent hiccups lasting more than 48 hours are rare. "
+        "PATIENT CONCERNS: A 62-year-old male with hypertension, type 2 diabetes, "
+        "and prior tuberculosis presented with persistent hiccups. "
+        "INTERVENTIONS: A combined therapy with phrenic nerve block and vagus "
+        "nerve stimulation was administered. "
+        "LESSONS: This treatment option may help persistent hiccups unresponsive "
+        "to conventional therapy."
+    )
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "held"
+    assert item.inclusion_rule_result == "disease_and_intervention_do_not_cooccur"
+    assert item.reason_codes == ("SCIENTIFIC_SCOPE_INSUFFICIENT",)
+
+
+def test_disease_and_intervention_cooccurring_across_title_and_abstract_passes(
+    tmp_path: Path,
+) -> None:
+    """The co-occurrence check must not require both terms in the title
+    alone -- the title and the abstract's leading sentence are joined
+    without a separating period, so a generic title plus an abstract whose
+    first sentence supplies both terms still counts as one co-occurring
+    sentence, exactly as `test_abstract_can_supply_complete_scientific_scope_evidence`
+    already relies on."""
+
+    candidate = _candidate()
+    candidate["title"] = "Cardiovascular outcomes in a randomized clinical trial"
+    candidate["abstract"] = (
+        "Adults with obesity received semaglutide therapy or placebo for 68 weeks. "
+        "Participants were also screened for unrelated cardiovascular risk factors."
+    )
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "accepted"
+    assert item.inclusion_rule_result == "passed"
+
+
 def test_oa_candidate_with_unsupported_license_is_held(tmp_path: Path) -> None:
     candidate = _candidate()
     candidate["license"] = "Publisher free access"
