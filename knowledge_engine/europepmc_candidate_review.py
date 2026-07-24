@@ -1,4 +1,15 @@
-"""Deterministic adjudication worksheets for PubMed/PMC candidates."""
+"""Deterministic adjudication worksheets for Europe PMC candidates.
+
+Mirrors `candidate_review.py`'s accept/reject/hold-with-reason-codes shape
+for M14's PubMed/PMC pipeline, but is a deliberately separate, independently
+versioned engine rather than a retrofit of that mature, heavily-rehearsed
+module: identity and full-text evidence work differently here (no PMCID to
+anchor identity for the non-PMC content this pipeline targets; no single
+official PDF bucket to allowlist the way PMC's S3 bucket is). Scientific-scope
+and license rules ARE shared -- see `scientific_scope.py`/`license_rules.py`
+-- since those criteria are the same regardless of which discovery source
+found a candidate.
+"""
 
 from __future__ import annotations
 
@@ -9,34 +20,36 @@ from pathlib import Path
 from typing import TypedDict
 from urllib.parse import urlparse
 
+from knowledge_engine.europepmc_discovery import EUROPEPMC_PDF_HOST
 from knowledge_engine.license_rules import evaluate_license
-from knowledge_engine.license_rules import license_deed_url as license_deed_url
-from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST
 from knowledge_engine.scientific_scope import evaluate_scientific_scope
 
-ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v9"
+EUROPEPMC_ADJUDICATION_RULES_VERSION = "m34-europepmc-candidate-adjudication-v1"
 
 
-class CandidateReviewError(RuntimeError):
+class EuropePmcCandidateReviewError(RuntimeError):
     """Sanitized candidate-adjudication preparation failure."""
 
 
 @dataclass(frozen=True)
-class CandidateReviewItem:
+class EuropePmcCandidateReviewItem:
     """One candidate with an explicit deterministic adjudication result."""
 
-    pmid: str
+    europepmc_id: str
+    source: str
+    pmid: str | None
+    pmcid: str | None
+    doi: str | None
     title: str
     abstract: str | None
     authors: tuple[str, ...]
     publication_year: int | None
     venue: str | None
-    doi: str | None
-    pmcid: str | None
+    in_pmc: bool
     open_access: bool
     reported_license: str | None
     pdf_url: str | None
-    discovery_status: str
+    pdf_host: str | None
     decision: str
     reason_codes: tuple[str, ...]
     rules_version: str
@@ -45,22 +58,23 @@ class CandidateReviewItem:
     identity_rule_result: str
     license_rule_result: str
     full_text_rule_result: str
+    pmc_overlap_rule_result: str
     duplicate_rule_result: str
     evidence_provenance: tuple[str, ...]
     unresolved_ambiguities: tuple[str, ...]
 
 
 @dataclass(frozen=True)
-class CandidateReviewWorksheet:
+class EuropePmcCandidateReviewWorksheet:
     """Stable adjudication worksheet that cannot itself authorize acquisition."""
 
     schema_version: int
     source_query: str
-    source_retstart: int
+    source_cursor_mark: str
     source_limit: int
     candidate_count: int
     rules_version: str
-    items: tuple[CandidateReviewItem, ...]
+    items: tuple[EuropePmcCandidateReviewItem, ...]
 
     def to_json(self) -> str:
         """Render stable, auditable JSON."""
@@ -68,92 +82,97 @@ class CandidateReviewWorksheet:
         return json.dumps(asdict(self), indent=2, sort_keys=True) + "\n"
 
 
-def prepare_candidate_review(candidates_path: Path) -> CandidateReviewWorksheet:
+def prepare_europepmc_candidate_review(candidates_path: Path) -> EuropePmcCandidateReviewWorksheet:
     """Validate discovery output and create explicit adjudication records."""
 
     if candidates_path.is_symlink():
-        raise CandidateReviewError("Candidate input must not be a symbolic link.")
+        raise EuropePmcCandidateReviewError("Candidate input must not be a symbolic link.")
     try:
         payload = json.loads(candidates_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise CandidateReviewError("Candidate input is not valid discovery JSON.") from exc
+        raise EuropePmcCandidateReviewError("Candidate input is not valid discovery JSON.") from exc
     if not isinstance(payload, dict):
-        raise CandidateReviewError("Candidate input is not valid discovery JSON.")
+        raise EuropePmcCandidateReviewError("Candidate input is not valid discovery JSON.")
 
     query = _required_string(payload, "query")
-    retstart = _required_nonnegative_int(payload, "retstart")
-    limit = _discovery_limit(payload)
+    cursor_mark = _required_string(payload, "cursor_mark")
+    limit = _required_positive_int(payload, "limit")
     candidates = payload.get("candidates")
     if not isinstance(candidates, list) or payload.get("candidate_count") != len(candidates):
-        raise CandidateReviewError("Candidate input count does not reconcile.")
+        raise EuropePmcCandidateReviewError("Candidate input count does not reconcile.")
 
     adjudicated_at = datetime.now(UTC).isoformat()
-    items: list[CandidateReviewItem] = []
-    seen_pmids: set[str] = set()
-    seen_pmcids: set[str] = set()
+    items: list[EuropePmcCandidateReviewItem] = []
+    seen_ids: set[str] = set()
+    seen_dois: set[str] = set()
     for candidate in candidates:
         if not isinstance(candidate, dict):
-            raise CandidateReviewError("Candidate input contains a malformed item.")
-        pmid = _required_string(candidate, "pmid")
-        if pmid in seen_pmids:
-            raise CandidateReviewError("Candidate input contains a duplicate PMID.")
-        seen_pmids.add(pmid)
+            raise EuropePmcCandidateReviewError("Candidate input contains a malformed item.")
+        europepmc_id = _required_string(candidate, "europepmc_id")
+        if europepmc_id in seen_ids:
+            raise EuropePmcCandidateReviewError("Candidate input contains a duplicate id.")
+        seen_ids.add(europepmc_id)
 
-        pmcid = _optional_string(candidate, "pmcid")
-        if pmcid is not None:
-            if pmcid in seen_pmcids:
-                raise CandidateReviewError("Candidate input contains a duplicate PMCID.")
-            seen_pmcids.add(pmcid)
+        doi = _optional_string(candidate, "doi")
+        duplicate_rule_result = "passed_exact_identifier_uniqueness"
+        if doi is not None:
+            if doi in seen_dois:
+                raise EuropePmcCandidateReviewError("Candidate input contains a duplicate DOI.")
+            seen_dois.add(doi)
 
         open_access = candidate.get("open_access")
         if not isinstance(open_access, bool):
-            raise CandidateReviewError("Candidate input contains malformed OA evidence.")
-        status = _required_string(candidate, "status")
-        if status not in {"oa_verified", "metadata_only"}:
-            raise CandidateReviewError("Candidate input contains an unsupported discovery status.")
-        if open_access != (status == "oa_verified"):
-            raise CandidateReviewError("Candidate OA evidence does not reconcile.")
+            raise EuropePmcCandidateReviewError("Candidate input contains malformed OA evidence.")
+        in_pmc = candidate.get("in_pmc")
+        if not isinstance(in_pmc, bool):
+            raise EuropePmcCandidateReviewError("Candidate input contains malformed PMC evidence.")
 
         title = _required_string(candidate, "title")
         abstract = _optional_string(candidate, "abstract")
         reported_license = _optional_string(candidate, "license")
         pdf_url = _optional_string(candidate, "pdf_url")
+        pdf_host = _optional_string(candidate, "pdf_host")
         decision = _adjudicate(
             title=title,
             abstract=abstract,
-            pmcid=pmcid,
-            status=status,
+            doi=doi,
+            open_access=open_access,
+            in_pmc=in_pmc,
             reported_license=reported_license,
             pdf_url=pdf_url,
+            pdf_host=pdf_host,
         )
         items.append(
-            CandidateReviewItem(
-                pmid=pmid,
+            EuropePmcCandidateReviewItem(
+                europepmc_id=europepmc_id,
+                source=_required_string(candidate, "source"),
+                pmid=_optional_string(candidate, "pmid"),
+                pmcid=_optional_string(candidate, "pmcid"),
+                doi=doi,
                 title=title,
                 abstract=abstract,
                 authors=_authors(candidate),
                 publication_year=_optional_year(candidate, "publication_year"),
                 venue=_optional_string(candidate, "venue"),
-                doi=_optional_string(candidate, "doi"),
-                pmcid=pmcid,
+                in_pmc=in_pmc,
                 open_access=open_access,
                 reported_license=reported_license,
                 pdf_url=pdf_url,
-                discovery_status=status,
+                pdf_host=pdf_host,
                 adjudicated_at=adjudicated_at,
-                duplicate_rule_result="passed_exact_identifier_uniqueness",
-                evidence_provenance=("pubmed_metadata", "pmc_cloud_service"),
+                duplicate_rule_result=duplicate_rule_result,
+                evidence_provenance=("europepmc_search",),
                 **decision,
             )
         )
 
-    return CandidateReviewWorksheet(
-        schema_version=2,
+    return EuropePmcCandidateReviewWorksheet(
+        schema_version=1,
         source_query=query,
-        source_retstart=retstart,
+        source_cursor_mark=cursor_mark,
         source_limit=limit,
         candidate_count=len(items),
-        rules_version=ADJUDICATION_RULES_VERSION,
+        rules_version=EUROPEPMC_ADJUDICATION_RULES_VERSION,
         items=tuple(items),
     )
 
@@ -166,6 +185,7 @@ class _AdjudicationDecision(TypedDict):
     identity_rule_result: str
     license_rule_result: str
     full_text_rule_result: str
+    pmc_overlap_rule_result: str
     unresolved_ambiguities: tuple[str, ...]
 
 
@@ -173,25 +193,42 @@ def _adjudicate(
     *,
     title: str,
     abstract: str | None,
-    pmcid: str | None,
-    status: str,
+    doi: str | None,
+    open_access: bool,
+    in_pmc: bool,
     reported_license: str | None,
     pdf_url: str | None,
+    pdf_host: str | None,
 ) -> _AdjudicationDecision:
     inclusion = evaluate_scientific_scope(title, abstract)
-    identity = "passed" if pmcid is not None else "incomplete_missing_pmcid"
+    identity = "passed" if doi is not None else "incomplete_missing_doi"
     license_result = evaluate_license(reported_license)
-    full_text = _full_text_result(pdf_url)
+    full_text = _full_text_result(pdf_url, pdf_host)
+    pmc_overlap = "out_of_scope_already_in_pmc" if in_pmc else "passed"
 
-    if status == "metadata_only":
+    if not open_access:
         return {
             "decision": "rejected",
             "reason_codes": ("NO_VERIFIED_REUSABLE_FULL_TEXT",),
-            "rules_version": ADJUDICATION_RULES_VERSION,
+            "rules_version": EUROPEPMC_ADJUDICATION_RULES_VERSION,
             "inclusion_rule_result": inclusion,
             "identity_rule_result": identity,
             "license_rule_result": "not_evaluated_without_oa_record",
             "full_text_rule_result": "not_available",
+            "pmc_overlap_rule_result": pmc_overlap,
+            "unresolved_ambiguities": (),
+        }
+
+    if in_pmc:
+        return {
+            "decision": "rejected",
+            "reason_codes": ("DUPLICATE_OF_PMC_PIPELINE_SCOPE",),
+            "rules_version": EUROPEPMC_ADJUDICATION_RULES_VERSION,
+            "inclusion_rule_result": inclusion,
+            "identity_rule_result": identity,
+            "license_rule_result": license_result,
+            "full_text_rule_result": full_text,
+            "pmc_overlap_rule_result": pmc_overlap,
             "unresolved_ambiguities": (),
         }
 
@@ -214,37 +251,40 @@ def _adjudicate(
         return {
             "decision": "held",
             "reason_codes": tuple(reasons),
-            "rules_version": ADJUDICATION_RULES_VERSION,
+            "rules_version": EUROPEPMC_ADJUDICATION_RULES_VERSION,
             "inclusion_rule_result": inclusion,
             "identity_rule_result": identity,
             "license_rule_result": license_result,
             "full_text_rule_result": full_text,
+            "pmc_overlap_rule_result": pmc_overlap,
             "unresolved_ambiguities": tuple(ambiguities),
         }
 
     return {
         "decision": "accepted",
         "reason_codes": ("ALL_REQUIRED_RULES_PASSED",),
-        "rules_version": ADJUDICATION_RULES_VERSION,
+        "rules_version": EUROPEPMC_ADJUDICATION_RULES_VERSION,
         "inclusion_rule_result": inclusion,
         "identity_rule_result": identity,
         "license_rule_result": license_result,
         "full_text_rule_result": full_text,
+        "pmc_overlap_rule_result": pmc_overlap,
         "unresolved_ambiguities": (),
     }
 
 
-def _full_text_result(pdf_url: str | None) -> str:
-    if pdf_url is None:
+def _full_text_result(pdf_url: str | None, pdf_host: str | None) -> str:
+    if pdf_url is None or pdf_host is None:
         return "incomplete_missing_pdf_url"
+    if pdf_host != EUROPEPMC_PDF_HOST:
+        return "held_third_party_host"
     parsed = urlparse(pdf_url)
     if (
         parsed.scheme != "https"
-        or parsed.hostname != PMC_CLOUD_PDF_HOST
+        or parsed.hostname != EUROPEPMC_PDF_HOST
         or parsed.username is not None
         or parsed.password is not None
         or parsed.port not in (None, 443)
-        or not parsed.path.lower().endswith(".pdf")
     ):
         return "invalid_approved_pdf_url"
     return "passed"
@@ -253,7 +293,7 @@ def _full_text_result(pdf_url: str | None) -> str:
 def _required_string(payload: dict[str, object], key: str) -> str:
     value = payload.get(key)
     if not isinstance(value, str) or not value.strip():
-        raise CandidateReviewError("Candidate input is missing required evidence.")
+        raise EuropePmcCandidateReviewError("Candidate input is missing required evidence.")
     return value.strip()
 
 
@@ -262,7 +302,7 @@ def _optional_string(payload: dict[str, object], key: str) -> str | None:
     if value is None:
         return None
     if not isinstance(value, str):
-        raise CandidateReviewError("Candidate input contains malformed evidence.")
+        raise EuropePmcCandidateReviewError("Candidate input contains malformed evidence.")
     normalized = value.strip()
     return normalized or None
 
@@ -272,7 +312,7 @@ def _authors(payload: dict[str, object]) -> tuple[str, ...]:
     if not isinstance(value, list) or not all(
         isinstance(author, str) and author.strip() for author in value
     ):
-        raise CandidateReviewError("Candidate input contains malformed author evidence.")
+        raise EuropePmcCandidateReviewError("Candidate input contains malformed author evidence.")
     return tuple(author.strip() for author in value)
 
 
@@ -281,33 +321,16 @@ def _optional_year(payload: dict[str, object], key: str) -> int | None:
     if value is None:
         return None
     if not isinstance(value, int) or isinstance(value, bool) or not 1000 <= value <= 9999:
-        raise CandidateReviewError("Candidate input contains malformed publication evidence.")
+        raise EuropePmcCandidateReviewError(
+            "Candidate input contains malformed publication evidence."
+        )
     return value
-
-
-def _discovery_limit(payload: dict[str, object]) -> int:
-    single_page_limit = payload.get("limit")
-    batch_limit = payload.get("requested_limit")
-    if single_page_limit is not None and batch_limit is not None:
-        if single_page_limit != batch_limit:
-            raise CandidateReviewError("Candidate input contains conflicting discovery limits.")
-        return _required_positive_int(payload, "limit")
-    if single_page_limit is not None:
-        return _required_positive_int(payload, "limit")
-    if batch_limit is not None:
-        return _required_positive_int(payload, "requested_limit")
-    raise CandidateReviewError("Candidate input is missing a discovery limit.")
 
 
 def _required_positive_int(payload: dict[str, object], key: str) -> int:
     value = payload.get(key)
     if not isinstance(value, int) or isinstance(value, bool) or value < 1:
-        raise CandidateReviewError("Candidate input contains malformed discovery metadata.")
-    return value
-
-
-def _required_nonnegative_int(payload: dict[str, object], key: str) -> int:
-    value = payload.get(key)
-    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-        raise CandidateReviewError("Candidate input contains malformed discovery metadata.")
+        raise EuropePmcCandidateReviewError(
+            "Candidate input contains malformed discovery metadata."
+        )
     return value

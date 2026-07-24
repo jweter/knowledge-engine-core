@@ -15,7 +15,7 @@ must be able to trust.
 
 Current version: `0.2.0a1`
 
-Current phase: **Phase 2 — Evidence Records** (Phase 1 ingestion complete through M14)
+Current phase: **Phase 2 — Evidence Records** (Phase 1 ingestion complete through M14, plus M34's second discovery source)
 
 Phase 1 completed capabilities include:
 
@@ -33,6 +33,9 @@ Phase 1 completed capabilities include:
 - provenance-preserving metadata preview and Crossref enrichment boundaries
 - controlled 100-paper rehearsal reporting
 - deterministic M13 scale-readiness assessment
+- a second automated discovery source, Europe PMC (M34), alongside PubMed/PMC
+  (`ke europepmc-candidate-discover`, `ke europepmc-candidate-review-prepare`)
+  -- discovery and adjudication only, not yet wired into acquisition
 - strict mypy, Ruff formatting/linting, and pytest coverage
 
 Phase 2 completed capabilities include:
@@ -223,10 +226,20 @@ architecture and milestone-by-milestone status.
   wiring (`ke embedding-index-build`/`ke vector-search` targeting a
   collection instead of a local file) is deliberately deferred until a
   real operator need for it appears.
+- **M34 (Phase 1):** added Europe PMC as a second automated discovery
+  source alongside M14's PubMed/PMC pipeline (`ke europepmc-candidate-discover`,
+  `ke europepmc-candidate-review-prepare`), with its own adjudication
+  engine since identity and full-text evidence work differently for
+  Europe PMC than for PMC. Scientific-scope and license rules are shared
+  with M14's engine (`scientific_scope.py`, `license_rules.py`, extracted
+  with zero behavior change). Scoped to discovery and adjudication only --
+  not wired into acquisition, and does not resume corpus growth (frozen at
+  605 papers). See [docs/m34_europepmc_discovery.md](docs/m34_europepmc_discovery.md).
 
-Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is
-complete through M29. Phase 3 (search plus semantics) is in progress with
-M33. See [docs/roadmap.md](docs/roadmap.md) and
+Phase 1 ingestion is complete through M14, plus M34's second discovery
+source. Phase 2 evidence extraction is complete through M29. Phase 3
+(search plus semantics) is in progress with M33. See
+[docs/roadmap.md](docs/roadmap.md) and
 [docs/phase3_design.md](docs/phase3_design.md) for the next milestone.
 
 ## Requirements

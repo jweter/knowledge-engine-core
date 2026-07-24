@@ -17,6 +17,16 @@ from knowledge_engine.corpus_library import export_corpus_library, import_corpus
 from knowledge_engine.crossref_http import UrllibCrossrefTransport
 from knowledge_engine.crossref_provider import CrossrefProvider
 from knowledge_engine.database import Database, ExtractionRunRepository, PaperRepository
+from knowledge_engine.europepmc_candidate_review import (
+    EuropePmcCandidateReviewError,
+    prepare_europepmc_candidate_review,
+)
+from knowledge_engine.europepmc_discovery import (
+    EuropePmcDiscoveryError,
+    EuropePmcDiscoveryService,
+)
+from knowledge_engine.europepmc_discovery import GetTransport as EuropePmcGetTransport
+from knowledge_engine.europepmc_http import UrllibEuropePmcTransport
 from knowledge_engine.extraction import (
     CLAIM_CANDIDATE_RULES_VERSION,
     CLAIM_FRAMING_RULES_VERSION,
@@ -98,6 +108,24 @@ CandidateLimitOption = Annotated[
 CandidateRetstartOption = Annotated[
     int,
     typer.Option("--retstart", min=0, help="Zero-based PubMed page offset."),
+]
+EuropePmcQueryOption = Annotated[
+    str,
+    typer.Option("--query", help="Europe PMC search expression."),
+]
+EuropePmcCursorMarkOption = Annotated[
+    str,
+    typer.Option("--cursor-mark", help="Europe PMC pagination cursor ('*' for the first page)."),
+]
+EuropePmcReviewCandidatesOption = Annotated[
+    Path,
+    typer.Option(
+        "--candidates",
+        help="Europe PMC discovery JSON path.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
 ]
 CandidatesPathOption = Annotated[
     Path,
@@ -227,6 +255,13 @@ def _pmc_acquisition_service() -> PmcOaAcquisitionService:
 
     transport = cast(AcquisitionTransport, UrllibNcbiTransport())
     return PmcOaAcquisitionService(transport)
+
+
+def _europepmc_discovery_service() -> EuropePmcDiscoveryService:
+    """Build the production Europe PMC discovery service for an explicit command."""
+
+    transport = cast(EuropePmcGetTransport, UrllibEuropePmcTransport())
+    return EuropePmcDiscoveryService(transport)
 
 
 def _local_database() -> Database:
@@ -427,6 +462,82 @@ def pubmed_candidate_discover(
     console.print(
         "[bold]Candidates require human inclusion and license review; "
         "no PDFs were downloaded.[/bold]"
+    )
+
+
+@app.command("europepmc-candidate-discover")
+def europepmc_candidate_discover(
+    query: EuropePmcQueryOption,
+    output: CandidateOutputOption,
+    limit: CandidateLimitOption = 25,
+    cursor_mark: EuropePmcCursorMarkOption = "*",
+    force: ForceOutputOption = False,
+) -> None:
+    """Discover reviewable Europe PMC candidates without downloading PDFs.
+
+    The second automated discovery source (M34), alongside
+    `pubmed-candidate-discover`. Deliberately scoped to what Europe PMC adds
+    beyond PMC: candidates already in PMC are still discovered and reported
+    here (never silently dropped), but `europepmc-candidate-review-prepare`
+    rejects them as out of this pipeline's scope, since PMC content is
+    already reachable through the PubMed/PMC pipeline via NCBI's own
+    official S3 bucket.
+    """
+
+    _validate_output(output, force=force)
+    console.print("[yellow]Network access:[/yellow] querying the official Europe PMC REST API.")
+    try:
+        result = _europepmc_discovery_service().discover(
+            query,
+            limit=limit,
+            cursor_mark=cursor_mark,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except EuropePmcDiscoveryError as exc:
+        console.print(f"[red]Europe PMC discovery failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    _write_output(output, result.to_json())
+    verified = sum(candidate.open_access for candidate in result.candidates)
+    console.print(
+        f"[green]Wrote {len(result.candidates)} candidates:[/green] {output} "
+        f"({verified} open access)."
+    )
+    if result.next_cursor_mark is not None:
+        console.print(f"Next page: --cursor-mark {result.next_cursor_mark!r}")
+    console.print(
+        "[bold]Candidates require human inclusion and license review; "
+        "no PDFs were downloaded.[/bold]"
+    )
+
+
+@app.command("europepmc-candidate-review-prepare")
+def europepmc_candidate_review_prepare(
+    candidates: EuropePmcReviewCandidatesOption,
+    output: CandidateOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Create a deterministic Europe PMC adjudication worksheet.
+
+    Never approves or promotes a candidate -- mirrors
+    `candidate_review_cli.py`'s "prepare" step for the PubMed/PMC pipeline,
+    but as a `ke` subcommand for discoverability.
+    """
+
+    _validate_output(output, force=force)
+    try:
+        worksheet = prepare_europepmc_candidate_review(candidates)
+    except EuropePmcCandidateReviewError as exc:
+        console.print(
+            f"[red]Europe PMC candidate review preparation failed:[/red] {escape(str(exc))}"
+        )
+        raise typer.Exit(1) from exc
+
+    _write_output(output, worksheet.to_json())
+    console.print(
+        f"[green]Prepared {worksheet.candidate_count} pending candidate reviews:[/green] {output}. "
+        "No candidates were approved or promoted."
     )
 
 
