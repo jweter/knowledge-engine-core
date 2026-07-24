@@ -62,45 +62,32 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 493 sources: the small historical GLP-1
-prototype set (3 rows) plus 490 accepted records from the first six small
-(`--limit 250`) automated discovery batches (`retstart=0`, 80 records;
-`retstart=250`, 72 records; `retstart=500`, 86 records; `retstart=750`, 76
-records; `retstart=1000`, 70 records; `retstart=1250`, 106 records) of the
-project owner's larger corpus-building effort, following M14's rules.
+The committed manifest holds 605 sources: the small historical GLP-1
+prototype set (3 rows) plus 602 accepted records from seven small
+(`--limit 250`) automated discovery batches (`retstart` 0 through 1500) of
+the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
-A further eighteen records were manually excluded after review, since
-v9's disease/intervention keyword match has no automated way to catch any
-of these patterns: ten single-patient case reports whose abstracts named
-a target disease term only as an incidental, unrelated patient
-comorbidity, or whose reported intervention treated a coexisting condition
-rather than the metabolic disease named in the title -- including some
-whose titles named the disease term directly, showing that title presence
-alone doesn't rule out an incidental mention; two gene- or protein-name
-lexical collisions (a xenograft mouse strain literally named "non-obese
-diabetic (NOD)-SCID" in a cervical-cancer study, and the FTO gene's full
-name, "fat mass and obesity-associated," in a lymphoma drug-resistance
-study); a type 1 diabetes pathogenesis/multi-omics paper held under
-`exclusion_criteria.md`'s explicit "type 1 diabetes-specific without
-evidence applicable to the committed Phase 1 scope" rule; a
-rare-genetic-disease EHR mapping study whose only type-2-diabetes mention
-was one incidental example finding buried in results about an unrelated
-disease (myotonic dystrophy); an osteoarthritis mechanism review whose
-"metabolic" language never named any of the four scope diseases; a
-quality-of-life survey reporting no treatment-effect findings at all; and
-a cancer-cachexia genetics study whose only apparent match was the generic
-English phrase "a complex metabolic syndrome" describing cachexia itself,
-not the corpus's named disease entity. All of the above were confirmed via
-individual abstract review, several after Codex reviews on the growth PRs
-first flagged specific examples. A broader initial sweep over this same
-batch also flagged roughly a dozen more mechanism-only reviews and
-drug-adjacent analytical-chemistry papers as borderline; per the project
-owner's explicit direction that the corpus-building phase should prioritize
-breadth over precision for now, those were kept rather than excluded, and
-only the clear-cut cases above were held. See
-`docs/m14_candidate_review_worksheet.md` for the full v6-v9 rules history.
-Accepted records proceed
+A further twenty-five records were manually excluded after individual
+abstract review, since v9's disease/intervention keyword match has no
+automated way to catch several recurring patterns: single-patient case
+reports where the named disease is only incidental patient background or
+the reported intervention treats an unrelated coexisting condition;
+gene-/protein-name lexical collisions (e.g. the NOD-SCID mouse strain, the
+FTO gene's "fat mass and obesity-associated" full name); type 1
+diabetes-specific sources per `exclusion_criteria.md`'s explicit rule; a
+pediatric study population whose title's forward-looking "Adult" outcome
+term obscured the actual (non-adult) subjects; and a few papers matching a
+target term only via generic English phrasing unrelated to the actual
+disease entity. Several of these were first caught by Codex reviews on the
+growth PRs. As of the `retstart=1250` batch, the
+project owner gave explicit direction that this corpus-building phase
+should prioritize breadth over precision: only the clear-cut patterns
+above are now screened before acquisition, not exhaustive gray-area
+sweeps for mechanism-only reviews, analytical-chemistry papers, or drugs
+studied for unrelated diseases. See `CHANGELOG.md` for the full per-batch
+history and `docs/m14_candidate_review_worksheet.md` for the v6-v9
+ruleset history. Accepted records proceed
 automatically; rejected and held records remain auditable but do not block
 the batch or require owner review. The corpus continues to grow in small
 batches toward a target of at least a couple thousand papers -- see
