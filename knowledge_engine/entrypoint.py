@@ -160,13 +160,32 @@ ExistingEmbeddingIndexPathOption = Annotated[
     ),
 ]
 QueryVectorOption = Annotated[
-    Path,
+    Path | None,
     typer.Option(
         "--query-vector",
-        help="JSON file containing an already-embedded query vector.",
+        help="JSON file containing an already-embedded query vector. Mutually exclusive "
+        "with --query-text.",
         exists=True,
         dir_okay=False,
         readable=True,
+    ),
+]
+QueryTextOption = Annotated[
+    str | None,
+    typer.Option(
+        "--query-text",
+        help="A free-text query to embed live (via --generator) and search with. "
+        "Mutually exclusive with --query-vector.",
+    ),
+]
+VectorSearchGeneratorOption = Annotated[
+    str | None,
+    typer.Option("--generator", help="Embedding generator for --query-text: 'local' or 'openai'."),
+]
+VectorSearchModelOption = Annotated[
+    str | None,
+    typer.Option(
+        "--model", help="Override the generator's default model name (used with --query-text)."
     ),
 ]
 VectorSearchLimitOption = Annotated[int, typer.Option("--limit", "-n", min=1, max=100)]
@@ -857,18 +876,23 @@ def embedding_index_build(
 @app.command("vector-search")
 def vector_search(
     index_path: ExistingEmbeddingIndexPathOption,
-    query_vector: QueryVectorOption,
+    query_vector: QueryVectorOption = None,
+    query_text: QueryTextOption = None,
+    generator: VectorSearchGeneratorOption = None,
+    model: VectorSearchModelOption = None,
     limit: VectorSearchLimitOption = 10,
 ) -> None:
-    """Search a local FAISS vector index by an already-embedded query vector.
+    """Search a local FAISS vector index by a free-text query or an already-embedded vector.
 
-    Does not accept a free-text query -- no EmbeddingGenerator exists yet
-    (see docs/phase3_design.md's Open Questions). The caller supplies an
-    already-embedded query vector, for example from any external
-    embedding tool, as a JSON file (`{"vector": [...]}`, optionally with
-    `"embedding_model"` to be checked against the index; or a bare array).
-    Lexical search remains available via `ke search`; this command is an
-    additional, separate retrieval signal, not a replacement.
+    Exactly one of `--query-text` (embedded live via `--generator local|openai`,
+    the same generators `ke embedding-generate` uses) or `--query-vector` (a JSON
+    file from any external embedding tool -- `{"vector": [...]}`, optionally with
+    `"embedding_model"`; or a bare array) must be given. Either way the query's
+    embedding_model, once known, is checked against the index's recorded
+    embedding_model -- vectors from different models are not comparable even at
+    the same dimension. Lexical search remains available via `ke search`; this
+    command is an additional, separate retrieval signal, not a replacement, and
+    combining the two into one ranked list is not yet implemented.
     """
 
     index_metadata = load_index_metadata(index_path)
@@ -880,28 +904,52 @@ def vector_search(
         )
         raise typer.Exit(1)
 
-    try:
-        payload = json.loads(query_vector.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        console.print(f"[red]Query vector file is not valid JSON:[/red] {query_vector}")
-        raise typer.Exit(1) from None
-
-    vector = payload.get("vector") if isinstance(payload, dict) else payload
-    if (
-        not isinstance(vector, list)
-        or not vector
-        or not all(
-            isinstance(component, int | float) and not isinstance(component, bool)
-            for component in vector
-        )
-    ):
-        console.print(
-            "[red]Query vector file must contain a non-empty array of numbers "
-            '(a bare array or {"vector": [...]}).[/red]'
-        )
+    if (query_vector is None) == (query_text is None):
+        console.print("[red]Provide exactly one of --query-vector or --query-text.[/red]")
         raise typer.Exit(1)
 
-    query_embedding_model = payload.get("embedding_model") if isinstance(payload, dict) else None
+    query_embedding_model: str | None
+    if query_text is not None:
+        if generator is None:
+            console.print("[red]--generator is required with --query-text (local or openai).[/red]")
+            raise typer.Exit(1)
+        embedding_generator = _build_embedding_generator(generator, model)
+        try:
+            vector: list[float] = list(embedding_generator.generate(query_text))
+        except (LocalEmbeddingError, OpenAiEmbeddingError) as exc:
+            console.print(f"[red]Failed to embed query text:[/red] {escape(str(exc))}")
+            raise typer.Exit(1) from None
+        query_embedding_model = embedding_generator.model_id
+    else:
+        assert query_vector is not None
+        if generator is not None or model is not None:
+            console.print("[red]--generator/--model are only used with --query-text.[/red]")
+            raise typer.Exit(1)
+        try:
+            payload = json.loads(query_vector.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            console.print(f"[red]Query vector file is not valid JSON:[/red] {query_vector}")
+            raise typer.Exit(1) from None
+
+        raw_vector = payload.get("vector") if isinstance(payload, dict) else payload
+        if (
+            not isinstance(raw_vector, list)
+            or not raw_vector
+            or not all(
+                isinstance(component, int | float) and not isinstance(component, bool)
+                for component in raw_vector
+            )
+        ):
+            console.print(
+                "[red]Query vector file must contain a non-empty array of numbers "
+                '(a bare array or {"vector": [...]}).[/red]'
+            )
+            raise typer.Exit(1)
+        vector = [float(component) for component in raw_vector]
+        query_embedding_model = (
+            payload.get("embedding_model") if isinstance(payload, dict) else None
+        )
+
     if (
         query_embedding_model is not None
         and query_embedding_model != index_metadata.embedding_model
@@ -919,7 +967,7 @@ def vector_search(
         console.print(f"[red]{escape(str(exc))}[/red]")
         raise typer.Exit(1) from None
 
-    matches = index.search([float(component) for component in vector], k=limit)
+    matches = index.search(vector, k=limit)
     if not matches:
         console.print("[yellow]No matches found in the vector index.[/yellow]")
         return

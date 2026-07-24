@@ -20,9 +20,15 @@ decision itself: the project owner chose "both" -- a local
 `sentence-transformers` model and an external OpenAI API generator, both
 implementing the same `EmbeddingGenerator` interface, wired into a new
 `ke embedding-generate` command that produces the same vectors file
-`ke embedding-index-build` already consumes. See the Architecture and
-Vector Index Layer sections below for what M30/M31 actually implement, and
-Open Questions for what remains undecided.
+`ke embedding-index-build` already consumes. M32 then closed the gap those
+two milestones deliberately left open: `ke vector-search` now accepts
+`--query-text`, embedding a live free-text query with either generator
+before searching, instead of requiring a pre-embedded vector file for
+every query. See the Architecture and Vector Index Layer sections below
+for what M30/M31/M32 actually implement, and Open Questions for what
+remains undecided (notably, combining this with lexical FTS5 results into
+one ranked list -- M32 only removes the "must pre-embed the query"
+friction, it does not unify the two retrieval signals).
 
 ## Mission
 
@@ -132,15 +138,21 @@ Parser / Extraction (existing, unchanged)
        file shares the same embedding_model -- referentially checks every
        paper_id against the local database, builds/updates the index, and
        persists Paper.embedding_model/embedding_id) and
-       `ke vector-search --index-path <path> --query-vector <json>`
-       (takes an already-embedded query vector, not free text -- embedding
-       a live query through `ke search`/`ke answer` is deferred, see
-       Result combination below -- and returns ranked papers with their
-       real metadata, labeled with the index's recorded embedding_model).
+       `ke vector-search --index-path <path> (--query-vector <json> |
+       --query-text <text> --generator local|openai)` (M32: accepts either
+       an already-embedded query vector from any external tool, or a
+       free-text query embedded live with the same local/OpenAI generators
+       `ke embedding-generate` uses -- exactly one of the two must be
+       given. Either way the query's embedding_model is checked against
+       the index's recorded embedding_model before searching, and the
+       command returns ranked papers with their real metadata).
   -> Search Service (existing SearchService, unchanged)
-       ke search / ke answer remain lexical-only (FTS5). Combining lexical
-       and semantic results into one ranked list is deferred -- see Open
-       Questions -- since a live text query can't be embedded yet.
+       ke search / ke answer remain lexical-only (FTS5); `ke vector-search`
+       is a separate command, not merged into them. Combining lexical and
+       semantic results into one ranked list is still deferred -- see Open
+       Questions' Result combination entry -- M32 only removed the
+       "queries must be pre-embedded" friction, it did not unify the two
+       retrieval signals.
 ```
 
 ## Decisions the project owner made before any code was written
@@ -199,7 +211,7 @@ simultaneously would have duplicated the M12-style "narrow first, expand
 later" discipline unnecessarily, so FAISS shipped first in M30 -- no
 server/operator setup, matching this project's default single-machine
 posture. The project owner has approved Qdrant as the second, explicitly
-optional backend behind the same `VectorIndex` interface (M32, not yet
+optional backend behind the same `VectorIndex` interface (M33, not yet
 built as of this writing).
 
 ## Testing Strategy
@@ -225,6 +237,12 @@ Following the same pattern M14/Phase 2 established:
   the CLI wiring is correct, but only reads `model_id`, which requires no
   model download (the model loads lazily on first `generate`/`dimension`
   call).
+- For `ke vector-search --query-text` (M32): `tests/test_free_text_vector_search_cli.py`
+  monkeypatches `_build_embedding_generator` with a fake generator (same
+  seam `test_embedding_generate_cli.py` uses), proving the live-embed path,
+  the `--query-vector`/`--query-text` mutual-exclusion validation, and the
+  embedding-model mismatch rejection without downloading a real model or
+  calling a real API.
 - No test should assert that a semantic match is more "correct" than a
   lexical one -- only that the ranking/combination logic behaves as
   specified for fixed, known inputs.
@@ -238,12 +256,14 @@ Following the same pattern M14/Phase 2 established:
   Qdrant remains a second, not-yet-built backend behind the same
   `VectorIndex` interface, to be added only if a real operator need for a
   server-backed index appears.
-- **Result combination** -- once both lexical and semantic signals exist,
-  how are they combined into one ranked result list (interleaved, semantic
-  as a re-ranker over lexical candidates, separate result sections)? Not
-  yet designed; depends on which embedding approach is chosen and what real
-  query patterns look like once `ke search`/`ke answer` can actually accept
-  a free-text semantic query.
+- **Result combination** -- partially unblocked by M32: `ke vector-search
+  --query-text` now accepts a free-text query directly, so "what real
+  query patterns look like" is no longer blocked on an embedding approach
+  existing. Still undesigned: how lexical (`ke search`/`ke answer`, FTS5)
+  and semantic (`ke vector-search`) results get combined into one ranked
+  list (interleaved, semantic as a re-ranker over lexical candidates,
+  separate result sections) -- they remain two separate commands today,
+  not merged.
 - **`embedding_id` semantics** -- resolved for M30's own mechanism:
   `embedding_id` is the paper's own `Paper.id` (as a string), matching the
   ID `FaissVectorIndex` itself is keyed by. This may need revisiting if a

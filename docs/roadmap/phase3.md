@@ -9,18 +9,21 @@ project owner had to make, the same way the Phase 2 extraction methodology
 was decided before any extraction code was written -- is now resolved: M30
 built the retrieval-side plumbing first (`VectorIndex`/FAISS, against
 externally-supplied vectors, without committing to an embedding-model
-dependency), and M31 added both a local (`sentence-transformers`) and an
+dependency), M31 added both a local (`sentence-transformers`) and an
 external-API (OpenAI) embedding generator behind the same
-`EmbeddingGenerator` interface. Qdrant, as a second `VectorIndex` backend,
-is approved and not yet built (M32).
+`EmbeddingGenerator` interface, and M32 wired `ke vector-search` to accept
+a free-text query embedded live with either generator, removing the
+"queries must be pre-embedded" friction M30/M31 deliberately left in
+place. Qdrant, as a second `VectorIndex` backend, is approved and not yet
+built (M33).
 
 ## Goals
 
 - Add embeddings using a pluggable vector index. (Done, M30: FAISS.)
 - Support local FAISS and server-backed Qdrant. (FAISS done, M30; Qdrant
-  approved, not yet built.)
+  approved, not yet built -- M33.)
 - Keep lexical search as a transparent baseline. (Unchanged -- `ke search`/
-  `ke answer` remain FTS5-only.)
+  `ke answer` remain FTS5-only; `ke vector-search` is a separate command.)
 
 ## Principle
 
