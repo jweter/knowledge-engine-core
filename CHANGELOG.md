@@ -405,10 +405,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   writes the same vectors-file format `ke embedding-index-build` already
   consumes; M30's ingestion/build/search commands are unchanged. Added
   `sentence-transformers` as a new dependency, with PyTorch pinned to the
-  CPU-only wheel index (`https://download.pytorch.org/whl/cpu`) rather
-  than the default GPU/CUDA build, since this project runs single-machine
-  and offline and the default build pulls in an unused multi-gigabyte
-  NVIDIA CUDA toolkit.
+  CPU-only wheel index (`https://download.pytorch.org/whl/cpu`) on
+  Linux/Windows rather than the default GPU/CUDA build, since this
+  project runs single-machine and offline and the default build pulls in
+  an unused multi-gigabyte NVIDIA CUDA toolkit; macOS resolves `torch`
+  from the default PyPI index instead, since the CPU-only wheel index
+  publishes no macOS wheels at all (found by a Codex review on PR #155,
+  which would otherwise have blocked `poetry install` on macOS entirely).
+- Added M32: `ke vector-search` now accepts `--query-text <text>
+  --generator local|openai [--model <name>]` as an alternative to
+  `--query-vector <json>` -- embedding a free-text query live with either
+  M31 generator before searching, instead of requiring every query to be
+  pre-embedded out-of-band first. Exactly one of `--query-vector`/
+  `--query-text` must be given; either way the query's embedding_model is
+  checked against the index's recorded embedding_model before searching.
+  `ke search`/`ke answer` remain lexical-only (FTS5); combining lexical
+  and semantic results into one ranked list is still a separate,
+  undesigned question.
 
 ### Changed
 

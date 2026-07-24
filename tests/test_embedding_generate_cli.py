@@ -10,7 +10,7 @@ import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.parser import ParsedPage, ParsedPaper
-from knowledge_engine.vector_search import LocalEmbeddingError
+from knowledge_engine.vector_search import LocalEmbeddingError, OpenAiEmbeddingError
 from knowledge_engine.vector_search.generator import EmbeddingGenerator
 
 
@@ -224,3 +224,61 @@ def test_build_embedding_generator_returns_a_real_embedding_generator() -> None:
     generator: EmbeddingGenerator = entrypoint._build_embedding_generator("local", None)
 
     assert generator.model_id == "local:all-MiniLM-L6-v2"
+
+
+def test_embedding_generate_reports_an_unknown_openai_model_cleanly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A bad --model must not crash with an unhandled exception (Codex finding, PR #156).
+
+    `_build_embedding_generator` constructs the generator before any
+    try/except in the caller; an invalid model previously propagated as
+    an unhandled OpenAiEmbeddingError instead of the sanitized CLI error
+    every other failure path in this command uses.
+    """
+
+    monkeypatch.setenv("KE_OPENAI_API_KEY", "sk-test")
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "embedding-generate",
+            "--output",
+            "/tmp/does-not-matter.jsonl",
+            "--generator",
+            "openai",
+            "--model",
+            "not-a-real-model",
+        ],
+    )
+
+    assert not isinstance(result.exception, LocalEmbeddingError | OpenAiEmbeddingError)
+    assert result.exit_code != 0
+    assert "Unknown OpenAI embedding model" in _unwrapped(result.output)
+
+
+def test_embedding_generate_reports_an_empty_local_model_name_cleanly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        repository = PaperRepository(session)
+        repository.add_parsed_paper(_parsed_paper(tmp_path, "a" * 64))
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "embedding-generate",
+            "--output",
+            str(tmp_path / "vectors.jsonl"),
+            "--generator",
+            "local",
+            "--model",
+            "   ",
+        ],
+    )
+
+    assert not isinstance(result.exception, LocalEmbeddingError | OpenAiEmbeddingError)
+    assert result.exit_code != 0
+    assert "model name is required" in _unwrapped(result.output)

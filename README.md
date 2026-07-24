@@ -110,9 +110,10 @@ Phase 3 completed capabilities include:
   a JSONL file of paper embeddings (from `ke embedding-generate` or any
   external tool), referentially checks every `paper_id` against the local
   database, and builds/updates the FAISS index
-- the `ke vector-search` CLI command, which searches that index by an
-  already-embedded query vector (not free text) and returns ranked papers
-  with their real title/DOI metadata
+- the `ke vector-search` CLI command, which searches that index by either
+  a free-text query (`--query-text`, embedded live with `--generator
+  local|openai`) or an already-embedded query vector (`--query-vector`),
+  and returns ranked papers with their real title/DOI metadata
 
 See [docs/phase3_design.md](docs/phase3_design.md) for the Phase 3
 architecture and milestone-by-milestone status.
@@ -204,10 +205,15 @@ architecture and milestone-by-milestone status.
   implementing `EmbeddingGenerator`, plus the `ke embedding-generate`
   CLI command that writes the same vectors-file format M30's commands
   already consume.
+- **M32:** `ke vector-search` now accepts `--query-text --generator
+  local|openai`, embedding a free-text query live before searching, as
+  an alternative to `--query-vector`'s pre-embedded JSON file. Combining
+  this with lexical `ke search`/`ke answer` results into one ranked list
+  is still a separate, undesigned question.
 
 Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is
 complete through M29. Phase 3 (search plus semantics) is in progress with
-M31. See [docs/roadmap.md](docs/roadmap.md) and
+M32. See [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase3_design.md](docs/phase3_design.md) for the next milestone.
 
 ## Requirements
@@ -442,7 +448,7 @@ Neither Phase 1 nor Phase 2 should be expanded into Alembic adoption, a new
 package manager, persistent telemetry, vector search, a graph, AI reasoning,
 an API, web functionality, or unrelated refactoring without separate
 evidence and authorization. Vector search itself is Phase 3's own explicit
-goal (see M30/M31 above and [docs/phase3_design.md](docs/phase3_design.md)), not
+goal (see M30/M31/M32 above and [docs/phase3_design.md](docs/phase3_design.md)), not
 an out-of-scope expansion of Phases 1/2.
 
 ## Known Issues
