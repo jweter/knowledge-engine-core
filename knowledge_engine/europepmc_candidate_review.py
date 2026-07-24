@@ -23,6 +23,7 @@ from urllib.parse import urlparse
 from knowledge_engine.europepmc_discovery import EUROPEPMC_PDF_HOST
 from knowledge_engine.license_rules import evaluate_license
 from knowledge_engine.scientific_scope import evaluate_scientific_scope
+from knowledge_engine.utils import normalize_doi
 
 EUROPEPMC_ADJUDICATION_RULES_VERSION = "m34-europepmc-candidate-adjudication-v1"
 
@@ -116,9 +117,10 @@ def prepare_europepmc_candidate_review(candidates_path: Path) -> EuropePmcCandid
         doi = _optional_string(candidate, "doi")
         duplicate_rule_result = "passed_exact_identifier_uniqueness"
         if doi is not None:
-            if doi in seen_dois:
+            normalized_doi = normalize_doi(doi)
+            if normalized_doi in seen_dois:
                 raise EuropePmcCandidateReviewError("Candidate input contains a duplicate DOI.")
-            seen_dois.add(doi)
+            seen_dois.add(normalized_doi)
 
         open_access = candidate.get("open_access")
         if not isinstance(open_access, bool):

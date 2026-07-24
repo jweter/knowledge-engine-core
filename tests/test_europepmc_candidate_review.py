@@ -195,6 +195,27 @@ def test_duplicate_doi_is_rejected_before_adjudication(tmp_path: Path) -> None:
         prepare_europepmc_candidate_review(candidates)
 
 
+def test_duplicate_doi_is_detected_despite_casing_and_url_prefix(tmp_path: Path) -> None:
+    """Codex finding on PR #158: exact-string DOI comparison missed real duplicates.
+
+    DOIs are case-insensitive and may appear with or without the
+    `https://doi.org/` prefix; `normalize_doi` (already used elsewhere in
+    this project for the same reason) must be applied before comparison.
+    """
+
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(
+        candidates,
+        [
+            _candidate(europepmc_id="PPR1", doi="10.1000/ABC"),
+            _candidate(europepmc_id="PPR2", doi="https://doi.org/10.1000/abc"),
+        ],
+    )
+
+    with pytest.raises(EuropePmcCandidateReviewError, match="duplicate DOI"):
+        prepare_europepmc_candidate_review(candidates)
+
+
 def test_missing_required_field_is_rejected(tmp_path: Path) -> None:
     candidate = _candidate()
     del candidate["title"]
