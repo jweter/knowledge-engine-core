@@ -8,7 +8,7 @@ import knowledge_engine.import_runs.ingestion as ingestion_module
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService
 from knowledge_engine.models import Paper
 from knowledge_engine.paper_persistence import ClassifiedPaperRepository
-from knowledge_engine.parser import DocumentParseError, DocumentParser, ParsedPaper
+from knowledge_engine.parser import DocumentParseError, DocumentParser, ParsedPage, ParsedPaper
 from knowledge_engine.persistence_errors import SearchIndexWriteError
 from tests.corpus_fixtures import (
     get_run,
@@ -70,7 +70,14 @@ def declare_pdf(tmp_path: Path, name: str) -> Path:
     return path
 
 
-def parsed_paper(path: Path, *, title: str, doi: str, content_hash: str) -> ParsedPaper:
+def parsed_paper(
+    path: Path,
+    *,
+    title: str,
+    doi: str,
+    content_hash: str,
+    pages: list[ParsedPage] | None = None,
+) -> ParsedPaper:
     return ParsedPaper(
         source_path=path,
         content_hash=content_hash,
@@ -82,6 +89,7 @@ def parsed_paper(path: Path, *, title: str, doi: str, content_hash: str) -> Pars
         word_count=4,
         raw_text="Raw text for indexing.",
         body_text="Body text for indexing.",
+        pages=pages or [],
     )
 
 
@@ -140,6 +148,48 @@ def test_warning_only_import_finishes_succeeded(tmp_path: Path) -> None:
     assert run.run_status == "succeeded"
     assert run.warning_count == 1
     assert run.items[0].item_status == "imported"
+
+
+def test_ingestion_persists_paper_pages(tmp_path: Path) -> None:
+    """Regression test: `CorpusIngestionService` uses `ClassifiedPaperRepository`,
+
+    a separate `PaperRepository.add_parsed_paper` override from the base
+    class. The override previously omitted `paper.pages = [...]`, so every
+    paper imported through the real `corpus-import` path (as opposed to the
+    base class, used only by the single-file `ke import` command) silently
+    persisted zero `PaperPage` rows despite a correctly parsed page count --
+    found by running Phase 2 extraction against a real, fully imported
+    corpus for the first time.
+    """
+
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(tmp_path)
+    pdf_path = declare_pdf(tmp_path, "paper.pdf")
+    parser = StubParser(
+        {
+            "paper.pdf": parsed_paper(
+                pdf_path,
+                title="Imported",
+                doi="10.1234/imported",
+                content_hash="a" * 64,
+                pages=[
+                    ParsedPage(page_number=1, text="Page one text."),
+                    ParsedPage(page_number=2, text="Page two text."),
+                ],
+            )
+        }
+    )
+
+    with database.session() as session:
+        CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
+            corpus_path
+        )
+
+    with database.session() as session:
+        paper = session.query(Paper).filter_by(doi="10.1234/imported").one()
+        assert [page.page_number for page in paper.pages] == [1, 2]
+        assert paper.pages[0].text == "Page one text."
+        assert paper.pages[1].text == "Page two text."
 
 
 def test_import_blocked_manifest_preserves_blocked_run_status(tmp_path: Path) -> None:
