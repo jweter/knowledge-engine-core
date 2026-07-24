@@ -1,5 +1,6 @@
 import pytest
 from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from knowledge_engine.vector_search import (
     QDRANT_VECTOR_INDEX_RULES_VERSION,
@@ -7,10 +8,21 @@ from knowledge_engine.vector_search import (
     VectorSearchError,
 )
 
+_MODEL = "test-model-v1"
 
-def _index(*, dimension: int = 3, collection_name: str = "test") -> QdrantVectorIndex:
+
+def _index(
+    *,
+    dimension: int = 3,
+    collection_name: str = "test",
+    embedding_model: str = _MODEL,
+    client: QdrantClient | None = None,
+) -> QdrantVectorIndex:
     return QdrantVectorIndex(
-        dimension=dimension, collection_name=collection_name, client=QdrantClient(":memory:")
+        dimension=dimension,
+        collection_name=collection_name,
+        embedding_model=embedding_model,
+        client=client or QdrantClient(":memory:"),
     )
 
 
@@ -115,25 +127,30 @@ def test_search_rejects_non_positive_k() -> None:
 
 def test_constructor_rejects_non_positive_dimension() -> None:
     with pytest.raises(VectorSearchError, match="dimension"):
-        QdrantVectorIndex(dimension=0, collection_name="test", client=QdrantClient(":memory:"))
+        _index(dimension=0)
 
 
 def test_constructor_rejects_empty_collection_name() -> None:
     with pytest.raises(VectorSearchError, match="collection name"):
-        QdrantVectorIndex(dimension=3, collection_name="  ", client=QdrantClient(":memory:"))
+        _index(collection_name="  ")
+
+
+def test_constructor_rejects_empty_embedding_model() -> None:
+    with pytest.raises(VectorSearchError, match="embedding_model"):
+        _index(embedding_model="  ")
 
 
 def test_constructor_requires_a_url_when_no_client_is_injected() -> None:
     with pytest.raises(VectorSearchError, match="url is required"):
-        QdrantVectorIndex(dimension=3, collection_name="test")
+        QdrantVectorIndex(dimension=3, collection_name="test", embedding_model=_MODEL)
 
 
 def test_reusing_an_existing_collection_with_matching_dimension_succeeds() -> None:
     client = QdrantClient(":memory:")
-    first = QdrantVectorIndex(dimension=3, collection_name="reused", client=client)
+    first = _index(dimension=3, collection_name="reused", client=client)
     first.add(1, [1.0, 0.0, 0.0])
 
-    second = QdrantVectorIndex(dimension=3, collection_name="reused", client=client)
+    second = _index(dimension=3, collection_name="reused", client=client)
 
     assert second.size == 1
     matches = second.search([1.0, 0.0, 0.0], k=1)
@@ -142,7 +159,42 @@ def test_reusing_an_existing_collection_with_matching_dimension_succeeds() -> No
 
 def test_reusing_an_existing_collection_with_mismatched_dimension_fails() -> None:
     client = QdrantClient(":memory:")
-    QdrantVectorIndex(dimension=3, collection_name="mismatched", client=client)
+    _index(dimension=3, collection_name="mismatched", client=client)
 
     with pytest.raises(VectorSearchError, match="dimension 3.*expected dimension 4"):
-        QdrantVectorIndex(dimension=4, collection_name="mismatched", client=client)
+        _index(dimension=4, collection_name="mismatched", client=client)
+
+
+def test_reusing_an_empty_existing_collection_with_a_different_model_succeeds() -> None:
+    """Nothing to conflict with yet -- see the module docstring."""
+
+    client = QdrantClient(":memory:")
+    _index(dimension=3, collection_name="empty", embedding_model="model-a", client=client)
+
+    reused = _index(dimension=3, collection_name="empty", embedding_model="model-b", client=client)
+
+    reused.add(1, [1.0, 0.0, 0.0])
+    assert reused.size == 1
+
+
+def test_reusing_a_populated_collection_with_a_different_model_fails() -> None:
+    client = QdrantClient(":memory:")
+    first = _index(dimension=3, collection_name="mixed", embedding_model="model-a", client=client)
+    first.add(1, [1.0, 0.0, 0.0])
+
+    with pytest.raises(VectorSearchError, match="model-a.*model-b"):
+        _index(dimension=3, collection_name="mixed", embedding_model="model-b", client=client)
+
+
+def test_reusing_a_populated_collection_with_unverifiable_points_fails() -> None:
+    """A point inserted outside `QdrantVectorIndex.add` carries no embedding_model payload."""
+
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        collection_name="foreign",
+        vectors_config=VectorParams(size=3, distance=Distance.EUCLID),
+    )
+    client.upsert(collection_name="foreign", points=[PointStruct(id=1, vector=[1.0, 0.0, 0.0])])
+
+    with pytest.raises(VectorSearchError, match="Refusing to mix"):
+        _index(dimension=3, collection_name="foreign", client=client)

@@ -431,7 +431,12 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   convention exactly -- Qdrant's own Euclidean-distance score is *not*
   squared, verified empirically against `qdrant-client`'s embedded
   local-mode client since Qdrant's own docs do not state this precisely.
-  Added `qdrant-client` as a new dependency (small transitive footprint:
+  Requires an `embedding_model` identifier: every point's payload records
+  it, and reusing an existing *non-empty* collection is rejected unless
+  its recorded model matches -- the same embedding-model-mixing bug class
+  a Codex review found in the FAISS path on PR #154, found again by a
+  Codex review on PR #157 before this backend ever shipped (see Fixed
+  below). Added `qdrant-client` as a new dependency (small transitive footprint:
   `grpcio`, `httpx`, `numpy`, `pydantic`, `protobuf`, `portalocker`,
   `urllib3` -- no heavy ML runtime). Tests
   (`tests/test_qdrant_index.py`) inject `qdrant_client.QdrantClient(":memory:")`
@@ -480,6 +485,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its metadata sidecar entirely; `vector-search` refuses to search such
   an index and validates an optional `embedding_model` in the query file
   against it.
+- Fixed M33's `QdrantVectorIndex` accepting any existing Qdrant collection
+  with a matching dimension and Euclidean distance for reuse, even if it
+  was populated with vectors from a different embedding model -- the same
+  bug class as above, since same-dimension embeddings from unrelated
+  models are common and L2 distance across them is meaningless. Found by
+  a Codex review on PR #157, before this backend ever merged. Fixed by
+  requiring an `embedding_model` identifier, recording it on every
+  point's payload, and rejecting reuse of a *non-empty* collection whose
+  recorded model (or unverifiable absence of one, for points inserted
+  outside `add`) does not match. A genuinely empty existing collection
+  has nothing to conflict with yet, so it may still be claimed by any
+  model.
 - Fixed `ke corpus-library-import` (M27) copying `embedding_model`/
   `embedding_id` verbatim onto an imported paper. `embedding_id` is the
   source database's own `Paper.id`, which is only unique within that one

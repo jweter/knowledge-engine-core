@@ -139,8 +139,17 @@ Parser / Extraction (existing, unchanged)
        own Euclidean score is *not* squared, verified empirically against
        qdrant-client's embedded local-mode client since Qdrant's own docs
        do not state this precisely, so QdrantVectorIndex squares it before
-       returning a VectorMatch. Not yet wired into the CLI commands below
-       (see Open Questions); usable today via direct Python import.
+       returning a VectorMatch. Requires an embedding_model identifier
+       (unlike FaissVectorIndex itself, which stays model-agnostic and
+       relies on an external CLI-level sidecar): a Qdrant collection has
+       no equivalent local sidecar file, so every point's payload here
+       carries its own embedding_model, and reusing an existing
+       *non-empty* collection is rejected unless its recorded model
+       matches -- the same embedding-model-mixing bug class a Codex
+       review found in the FAISS path on PR #154, found again by a Codex
+       review on PR #157 before this backend ever shipped. Not yet wired
+       into the CLI commands below (see Open Questions); usable today via
+       direct Python import.
        knowledge_engine.vector_search.index_metadata persists a small
        JSON sidecar recording exactly which embedding_model built a FAISS
        index -- vectors from different models are not comparable even at
@@ -270,7 +279,11 @@ Following the same pattern M14/Phase 2 established:
   `qdrant-client`'s own embedded local-mode client -- instead of a real
   server, so the suite exercises real `qdrant-client` code paths
   deterministically. Adds Qdrant-specific cases: the squared-distance
-  score conversion, and collection reuse/schema-mismatch validation.
+  score conversion, collection reuse/schema-mismatch validation, and
+  embedding-model isolation (matching model on a populated collection
+  succeeds; a genuinely empty existing collection may be claimed by any
+  model; a mismatched or unverifiable -- points inserted outside `add`,
+  carrying no recorded model -- populated collection is rejected).
 - No test should assert that a semantic match is more "correct" than a
   lexical one -- only that the ranking/combination logic behaves as
   specified for fixed, known inputs.
