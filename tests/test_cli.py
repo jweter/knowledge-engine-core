@@ -1425,7 +1425,9 @@ def test_relationship_report_escapes_forged_markdown_in_rationale(tmp_path: Path
     Found by a Codex review on PR #150: a rationale containing an embedded
     "\n## Final Disclaimer" line could otherwise inject a fake report
     section, since the report renderer only ASCII-normalized free-text
-    fields without escaping Markdown structure.
+    fields without escaping Markdown structure. A follow-up Codex review
+    on the fix (PR #151) found GFM strikethrough (`~~text~~`) was still
+    unescaped.
     """
 
     evidence_path = write_evidence_records(
@@ -1433,7 +1435,10 @@ def test_relationship_report_escapes_forged_markdown_in_rationale(tmp_path: Path
         [
             {
                 "evidence_record_id": "ev-1",
-                "claim_text": "*Bold claim* with [a link](https://example.test) and `code`.",
+                "claim_text": (
+                    "*Bold claim* with [a link](https://example.test), `code`, "
+                    "and ~~struck out~~ text."
+                ),
             },
             {"evidence_record_id": "ev-2"},
         ],
@@ -1469,6 +1474,7 @@ def test_relationship_report_escapes_forged_markdown_in_rationale(tmp_path: Path
     assert r"\*Bold claim\*" in report
     assert r"\[a link\](https://example.test)" in report
     assert r"\`code\`" in report
+    assert r"\~\~struck out\~\~" in report
 
 
 @pytest.mark.parametrize("command_name", ["evidence", "answer", "evidence-report"])

@@ -1780,7 +1780,7 @@ def _report_evidence_lines(record: dict[str, Any]) -> list[str]:
     ]
 
 
-_MARKDOWN_INLINE_SPECIAL_CHARS = re.compile(r"([\\`*_\[\]<])")
+_MARKDOWN_INLINE_SPECIAL_CHARS = re.compile(r"([\\`*_\[\]<~])")
 
 
 def _report_text(value: str) -> str:
@@ -1791,10 +1791,12 @@ def _report_text(value: str) -> str:
     or other free-text field is always rendered as literal text -- never a
     forged report section (a value containing "\\n## Final Disclaimer"
     could otherwise inject a fake heading) or altered inline formatting
-    (stray `*`/`_`/`[]` syntax) -- regardless of what the underlying record
-    actually contains. Found by a Codex review on the `relationship-report`
-    addition; fixed here since every report renderer (`evidence-report`,
-    `relationship-report`) shares this one function.
+    (stray `*`/`_`/`[]`/`~~` syntax) -- regardless of what the underlying
+    record actually contains. Found by a Codex review on the
+    `relationship-report` addition; fixed here since every report renderer
+    (`evidence-report`, `relationship-report`) shares this one function. A
+    follow-up Codex review on the fix itself found `~` (GFM strikethrough,
+    `~~text~~`) was still missing from the escape set.
     """
 
     collapsed = " ".join(_safe_text(value).split())
