@@ -62,38 +62,43 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 497 sources: the small historical GLP-1
-prototype set (3 rows) plus 494 accepted records from the first six small
+The committed manifest holds 493 sources: the small historical GLP-1
+prototype set (3 rows) plus 490 accepted records from the first six small
 (`--limit 250`) automated discovery batches (`retstart=0`, 80 records;
 `retstart=250`, 72 records; `retstart=500`, 86 records; `retstart=750`, 76
-records; `retstart=1000`, 70 records; `retstart=1250`, 109 records) of the
+records; `retstart=1000`, 70 records; `retstart=1250`, 106 records) of the
 project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
-A further fourteen records were manually excluded after review, since
+A further eighteen records were manually excluded after review, since
 v9's disease/intervention keyword match has no automated way to catch any
-of these patterns: nine single-patient case reports whose abstracts named
+of these patterns: ten single-patient case reports whose abstracts named
 a target disease term only as an incidental, unrelated patient
-comorbidity -- including some whose titles named the disease term
-directly, showing that title presence alone doesn't rule out an
-incidental mention; one single-patient case report whose reported
-intervention (vagus nerve stimulation) treated a coexisting condition
-(epilepsy), not the metabolic disease named in the title; two gene- or
-protein-name lexical collisions (a xenograft mouse strain literally named
-"non-obese diabetic (NOD)-SCID" in a cervical-cancer study, and the FTO
-gene's full name, "fat mass and obesity-associated," in a lymphoma
-drug-resistance study), both flagged by Codex reviews; a type 1 diabetes
-pathogenesis/multi-omics paper held under `exclusion_criteria.md`'s
-explicit "type 1 diabetes-specific without evidence applicable to the
-committed Phase 1 scope" rule, also flagged by Codex after an earlier
-narrower incidental-comorbidity/lexical-collision check had missed it; and
-a rare-genetic-disease EHR mapping study whose only type-2-diabetes
-mention was one incidental example finding buried in results about an
-unrelated disease (myotonic dystrophy). Every case-report-style accepted
-record (by title or venue), every gene/mouse-strain-name lexical
-collision, and every type 1 diabetes-specific title in a new batch is now
-individually read and judged against the full `exclusion_criteria.md`
-checklist, not just the narrower patterns caught so far. See
+comorbidity, or whose reported intervention treated a coexisting condition
+rather than the metabolic disease named in the title -- including some
+whose titles named the disease term directly, showing that title presence
+alone doesn't rule out an incidental mention; two gene- or protein-name
+lexical collisions (a xenograft mouse strain literally named "non-obese
+diabetic (NOD)-SCID" in a cervical-cancer study, and the FTO gene's full
+name, "fat mass and obesity-associated," in a lymphoma drug-resistance
+study); a type 1 diabetes pathogenesis/multi-omics paper held under
+`exclusion_criteria.md`'s explicit "type 1 diabetes-specific without
+evidence applicable to the committed Phase 1 scope" rule; a
+rare-genetic-disease EHR mapping study whose only type-2-diabetes mention
+was one incidental example finding buried in results about an unrelated
+disease (myotonic dystrophy); an osteoarthritis mechanism review whose
+"metabolic" language never named any of the four scope diseases; a
+quality-of-life survey reporting no treatment-effect findings at all; and
+a cancer-cachexia genetics study whose only apparent match was the generic
+English phrase "a complex metabolic syndrome" describing cachexia itself,
+not the corpus's named disease entity. All of the above were confirmed via
+individual abstract review, several after Codex reviews on the growth PRs
+first flagged specific examples. A broader initial sweep over this same
+batch also flagged roughly a dozen more mechanism-only reviews and
+drug-adjacent analytical-chemistry papers as borderline; per the project
+owner's explicit direction that the corpus-building phase should prioritize
+breadth over precision for now, those were kept rather than excluded, and
+only the clear-cut cases above were held. See
 `docs/m14_candidate_review_worksheet.md` for the full v6-v9 rules history.
 Accepted records proceed
 automatically; rejected and held records remain auditable but do not block
