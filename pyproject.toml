@@ -19,7 +19,12 @@ click = ">=8.0,<8.2"
 cryptography = "^49.0.0"
 faiss-cpu = "^1.14.3"
 sentence-transformers = "^5.6.1"
-torch = { version = "^2.13.0", source = "pytorch-cpu" }
+# pytorch-cpu publishes no macOS wheels; macOS resolves torch from the
+# default index instead, which already ships CPU/Metal-only wheels there.
+torch = [
+    { version = "^2.13.0", source = "pytorch-cpu", markers = "sys_platform != 'darwin'" },
+    { version = "^2.13.0", markers = "sys_platform == 'darwin'" },
+]
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^2.1.0"
