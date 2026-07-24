@@ -112,6 +112,22 @@ def test_candidate_with_only_third_party_pdf_host_is_held(tmp_path: Path) -> Non
     assert item.full_text_rule_result == "held_third_party_host"
 
 
+def test_candidate_with_malformed_pdf_port_is_held_not_crashed(tmp_path: Path) -> None:
+    """Codex finding on PR #159: `urlparse(...).port` raises `ValueError` for a
+    nonnumeric or out-of-range port, which previously escaped as an unhandled
+    exception instead of a clean `held` decision."""
+
+    candidate = _candidate(pdf_url="https://core.ac.uk:bad/paper.pdf")
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_core_candidate_review(candidates)
+
+    item = worksheet.items[0]
+    assert item.decision == "held"
+    assert item.full_text_rule_result == "invalid_approved_pdf_url"
+
+
 def test_candidate_missing_pdf_url_is_held(tmp_path: Path) -> None:
     candidate = _candidate(pdf_url=None, pdf_host=None)
     candidates = tmp_path / "candidates.json"

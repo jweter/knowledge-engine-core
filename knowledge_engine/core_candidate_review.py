@@ -231,12 +231,16 @@ def _full_text_result(pdf_url: str | None, pdf_host: str | None) -> str:
     if pdf_host != CORE_PDF_HOST:
         return "held_third_party_host"
     parsed = urlparse(pdf_url)
+    try:
+        port = parsed.port
+    except ValueError:
+        return "invalid_approved_pdf_url"
     if (
         parsed.scheme != "https"
         or parsed.hostname != CORE_PDF_HOST
         or parsed.username is not None
         or parsed.password is not None
-        or parsed.port not in (None, 443)
+        or port not in (None, 443)
     ):
         return "invalid_approved_pdf_url"
     return "passed"
