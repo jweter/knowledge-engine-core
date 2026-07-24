@@ -225,7 +225,18 @@ def import_corpus_library(target_session: Session, input_path: Path) -> ImportSu
 
 
 def _copy_paper_fields(paper: Paper, *, journal: Journal | None) -> Paper:
-    """Build a detached `Paper` copy, ready to `add()` into a new session."""
+    """Build a detached `Paper` copy, ready to `add()` into a new session.
+
+    Deliberately excludes `embedding_model`/`embedding_id`: M30's mechanism
+    sets `embedding_id` to the source database's own `Paper.id`, which the
+    target database's fresh auto-incremented primary key will not match
+    once this row is inserted -- copying it verbatim would let an imported
+    paper silently claim another (unrelated) paper's embedding identity in
+    the target database, or a stale one nothing indexes. Neither the FAISS
+    index file nor any embedding-generation state is part of this
+    snapshot's paper-intrinsic content (see the module docstring); an
+    operator must re-run `ke embedding-index-build` for imported papers.
+    """
 
     new_paper = Paper(
         title=paper.title,
@@ -237,8 +248,6 @@ def _copy_paper_fields(paper: Paper, *, journal: Journal | None) -> Paper:
         journal=journal,
         page_count=paper.page_count,
         word_count=paper.word_count,
-        embedding_model=paper.embedding_model,
-        embedding_id=paper.embedding_id,
     )
     if paper.text is not None:
         new_paper.text = PaperText(

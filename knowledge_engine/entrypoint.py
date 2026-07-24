@@ -53,8 +53,11 @@ from knowledge_engine.pubmed_discovery import (
 )
 from knowledge_engine.vector_search import (
     FaissVectorIndex,
+    VectorIndexMetadata,
     VectorSearchError,
     load_external_vectors,
+    load_index_metadata,
+    save_index_metadata,
 )
 
 DoiOption = Annotated[str, typer.Option("--doi", help="DOI to query.")]
@@ -653,7 +656,11 @@ def embedding_index_build(
     generating them itself. Every referenced paper_id must already exist
     in the local database; a dangling reference is reported, never
     silently skipped. Re-running against the same paper_id replaces its
-    vector rather than duplicating it.
+    vector rather than duplicating it. Every vector in the file, and every
+    incremental update to an existing index, must come from the same
+    embedding_model -- vectors from different models are not comparable
+    even at the same dimension, so a mismatch is rejected rather than
+    silently mixed into one index.
     """
 
     result = load_external_vectors(vectors)
@@ -662,6 +669,27 @@ def embedding_index_build(
         for error in result.errors:
             console.print(f"- {escape(error)}")
         raise typer.Exit(1)
+
+    assert result.dimension is not None  # non-empty records guarantee a dimension
+    assert result.embedding_model is not None  # non-empty records guarantee a model
+
+    if index_path.exists():
+        existing_metadata = load_index_metadata(index_path)
+        if existing_metadata is None:
+            console.print(
+                f"[red]Index at {index_path} has no recorded embedding_model "
+                "metadata.[/red] Refusing to update an index whose embedding model "
+                "cannot be verified."
+            )
+            raise typer.Exit(1)
+        if existing_metadata.embedding_model != result.embedding_model:
+            console.print(
+                f"[red]Index was built with embedding_model "
+                f"'{escape(existing_metadata.embedding_model)}'; this vectors file uses "
+                f"'{escape(result.embedding_model)}'.[/red] Refusing to mix incompatible "
+                "embedding models in one index."
+            )
+            raise typer.Exit(1)
 
     requested_ids = [record.paper_id for record in result.records]
     database = _local_database()
@@ -675,7 +703,6 @@ def embedding_index_build(
             console.print(f"[red]Vectors reference unknown paper ID(s):[/red] {missing}")
             raise typer.Exit(1)
 
-        assert result.dimension is not None  # non-empty records guarantee a dimension
         try:
             index = (
                 FaissVectorIndex.load(index_path, dimension=result.dimension)
@@ -695,10 +722,15 @@ def embedding_index_build(
             )
 
         index.save(index_path)
+        save_index_metadata(
+            index_path,
+            VectorIndexMetadata(embedding_model=result.embedding_model, dimension=result.dimension),
+        )
 
     console.print(
         f"[green]Indexed {len(result.records)} vector(s):[/green] {index_path} "
-        f"(dimension {result.dimension}, index size {index.size})."
+        f"(embedding_model {result.embedding_model}, dimension {result.dimension}, "
+        f"index size {index.size})."
     )
 
 
@@ -713,10 +745,20 @@ def vector_search(
     Does not accept a free-text query -- no EmbeddingGenerator exists yet
     (see docs/phase3_design.md's Open Questions). The caller supplies an
     already-embedded query vector, for example from any external
-    embedding tool, as a JSON file (`{"vector": [...]}` or a bare array).
+    embedding tool, as a JSON file (`{"vector": [...]}`, optionally with
+    `"embedding_model"` to be checked against the index; or a bare array).
     Lexical search remains available via `ke search`; this command is an
     additional, separate retrieval signal, not a replacement.
     """
+
+    index_metadata = load_index_metadata(index_path)
+    if index_metadata is None:
+        console.print(
+            f"[red]Index at {index_path} has no recorded embedding_model "
+            "metadata.[/red] Refusing to search an index whose embedding model cannot "
+            "be verified."
+        )
+        raise typer.Exit(1)
 
     try:
         payload = json.loads(query_vector.read_text(encoding="utf-8"))
@@ -739,6 +781,18 @@ def vector_search(
         )
         raise typer.Exit(1)
 
+    query_embedding_model = payload.get("embedding_model") if isinstance(payload, dict) else None
+    if (
+        query_embedding_model is not None
+        and query_embedding_model != index_metadata.embedding_model
+    ):
+        console.print(
+            f"[red]Query vector was embedded with '{escape(str(query_embedding_model))}'; "
+            f"this index was built with '{escape(index_metadata.embedding_model)}'.[/red] "
+            "Refusing to compare vectors from different embedding models."
+        )
+        raise typer.Exit(1)
+
     try:
         index = FaissVectorIndex.load(index_path, dimension=len(vector))
     except VectorSearchError as exc:
@@ -758,7 +812,10 @@ def vector_search(
             paper.id: paper for paper in repository.get_many([match.vector_id for match in matches])
         }
 
-    console.print(f"[bold]Vector search results:[/bold] {index_path}")
+    console.print(
+        f"[bold]Vector search results:[/bold] {index_path} "
+        f"(embedding_model: {index_metadata.embedding_model})"
+    )
     for rank, match in enumerate(matches, start=1):
         paper = papers_by_id.get(match.vector_id)
         title = escape(paper.title) if paper else "Unknown paper (not in local database)"

@@ -37,6 +37,7 @@ class VectorIngestionResult:
     records: tuple[ExternalVectorRecord, ...]
     errors: tuple[str, ...]
     dimension: int | None
+    embedding_model: str | None
 
 
 def load_external_vectors(path: Path) -> VectorIngestionResult:
@@ -44,28 +45,39 @@ def load_external_vectors(path: Path) -> VectorIngestionResult:
 
     Each line must be a JSON object: `{"paper_id": int, "vector": [float,
     ...], "embedding_model": str}`. Every vector in the file must share the
-    same dimension -- a mismatched dimension is reported, never silently
-    truncated or padded. Does not check that `paper_id` actually exists in
-    the database; the caller (the `embedding-index-build` command) does
-    that referential check, mirroring how `relationship-validate`'s
-    structural parsing and referential evidence check are separate steps.
+    same dimension AND the same `embedding_model` -- a mismatch of either is
+    reported, never silently truncated, padded, or mixed. Vectors from
+    different embedding models are not comparable even when their
+    dimensions happen to coincide (L2 distance between them is meaningless);
+    allowing them into the same index would silently rank unrelated vector
+    spaces together. Does not check that `paper_id` actually exists in the
+    database; the caller (the `embedding-index-build` command) does that
+    referential check, mirroring how `relationship-validate`'s structural
+    parsing and referential evidence check are separate steps.
     """
 
     if not path.exists():
         return VectorIngestionResult(
-            records=(), errors=(f"Vectors file does not exist: {path}",), dimension=None
+            records=(),
+            errors=(f"Vectors file does not exist: {path}",),
+            dimension=None,
+            embedding_model=None,
         )
 
     lines = path.read_text(encoding="utf-8").splitlines()
     if not any(line.strip() for line in lines):
         return VectorIngestionResult(
-            records=(), errors=("Vectors file contains no records.",), dimension=None
+            records=(),
+            errors=("Vectors file contains no records.",),
+            dimension=None,
+            embedding_model=None,
         )
 
     errors: list[str] = []
     records: list[ExternalVectorRecord] = []
     seen_paper_ids: set[int] = set()
     dimension: int | None = None
+    embedding_model: str | None = None
 
     for line_number, line in enumerate(lines, start=1):
         stripped = line.strip()
@@ -76,7 +88,7 @@ def load_external_vectors(path: Path) -> VectorIngestionResult:
         if parsed is None:
             continue
 
-        paper_id, vector, embedding_model = parsed
+        paper_id, vector, record_embedding_model = parsed
         if paper_id in seen_paper_ids:
             errors.append(f"Line {line_number}: duplicate paper_id: {paper_id}.")
             continue
@@ -90,14 +102,29 @@ def load_external_vectors(path: Path) -> VectorIngestionResult:
             )
             continue
 
+        if embedding_model is None:
+            embedding_model = record_embedding_model
+        elif record_embedding_model != embedding_model:
+            errors.append(
+                f"Line {line_number}: embedding_model is '{record_embedding_model}', "
+                f"expected '{embedding_model}' (from an earlier record in this file). "
+                "A single vectors file must come from exactly one embedding model."
+            )
+            continue
+
         seen_paper_ids.add(paper_id)
         records.append(
             ExternalVectorRecord(
-                paper_id=paper_id, vector=tuple(vector), embedding_model=embedding_model
+                paper_id=paper_id, vector=tuple(vector), embedding_model=record_embedding_model
             )
         )
 
-    return VectorIngestionResult(records=tuple(records), errors=tuple(errors), dimension=dimension)
+    return VectorIngestionResult(
+        records=tuple(records),
+        errors=tuple(errors),
+        dimension=dimension,
+        embedding_model=embedding_model,
+    )
 
 
 def _parse_line(

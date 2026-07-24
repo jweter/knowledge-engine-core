@@ -30,6 +30,7 @@ def test_load_external_vectors_accepts_well_formed_file(tmp_path: Path) -> None:
 
     assert result.errors == ()
     assert result.dimension == 3
+    assert result.embedding_model == "external:test-v1"
     assert len(result.records) == 2
     assert result.records[0].paper_id == 1
     assert result.records[0].vector == (0.1, 0.2, 0.3)
@@ -120,6 +121,31 @@ def test_load_external_vectors_rejects_dimension_mismatch_across_records(tmp_pat
 
     assert len(result.records) == 1
     assert "dimension 3, expected 2" in result.errors[0]
+
+
+def test_load_external_vectors_rejects_embedding_model_mismatch_across_records(
+    tmp_path: Path,
+) -> None:
+    """Vectors from different embedding models are not comparable even at the
+
+    same dimension -- mixing them into one file (and, downstream, one
+    index) would silently rank unrelated vector spaces together. Found by
+    a Codex review on PR #154.
+    """
+
+    path = write_vectors(
+        tmp_path,
+        [
+            {"paper_id": 1, "vector": [0.1, 0.2], "embedding_model": "model-a"},
+            {"paper_id": 2, "vector": [0.3, 0.4], "embedding_model": "model-b"},
+        ],
+    )
+
+    result = load_external_vectors(path)
+
+    assert len(result.records) == 1
+    assert result.embedding_model == "model-a"
+    assert "embedding_model is 'model-b', expected 'model-a'" in result.errors[0]
 
 
 def test_load_external_vectors_rejects_duplicate_paper_id(tmp_path: Path) -> None:

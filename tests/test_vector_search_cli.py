@@ -10,6 +10,7 @@ import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.parser import ParsedPage, ParsedPaper
+from knowledge_engine.vector_search import FaissVectorIndex
 
 
 def _unwrapped(output: str) -> str:
@@ -307,3 +308,178 @@ def test_vector_search_rejects_dimension_mismatch(
 
     assert result.exit_code != 0
     assert "dimension" in _unwrapped(result.output)
+
+
+def test_embedding_index_build_writes_metadata_sidecar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "a" * 64))
+        paper_id = paper.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    vectors_path = tmp_path / "vectors.jsonl"
+    _write_vectors(
+        vectors_path, [{"paper_id": paper_id, "vector": [1.0, 0.0], "embedding_model": "model-a"}]
+    )
+    index_path = tmp_path / "index.faiss"
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["embedding-index-build", "--vectors", str(vectors_path), "--index-path", str(index_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "embedding_model model-a" in _unwrapped(result.output)
+
+    metadata_path = tmp_path / "index.faiss.meta.json"
+    assert metadata_path.exists()
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert metadata == {"embedding_model": "model-a", "dimension": 2}
+
+
+def test_embedding_index_build_rejects_mismatched_embedding_model_on_incremental_build(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        repository = PaperRepository(session)
+        paper1 = repository.add_parsed_paper(_parsed_paper(tmp_path, "a" * 64))
+        paper2 = repository.add_parsed_paper(_parsed_paper(tmp_path, "b" * 64))
+        paper1_id, paper2_id = paper1.id, paper2.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    index_path = tmp_path / "index.faiss"
+
+    first_vectors = tmp_path / "first.jsonl"
+    _write_vectors(
+        first_vectors,
+        [{"paper_id": paper1_id, "vector": [1.0, 0.0], "embedding_model": "model-a"}],
+    )
+    CliRunner().invoke(
+        entrypoint.app,
+        ["embedding-index-build", "--vectors", str(first_vectors), "--index-path", str(index_path)],
+    )
+
+    second_vectors = tmp_path / "second.jsonl"
+    _write_vectors(
+        second_vectors,
+        [{"paper_id": paper2_id, "vector": [0.0, 1.0], "embedding_model": "model-b"}],
+    )
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "embedding-index-build",
+            "--vectors",
+            str(second_vectors),
+            "--index-path",
+            str(index_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    unwrapped = _unwrapped(result.output)
+    assert "model-a" in unwrapped
+    assert "model-b" in unwrapped
+    assert "Refusing to mix incompatible embedding models" in unwrapped
+
+
+def test_embedding_index_build_rejects_index_without_metadata_sidecar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An index file present without its metadata sidecar (for example one
+
+    predating this safeguard) must not be silently trusted and updated.
+    """
+
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "a" * 64))
+        paper_id = paper.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    index_path = tmp_path / "index.faiss"
+    orphan_index = FaissVectorIndex(dimension=2)
+    orphan_index.add(999, [1.0, 0.0])
+    orphan_index.save(index_path)
+
+    vectors_path = tmp_path / "vectors.jsonl"
+    _write_vectors(
+        vectors_path, [{"paper_id": paper_id, "vector": [1.0, 0.0], "embedding_model": "model-a"}]
+    )
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["embedding-index-build", "--vectors", str(vectors_path), "--index-path", str(index_path)],
+    )
+
+    assert result.exit_code != 0
+    assert "no recorded embedding_model metadata" in _unwrapped(result.output)
+
+
+def test_vector_search_rejects_index_without_metadata_sidecar(tmp_path: Path) -> None:
+    index_path = tmp_path / "index.faiss"
+    orphan_index = FaissVectorIndex(dimension=2)
+    orphan_index.add(1, [1.0, 0.0])
+    orphan_index.save(index_path)
+
+    query_path = tmp_path / "query.json"
+    query_path.write_text(json.dumps([1.0, 0.0]), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["vector-search", "--index-path", str(index_path), "--query-vector", str(query_path)],
+    )
+
+    assert result.exit_code != 0
+    assert "no recorded embedding_model metadata" in _unwrapped(result.output)
+
+
+def test_vector_search_reports_embedding_model_and_rejects_query_mismatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "a" * 64))
+        paper_id = paper.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    vectors_path = tmp_path / "vectors.jsonl"
+    _write_vectors(
+        vectors_path, [{"paper_id": paper_id, "vector": [1.0, 0.0], "embedding_model": "model-a"}]
+    )
+    index_path = tmp_path / "index.faiss"
+    CliRunner().invoke(
+        entrypoint.app,
+        ["embedding-index-build", "--vectors", str(vectors_path), "--index-path", str(index_path)],
+    )
+
+    matching_query = tmp_path / "matching_query.json"
+    matching_query.write_text(
+        json.dumps({"vector": [1.0, 0.0], "embedding_model": "model-a"}), encoding="utf-8"
+    )
+    ok_result = CliRunner().invoke(
+        entrypoint.app,
+        ["vector-search", "--index-path", str(index_path), "--query-vector", str(matching_query)],
+    )
+    assert ok_result.exit_code == 0, ok_result.output
+    assert "embedding_model: model-a" in _unwrapped(ok_result.output)
+
+    mismatched_query = tmp_path / "mismatched_query.json"
+    mismatched_query.write_text(
+        json.dumps({"vector": [1.0, 0.0], "embedding_model": "model-b"}), encoding="utf-8"
+    )
+    bad_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "vector-search",
+            "--index-path",
+            str(index_path),
+            "--query-vector",
+            str(mismatched_query),
+        ],
+    )
+    assert bad_result.exit_code != 0
+    unwrapped = _unwrapped(bad_result.output)
+    assert "model-a" in unwrapped
+    assert "model-b" in unwrapped

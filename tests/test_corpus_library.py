@@ -145,6 +145,37 @@ def test_import_corpus_library_hydrates_empty_database(tmp_path: Path) -> None:
         assert len(list(session.scalars(select(Keyword)))) == 1
 
 
+def test_import_corpus_library_clears_embedding_identity(tmp_path: Path) -> None:
+    """A source paper's embedding_id (its own database-local primary key)
+
+    must never survive into a target database, where the imported paper
+    gets a different primary key -- copying it verbatim would let the
+    imported paper silently claim another (unrelated) paper's vector-index
+    identity, or a stale one nothing indexes. Found by a Codex review on
+    PR #154.
+    """
+
+    source = _database(tmp_path, "source")
+    with source.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(
+            _parsed_paper(source_path=tmp_path / "a.pdf", content_hash="a" * 64)
+        )
+        PaperRepository(session).set_embedding(
+            paper.id, embedding_model="external:test-v1", embedding_id=str(paper.id)
+        )
+    snapshot_path = tmp_path / "snapshot.sqlite3"
+    export_corpus_library(source.engine, snapshot_path)
+
+    target = _database(tmp_path, "target")
+    with target.session() as session:
+        import_corpus_library(session, snapshot_path)
+
+    with target.session() as session:
+        imported = session.scalars(select(Paper)).one()
+        assert imported.embedding_model is None
+        assert imported.embedding_id is None
+
+
 def test_import_corpus_library_indexes_imported_papers_for_search(tmp_path: Path) -> None:
     source = _database(tmp_path, "source")
     with source.session() as session:

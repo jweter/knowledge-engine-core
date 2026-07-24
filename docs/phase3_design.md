@@ -94,16 +94,26 @@ Parser / Extraction (existing, unchanged)
        interface (add/search/remove) and FaissVectorIndex, a local flat
        (exact) L2 index (no server, matches this project's
        offline-by-default posture). Qdrant remains a second, not-yet-built
-       backend behind the same interface. Wired into two CLI commands:
+       backend behind the same interface. knowledge_engine.vector_search.
+       index_metadata persists a small JSON sidecar recording exactly
+       which embedding_model built an index -- vectors from different
+       models are not comparable even at the same dimension, so mixing
+       them would silently rank unrelated vector spaces together (found
+       by a Codex review on PR #154); a single index is now locked to one
+       model, enforced at both build time (a mismatched or
+       metadata-less existing index is rejected) and search time (an
+       optional embedding_model in the query file is checked against it).
+       Wired into two CLI commands:
        `ke embedding-index-build --vectors <jsonl> --index-path <path>`
        (knowledge_engine.vector_search.ingestion parses and validates
-       externally-supplied vectors, referentially checks every paper_id
-       against the local database, builds/updates the index, and persists
-       Paper.embedding_model/embedding_id) and
+       externally-supplied vectors -- including that every record in one
+       file shares the same embedding_model -- referentially checks every
+       paper_id against the local database, builds/updates the index, and
+       persists Paper.embedding_model/embedding_id) and
        `ke vector-search --index-path <path> --query-vector <json>`
        (takes an already-embedded query vector -- not free text, since no
        EmbeddingGenerator exists -- and returns ranked papers with their
-       real metadata).
+       real metadata, labeled with the index's recorded embedding_model).
   -> Search Service (existing SearchService, unchanged)
        ke search / ke answer remain lexical-only (FTS5). Combining lexical
        and semantic results into one ranked list is deferred -- see Open
@@ -209,4 +219,14 @@ Following the same pattern M14/Phase 2 established:
   ID `FaissVectorIndex` itself is keyed by. This may need revisiting if a
   future embedding approach naturally produces vectors identified some
   other way (for example versioned per re-embedding), but is not
-  speculative for the mechanism M30 actually implements.
+  speculative for the mechanism M30 actually implements. A real
+  consequence of this choice, found by a Codex review on PR #154:
+  `Paper.id` is only unique *within* one database, not portable across
+  one, so `ke corpus-library-import` (M27) now clears
+  `embedding_model`/`embedding_id` on every imported paper rather than
+  copying them verbatim -- the source database's ID would otherwise
+  collide with an unrelated paper's ID in the target database, or point
+  at nothing. An operator must re-run `ke embedding-index-build` for
+  papers after importing a corpus-library snapshot; the FAISS index file
+  itself was never part of the snapshot's portable content to begin with
+  (only paper-intrinsic content is -- see `docs/m27_corpus_library.md`).

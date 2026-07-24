@@ -8,6 +8,12 @@ from knowledge_engine.vector_search.index import (
     VectorMatch,
     VectorSearchError,
 )
+from knowledge_engine.vector_search.index_metadata import (
+    VectorIndexMetadata,
+    load_index_metadata,
+    metadata_path_for,
+    save_index_metadata,
+)
 from knowledge_engine.vector_search.ingestion import (
     EXTERNAL_VECTOR_INGESTION_RULES_VERSION,
     ExternalVectorRecord,
@@ -22,8 +28,12 @@ __all__ = [
     "ExternalVectorRecord",
     "FaissVectorIndex",
     "VectorIndex",
+    "VectorIndexMetadata",
     "VectorIngestionResult",
     "VectorMatch",
     "VectorSearchError",
     "load_external_vectors",
+    "load_index_metadata",
+    "metadata_path_for",
+    "save_index_metadata",
 ]

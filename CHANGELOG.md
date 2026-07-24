@@ -415,6 +415,29 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed M30's `embedding-index-build`/`vector-search` silently permitting
+  vectors from different `embedding_model`s into the same FAISS index --
+  L2 distance between vectors from incompatible embedding spaces is
+  meaningless even at the same dimension, so this could rank unrelated
+  vector spaces together and produce meaningless results. Found by a
+  Codex review on PR #154. Fixed by adding a JSON metadata sidecar
+  (`knowledge_engine.vector_search.index_metadata`) recording exactly
+  which model built an index: `embedding-index-build` now rejects a
+  vectors file mixing models, rejects updating an index with a different
+  model than it was built with, and refuses to update an index missing
+  its metadata sidecar entirely; `vector-search` refuses to search such
+  an index and validates an optional `embedding_model` in the query file
+  against it.
+- Fixed `ke corpus-library-import` (M27) copying `embedding_model`/
+  `embedding_id` verbatim onto an imported paper. `embedding_id` is the
+  source database's own `Paper.id`, which is only unique within that one
+  database -- copying it into a target database (where the imported paper
+  gets a different, fresh primary key) let the imported paper silently
+  claim another, unrelated paper's embedding identity, or a stale one
+  nothing indexes. Found by a Codex review on PR #154. Fixed by clearing
+  both fields on import; an operator must re-run `ke embedding-index-build`
+  for papers after importing a snapshot, since the FAISS index file was
+  never part of the snapshot's portable paper-intrinsic content anyway.
 - Fixed `_report_text` (shared by every Markdown report renderer --
   `evidence-report` and M29's `relationship-report`) only ASCII-normalizing
   free-text fields without escaping Markdown structure or collapsing
