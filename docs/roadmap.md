@@ -213,8 +213,11 @@ Detailed milestone records include:
   open question -- which embedding-generation approach to use -- is a
   new-dependency and offline-posture decision for the project owner, the
   same way Phase 2's extraction methodology was decided before any
-  extraction code was written; no embedding or vector-index code should be
-  written before it is.
+  extraction code was written; no embedding-*generation* code should be
+  written before it is. Vector-index (`VectorIndex`/FAISS/Qdrant) work is
+  not blocked on that same decision -- the design's option 3 explicitly
+  proposes building the retrieval-side plumbing first, against
+  externally-supplied vectors.
 
 ## Phase 4: Knowledge Graph
 

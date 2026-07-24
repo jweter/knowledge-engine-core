@@ -7,7 +7,12 @@ The detailed design is maintained in `docs/phase3_design.md`. Its first open
 question -- which embedding-generation approach to use -- is a new-dependency
 and offline-posture decision the project owner must make, the same way the
 Phase 2 extraction methodology was decided before any extraction code was
-written; no embedding or vector-index code should be written before it is.
+written; no embedding-*generation* code should be written before it is.
+Vector-index (`VectorIndex`/FAISS/Qdrant) work is not blocked on that same
+decision -- `docs/phase3_design.md`'s option 3 explicitly proposes building
+the retrieval-side plumbing first, against externally-supplied vectors,
+narrowing the first milestone without committing to an embedding-model
+dependency yet.
 
 ## Goals
 

@@ -6,8 +6,11 @@ milestone -- the same role `docs/m6_phase1_corpus_ingestion_plan.md` played
 for Phase 1 and `docs/phase2_design.md` played for Phase 2. It turns
 `docs/roadmap/phase3.md`'s three-bullet goal statement into an
 implementation-ready architecture and, most importantly, surfaces the one
-real open decision (embedding-generation approach) before any code is
-written, the same way Phase 2's Extraction Methodology section did.
+real open decision (embedding-generation approach) before any
+embedding-*generation* code is written, the same way Phase 2's Extraction
+Methodology section did. That decision does not block the retrieval-side
+`VectorIndex`/FAISS/Qdrant plumbing -- see option 3 below, which explicitly
+proposes building that first against externally-supplied vectors.
 
 ## Mission
 
