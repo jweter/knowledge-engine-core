@@ -31,10 +31,15 @@ from knowledge_engine.vector_search.openai_generator import (
     OpenAiEmbeddingError,
     OpenAiEmbeddingGenerator,
 )
+from knowledge_engine.vector_search.qdrant_index import (
+    QDRANT_VECTOR_INDEX_RULES_VERSION,
+    QdrantVectorIndex,
+)
 
 __all__ = [
     "DEFAULT_LOCAL_MODEL_NAME",
     "EXTERNAL_VECTOR_INGESTION_RULES_VERSION",
+    "QDRANT_VECTOR_INDEX_RULES_VERSION",
     "VECTOR_INDEX_RULES_VERSION",
     "EmbeddingGenerator",
     "ExternalVectorRecord",
@@ -42,6 +47,7 @@ __all__ = [
     "LocalEmbeddingError",
     "OpenAiEmbeddingError",
     "OpenAiEmbeddingGenerator",
+    "QdrantVectorIndex",
     "SentenceTransformerEmbeddingGenerator",
     "VectorIndex",
     "VectorIndexMetadata",

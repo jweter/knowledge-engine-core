@@ -28,7 +28,16 @@ every query. See the Architecture and Vector Index Layer sections below
 for what M30/M31/M32 actually implement, and Open Questions for what
 remains undecided (notably, combining this with lexical FTS5 results into
 one ranked list -- M32 only removes the "must pre-embed the query"
-friction, it does not unify the two retrieval signals).
+friction, it does not unify the two retrieval signals). M33 then added the
+second `VectorIndex` implementation the roadmap named from the start:
+`QdrantVectorIndex`, targeting an operator-run Qdrant server. Scoped to the
+class and its test suite only -- CLI wiring (`--backend faiss|qdrant` for
+`ke embedding-index-build`/`ke vector-search`) is deliberately deferred,
+matching this doc's own prior framing of Qdrant as "a second backend...
+to be added only if a real operator need for a server-backed index
+appears": no operator has asked for the CLI integration yet, and there is
+no live Qdrant server in this project's development/CI environment to
+verify that wiring against.
 
 ## Mission
 
@@ -117,21 +126,31 @@ Parser / Extraction (existing, unchanged)
        and writes the same vectors-file format `ke embedding-index-build`
        already consumes; M30's ingestion/build/search commands did not
        change.
-  -> Vector Index Layer (implemented, M30)
+  -> Vector Index Layer (implemented, M30/M33)
        knowledge_engine.vector_search.index: a narrow VectorIndex
        interface (add/search/remove) and FaissVectorIndex, a local flat
        (exact) L2 index (no server, matches this project's
-       offline-by-default posture). Qdrant remains a second, not-yet-built
-       backend behind the same interface. knowledge_engine.vector_search.
-       index_metadata persists a small JSON sidecar recording exactly
-       which embedding_model built an index -- vectors from different
-       models are not comparable even at the same dimension, so mixing
-       them would silently rank unrelated vector spaces together (found
-       by a Codex review on PR #154); a single index is now locked to one
-       model, enforced at both build time (a mismatched or
-       metadata-less existing index is rejected) and search time (an
-       optional embedding_model in the query file is checked against it).
-       Wired into two CLI commands:
+       offline-by-default posture). knowledge_engine.vector_search.
+       qdrant_index.QdrantVectorIndex (M33) is the second implementation:
+       a collection on an operator-run Qdrant server (this project does
+       not stand one up), created on first use and validated against the
+       expected dimension on reuse. Its score is squared Euclidean
+       distance, matching FaissVectorIndex's convention exactly -- Qdrant's
+       own Euclidean score is *not* squared, verified empirically against
+       qdrant-client's embedded local-mode client since Qdrant's own docs
+       do not state this precisely, so QdrantVectorIndex squares it before
+       returning a VectorMatch. Not yet wired into the CLI commands below
+       (see Open Questions); usable today via direct Python import.
+       knowledge_engine.vector_search.index_metadata persists a small
+       JSON sidecar recording exactly which embedding_model built a FAISS
+       index -- vectors from different models are not comparable even at
+       the same dimension, so mixing them would silently rank unrelated
+       vector spaces together (found by a Codex review on PR #154); a
+       single index is now locked to one model, enforced at both build
+       time (a mismatched or metadata-less existing index is rejected)
+       and search time (an optional embedding_model in the query file is
+       checked against it).
+       Wired into two CLI commands (FAISS only, for now):
        `ke embedding-index-build --vectors <jsonl> --index-path <path>`
        (knowledge_engine.vector_search.ingestion parses and validates
        externally-supplied vectors -- including that every record in one
@@ -204,15 +223,16 @@ Both generators implement the same `EmbeddingGenerator` interface
 `ke embedding-generate --generator local|openai`, so neither `VectorIndex`
 nor the ingestion/build/search commands needed to change.
 
-### Vector index sequencing (resolved: FAISS first, Qdrant approved next)
+### Vector index sequencing (resolved: FAISS first, Qdrant added)
 
 The roadmap names both local FAISS and server-backed Qdrant. Building both
 simultaneously would have duplicated the M12-style "narrow first, expand
 later" discipline unnecessarily, so FAISS shipped first in M30 -- no
 server/operator setup, matching this project's default single-machine
-posture. The project owner has approved Qdrant as the second, explicitly
-optional backend behind the same `VectorIndex` interface (M33, not yet
-built as of this writing).
+posture. The project owner approved Qdrant as the second, explicitly
+optional backend behind the same `VectorIndex` interface; M33 added
+`QdrantVectorIndex` (class + tests, not yet CLI-wired -- see the Vector
+Index Layer section above).
 
 ## Testing Strategy
 
@@ -243,6 +263,14 @@ Following the same pattern M14/Phase 2 established:
   the `--query-vector`/`--query-text` mutual-exclusion validation, and the
   embedding-model mismatch rejection without downloading a real model or
   calling a real API.
+- For `QdrantVectorIndex` (M33): `tests/test_qdrant_index.py` mirrors
+  `tests/test_vector_index.py`'s FaissVectorIndex cases exactly (same
+  add/search/remove/dimension/k-validation behavior expected across
+  backends), injecting `qdrant_client.QdrantClient(":memory:")` --
+  `qdrant-client`'s own embedded local-mode client -- instead of a real
+  server, so the suite exercises real `qdrant-client` code paths
+  deterministically. Adds Qdrant-specific cases: the squared-distance
+  score conversion, and collection reuse/schema-mismatch validation.
 - No test should assert that a semantic match is more "correct" than a
   lexical one -- only that the ranking/combination logic behaves as
   specified for fixed, known inputs.
@@ -252,10 +280,11 @@ Following the same pattern M14/Phase 2 established:
 - **Embedding generation approach** -- resolved by M31: both local
   (`sentence-transformers`) and external-API (OpenAI) generators are
   implemented behind the same `EmbeddingGenerator` interface. See above.
-- **Vector index sequencing** -- resolved by M30: FAISS first, implemented.
-  Qdrant remains a second, not-yet-built backend behind the same
-  `VectorIndex` interface, to be added only if a real operator need for a
-  server-backed index appears.
+- **Vector index sequencing** -- resolved: FAISS first (M30), Qdrant added
+  second (M33, `QdrantVectorIndex`). CLI wiring for Qdrant
+  (`ke embedding-index-build`/`ke vector-search` targeting a collection
+  instead of a local file) remains deliberately not built, to be added
+  only if a real operator need for it appears.
 - **Result combination** -- partially unblocked by M32: `ke vector-search
   --query-text` now accepts a free-text query directly, so "what real
   query patterns look like" is no longer blocked on an embedding approach

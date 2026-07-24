@@ -96,8 +96,12 @@ and milestone-by-milestone status.
 Phase 3 completed capabilities include:
 
 - a pluggable `VectorIndex` interface
-  (`knowledge_engine.vector_search.index`) and a local `FaissVectorIndex`
-  implementation (flat, exact L2 index; no server)
+  (`knowledge_engine.vector_search.index`) with two implementations: a
+  local `FaissVectorIndex` (flat, exact L2 index; no server) and a
+  `QdrantVectorIndex` (`knowledge_engine.vector_search.qdrant_index`)
+  targeting an operator-run Qdrant server -- usable via direct Python
+  import; not yet wired into the CLI commands below (those remain FAISS
+  only)
 - two `EmbeddingGenerator` implementations
   (`knowledge_engine.vector_search.generator`): a local
   `SentenceTransformerEmbeddingGenerator` (default `all-MiniLM-L6-v2`,
@@ -210,10 +214,19 @@ architecture and milestone-by-milestone status.
   an alternative to `--query-vector`'s pre-embedded JSON file. Combining
   this with lexical `ke search`/`ke answer` results into one ranked list
   is still a separate, undesigned question.
+- **M33:** added `QdrantVectorIndex`, the second `VectorIndex`
+  implementation the roadmap named from the start, targeting a collection
+  on an operator-run Qdrant server. Its score is squared Euclidean
+  distance, matching `FaissVectorIndex`'s convention exactly (Qdrant's own
+  score is not squared -- verified empirically, since Qdrant's docs do not
+  state this precisely). Scoped to the class and its test suite; CLI
+  wiring (`ke embedding-index-build`/`ke vector-search` targeting a
+  collection instead of a local file) is deliberately deferred until a
+  real operator need for it appears.
 
 Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is
 complete through M29. Phase 3 (search plus semantics) is in progress with
-M32. See [docs/roadmap.md](docs/roadmap.md) and
+M33. See [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase3_design.md](docs/phase3_design.md) for the next milestone.
 
 ## Requirements
@@ -448,7 +461,7 @@ Neither Phase 1 nor Phase 2 should be expanded into Alembic adoption, a new
 package manager, persistent telemetry, vector search, a graph, AI reasoning,
 an API, web functionality, or unrelated refactoring without separate
 evidence and authorization. Vector search itself is Phase 3's own explicit
-goal (see M30/M31/M32 above and [docs/phase3_design.md](docs/phase3_design.md)), not
+goal (see M30/M31/M32/M33 above and [docs/phase3_design.md](docs/phase3_design.md)), not
 an out-of-scope expansion of Phases 1/2.
 
 ## Known Issues
