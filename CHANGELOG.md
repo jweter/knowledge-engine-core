@@ -292,6 +292,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (myotonic dystrophy). Excluded all three. Net: 70 of 74 automatically
   accepted records remain. Refreshed the corpus-library snapshot (387
   papers total, 871 authors).
+- Grew `sources.csv` by another 109 records (the sixth discovery batch,
+  `retstart=1250`, the largest yet at 111 automatically accepted). Applied
+  the full false-positive screen (case-report-style rows by title or
+  venue, gene/mouse-strain-name lexical collisions, type 1
+  diabetes-specific titles) before acquisition. Found and excluded 1
+  match: a case report on transcutaneous auricular vagus nerve stimulation
+  for abdominal epilepsy in a patient with ketosis-prone diabetes -- the
+  reported intervention and outcome treat the epilepsy, not the diabetes,
+  which is managed only with standard supportive stabilization rather than
+  being the subject of any reported treatment finding. Confirmed a second
+  flagged case report (time-restricted eating alongside GLP-1 receptor
+  agonist therapy in type 2 diabetes) genuinely on-topic and kept it. No
+  lexical collisions or type 1 diabetes-specific titles found in this
+  batch. Refreshed the corpus-library snapshot (497 papers total, 1133
+  authors).
 
 ### Changed
 

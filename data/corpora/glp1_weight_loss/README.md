@@ -62,20 +62,23 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 387 sources: the small historical GLP-1
-prototype set (3 rows) plus 384 accepted records from the first five small
+The committed manifest holds 497 sources: the small historical GLP-1
+prototype set (3 rows) plus 494 accepted records from the first six small
 (`--limit 250`) automated discovery batches (`retstart=0`, 80 records;
 `retstart=250`, 72 records; `retstart=500`, 86 records; `retstart=750`, 76
-records; `retstart=1000`, 70 records) of the project owner's larger
-corpus-building effort, following M14's rules. Ruleset corrections along
-the way held 3 pediatric-titled records and 1 correction-notice record
-that earlier rule versions had wrongly accepted. A further thirteen
-records were manually excluded after review, since v9's disease/
-intervention keyword match has no automated way to catch any of these
-patterns: nine single-patient case reports whose abstracts named a target
-disease term only as an incidental, unrelated patient comorbidity --
-including some whose titles named the disease term directly, showing that
-title presence alone doesn't rule out an incidental mention; two gene- or
+records; `retstart=1000`, 70 records; `retstart=1250`, 109 records) of the
+project owner's larger corpus-building effort, following M14's rules.
+Ruleset corrections along the way held 3 pediatric-titled records and 1
+correction-notice record that earlier rule versions had wrongly accepted.
+A further fourteen records were manually excluded after review, since
+v9's disease/intervention keyword match has no automated way to catch any
+of these patterns: nine single-patient case reports whose abstracts named
+a target disease term only as an incidental, unrelated patient
+comorbidity -- including some whose titles named the disease term
+directly, showing that title presence alone doesn't rule out an
+incidental mention; one single-patient case report whose reported
+intervention (vagus nerve stimulation) treated a coexisting condition
+(epilepsy), not the metabolic disease named in the title; two gene- or
 protein-name lexical collisions (a xenograft mouse strain literally named
 "non-obese diabetic (NOD)-SCID" in a cervical-cancer study, and the FTO
 gene's full name, "fat mass and obesity-associated," in a lymphoma
