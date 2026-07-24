@@ -422,6 +422,32 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ke search`/`ke answer` remain lexical-only (FTS5); combining lexical
   and semantic results into one ranked list is still a separate,
   undesigned question.
+- Added M33: `QdrantVectorIndex` (`knowledge_engine.vector_search.qdrant_index`),
+  the second `VectorIndex` implementation, targeting a collection on an
+  operator-run Qdrant server (this project does not stand one up). The
+  collection is created on first use and validated against the expected
+  dimension on reuse, mirroring `FaissVectorIndex.load`'s dimension check.
+  Score is squared Euclidean distance, matching `FaissVectorIndex`'s
+  convention exactly -- Qdrant's own Euclidean-distance score is *not*
+  squared, verified empirically against `qdrant-client`'s embedded
+  local-mode client since Qdrant's own docs do not state this precisely.
+  Requires an `embedding_model` identifier: every point's payload records
+  it, and reusing an existing *non-empty* collection is rejected unless
+  its recorded model matches -- the same embedding-model-mixing bug class
+  a Codex review found in the FAISS path on PR #154, found again by a
+  Codex review on PR #157 before this backend ever shipped (see Fixed
+  below). Added `qdrant-client` as a new dependency (small transitive footprint:
+  `grpcio`, `httpx`, `numpy`, `pydantic`, `protobuf`, `portalocker`,
+  `urllib3` -- no heavy ML runtime). Tests
+  (`tests/test_qdrant_index.py`) inject `qdrant_client.QdrantClient(":memory:")`
+  -- the client's own embedded local mode -- so the suite exercises real
+  `qdrant-client` code paths deterministically without a live server.
+  Scoped to the class and its tests only; CLI wiring
+  (`ke embedding-index-build`/`ke vector-search` targeting a Qdrant
+  collection instead of a local FAISS file) is deliberately deferred
+  until a real operator need for it appears, matching how
+  `docs/phase3_design.md` already framed Qdrant support before this
+  milestone.
 
 ### Changed
 
@@ -459,6 +485,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its metadata sidecar entirely; `vector-search` refuses to search such
   an index and validates an optional `embedding_model` in the query file
   against it.
+- Fixed M33's `QdrantVectorIndex` accepting any existing Qdrant collection
+  with a matching dimension and Euclidean distance for reuse, even if it
+  was populated with vectors from a different embedding model -- the same
+  bug class as above, since same-dimension embeddings from unrelated
+  models are common and L2 distance across them is meaningless. Found by
+  a Codex review on PR #157, before this backend ever merged. Fixed by
+  requiring an `embedding_model` identifier, recording it on every
+  point's payload, and rejecting reuse of a *non-empty* collection whose
+  recorded model (or unverifiable absence of one, for points inserted
+  outside `add`) does not match. A genuinely empty existing collection
+  has nothing to conflict with yet, so it may still be claimed by any
+  model.
 - Fixed `ke corpus-library-import` (M27) copying `embedding_model`/
   `embedding_id` verbatim onto an imported paper. `embedding_id` is the
   source database's own `Paper.id`, which is only unique within that one
@@ -469,6 +507,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   both fields on import; an operator must re-run `ke embedding-index-build`
   for papers after importing a snapshot, since the FAISS index file was
   never part of the snapshot's portable paper-intrinsic content anyway.
+- Fixed `_build_embedding_generator` constructing
+  `SentenceTransformerEmbeddingGenerator`/`OpenAiEmbeddingGenerator`
+  outside any try/except, so a constructor-time `LocalEmbeddingError`/
+  `OpenAiEmbeddingError` (an invalid `--model`, an empty local model name)
+  propagated as an unhandled exception instead of the sanitized red-text
+  + exit(1) error every other failure path in `embedding-generate`/
+  `vector-search` uses. Found by a Codex review on PR #156. Fixed by
+  wrapping both constructor calls in the shared helper itself, so both
+  call sites get the fix.
 - Fixed `_report_text` (shared by every Markdown report renderer --
   `evidence-report` and M29's `relationship-report`) only ASCII-normalizing
   free-text fields without escaping Markdown structure or collapsing

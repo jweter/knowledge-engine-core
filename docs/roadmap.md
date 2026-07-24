@@ -207,8 +207,9 @@ Detailed milestone records include:
 ## Phase 3: Search Plus Semantics
 
 - Add embeddings using a pluggable vector index. (Done, M30: FAISS.)
-- Support local FAISS and server-backed Qdrant. (FAISS done, M30; Qdrant
-  approved, not yet built -- M33.)
+- Support local FAISS and server-backed Qdrant. (Both implemented -- FAISS
+  M30, Qdrant M33 (`QdrantVectorIndex`, not yet wired into the CLI
+  commands -- no operator need for that has appeared).)
 - Keep lexical search as a transparent baseline. Unchanged: `ke search`/
   `ke answer` remain FTS5-only; `ke vector-search` is a separate command.
 - Use `docs/phase3_design.md` as the detailed design reference. Its
@@ -225,10 +226,13 @@ Detailed milestone records include:
   M30 commands already consume. **M32** wired `ke vector-search
   --query-text` to embed a free-text query live with either generator,
   removing the "queries must be pre-embedded" friction M30/M31
-  deliberately left in place. Combining lexical (`ke search`/`ke answer`)
-  and semantic (`ke vector-search`) results into one ranked list remains a
-  separate, not-yet-designed question (see `docs/phase3_design.md`'s Open
-  Questions).
+  deliberately left in place. **M33** added `QdrantVectorIndex`, the
+  second `VectorIndex` implementation the roadmap named from the start,
+  targeting an operator-run Qdrant server -- usable via direct Python
+  import today; CLI wiring is a future step. Combining lexical
+  (`ke search`/`ke answer`) and semantic (`ke vector-search`) results into
+  one ranked list remains a separate, not-yet-designed question (see
+  `docs/phase3_design.md`'s Open Questions).
 
 ## Phase 4: Knowledge Graph
 
@@ -286,8 +290,8 @@ Detailed milestone records include:
 - `docs/roadmap/phase2.md`
 - `docs/phase3_design.md` and `docs/roadmap/phase3.md` -- design sketch and
   goals; M30 (FAISS retrieval plumbing), M31 (local + OpenAI embedding
-  generators), and M32 (free-text `ke vector-search --query-text`) are
-  implemented, Qdrant (M33) is approved and not yet built
+  generators), M32 (free-text `ke vector-search --query-text`), and M33
+  (`QdrantVectorIndex`, not yet CLI-wired) are implemented
 - `docs/roadmap/long_term_vision.md` -- the multi-package ecosystem and final
   goal these phases build toward, including the future `knowledge-engine-ai`
   layer's role once Phase 2's Evidence Records exist

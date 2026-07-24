@@ -25,6 +25,7 @@ torch = [
     { version = "^2.13.0", source = "pytorch-cpu", markers = "sys_platform != 'darwin'" },
     { version = "^2.13.0", markers = "sys_platform == 'darwin'" },
 ]
+qdrant-client = "^1.18.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^2.1.0"
