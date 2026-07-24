@@ -316,6 +316,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   mechanism/chemistry-adjacent papers were kept. Net: 106 of 111
   automatically accepted records remain. Refreshed the corpus-library
   snapshot (493 papers total, 1117 authors).
+- Grew `sources.csv` by another 114 records (the seventh discovery batch,
+  `retstart=1500`; 120 automatically accepted, 1 excluded as a cross-batch
+  duplicate already present from `retstart=1250`). Screened only the
+  clear-cut patterns going forward (per the volume-priority direction
+  above), not exhaustive gray-area sweeps: excluded 5 further records --
+  4 single-patient case reports where type 2 diabetes or obesity was
+  purely incidental patient background unrelated to the reported condition
+  (a fungal prostatitis infection, a ciliopathy genetics case, an
+  incidental angiographic finding, and uremic pericarditis/cardiac
+  tamponade), and 1 type 1 diabetes-specific mechanistic study held under
+  `exclusion_criteria.md`'s explicit rule. Net: 114 of 120 automatically
+  accepted records remain. Refreshed the corpus-library snapshot (607
+  papers total, 1388 authors).
 
 ### Changed
 
