@@ -81,6 +81,20 @@ each page individually and `ParsedPaper.pages` preserves page boundaries; a new
 Every extracted claim can now cite an exact `(page_number, offset)` span instead of
 only a page count. See `docs/phase2_design.md`'s Prerequisite section.
 
+### One-off GitHub Actions workflows are not classified
+
+Was flagged as needing an inventory "after M14 is stable" to distinguish
+load-bearing automation from retained implementation history. M14 has been
+stable since the corpus reached 605 papers and the project owner stopped
+further growth; inventoried now. `.github/workflows/` contains exactly two
+files: `quality.yml` (the recurring CI quality gate) and
+`m14-mass-discovery.yml` (the M14 discovery pipeline, dispatchable on demand
+for future corpus growth and also run as a bounded smoke test on pull
+requests touching M14 pipeline code). Both are load-bearing; no historical
+one-off diagnostic or patch workflow remains -- `git log` confirms these were
+already removed earlier in the project's history (for example, "chore:
+remove temporary pytest diagnostic workflow"). No cleanup PR was needed.
+
 ## Medium
 
 ### Best-effort PDF metadata extraction
@@ -142,19 +156,6 @@ provider conflicts will eventually require explicit provenance-aware identity.
 
 Eventual fix: design this model when multiple-provider/version conflicts become an
 operational requirement. Do not introduce it solely for the 500-paper rehearsal.
-
-### One-off GitHub Actions workflows are not classified
-
-The workflow directory contains recurring quality/rehearsal workflows alongside
-historical one-off diagnostic and patch workflows.
-
-Why it matters: contributors cannot immediately distinguish load-bearing automation
-from retained implementation history, and obsolete workflows increase maintenance
-and accidental-execution risk.
-
-Eventual fix: after M14 is stable, inventory every workflow, retain recurring
-operational workflows, archive evidence in documentation where needed, and remove
-obsolete remote-patch or diagnostic workflows in a dedicated cleanup PR.
 
 ## Low
 
