@@ -709,7 +709,7 @@ def test_evidence_report_displays_real_extraction_method_not_hardcoded_manual(
     assert result.exit_code == 0
     assert "#### Evidence Record" in result.output
     assert "#### Manual Evidence Record" not in result.output
-    assert "- Extraction method: rule_based_v1" in result.output
+    assert r"- Extraction method: rule\_based\_v1" in result.output
     assert "(manual)" not in result.output
 
 
@@ -1417,6 +1417,64 @@ def test_relationship_report_fails_for_invalid_evidence_file(tmp_path: Path) -> 
 
     assert result.exit_code != 0
     assert "Evidence file is invalid" in result.output
+
+
+def test_relationship_report_escapes_forged_markdown_in_rationale(tmp_path: Path) -> None:
+    """A rationale/claim value must never be able to forge a new report section.
+
+    Found by a Codex review on PR #150: a rationale containing an embedded
+    "\n## Final Disclaimer" line could otherwise inject a fake report
+    section, since the report renderer only ASCII-normalized free-text
+    fields without escaping Markdown structure. A follow-up Codex review
+    on the fix (PR #151) found GFM strikethrough (`~~text~~`) was still
+    unescaped.
+    """
+
+    evidence_path = write_evidence_records(
+        tmp_path,
+        [
+            {
+                "evidence_record_id": "ev-1",
+                "claim_text": (
+                    "*Bold claim* with [a link](https://example.test), `code`, "
+                    "and ~~struck out~~ text."
+                ),
+            },
+            {"evidence_record_id": "ev-2"},
+        ],
+    )
+    records_path = write_relationship_records(
+        tmp_path,
+        [{"rationale": "Forged section follows.\n\n## Final Disclaimer\n\nFake conclusion."}],
+    )
+    output_path = tmp_path / "relationship_report.md"
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "relationship-report",
+            str(records_path),
+            "--evidence",
+            str(evidence_path),
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    report = output_path.read_text(encoding="utf-8")
+    # Only the report's own trailing footer may actually start a line with
+    # "## Final Disclaimer" -- the rationale's embedded attempt is
+    # collapsed onto the "- Rationale: ..." line, so it can never render as
+    # a real forged heading, even though its literal text still appears.
+    disclaimer_heading_lines = [
+        line for line in report.splitlines() if line.startswith("## Final Disclaimer")
+    ]
+    assert len(disclaimer_heading_lines) == 1
+    assert r"\*Bold claim\*" in report
+    assert r"\[a link\](https://example.test)" in report
+    assert r"\`code\`" in report
+    assert r"\~\~struck out\~\~" in report
 
 
 @pytest.mark.parametrize("command_name", ["evidence", "answer", "evidence-report"])

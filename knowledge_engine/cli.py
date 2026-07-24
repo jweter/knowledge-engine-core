@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import re
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass
@@ -1494,12 +1495,13 @@ def _report_relationship_endpoint_lines(
 ) -> list[str]:
     """Build Markdown lines for one relationship endpoint's evidence record."""
 
+    heading_id = _report_text(evidence_record_id)
     record = evidence_by_id.get(evidence_record_id)
     if record is None:
-        return [f"#### {label} Evidence Record ({evidence_record_id})", "", "Not found.", ""]
+        return [f"#### {label} Evidence Record ({heading_id})", "", "Not found.", ""]
 
     return [
-        f"#### {label} Evidence Record ({evidence_record_id})",
+        f"#### {label} Evidence Record ({heading_id})",
         "",
         f"- Source title: {_report_record_value(record, 'source_title')}",
         f"- DOI: {_report_record_value(record, 'source_doi')}",
@@ -1778,10 +1780,27 @@ def _report_evidence_lines(record: dict[str, Any]) -> list[str]:
     ]
 
 
-def _report_text(value: str) -> str:
-    """Normalize text for Markdown report output."""
+_MARKDOWN_INLINE_SPECIAL_CHARS = re.compile(r"([\\`*_\[\]<~])")
 
-    return _safe_text(value)
+
+def _report_text(value: str) -> str:
+    """Normalize text for Markdown report output.
+
+    Collapses embedded whitespace/newlines and escapes characters that
+    create Markdown structure or inline formatting, so a claim, rationale,
+    or other free-text field is always rendered as literal text -- never a
+    forged report section (a value containing "\\n## Final Disclaimer"
+    could otherwise inject a fake heading) or altered inline formatting
+    (stray `*`/`_`/`[]`/`~~` syntax) -- regardless of what the underlying
+    record actually contains. Found by a Codex review on the
+    `relationship-report` addition; fixed here since every report renderer
+    (`evidence-report`, `relationship-report`) shares this one function. A
+    follow-up Codex review on the fix itself found `~` (GFM strikethrough,
+    `~~text~~`) was still missing from the escape set.
+    """
+
+    collapsed = " ".join(_safe_text(value).split())
+    return _MARKDOWN_INLINE_SPECIAL_CHARS.sub(r"\\\1", collapsed)
 
 
 def _report_record_value(record: dict[str, Any], key: str) -> str:
