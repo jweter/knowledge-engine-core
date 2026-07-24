@@ -62,23 +62,25 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 607 sources: the small historical GLP-1
-prototype set (3 rows) plus 604 accepted records from seven small
+The committed manifest holds 605 sources: the small historical GLP-1
+prototype set (3 rows) plus 602 accepted records from seven small
 (`--limit 250`) automated discovery batches (`retstart` 0 through 1500) of
 the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
-A further twenty-three records were manually excluded after individual
+A further twenty-five records were manually excluded after individual
 abstract review, since v9's disease/intervention keyword match has no
 automated way to catch several recurring patterns: single-patient case
 reports where the named disease is only incidental patient background or
 the reported intervention treats an unrelated coexisting condition;
 gene-/protein-name lexical collisions (e.g. the NOD-SCID mouse strain, the
 FTO gene's "fat mass and obesity-associated" full name); type 1
-diabetes-specific sources per `exclusion_criteria.md`'s explicit rule; and
-a few papers matching a target term only via generic English phrasing
-unrelated to the actual disease entity. Several of these were first caught
-by Codex reviews on the growth PRs. As of the `retstart=1250` batch, the
+diabetes-specific sources per `exclusion_criteria.md`'s explicit rule; a
+pediatric study population whose title's forward-looking "Adult" outcome
+term obscured the actual (non-adult) subjects; and a few papers matching a
+target term only via generic English phrasing unrelated to the actual
+disease entity. Several of these were first caught by Codex reviews on the
+growth PRs. As of the `retstart=1250` batch, the
 project owner gave explicit direction that this corpus-building phase
 should prioritize breadth over precision: only the clear-cut patterns
 above are now screened before acquisition, not exhaustive gray-area
