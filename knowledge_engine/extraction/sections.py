@@ -116,3 +116,45 @@ def detect_sections(pages: Sequence[ParsedPage]) -> tuple[SectionSpan, ...]:
             )
         )
     return tuple(spans)
+
+
+def section_text(pages: Sequence[ParsedPage], section: SectionSpan) -> str:
+    """Return one section's exact text, concatenated across the pages it spans.
+
+    Shared by every extraction module that needs a section's raw text (M26's
+    `study_design`, M28's `pico`) so this span-to-text conversion has exactly
+    one implementation -- the same class of copy-paste divergence that let
+    `ClassifiedPaperRepository` silently drop page persistence (see
+    CHANGELOG.md) is not worth risking here too. Includes the heading itself
+    at the start; use `section_content` for the heading-stripped body.
+    """
+
+    parts: list[str] = []
+    for page in pages:
+        if page.page_number < section.start_page_number:
+            continue
+        if page.page_number > section.end_page_number:
+            continue
+        start = section.start_offset if page.page_number == section.start_page_number else 0
+        end = section.end_offset if page.page_number == section.end_page_number else len(page.text)
+        parts.append(page.text[start:end])
+    return "\n\n".join(parts)
+
+
+def section_content(pages: Sequence[ParsedPage], section: SectionSpan) -> str:
+    """Return one section's text with its own heading stripped from the start.
+
+    `section.start_offset` can point at whitespace preceding the heading
+    (`detect_sections`' heading regex greedily absorbs a preceding blank line
+    into the match before `heading_text` is stripped), so a fixed
+    `len(heading_text)` slice from the start is not reliable. Locates the
+    heading text itself and slices from immediately after it instead. Falls
+    back to the full (stripped) section text if the heading cannot be found,
+    which should not normally happen.
+    """
+
+    text = section_text(pages, section)
+    heading_index = text.find(section.heading_text)
+    if heading_index == -1:
+        return text.strip()
+    return text[heading_index + len(section.heading_text) :].strip()

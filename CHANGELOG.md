@@ -335,6 +335,27 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a pediatric study population, not the actual (adult) subjects. Both were
   held. Net: 112 of 120 automatically accepted records remain. Refreshed
   the corpus-library snapshot (605 papers total, 1388 authors).
+- Added M28 deterministic PICO extraction
+  (`knowledge_engine.extraction.pico.extract_pico`): population,
+  intervention, comparator, and outcome, each the first sentence matching
+  an explicit cue (a numeric cohort-size clause for population;
+  received/administered/randomized to/etc. for intervention;
+  versus/compared with/placebo/etc. for comparator; primary outcome/
+  endpoint/etc. for outcome) within Abstract/Methods (and also Results for
+  comparator/outcome). Patterns were tuned by reading a real sample of the
+  605-paper `glp1_weight_loss` corpus's actual abstracts rather than
+  guessed speculatively -- the corpus only reached a size the project
+  owner judged sufficient for this once M14's growth loop was
+  deliberately stopped. No new dependency, no LLM, and the same
+  absence-over-guessing discipline as M17's claim candidates and M26's
+  `study_type`/`limitations`. Wired into `ke extraction-review-generate`
+  alongside M16-M26's pipeline; adds
+  `extraction_runs.pico_extraction_rules_version` (schema version 7).
+  Promoted M26's private, unshared section-text and heading-stripping
+  helpers to `knowledge_engine.extraction.sections.section_text`/
+  `section_content` so this module could reuse them exactly rather than
+  risk a third divergent copy -- the same lesson the
+  `ClassifiedPaperRepository` bug below had just taught.
 
 ### Changed
 

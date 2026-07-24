@@ -109,6 +109,70 @@ def test_extraction_review_generate_populates_study_type_and_limitations(
     assert record["population"] is None
 
 
+def test_extraction_review_generate_populates_pico_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "review.jsonl"
+    text = (
+        "Methods\n\nWe enrolled 253 adults with obesity. Participants were randomized "
+        "to semaglutide or placebo. The primary outcome was change in body weight.\n\n"
+        "Results\n\nThe primary endpoint was body weight change. "
+        "Body weight decreased by 12.4% relative to baseline."
+    )
+    pages = [ParsedPage(page_number=1, text=text)]
+    monkeypatch.setattr(entrypoint, "_load_paper_pages", lambda paper_id: (_paper(), pages))
+    monkeypatch.setattr(entrypoint, "_record_extraction_run", lambda **kwargs: None)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["extraction-review-generate", "--paper-id", "1", "--output", str(output)],
+    )
+
+    assert result.exit_code == 0, result.output
+    normalized_output = " ".join(result.output.split())
+    assert "PICO fields detected: population, intervention, comparator, outcome" in (
+        normalized_output
+    )
+
+    lines = output.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["population"] == "We enrolled 253 adults with obesity."
+    assert record["intervention"] == "Participants were randomized to semaglutide or placebo."
+    assert record["comparator"] == "Participants were randomized to semaglutide or placebo."
+    assert record["outcome"] == "The primary outcome was change in body weight."
+    assert record["extraction_context"]["pico_extraction_rules_version"]
+
+
+def test_extraction_review_generate_pico_fields_absent_when_no_cue_matches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "review.jsonl"
+    text = (
+        "Methods\n\nThis study describes trends in metabolic health over time.\n\n"
+        "Results\n\nBody weight decreased by 12.4% relative to baseline."
+    )
+    pages = [ParsedPage(page_number=1, text=text)]
+    monkeypatch.setattr(entrypoint, "_load_paper_pages", lambda paper_id: (_paper(), pages))
+    monkeypatch.setattr(entrypoint, "_record_extraction_run", lambda **kwargs: None)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["extraction-review-generate", "--paper-id", "1", "--output", str(output)],
+    )
+
+    assert result.exit_code == 0, result.output
+    normalized_output = " ".join(result.output.split())
+    assert "PICO fields detected: none" in normalized_output
+
+    lines = output.read_text(encoding="utf-8").strip().splitlines()
+    record = json.loads(lines[0])
+    assert record["population"] is None
+    assert record["intervention"] is None
+    assert record["comparator"] is None
+    assert record["outcome"] is None
+
+
 def test_extraction_review_generate_removes_output_when_run_cannot_be_recorded(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -312,3 +376,4 @@ def test_extraction_review_generate_end_to_end_against_real_database(
     assert run.claim_framing_rules_version
     assert run.draft_evidence_item_rules_version
     assert run.study_design_rules_version
+    assert run.pico_extraction_rules_version

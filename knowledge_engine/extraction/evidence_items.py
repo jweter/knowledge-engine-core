@@ -11,17 +11,17 @@ codebase -- it is inherently supplied by whoever compiles a corpus around a
 question, not derivable from a paper's own text. M18 already established
 that `evidence_direction` is defined relative to a `research_question`
 (`docs/vs7_manual_evidence_record.md`), so it cannot be honestly populated
-without one either. Those two fields, PICO's population/intervention/
-comparator/outcome, `uncertainty_notes`, `confidence_note`, and
-`provenance` require real judgment or external input and are left
-explicitly `None`. `study_type` and `limitations` are different: M26's
-deterministic study-design classification and limitations extraction
-(`knowledge_engine.extraction.study_design`) populate them from the
-paper's own text when a caller supplies them, since both are paper-intrinsic
-facts, not judgment relative to a research question -- see
-`docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed Fields section.
-A draft item is intentionally incomplete and is never claimed to be a
-valid EvidenceRecord.
+without one either. Those two fields, `uncertainty_notes`, `confidence_note`, and `provenance`
+require real judgment or external input and are left explicitly `None`.
+`study_type`, `limitations`, and PICO's population/intervention/comparator/
+outcome are different: M26's deterministic study-design classification and
+limitations extraction (`knowledge_engine.extraction.study_design`), and
+M28's deterministic PICO extraction (`knowledge_engine.extraction.pico`),
+populate them from the paper's own text when a caller supplies them, since
+all are paper-intrinsic facts, not judgment relative to a research
+question -- see `docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed
+Fields section. A draft item is intentionally incomplete and is never
+claimed to be a valid EvidenceRecord.
 """
 
 from __future__ import annotations
@@ -85,6 +85,7 @@ class DraftEvidenceItem:
     intervention: str | None = None
     comparator: str | None = None
     outcome: str | None = None
+    pico_extraction_rules_version: str | None = None
     limitations: list[str] | None = None
     uncertainty_notes: str | None = None
     confidence_note: str | None = None
@@ -134,6 +135,7 @@ class DraftEvidenceItem:
                 "candidate_rules_version": candidate.rules_version,
                 "framing_rules_version": self.claim_framing.rules_version,
                 "study_design_rules_version": self.study_design_rules_version,
+                "pico_extraction_rules_version": self.pico_extraction_rules_version,
             },
         }
 
@@ -145,17 +147,23 @@ def build_draft_evidence_item(
     study_type: str | None = None,
     limitations: list[str] | None = None,
     study_design_rules_version: str | None = None,
+    population: str | None = None,
+    intervention: str | None = None,
+    comparator: str | None = None,
+    outcome: str | None = None,
+    pico_extraction_rules_version: str | None = None,
 ) -> DraftEvidenceItem:
     """Build one draft evidence item from a paper and a classified candidate.
 
-    `study_type`/`limitations` are paper-level facts (the same value applies
-    to every candidate from the same paper), so the caller computes them
-    once per paper -- typically via `classify_study_type`/
-    `extract_limitations` -- rather than this function deriving them itself.
-    `study_design_rules_version` records which ruleset produced them (or
+    `study_type`/`limitations`/PICO fields are paper-level facts (the same
+    value applies to every candidate from the same paper), so the caller
+    computes them once per paper -- typically via `classify_study_type`/
+    `extract_limitations`/`extract_pico` -- rather than this function
+    deriving them itself. `study_design_rules_version`/
+    `pico_extraction_rules_version` record which ruleset produced them (or
     found nothing), mirroring `candidate_rules_version`/
     `framing_rules_version`, so a later ruleset revision doesn't leave a
-    draft item's `study_type`/`limitations` provenance unrecorded.
+    draft item's provenance unrecorded.
     """
 
     candidate = framing.candidate
@@ -179,6 +187,11 @@ def build_draft_evidence_item(
         study_type=study_type,
         limitations=limitations,
         study_design_rules_version=study_design_rules_version,
+        population=population,
+        intervention=intervention,
+        comparator=comparator,
+        outcome=outcome,
+        pico_extraction_rules_version=pico_extraction_rules_version,
     )
 
 
@@ -189,6 +202,11 @@ def build_draft_evidence_items(
     study_type: str | None = None,
     limitations: list[str] | None = None,
     study_design_rules_version: str | None = None,
+    population: str | None = None,
+    intervention: str | None = None,
+    comparator: str | None = None,
+    outcome: str | None = None,
+    pico_extraction_rules_version: str | None = None,
 ) -> tuple[DraftEvidenceItem, ...]:
     """Build one draft evidence item per classified candidate, order preserved."""
 
@@ -199,6 +217,11 @@ def build_draft_evidence_items(
             study_type=study_type,
             limitations=limitations,
             study_design_rules_version=study_design_rules_version,
+            population=population,
+            intervention=intervention,
+            comparator=comparator,
+            outcome=outcome,
+            pico_extraction_rules_version=pico_extraction_rules_version,
         )
         for framing in framings
     )

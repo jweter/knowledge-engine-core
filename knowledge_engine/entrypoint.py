@@ -21,6 +21,7 @@ from knowledge_engine.extraction import (
     CLAIM_CANDIDATE_RULES_VERSION,
     CLAIM_FRAMING_RULES_VERSION,
     DRAFT_EVIDENCE_ITEM_RULES_VERSION,
+    PICO_EXTRACTION_RULES_VERSION,
     SECTION_DETECTION_RULES_VERSION,
     STUDY_DESIGN_RULES_VERSION,
     build_draft_evidence_items,
@@ -29,6 +30,7 @@ from knowledge_engine.extraction import (
     detect_claim_candidates,
     detect_sections,
     extract_limitations,
+    extract_pico,
 )
 from knowledge_engine.extraction.evidence_items import PaperMetadata
 from knowledge_engine.import_runs import ImportRunService
@@ -209,6 +211,7 @@ def _record_extraction_run(
             claim_framing_rules_version=CLAIM_FRAMING_RULES_VERSION,
             draft_evidence_item_rules_version=DRAFT_EVIDENCE_ITEM_RULES_VERSION,
             study_design_rules_version=STUDY_DESIGN_RULES_VERSION,
+            pico_extraction_rules_version=PICO_EXTRACTION_RULES_VERSION,
         )
 
 
@@ -440,6 +443,7 @@ def extraction_review_generate(
     framings = classify_claim_framing(candidates)
     study_type = classify_study_type(pages, sections)
     limitations = extract_limitations(pages, sections)
+    pico = extract_pico(pages, sections)
     paper_metadata = PaperMetadata(paper_id=paper.id, doi=paper.doi, title=paper.title)
     items = build_draft_evidence_items(
         paper_metadata,
@@ -447,6 +451,11 @@ def extraction_review_generate(
         study_type=study_type,
         limitations=limitations,
         study_design_rules_version=STUDY_DESIGN_RULES_VERSION,
+        population=pico.population,
+        intervention=pico.intervention,
+        comparator=pico.comparator,
+        outcome=pico.outcome,
+        pico_extraction_rules_version=pico.rules_version,
     )
 
     lines = [json.dumps(item.to_dict()) for item in items]
@@ -470,17 +479,28 @@ def extraction_review_generate(
         )
         raise typer.Exit(1) from None
 
+    pico_detected = ", ".join(
+        field
+        for field, value in (
+            ("population", pico.population),
+            ("intervention", pico.intervention),
+            ("comparator", pico.comparator),
+            ("outcome", pico.outcome),
+        )
+        if value
+    )
     console.print(
         f"[green]Wrote {len(items)} draft evidence item(s):[/green] {output} "
         f"({len(pages)} page(s), {len(sections)} section(s), {len(candidates)} candidate(s), "
         f"study_type: {study_type or 'not detected'}, "
-        f"limitations: {'detected' if limitations else 'not detected'})."
+        f"limitations: {'detected' if limitations else 'not detected'}, "
+        f"PICO fields detected: {pico_detected or 'none'})."
     )
     console.print(
         "[bold]Draft items are a review queue, not validated evidence -- "
-        "research_question, evidence_direction, and population/intervention/comparator/"
-        "outcome require human completion. study_type and limitations are populated "
-        "automatically when detected, never guessed.[/bold]"
+        "research_question and evidence_direction require human completion. "
+        "study_type, limitations, and population/intervention/comparator/outcome are "
+        "populated automatically when detected, never guessed.[/bold]"
     )
 
 

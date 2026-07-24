@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 
-from knowledge_engine.extraction.sections import SectionSpan
+from knowledge_engine.extraction.sections import SectionSpan, section_content, section_text
 from knowledge_engine.parser import ParsedPage
 
 STUDY_DESIGN_RULES_VERSION = "m26-study-design-v1"
@@ -50,7 +50,7 @@ def classify_study_type(pages: Sequence[ParsedPage], sections: Sequence[SectionS
     """
 
     combined = "\n\n".join(
-        _section_text(pages, section)
+        section_text(pages, section)
         for section in sections
         if section.section_type in _STUDY_TYPE_SECTION_TYPES
     )
@@ -75,32 +75,7 @@ def extract_limitations(
     section = next((s for s in sections if s.section_type == "limitations"), None)
     if section is None:
         return None
-    text = _section_text(pages, section)
-    # `section.start_offset` can point at whitespace preceding the heading
-    # (detect_sections' heading regex greedily absorbs a preceding blank
-    # line into the match before `heading_text` is stripped), so a fixed
-    # `len(heading_text)` slice from the start is not reliable. Locate the
-    # heading text itself and slice from immediately after it instead.
-    heading_index = text.find(section.heading_text)
-    if heading_index == -1:
-        content = text.strip()
-    else:
-        content = text[heading_index + len(section.heading_text) :].strip()
+    content = section_content(pages, section)
     if not content:
         return None
     return [content]
-
-
-def _section_text(pages: Sequence[ParsedPage], section: SectionSpan) -> str:
-    """Return a section's exact text, concatenated across the pages it spans."""
-
-    parts: list[str] = []
-    for page in pages:
-        if page.page_number < section.start_page_number:
-            continue
-        if page.page_number > section.end_page_number:
-            continue
-        start = section.start_offset if page.page_number == section.start_page_number else 0
-        end = section.end_offset if page.page_number == section.end_page_number else len(page.text)
-        parts.append(page.text[start:end])
-    return "\n\n".join(parts)
