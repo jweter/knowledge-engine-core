@@ -76,6 +76,16 @@ acceptance, release validation, and optional post-release quality audits.
   decision: a fresh import and a linked resume against the same manifest
   snapshot both reconciled exactly, with zero failures, zero issues, and a fully
   idempotent resume. See `docs/m14_500_paper_rehearsal_report.md`.
+- **M34** added Europe PMC as a second automated discovery source, alongside
+  M14's PubMed/PMC pipeline -- `ke europepmc-candidate-discover` and
+  `ke europepmc-candidate-review-prepare`, with their own adjudication engine
+  (`europepmc_candidate_review.py`, `EUROPEPMC_ADJUDICATION_RULES_VERSION`)
+  since identity and full-text evidence work differently for Europe PMC than
+  for PMC. Scoped to discovery and adjudication only -- **not** wired into
+  acquisition, and does not resume corpus growth: the corpus remains
+  intentionally frozen at 605 papers by the project owner's prior decision
+  (see "Scaling beyond 500 papers for Phase 2 tuning" below). See
+  `docs/m34_europepmc_discovery.md`.
 
 ### M14: Controlled 500-paper rehearsal
 
@@ -124,6 +134,31 @@ continue through measured query revisions inside the committed M14 domain. Each
 revision must preserve its query, offset, rules version, decision counts, and
 provider provenance. Unrelated scientific domains require a separate roadmap
 amendment rather than silent corpus mixing.
+
+### M34: Europe PMC, a second discovery source
+
+The project owner asked for more automated discovery sources and pipelines
+beyond M14's PubMed/PMC-only pipeline. M34 adds Europe PMC as the second one
+-- see `docs/m34_europepmc_discovery.md` for the full design, and
+`knowledge_engine/europepmc_discovery.py` /
+`knowledge_engine/europepmc_candidate_review.py` for the implementation.
+Deliberately scoped to what Europe PMC adds beyond PMC: for records already
+in PMC, Europe PMC's own "PDF" is just a rendered view of the exact same PMC
+content M14 already acquires via NCBI's official S3 bucket, so those
+candidates are still discovered (never silently dropped) but explicitly
+rejected as out of this pipeline's scope
+(`DUPLICATE_OF_PMC_PIPELINE_SCOPE`), rather than duplicating M14's own
+pipeline through a less-official endpoint. Scientific-scope and license
+rules are shared with M14's engine (`scientific_scope.py`,
+`license_rules.py`) so the same corpus-inclusion criteria apply regardless
+of which pipeline found a candidate.
+
+**Not yet wired into acquisition, and does not resume corpus growth.** The
+corpus remains intentionally frozen at 605 papers by the project owner's
+prior decision (see "Scaling beyond 500 papers for Phase 2 tuning" below).
+M34 only builds the discovery/adjudication capability; using it to actually
+grow the corpus further is a separate decision for the project owner to
+make explicitly, the same way M13/M14's own scale-up was.
 
 ### Scaling beyond 500 papers for Phase 2 tuning
 

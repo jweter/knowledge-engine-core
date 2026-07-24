@@ -448,6 +448,32 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   until a real operator need for it appears, matching how
   `docs/phase3_design.md` already framed Qdrant support before this
   milestone.
+- Added M34: Europe PMC as a second automated discovery source alongside
+  M14's PubMed/PMC pipeline (`docs/m34_europepmc_discovery.md`). New
+  `ke europepmc-candidate-discover` and `ke europepmc-candidate-review-prepare`
+  commands, backed by `knowledge_engine.europepmc_http`
+  (bounded HTTPS transport, `www.ebi.ac.uk` only, mirroring `ncbi_http.py`),
+  `knowledge_engine.europepmc_discovery` (single-call discovery against
+  Europe PMC's `resultType=core` REST API, cursor-based pagination via
+  `cursor_mark`/`next_cursor_mark` rather than PubMed's offset-based
+  `retstart`), and `knowledge_engine.europepmc_candidate_review` (a
+  deliberately separate, independently versioned adjudication engine --
+  `EUROPEPMC_ADJUDICATION_RULES_VERSION` -- since identity anchors on DOI
+  rather than PMCID and full-text location has no single official bucket
+  to allowlist the way PMC's S3 bucket has). For records already in PMC,
+  Europe PMC's own "PDF" is a rendered view of the exact same PMC content
+  M14 already acquires via NCBI's official bucket; such candidates are
+  still discovered and reported, never silently dropped, but explicitly
+  rejected (`DUPLICATE_OF_PMC_PIPELINE_SCOPE`) to avoid duplicating M14's
+  own pipeline through a less-official endpoint. Extracted the scope
+  (`knowledge_engine.scientific_scope`) and license
+  (`knowledge_engine.license_rules`) evaluation logic out of
+  `candidate_review.py` into shared modules with zero behavior change
+  (verified: M14's existing test suite passes unmodified), since those
+  criteria are the same regardless of which pipeline found a candidate.
+  Scoped to discovery and adjudication only -- not wired into acquisition,
+  and does not resume corpus growth, which remains intentionally frozen at
+  605 papers by the project owner's prior decision.
 
 ### Changed
 
