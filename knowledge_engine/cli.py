@@ -57,6 +57,16 @@ RelationshipEvidenceOption = Annotated[
         readable=True,
     ),
 ]
+RequiredRelationshipEvidenceOption = Annotated[
+    Path,
+    typer.Option(
+        "--evidence",
+        help="Evidence records JSONL file the relationships reference.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
 SearchLimitOption = Annotated[int, typer.Option("--limit", "-n", min=1, max=100)]
 SourcesCsvOption = Annotated[
     Path | None,
@@ -524,6 +534,62 @@ def relationship_validate(
             "[yellow]No --evidence file given: relationship references were not checked "
             "against real evidence records.[/yellow]"
         )
+
+
+@app.command("relationship-report")
+def relationship_report(
+    records_path: RelationshipRecordsArgument,
+    evidence: RequiredRelationshipEvidenceOption,
+    output: OutputMarkdownOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Generate a Markdown report of human-authored evidence relationships.
+
+    Renders each relationship next to the claim text of the two evidence
+    records it links, so a reviewer does not have to cross-reference
+    `evidence_record_id` values by hand. Purely a display layer: reuses
+    `relationship-validate`'s and `evidence-validate`'s checks unchanged as
+    the sole correctness gate and refuses to render anything if either file
+    is invalid or a reference is dangling. Never infers, detects, or
+    suggests a relationship -- deciding whether one holds remains a human
+    judgment call.
+    """
+
+    if output and output.exists() and not force:
+        raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
+
+    evidence_result = _validate_evidence_records(evidence, require_review_fields=True)
+    if evidence_result.errors:
+        console.print(f"[red]Evidence file is invalid:[/red] {evidence}")
+        for error in evidence_result.errors:
+            console.print(f"- {error}")
+        raise typer.Exit(1)
+    known_evidence_ids = {record["evidence_record_id"] for record in evidence_result.records}
+
+    relationship_result = _validate_relationship_records(
+        records_path, known_evidence_ids=known_evidence_ids
+    )
+    if relationship_result.errors:
+        console.print(f"[red]Relationship file is invalid:[/red] {records_path}")
+        for error in relationship_result.errors:
+            console.print(f"- {error}")
+        raise typer.Exit(1)
+
+    evidence_by_id = _index_evidence_records_by_id(evidence_result.records)
+    report = _build_relationship_report(
+        relationships=relationship_result.records,
+        evidence_by_id=evidence_by_id,
+        records_path=records_path,
+        evidence_path=evidence,
+    )
+
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(report, encoding="utf-8")
+        console.print(f"[green]Wrote relationship report:[/green] {output}")
+        return
+
+    console.print(report, markup=False)
 
 
 @app.command("corpus-validate")
@@ -1175,6 +1241,17 @@ def _index_evidence_records_by_doi(
     return records_by_doi
 
 
+def _index_evidence_records_by_id(records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Index manual evidence records by their unique `evidence_record_id`.
+
+    Unlike `_index_evidence_records_by_doi` (one DOI can have several
+    records), `evidence_record_id` is a validated unique key, so each ID
+    maps to exactly one record.
+    """
+
+    return {record["evidence_record_id"]: record for record in records}
+
+
 def _evidence_status_summary(records: list[dict[str, Any]]) -> EvidenceStatusSummary:
     """Summarize review status counts for validated evidence records."""
 
@@ -1330,6 +1407,106 @@ def _build_evidence_report(
         ]
     )
     return "\n".join(lines)
+
+
+def _build_relationship_report(
+    *,
+    relationships: list[dict[str, Any]],
+    evidence_by_id: dict[str, dict[str, Any]],
+    records_path: Path,
+    evidence_path: Path,
+) -> str:
+    """Build a Markdown report of human-authored evidence relationships."""
+
+    generated_at = datetime.now(UTC).isoformat(timespec="seconds")
+    type_counts = Counter(
+        record.get("relationship_type", "unspecified") for record in relationships
+    )
+    lines = [
+        "# Knowledge Engine Relationship Report",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "## Inputs",
+        "",
+        f"- Relationship file: `{records_path}`",
+        f"- Evidence file: `{evidence_path}`",
+        "",
+        "## Scope",
+        "",
+        "This report displays human-authored evidence relationships only. No "
+        "relationship has been inferred, detected, or suggested "
+        "automatically. Deciding whether a relationship holds between two "
+        "evidence records remains a human judgment call.",
+        "",
+        "## Relationship Type Summary",
+        "",
+        f"- Relationships: {len(relationships)}",
+    ]
+    for relationship_type in sorted(ALLOWED_RELATIONSHIP_TYPES):
+        lines.append(f"- {relationship_type.capitalize()}: {type_counts[relationship_type]}")
+    lines.extend(["", "## Relationships", ""])
+
+    for index, relationship in enumerate(relationships, start=1):
+        lines.extend(_report_relationship_lines(index, relationship, evidence_by_id))
+
+    lines.extend(
+        [
+            "## Final Disclaimer",
+            "",
+            "This report displays recorded relationships only. No relationship "
+            "has been inferred, detected, or suggested automatically.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _report_relationship_lines(
+    index: int,
+    relationship: dict[str, Any],
+    evidence_by_id: dict[str, dict[str, Any]],
+) -> list[str]:
+    """Build Markdown lines for one evidence relationship and its two endpoints."""
+
+    relationship_type = _report_text(str(relationship.get("relationship_type", "")))
+    lines = [
+        f"### {index}. {relationship_type.capitalize()}",
+        "",
+        f"- Relationship ID: {_report_text(str(relationship.get('relationship_id', '')))}",
+        f"- Relationship type: {relationship_type}",
+        f"- Rationale: {_report_text(str(relationship.get('rationale', '')))}",
+        "- Provenance summary: "
+        f"{_report_text(_format_record_value(relationship.get('provenance')))}",
+        "",
+    ]
+    source_id = str(relationship.get("source_evidence_record_id", ""))
+    target_id = str(relationship.get("target_evidence_record_id", ""))
+    lines.extend(_report_relationship_endpoint_lines("Source", source_id, evidence_by_id))
+    lines.extend(_report_relationship_endpoint_lines("Target", target_id, evidence_by_id))
+    return lines
+
+
+def _report_relationship_endpoint_lines(
+    label: str,
+    evidence_record_id: str,
+    evidence_by_id: dict[str, dict[str, Any]],
+) -> list[str]:
+    """Build Markdown lines for one relationship endpoint's evidence record."""
+
+    record = evidence_by_id.get(evidence_record_id)
+    if record is None:
+        return [f"#### {label} Evidence Record ({evidence_record_id})", "", "Not found.", ""]
+
+    return [
+        f"#### {label} Evidence Record ({evidence_record_id})",
+        "",
+        f"- Source title: {_report_record_value(record, 'source_title')}",
+        f"- DOI: {_report_record_value(record, 'source_doi')}",
+        f"- Claim text: {_report_record_value(record, 'claim_text')}",
+        f"- Evidence direction: {_report_record_value(record, 'evidence_direction')}",
+        "",
+    ]
 
 
 def _print_corpus_validation_result(

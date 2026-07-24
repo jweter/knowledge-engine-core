@@ -1267,6 +1267,158 @@ def test_relationship_validate_rejects_invalid_evidence_file(tmp_path: Path) -> 
     assert "Referenced evidence file is invalid" in result.output
 
 
+def test_relationship_report_prints_markdown_without_output(tmp_path: Path) -> None:
+    evidence_path = write_evidence_records(
+        tmp_path,
+        [
+            {"evidence_record_id": "ev-1", "claim_text": "Semaglutide reduced body weight."},
+            {"evidence_record_id": "ev-2", "claim_text": "Tirzepatide reduced body weight."},
+        ],
+    )
+    records_path = write_relationship_records(
+        tmp_path,
+        [
+            {
+                "relationship_type": "contextualizes",
+                "rationale": "Both studies report weight-reduction effects for GLP-1 therapies.",
+            }
+        ],
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "relationship-report",
+            str(records_path),
+            "--evidence",
+            str(evidence_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    normalized_output = " ".join(result.output.split())
+    assert "# Knowledge Engine Relationship Report" in result.output
+    assert "Relationships: 1" in result.output
+    assert "Contextualizes: 1" in result.output
+    assert "1. Contextualizes" in result.output
+    assert "Relationship ID: rel-1" in result.output
+    assert (
+        "Rationale: Both studies report weight-reduction effects for GLP-1 therapies."
+        in normalized_output
+    )
+    assert "Source Evidence Record (ev-1)" in result.output
+    assert "Semaglutide reduced body weight." in result.output
+    assert "Target Evidence Record (ev-2)" in result.output
+    assert "Tirzepatide reduced body weight." in result.output
+    assert "No relationship has been inferred" in normalized_output
+
+
+def test_relationship_report_writes_markdown_output(tmp_path: Path) -> None:
+    evidence_path = write_evidence_records(tmp_path, [{}, {}])
+    records_path = write_relationship_records(tmp_path, [{}])
+    output_path = tmp_path / "relationship_report.md"
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "relationship-report",
+            str(records_path),
+            "--evidence",
+            str(evidence_path),
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Wrote relationship report" in result.output
+    assert output_path.exists()
+    assert "# Knowledge Engine Relationship Report" in output_path.read_text(encoding="utf-8")
+
+
+def test_relationship_report_fails_when_output_exists_without_force(tmp_path: Path) -> None:
+    evidence_path = write_evidence_records(tmp_path, [{}, {}])
+    records_path = write_relationship_records(tmp_path, [{}])
+    output_path = tmp_path / "relationship_report.md"
+    output_path.write_text("existing", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "relationship-report",
+            str(records_path),
+            "--evidence",
+            str(evidence_path),
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert output_path.read_text(encoding="utf-8") == "existing"
+
+
+def test_relationship_report_overwrites_output_with_force(tmp_path: Path) -> None:
+    evidence_path = write_evidence_records(tmp_path, [{}, {}])
+    records_path = write_relationship_records(tmp_path, [{}])
+    output_path = tmp_path / "relationship_report.md"
+    output_path.write_text("existing", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "relationship-report",
+            str(records_path),
+            "--evidence",
+            str(evidence_path),
+            "--output",
+            str(output_path),
+            "--force",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "# Knowledge Engine Relationship Report" in output_path.read_text(encoding="utf-8")
+
+
+def test_relationship_report_fails_for_invalid_relationship_file(tmp_path: Path) -> None:
+    evidence_path = write_evidence_records(tmp_path, [{}])
+    records_path = write_relationship_records(
+        tmp_path, [{"target_evidence_record_id": "ev-does-not-exist"}]
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "relationship-report",
+            str(records_path),
+            "--evidence",
+            str(evidence_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Relationship file is invalid" in result.output
+
+
+def test_relationship_report_fails_for_invalid_evidence_file(tmp_path: Path) -> None:
+    evidence_path = write_evidence_records(tmp_path, [{"review_status": "approved"}])
+    records_path = write_relationship_records(tmp_path, [{}])
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "relationship-report",
+            str(records_path),
+            "--evidence",
+            str(evidence_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Evidence file is invalid" in result.output
+
+
 @pytest.mark.parametrize("command_name", ["evidence", "answer", "evidence-report"])
 def test_evidence_consuming_commands_reject_duplicate_evidence_ids(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command_name: str

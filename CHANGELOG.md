@@ -356,6 +356,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `section_content` so this module could reuse them exactly rather than
   risk a third divergent copy -- the same lesson the
   `ClassifiedPaperRepository` bug below had just taught.
+- Added M29 `ke relationship-report`, expanding the Relationship Layer
+  past M24's validate-only first slice with a pure Markdown display
+  layer -- not automated detection, which remains a human judgment call
+  per M24's "never decide truth" boundary. A reviewer could previously
+  validate a `relationships.jsonl` file but had no way to actually read
+  one, since it only stores two `evidence_record_id` strings, a type, and
+  a rationale. `ke relationship-report <path> --evidence
+  <evidence_records.jsonl> [--output report.md]` reuses
+  `relationship-validate`'s and `evidence-validate`'s checks completely
+  unchanged as the sole correctness gate, refuses to render anything if
+  either file is invalid or a reference is dangling, and renders each
+  relationship's type and rationale next to the `claim_text`/
+  `source_title`/`source_doi`/`evidence_direction` of the two evidence
+  records it links. No database change -- relationships remain
+  file-only, matching how evidence records themselves have always
+  worked.
 
 ### Changed
 

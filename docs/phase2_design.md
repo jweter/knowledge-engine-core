@@ -142,8 +142,31 @@ written as private, unshared functions were promoted to
 `knowledge_engine.extraction.sections.section_text`/`section_content` so
 M28 could reuse them exactly rather than risk a third divergent copy --
 the same lesson the `ClassifiedPaperRepository` bug above had just
-taught. Relationship Layer expansion (below) remains the other named
-"next priority," not yet started.
+taught.
+M29 implements the other named "next priority": expanding the
+Relationship Layer past M24's fully human-authored, validate-only first
+slice. Confirmed by inspection that automated relationship *detection*
+(deciding whether two evidence records actually support, contradict,
+qualify, or contextualize each other) still requires real scientific
+judgment -- the same "never decide truth" boundary M24 drew and this
+design's Principle section requires -- so M29 does not touch detection.
+What M24 was missing instead: a reviewer could validate a
+`relationships.jsonl` file but had no way to actually *read* one, since
+the file only stores two `evidence_record_id` strings, a type, and a
+rationale -- there was no way to see what the two linked claims actually
+say without manually cross-referencing IDs against the evidence file by
+hand. No example relationship file existed anywhere in the repository
+either. M29 adds `ke relationship-report`, a pure display layer
+mirroring `ke evidence-report`'s shape: it reuses
+`relationship-validate`'s and `evidence-validate`'s checks completely
+unchanged as the sole correctness gate (zero new judgment logic, the
+same precedent M21's promotion command set), refuses to render anything
+if either file is invalid or a reference is dangling, and renders each
+relationship next to the `claim_text`/`source_title`/`source_doi`/
+`evidence_direction` of the two evidence records it links. No database
+change, no new schema field -- relationships remain file-only, matching
+how evidence records themselves have always worked (confirmed by
+inspection of `models.py`: neither has ever had a database table).
 
 ## Mission
 
@@ -319,13 +342,15 @@ Parser (extended with page/span provenance)
        EvidenceRecord rows satisfying the existing REQUIRED_EVIDENCE_FIELDS
        contract, with extraction_method identifying the automated rule/pattern
        that produced them instead of "manual"
-  -> Relationship Layer (M24 first slice implemented; automated detection
-     not yet built)
+  -> Relationship Layer (M24 schema/validator + M29 reporting implemented;
+     automated detection not yet built)
        typed support/contradiction/qualification links between evidence
        records, reusing the direction vocabulary already used by manual
        records (supports, contradicts, qualifies, contextualizes). M24
-       added the schema and `ke relationship-validate`, but only for
-       human-authored links -- deciding *whether* a relationship holds
+       added the schema and `ke relationship-validate`; M29 added
+       `ke relationship-report`, a display layer rendering each
+       relationship next to its two linked evidence records -- both only
+       for human-authored links. Deciding *whether* a relationship holds
        between two records remains a human judgment call, same boundary
        as `evidence_direction`/`research_question`; see Relationship
        Layer section below.
@@ -442,7 +467,7 @@ recorded per record above."; `ke evidence-report`'s header is `"#### Evidence
 Record"`, not `"#### Manual Evidence Record"`). Renderer-only change — no
 schema or validator change was required for this part.
 
-## Relationship Layer (M24 first slice, implemented)
+## Relationship Layer (M24 first slice + M29 reporting, implemented)
 
 The Relationship Layer had remained entirely unbuilt since the Architecture
 section above first sketched it -- the last of the Extraction/Evidence/
@@ -480,6 +505,17 @@ validated structurally, long before any extraction automation existed):
   never silently accepted).
 - `core` never infers, suggests, or detects a relationship; it only confirms
   that a human-supplied one is well-formed and internally consistent.
+
+M29 adds `ke relationship-report <path> --evidence <evidence_records.jsonl>
+[--output report.md]`, a pure Markdown display layer on top of M24's
+schema and validator -- not a detection capability. It reuses
+`relationship-validate`'s referential check and `evidence-validate`
+unchanged, refuses to render anything if either file is invalid or a
+reference is dangling, and renders each relationship's type and
+rationale next to the `claim_text`/`source_title`/`source_doi`/
+`evidence_direction` of the two evidence records it links, so a reviewer
+does not have to cross-reference `evidence_record_id` values by hand.
+`core` still never infers, suggests, or detects a relationship.
 
 ## Extraction Run Persistence (M25, implemented)
 
