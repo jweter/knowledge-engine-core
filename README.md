@@ -15,7 +15,7 @@ must be able to trust.
 
 Current version: `0.2.0a1`
 
-Current phase: **Phase 2 — Evidence Records** (Phase 1 ingestion complete through M14, plus M34's second discovery source)
+Current phase: **Phase 2 — Evidence Records** (Phase 1 ingestion complete through M14, plus M34/M35's second and third discovery sources)
 
 Phase 1 completed capabilities include:
 
@@ -36,6 +36,11 @@ Phase 1 completed capabilities include:
 - a second automated discovery source, Europe PMC (M34), alongside PubMed/PMC
   (`ke europepmc-candidate-discover`, `ke europepmc-candidate-review-prepare`)
   -- discovery and adjudication only, not yet wired into acquisition
+- a third automated discovery source, CORE (M35)
+  (`ke core-candidate-discover`, `ke core-candidate-review-prepare`) --
+  discovery and adjudication only, not yet wired into acquisition; CORE
+  never reports a license field, so every CORE candidate is held pending
+  human license verification
 - strict mypy, Ruff formatting/linting, and pytest coverage
 
 Phase 2 completed capabilities include:
@@ -235,9 +240,18 @@ architecture and milestone-by-milestone status.
   with zero behavior change). Scoped to discovery and adjudication only --
   not wired into acquisition, and does not resume corpus growth (frozen at
   605 papers). See [docs/m34_europepmc_discovery.md](docs/m34_europepmc_discovery.md).
+- **M35 (Phase 1):** added CORE as a third automated discovery source
+  (`ke core-candidate-discover`, `ke core-candidate-review-prepare`), with
+  its own adjudication engine. CORE's API never returns a license field
+  (verified empirically), so every CORE candidate's license rule is
+  `incomplete_missing_license` and no CORE candidate can ever auto-accept.
+  PMC/Europe PMC overlap detection is a known, deliberate limitation (CORE
+  never reports a PMCID). Scoped to discovery and adjudication only -- not
+  wired into acquisition, and does not resume corpus growth (frozen at 605
+  papers). See [docs/m35_core_discovery.md](docs/m35_core_discovery.md).
 
-Phase 1 ingestion is complete through M14, plus M34's second discovery
-source. Phase 2 evidence extraction is complete through M29. Phase 3
+Phase 1 ingestion is complete through M14, plus M34/M35's second and third
+discovery sources. Phase 2 evidence extraction is complete through M29. Phase 3
 (search plus semantics) is in progress with M33. See
 [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase3_design.md](docs/phase3_design.md) for the next milestone.

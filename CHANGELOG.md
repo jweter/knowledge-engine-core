@@ -474,6 +474,29 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Scoped to discovery and adjudication only -- not wired into acquisition,
   and does not resume corpus growth, which remains intentionally frozen at
   605 papers by the project owner's prior decision.
+- Added M35: CORE as a third automated discovery source alongside M14's
+  PubMed/PMC and M34's Europe PMC pipelines (`docs/m35_core_discovery.md`).
+  New `ke core-candidate-discover` and `ke core-candidate-review-prepare`
+  commands, backed by `knowledge_engine.core_http` (bounded HTTPS transport,
+  `api.core.ac.uk` only, mirroring `europepmc_http.py`),
+  `knowledge_engine.core_discovery` (single-call discovery against CORE's
+  `/v3/search/works/` REST API, offset-based pagination via
+  `offset`/`next_offset`, and an optional `KE_CORE_API_KEY` setting that
+  raises CORE's otherwise low unauthenticated rate limit), and
+  `knowledge_engine.core_candidate_review` (a third, independently
+  versioned adjudication engine -- `CORE_ADJUDICATION_RULES_VERSION`).
+  CORE's API never returns a license field at all (confirmed empirically by
+  enumerating every key in a real response), so `evaluate_license(None)` is
+  called for every candidate and always returns
+  `incomplete_missing_license`: no CORE candidate can ever auto-accept, a
+  deliberate and honest consequence rather than a bug to work around. PMC/
+  Europe PMC overlap detection is a known, deliberate limitation for this
+  milestone, since CORE's response never includes a PMCID. Scientific-scope
+  and license rules are shared with M14 and M34's engines
+  (`scientific_scope.py`, `license_rules.py`). Scoped to discovery and
+  adjudication only -- not wired into acquisition, and does not resume
+  corpus growth, which remains intentionally frozen at 605 papers by the
+  project owner's prior decision.
 
 ### Changed
 
