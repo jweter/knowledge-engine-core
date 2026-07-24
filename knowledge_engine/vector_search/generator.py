@@ -1,18 +1,16 @@
-"""The not-yet-implemented embedding-generation interface.
+"""The embedding-generation interface, implemented by two pluggable backends.
 
-`docs/phase3_design.md`'s Open Questions section leaves the actual
+`docs/phase3_design.md`'s Open Questions section escalated the actual
 embedding-generation approach (a local model, an external API, or neither
-yet) as an explicit decision for the project owner -- the same class of
-new-dependency, offline-posture decision Phase 2's extraction methodology
-was escalated for before any extraction code existed. This module defines
-only the interface a future generator implements, so `VectorIndex` and the
-ingestion/search commands built against externally-supplied vectors in the
-meantime never need to change once a generator is chosen -- any
-implementation (local-model, external-API, or something else) plugs in
-here without touching the rest of the vector-search stack.
-
-No implementation exists in this module. Do not add one without the
-project owner's decision recorded in `docs/phase3_design.md`.
+yet) to the project owner -- the same class of new-dependency,
+offline-posture decision Phase 2's extraction methodology was escalated for
+before any extraction code existed. The project owner chose "both": this
+module defines the interface, and `knowledge_engine.vector_search.
+local_generator.SentenceTransformerEmbeddingGenerator` /
+`knowledge_engine.vector_search.openai_generator.OpenAiEmbeddingGenerator`
+implement it. `VectorIndex` and the ingestion/search commands built against
+externally-supplied vectors never needed to change -- either implementation
+plugs in here without touching the rest of the vector-search stack.
 """
 
 from __future__ import annotations

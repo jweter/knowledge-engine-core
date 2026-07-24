@@ -206,22 +206,26 @@ Detailed milestone records include:
 
 ## Phase 3: Search Plus Semantics
 
-- Add embeddings using a pluggable vector index.
-- Support local FAISS and server-backed Qdrant.
-- Keep lexical search as a transparent baseline.
-- Use `docs/phase3_design.md` as the detailed design reference. Its first
-  open question -- which embedding-generation approach to use -- is a
-  new-dependency and offline-posture decision for the project owner, the
-  same way Phase 2's extraction methodology was decided before any
-  extraction code was written; no embedding-*generation* code should be
-  written before it is. Vector-index (`VectorIndex`/FAISS/Qdrant) work is
-  not blocked on that same decision -- **M30** implemented exactly that: a
-  pluggable `VectorIndex` interface, a local FAISS backend, and two CLI
-  commands (`ke embedding-index-build`, `ke vector-search`) operating on
-  externally-supplied vectors, so the retrieval architecture is proven
-  without committing to an embedding-generation dependency. Free-text
-  semantic search (`ke search`/`ke answer` accepting a live query) remains
-  blocked on the still-open embedding-generation decision.
+- Add embeddings using a pluggable vector index. (Done, M30: FAISS.)
+- Support local FAISS and server-backed Qdrant. (FAISS done, M30; Qdrant
+  approved, not yet built -- M32.)
+- Keep lexical search as a transparent baseline. Unchanged: `ke search`/
+  `ke answer` remain FTS5-only.
+- Use `docs/phase3_design.md` as the detailed design reference. Its
+  embedding-generation decision -- a new-dependency and offline-posture
+  choice for the project owner, the same way Phase 2's extraction
+  methodology was decided before any extraction code was written -- is
+  resolved as of M31: **both** a local (`sentence-transformers`) and an
+  external-API (OpenAI) `EmbeddingGenerator` are implemented. **M30**
+  implemented the retrieval side first: a pluggable `VectorIndex`
+  interface, a local FAISS backend, and two CLI commands
+  (`ke embedding-index-build`, `ke vector-search`) operating on
+  externally-supplied vectors. **M31** added `ke embedding-generate
+  --generator local|openai`, which produces the same vectors file those
+  M30 commands already consume. Free-text semantic search (`ke search`/
+  `ke answer` accepting a live query) remains a separate, not-yet-designed
+  result-combination question (see `docs/phase3_design.md`'s Open
+  Questions).
 
 ## Phase 4: Knowledge Graph
 
@@ -278,8 +282,8 @@ Detailed milestone records include:
 - `docs/roadmap/phase1.md`
 - `docs/roadmap/phase2.md`
 - `docs/phase3_design.md` and `docs/roadmap/phase3.md` -- design sketch and
-  goals; the embedding-generation approach is an open decision, not yet
-  started
+  goals; M30 (FAISS retrieval plumbing) and M31 (local + OpenAI embedding
+  generators) are implemented, Qdrant (M32) is approved and not yet built
 - `docs/roadmap/long_term_vision.md` -- the multi-package ecosystem and final
   goal these phases build toward, including the future `knowledge-engine-ai`
   layer's role once Phase 2's Evidence Records exist

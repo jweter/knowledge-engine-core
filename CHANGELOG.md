@@ -391,6 +391,24 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the roadmap's "local FAISS" goal, unlike the still-open
   embedding-generation dependency decision. Free-text semantic search
   remains blocked on that decision.
+- Added M31: resolved `docs/phase3_design.md`'s embedding-generation
+  decision as "both". Added `SentenceTransformerEmbeddingGenerator`
+  (`knowledge_engine.vector_search.local_generator`, local
+  `sentence-transformers` model, default `all-MiniLM-L6-v2`, fully
+  offline once weights are cached) and `OpenAiEmbeddingGenerator`
+  (`knowledge_engine.vector_search.openai_generator`, OpenAI's
+  `/v1/embeddings` endpoint over stdlib `urllib` -- no SDK, matching
+  every other outbound HTTP client in this project -- requires
+  `KE_OPENAI_API_KEY`), both implementing `EmbeddingGenerator`. Added
+  `ke embedding-generate --generator local|openai --output <jsonl>`,
+  which embeds each paper's title/abstract (one vector per paper) and
+  writes the same vectors-file format `ke embedding-index-build` already
+  consumes; M30's ingestion/build/search commands are unchanged. Added
+  `sentence-transformers` as a new dependency, with PyTorch pinned to the
+  CPU-only wheel index (`https://download.pytorch.org/whl/cpu`) rather
+  than the default GPU/CUDA build, since this project runs single-machine
+  and offline and the default build pulls in an unused multi-gigabyte
+  NVIDIA CUDA toolkit.
 
 ### Changed
 
