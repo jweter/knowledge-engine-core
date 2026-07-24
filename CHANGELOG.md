@@ -292,6 +292,30 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (myotonic dystrophy). Excluded all three. Net: 70 of 74 automatically
   accepted records remain. Refreshed the corpus-library snapshot (387
   papers total, 871 authors).
+- Grew `sources.csv` by another 106 records (the sixth discovery batch,
+  `retstart=1250`, the largest yet at 111 automatically accepted). Applied
+  the full false-positive screen (case-report-style rows by title or
+  venue, gene/mouse-strain-name lexical collisions, type 1
+  diabetes-specific titles) before acquisition, excluding 1 case report
+  whose reported intervention (vagus nerve stimulation) treated a
+  coexisting condition (epilepsy) rather than the diabetes named in the
+  title. A Codex review on the growth PR then flagged 3 further records as
+  failing basic title-scope criteria (a quality-of-life survey with no
+  treatment findings, an osteoarthritis mechanism review, and a
+  contrast-media safety study with obesity as an incidental risk-factor
+  mention); a full manual review of the batch prompted by that finding
+  identified roughly a dozen more candidates in the same shape (drugs
+  studied for unrelated diseases, analytical-chemistry method papers,
+  broad mechanism-only reviews, and further incidental disease mentions).
+  Per the project owner's explicit direction that this corpus-building
+  phase should prioritize breadth over precision for now, only the
+  clear-cut cases (the Codex-flagged 3 plus one further unambiguous
+  wrong-disease match, a cancer-cachexia genetics paper matching only the
+  generic English phrase "a complex metabolic syndrome" rather than the
+  corpus's named disease entity) were held; the remaining borderline
+  mechanism/chemistry-adjacent papers were kept. Net: 106 of 111
+  automatically accepted records remain. Refreshed the corpus-library
+  snapshot (493 papers total, 1117 authors).
 
 ### Changed
 
