@@ -17,11 +17,18 @@ from knowledge_engine.extraction.evidence_items import (
     build_draft_evidence_item,
     build_draft_evidence_items,
 )
+from knowledge_engine.extraction.pico import (
+    PICO_EXTRACTION_RULES_VERSION,
+    PicoFields,
+    extract_pico,
+)
 from knowledge_engine.extraction.sections import (
     SECTION_DETECTION_RULES_VERSION,
     SECTION_TYPES,
     SectionSpan,
     detect_sections,
+    section_content,
+    section_text,
 )
 from knowledge_engine.extraction.study_design import (
     STUDY_DESIGN_RULES_VERSION,
@@ -33,6 +40,7 @@ __all__ = [
     "CLAIM_CANDIDATE_RULES_VERSION",
     "CLAIM_FRAMING_RULES_VERSION",
     "DRAFT_EVIDENCE_ITEM_RULES_VERSION",
+    "PICO_EXTRACTION_RULES_VERSION",
     "SECTION_DETECTION_RULES_VERSION",
     "SECTION_TYPES",
     "STUDY_DESIGN_RULES_VERSION",
@@ -40,6 +48,7 @@ __all__ = [
     "ClaimFraming",
     "DraftEvidenceItem",
     "PaperMetadata",
+    "PicoFields",
     "SectionSpan",
     "build_draft_evidence_item",
     "build_draft_evidence_items",
@@ -48,4 +57,7 @@ __all__ = [
     "detect_claim_candidates",
     "detect_sections",
     "extract_limitations",
+    "extract_pico",
+    "section_content",
+    "section_text",
 ]

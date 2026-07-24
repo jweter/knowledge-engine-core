@@ -80,6 +80,13 @@ Phase 2 completed capabilities include:
   versions), so a paper's extraction history is findable without re-reading
   every JSONL file; extraction is never automatically re-run on a ruleset
   change
+- deterministic `study_type` classification and `limitations` extraction
+  (`knowledge_engine.extraction.classify_study_type`/`extract_limitations`)
+  from an explicit cue in Abstract/Methods or a "Limitations" heading
+- deterministic PICO extraction
+  (`knowledge_engine.extraction.extract_pico`): `population`, `intervention`,
+  `comparator`, `outcome`, each the first sentence matching an explicit cue
+  within Abstract/Methods (and also Results for comparator/outcome)
 
 See [docs/phase2_design.md](docs/phase2_design.md) for the Phase 2 architecture
 and milestone-by-milestone status.
@@ -142,9 +149,16 @@ and milestone-by-milestone status.
   extracted pages/text, journals, authors, keywords) that can be committed
   and shared, since the working database itself is gitignored and does not
   survive a fresh clone. Idempotent, content-hash-keyed import.
+- **M28:** implemented deterministic PICO extraction (population,
+  intervention, comparator, outcome), the second and final slice of
+  non-human-typed PICO-adjacent extraction after M26. Each field is the
+  first sentence matching an explicit cue within Abstract/Methods (and
+  also Results for comparator/outcome); patterns were tuned by reading a
+  real sample of the corpus's own abstracts rather than guessed
+  speculatively. No new dependency, no LLM.
 
 Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is in
-progress through M26. M27 adds corpus-persistence infrastructure alongside
+progress through M28. M27 adds corpus-persistence infrastructure alongside
 it. See [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase2_design.md](docs/phase2_design.md) for the next milestone.
 
@@ -340,7 +354,7 @@ The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now inc
 completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
 scale-readiness, and the controlled 500-paper rehearsal
 ([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
-[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M26:
+[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M28:
 deterministic, rule-based structured-section detection, claim-candidate
 detection, claim framing-cue classification, and draft extraction
 review-item generation, runnable end-to-end via `ke
@@ -363,13 +377,16 @@ observational study) from an explicit cue in its Abstract or Methods, and
 extracts its own stated `limitations` from an explicit "Limitations"
 heading -- the first slice of deterministic, non-human-typed
 PICO-adjacent extraction; a missing signal produces `None`, never a
-guess. Automated, research-question-relative `evidence_direction`
-classification is not yet implemented -- `research_question` acquisition
-has no automated source
-anywhere in this pipeline yet; a human reviewer supplies it before
-promotion. Full `population`/`intervention`/`comparator`/`outcome`
-extraction is not yet implemented. All Phase 2 extraction is rule-based,
-with no LLM-based extraction, synthesis, or reasoning of any kind.
+guess. `ke extraction-review-generate` also now extracts `population`,
+`intervention`, `comparator`, and `outcome` (the second and final PICO
+slice) as the first sentence matching an explicit cue within Abstract/
+Methods (and also Results for comparator/outcome) -- the same
+absence-over-guessing discipline. Automated, research-question-relative
+`evidence_direction` classification is not yet implemented --
+`research_question` acquisition has no automated source anywhere in this
+pipeline yet; a human reviewer supplies it before promotion. All Phase 2
+extraction is rule-based, with no LLM-based extraction, synthesis, or
+reasoning of any kind.
 
 Neither phase should be expanded into Alembic adoption, a new package manager,
 persistent telemetry, vector search, a graph, AI reasoning, an API, web

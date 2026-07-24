@@ -195,12 +195,14 @@ Detailed milestone records include:
   `docs/roadmap/long_term_vision.md`'s AI Interface Layer section.
 - PICO fields (population, intervention, comparator, outcome),
   `study_type`, and `limitations` are a different case: paper-intrinsic
-  facts, not judgment relative to a research question, so they are an
-  explicit near-term priority for deterministic, non-human-typed
-  extraction rather than an indefinitely deferred human-review field --
-  see `docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed Fields
-  section. Tuning this extraction needs the larger corpus described above
-  under Phase 1.
+  facts, not judgment relative to a research question, so deterministic,
+  non-human-typed extraction was prioritized for them rather than an
+  indefinitely deferred human-review field -- see
+  `docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed Fields
+  section. `study_type`/`limitations` shipped in M26; full PICO
+  extraction shipped in M28, once the corpus described above under
+  Phase 1 was large enough to tune against and the project owner decided
+  605 papers was sufficient to stop growing it further.
 
 ## Phase 3: Search Plus Semantics
 

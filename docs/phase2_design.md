@@ -116,17 +116,34 @@ each draft item's `extraction_context`. Full `population`/`intervention`/
 `comparator`/`outcome` extraction remains out of scope for M26 -- those
 values are typically embedded in free-form prose rather than signaled by
 a fixed heading or phrase, and need a different extraction approach; see
-the Minimizing Human-Typed Fields section for the reasoning. Not yet
-tracked by a numbered follow-on issue.
-Next priorities, per the project owner's explicit preference to minimize
-human-typed fields (see `docs/roadmap/long_term_vision.md`'s Minimizing
-Human-Typed Fields section): full `population`/`intervention`/
-`comparator`/`outcome` extraction, extending M26's methodology to
-free-form prose; and expanding the Relationship Layer past its first
-slice's fully human-authored records. Tuning either against real data
-needs a real corpus far larger than the two hand-authored records
-currently committed -- see `docs/roadmap.md`'s "Scaling beyond 500 papers
-for Phase 2 tuning" section.
+the Minimizing Human-Typed Fields section for the reasoning.
+M28 implements that full PICO extraction (`knowledge_engine.extraction.pico`),
+scoped and tuned against a real sample of the `glp1_weight_loss` corpus's
+605 papers rather than speculative patterns -- the corpus only reached a
+size the project owner judged sufficient for this once M14's growth loop
+was deliberately stopped (see `docs/roadmap.md`'s "Scaling beyond 500
+papers for Phase 2 tuning" section). Each field is the first sentence
+matching an explicit cue (a numeric cohort-size clause for `population`;
+`received`/`administered`/`randomized to`/etc. for `intervention`;
+`versus`/`compared with`/`placebo`/etc. for `comparator`;
+`primary outcome`/`endpoint`/etc. for `outcome`) within Abstract/Methods
+(and also Results for `comparator`/`outcome`), reusing the same
+absence-over-guessing discipline as M17's claim candidates and M26's
+`study_type`. No new dependency and no LLM, matching the extraction
+methodology decided below. Running the *existing* M15-M26 pipeline
+against the real corpus for the first time (before M28's own work
+started) also surfaced an unrelated persistence bug -- see
+CHANGELOG.md's "Fixed `ClassifiedPaperRepository`..." entry -- fixed and
+merged separately from this milestone. Wired into
+`ke extraction-review-generate` alongside M16-M26's pipeline; adds
+`extraction_runs.pico_extraction_rules_version` (schema version 7). While
+implementing M28, the section-text and heading-stripping helpers M26 had
+written as private, unshared functions were promoted to
+`knowledge_engine.extraction.sections.section_text`/`section_content` so
+M28 could reuse them exactly rather than risk a third divergent copy --
+the same lesson the `ClassifiedPaperRepository` bug above had just
+taught. Relationship Layer expansion (below) remains the other named
+"next priority," not yet started.
 
 ## Mission
 
