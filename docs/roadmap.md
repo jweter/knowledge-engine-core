@@ -215,9 +215,13 @@ Detailed milestone records include:
   same way Phase 2's extraction methodology was decided before any
   extraction code was written; no embedding-*generation* code should be
   written before it is. Vector-index (`VectorIndex`/FAISS/Qdrant) work is
-  not blocked on that same decision -- the design's option 3 explicitly
-  proposes building the retrieval-side plumbing first, against
-  externally-supplied vectors.
+  not blocked on that same decision -- **M30** implemented exactly that: a
+  pluggable `VectorIndex` interface, a local FAISS backend, and two CLI
+  commands (`ke embedding-index-build`, `ke vector-search`) operating on
+  externally-supplied vectors, so the retrieval architecture is proven
+  without committing to an embedding-generation dependency. Free-text
+  semantic search (`ke search`/`ke answer` accepting a live query) remains
+  blocked on the still-open embedding-generation decision.
 
 ## Phase 4: Knowledge Graph
 

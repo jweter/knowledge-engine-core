@@ -27,6 +27,8 @@ data/*.sqlite3
 data/*.sqlite3-*
 data/*.db
 data/*.db-*
+data/*.faiss
+*.faiss
 papers/*.pdf
 papers/**/*.pdf
 data/corpora/**/reports/*.md

@@ -372,6 +372,25 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   records it links. No database change -- relationships remain
   file-only, matching how evidence records themselves have always
   worked.
+- Added M30, Phase 3's first milestone: a pluggable
+  `knowledge_engine.vector_search` package (`VectorIndex` interface,
+  `FaissVectorIndex` local implementation, `EmbeddingGenerator` interface
+  with no implementation yet) and two CLI commands,
+  `ke embedding-index-build --vectors <jsonl> --index-path <path>` and
+  `ke vector-search --index-path <path> --query-vector <json>`. Per
+  `docs/phase3_design.md`'s option 3, no embedding-generation code exists
+  yet, so these commands operate on externally-supplied vectors only --
+  `embedding-index-build` parses and validates a JSONL file any external
+  tool produced, referentially checks every `paper_id` against the local
+  database, builds/updates the FAISS index, and persists
+  `Paper.embedding_model`/`embedding_id`; `vector-search` takes an
+  already-embedded query vector (not free text) and returns ranked papers
+  with their real metadata, explicitly labeled "vector similarity only,
+  not lexical search." Added `faiss-cpu` as a new dependency (no
+  PyTorch or other heavy transitive dependency); already anticipated by
+  the roadmap's "local FAISS" goal, unlike the still-open
+  embedding-generation dependency decision. Free-text semantic search
+  remains blocked on that decision.
 
 ### Changed
 

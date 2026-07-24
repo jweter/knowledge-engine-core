@@ -51,6 +51,11 @@ from knowledge_engine.pubmed_discovery import (
     NcbiDiscoveryError,
     PubmedPmcDiscoveryService,
 )
+from knowledge_engine.vector_search import (
+    FaissVectorIndex,
+    VectorSearchError,
+    load_external_vectors,
+)
 
 DoiOption = Annotated[str, typer.Option("--doi", help="DOI to query.")]
 ProviderOption = Annotated[
@@ -121,6 +126,41 @@ CorpusLibraryInputOption = Annotated[
     Path,
     typer.Option("--input", help="Corpus-library snapshot file to import."),
 ]
+EmbeddingVectorsOption = Annotated[
+    Path,
+    typer.Option(
+        "--vectors",
+        help="JSONL file of externally-generated paper embeddings.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+EmbeddingIndexPathOption = Annotated[
+    Path,
+    typer.Option("--index-path", help="Local FAISS index file to create or update."),
+]
+ExistingEmbeddingIndexPathOption = Annotated[
+    Path,
+    typer.Option(
+        "--index-path",
+        help="Local FAISS index file to search.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+QueryVectorOption = Annotated[
+    Path,
+    typer.Option(
+        "--query-vector",
+        help="JSON file containing an already-embedded query vector.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+VectorSearchLimitOption = Annotated[int, typer.Option("--limit", "-n", min=1, max=100)]
 
 
 def _crossref_provider() -> MetadataProvider:
@@ -597,4 +637,140 @@ def corpus_library_import(input_path: CorpusLibraryInputOption) -> None:
     console.print(
         f"[green]Imported corpus library:[/green] {summary.imported_paper_count} paper(s) "
         f"imported, {summary.skipped_existing_paper_count} already present and skipped."
+    )
+
+
+@app.command("embedding-index-build")
+def embedding_index_build(
+    vectors: EmbeddingVectorsOption,
+    index_path: EmbeddingIndexPathOption,
+) -> None:
+    """Build or update a local FAISS vector index from externally-generated embeddings.
+
+    Phase 3's option 3 (see docs/phase3_design.md's Open Questions): no
+    embedding-generation code exists in this project yet, so this command
+    ingests vectors an external tool already computed rather than
+    generating them itself. Every referenced paper_id must already exist
+    in the local database; a dangling reference is reported, never
+    silently skipped. Re-running against the same paper_id replaces its
+    vector rather than duplicating it.
+    """
+
+    result = load_external_vectors(vectors)
+    if result.errors:
+        console.print(f"[red]Vectors file is invalid:[/red] {vectors}")
+        for error in result.errors:
+            console.print(f"- {escape(error)}")
+        raise typer.Exit(1)
+
+    requested_ids = [record.paper_id for record in result.records]
+    database = _local_database()
+    database.initialize()
+    with database.session() as session:
+        repository = PaperRepository(session)
+        found_ids = {paper.id for paper in repository.get_many(requested_ids)}
+        missing_ids = sorted(set(requested_ids) - found_ids)
+        if missing_ids:
+            missing = ", ".join(str(paper_id) for paper_id in missing_ids)
+            console.print(f"[red]Vectors reference unknown paper ID(s):[/red] {missing}")
+            raise typer.Exit(1)
+
+        assert result.dimension is not None  # non-empty records guarantee a dimension
+        try:
+            index = (
+                FaissVectorIndex.load(index_path, dimension=result.dimension)
+                if index_path.exists()
+                else FaissVectorIndex(result.dimension)
+            )
+        except VectorSearchError as exc:
+            console.print(f"[red]{escape(str(exc))}[/red]")
+            raise typer.Exit(1) from None
+
+        for record in result.records:
+            index.add(record.paper_id, record.vector)
+            repository.set_embedding(
+                record.paper_id,
+                embedding_model=record.embedding_model,
+                embedding_id=str(record.paper_id),
+            )
+
+        index.save(index_path)
+
+    console.print(
+        f"[green]Indexed {len(result.records)} vector(s):[/green] {index_path} "
+        f"(dimension {result.dimension}, index size {index.size})."
+    )
+
+
+@app.command("vector-search")
+def vector_search(
+    index_path: ExistingEmbeddingIndexPathOption,
+    query_vector: QueryVectorOption,
+    limit: VectorSearchLimitOption = 10,
+) -> None:
+    """Search a local FAISS vector index by an already-embedded query vector.
+
+    Does not accept a free-text query -- no EmbeddingGenerator exists yet
+    (see docs/phase3_design.md's Open Questions). The caller supplies an
+    already-embedded query vector, for example from any external
+    embedding tool, as a JSON file (`{"vector": [...]}` or a bare array).
+    Lexical search remains available via `ke search`; this command is an
+    additional, separate retrieval signal, not a replacement.
+    """
+
+    try:
+        payload = json.loads(query_vector.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        console.print(f"[red]Query vector file is not valid JSON:[/red] {query_vector}")
+        raise typer.Exit(1) from None
+
+    vector = payload.get("vector") if isinstance(payload, dict) else payload
+    if (
+        not isinstance(vector, list)
+        or not vector
+        or not all(
+            isinstance(component, int | float) and not isinstance(component, bool)
+            for component in vector
+        )
+    ):
+        console.print(
+            "[red]Query vector file must contain a non-empty array of numbers "
+            '(a bare array or {"vector": [...]}).[/red]'
+        )
+        raise typer.Exit(1)
+
+    try:
+        index = FaissVectorIndex.load(index_path, dimension=len(vector))
+    except VectorSearchError as exc:
+        console.print(f"[red]{escape(str(exc))}[/red]")
+        raise typer.Exit(1) from None
+
+    matches = index.search([float(component) for component in vector], k=limit)
+    if not matches:
+        console.print("[yellow]No matches found in the vector index.[/yellow]")
+        return
+
+    database = _local_database()
+    database.initialize()
+    with database.session() as session:
+        repository = PaperRepository(session)
+        papers_by_id = {
+            paper.id: paper for paper in repository.get_many([match.vector_id for match in matches])
+        }
+
+    console.print(f"[bold]Vector search results:[/bold] {index_path}")
+    for rank, match in enumerate(matches, start=1):
+        paper = papers_by_id.get(match.vector_id)
+        title = escape(paper.title) if paper else "Unknown paper (not in local database)"
+        console.print()
+        console.print(f"[bold]{rank}. {title}[/bold]")
+        console.print(f"Paper ID: {match.vector_id}")
+        console.print(f"Score (squared L2 distance, lower = more similar): {match.score:.4f}")
+        if paper:
+            console.print(f"DOI: {escape(paper.doi or 'Unknown')}")
+
+    console.print()
+    console.print(
+        "[bold]This is vector similarity only, not lexical search and not scientific "
+        "synthesis.[/bold]"
     )
