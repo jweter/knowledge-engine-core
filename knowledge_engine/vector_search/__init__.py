@@ -1,4 +1,4 @@
-"""Phase 3 vector-search services: pluggable index, not-yet-implemented generator."""
+"""Phase 3 vector-search services: pluggable index and embedding generators."""
 
 from knowledge_engine.vector_search.generator import EmbeddingGenerator
 from knowledge_engine.vector_search.index import (
@@ -20,13 +20,29 @@ from knowledge_engine.vector_search.ingestion import (
     VectorIngestionResult,
     load_external_vectors,
 )
+from knowledge_engine.vector_search.local_generator import (
+    DEFAULT_MODEL_NAME as DEFAULT_LOCAL_MODEL_NAME,
+)
+from knowledge_engine.vector_search.local_generator import (
+    LocalEmbeddingError,
+    SentenceTransformerEmbeddingGenerator,
+)
+from knowledge_engine.vector_search.openai_generator import (
+    OpenAiEmbeddingError,
+    OpenAiEmbeddingGenerator,
+)
 
 __all__ = [
+    "DEFAULT_LOCAL_MODEL_NAME",
     "EXTERNAL_VECTOR_INGESTION_RULES_VERSION",
     "VECTOR_INDEX_RULES_VERSION",
     "EmbeddingGenerator",
     "ExternalVectorRecord",
     "FaissVectorIndex",
+    "LocalEmbeddingError",
+    "OpenAiEmbeddingError",
+    "OpenAiEmbeddingGenerator",
+    "SentenceTransformerEmbeddingGenerator",
     "VectorIndex",
     "VectorIndexMetadata",
     "VectorIngestionResult",

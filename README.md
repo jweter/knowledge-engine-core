@@ -98,18 +98,24 @@ Phase 3 completed capabilities include:
 - a pluggable `VectorIndex` interface
   (`knowledge_engine.vector_search.index`) and a local `FaissVectorIndex`
   implementation (flat, exact L2 index; no server)
+- two `EmbeddingGenerator` implementations
+  (`knowledge_engine.vector_search.generator`): a local
+  `SentenceTransformerEmbeddingGenerator` (default `all-MiniLM-L6-v2`,
+  fully offline once weights are cached) and an `OpenAiEmbeddingGenerator`
+  (OpenAI's `/v1/embeddings` endpoint over stdlib `urllib`, requires
+  `KE_OPENAI_API_KEY`)
+- the `ke embedding-generate` CLI command, which embeds every paper's
+  title/abstract with either generator and writes a vectors JSONL file
 - the `ke embedding-index-build` CLI command, which parses and validates
-  a JSONL file of externally-generated paper embeddings (no
-  embedding-generation code exists in this project yet), referentially
-  checks every `paper_id` against the local database, and builds/updates
-  the FAISS index
+  a JSONL file of paper embeddings (from `ke embedding-generate` or any
+  external tool), referentially checks every `paper_id` against the local
+  database, and builds/updates the FAISS index
 - the `ke vector-search` CLI command, which searches that index by an
   already-embedded query vector (not free text) and returns ranked papers
   with their real title/DOI metadata
 
 See [docs/phase3_design.md](docs/phase3_design.md) for the Phase 3
-architecture, the still-open embedding-generation decision, and
-milestone-by-milestone status.
+architecture and milestone-by-milestone status.
 
 ### Milestone history
 
@@ -187,14 +193,21 @@ milestone-by-milestone status.
   a local `FaissVectorIndex` implementation, and an `EmbeddingGenerator`
   interface with no implementation yet -- and two CLI commands,
   `ke embedding-index-build` and `ke vector-search`. No embedding-
-  generation code exists yet (see `docs/phase3_design.md`'s Open
-  Questions), so both commands operate on externally-supplied vectors
-  only, proving the retrieval architecture without committing to a
-  new-dependency embedding-generation decision.
+  generation code existed yet at this point (see `docs/phase3_design.md`'s
+  Open Questions), so both commands operated on externally-supplied
+  vectors only, proving the retrieval architecture without committing to
+  a new-dependency embedding-generation decision.
+- **M31:** resolved the embedding-generation decision as "both": added
+  `SentenceTransformerEmbeddingGenerator` (local, `sentence-transformers`
+  pinned to a CPU-only PyTorch build) and `OpenAiEmbeddingGenerator`
+  (OpenAI's `/v1/embeddings` endpoint over stdlib `urllib`, no SDK), both
+  implementing `EmbeddingGenerator`, plus the `ke embedding-generate`
+  CLI command that writes the same vectors-file format M30's commands
+  already consume.
 
 Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is
 complete through M29. Phase 3 (search plus semantics) is in progress with
-M30. See [docs/roadmap.md](docs/roadmap.md) and
+M31. See [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase3_design.md](docs/phase3_design.md) for the next milestone.
 
 ## Requirements
@@ -429,7 +442,7 @@ Neither Phase 1 nor Phase 2 should be expanded into Alembic adoption, a new
 package manager, persistent telemetry, vector search, a graph, AI reasoning,
 an API, web functionality, or unrelated refactoring without separate
 evidence and authorization. Vector search itself is Phase 3's own explicit
-goal (see M30 above and [docs/phase3_design.md](docs/phase3_design.md)), not
+goal (see M30/M31 above and [docs/phase3_design.md](docs/phase3_design.md)), not
 an out-of-scope expansion of Phases 1/2.
 
 ## Known Issues

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     project_root: Path = Field(default_factory=lambda: Path.cwd())
     data_dir: Path | None = None
     database_url: str | None = None
+    openai_api_key: str | None = None
 
     model_config = SettingsConfigDict(env_prefix="KE_", env_file=".env", extra="ignore")
 

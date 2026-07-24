@@ -52,7 +52,13 @@ from knowledge_engine.pubmed_discovery import (
     PubmedPmcDiscoveryService,
 )
 from knowledge_engine.vector_search import (
+    DEFAULT_LOCAL_MODEL_NAME,
+    EmbeddingGenerator,
     FaissVectorIndex,
+    LocalEmbeddingError,
+    OpenAiEmbeddingError,
+    OpenAiEmbeddingGenerator,
+    SentenceTransformerEmbeddingGenerator,
     VectorIndexMetadata,
     VectorSearchError,
     load_external_vectors,
@@ -164,6 +170,24 @@ QueryVectorOption = Annotated[
     ),
 ]
 VectorSearchLimitOption = Annotated[int, typer.Option("--limit", "-n", min=1, max=100)]
+EmbeddingGenerateOutputOption = Annotated[
+    Path,
+    typer.Option("--output", help="Path for the generated vectors JSONL file."),
+]
+EmbeddingGeneratorNameOption = Annotated[
+    str,
+    typer.Option("--generator", help="Embedding generator to use: 'local' or 'openai'."),
+]
+EmbeddingGenerateModelOption = Annotated[
+    str | None,
+    typer.Option("--model", help="Override the generator's default model name."),
+]
+EmbeddingGeneratePaperIdsOption = Annotated[
+    list[int] | None,
+    typer.Option(
+        "--paper-id", help="Restrict generation to this paper ID (repeatable; default: all)."
+    ),
+]
 
 
 def _crossref_provider() -> MetadataProvider:
@@ -640,6 +664,102 @@ def corpus_library_import(input_path: CorpusLibraryInputOption) -> None:
     console.print(
         f"[green]Imported corpus library:[/green] {summary.imported_paper_count} paper(s) "
         f"imported, {summary.skipped_existing_paper_count} already present and skipped."
+    )
+
+
+def _build_embedding_generator(generator: str, model: str | None) -> EmbeddingGenerator:
+    """Construct the requested `EmbeddingGenerator`.
+
+    Both options from `docs/phase3_design.md`'s embedding-generation
+    decision are implemented behind this one switch: 'local' (fully
+    offline, no per-query cost, a real new dependency) and 'openai' (no
+    local model weights, but sends paper text to a third party and
+    requires a `KE_OPENAI_API_KEY`).
+    """
+
+    if generator == "local":
+        return SentenceTransformerEmbeddingGenerator(model_name=model or DEFAULT_LOCAL_MODEL_NAME)
+    if generator == "openai":
+        api_key = build_settings(Path.cwd()).openai_api_key
+        if not api_key:
+            console.print(
+                "[red]KE_OPENAI_API_KEY is not set.[/red] The openai generator requires an "
+                "API key; corpus text is sent to OpenAI over the network."
+            )
+            raise typer.Exit(1)
+        if model:
+            return OpenAiEmbeddingGenerator(api_key=api_key, model=model)
+        return OpenAiEmbeddingGenerator(api_key=api_key)
+    console.print(f"[red]Unknown generator {generator!r}.[/red] Expected 'local' or 'openai'.")
+    raise typer.Exit(1)
+
+
+def _paper_embedding_text(paper: Paper) -> str:
+    """Return the text embedded for one paper: title, plus abstract if present.
+
+    Deliberately not the full body text -- one vector per paper, matching
+    `embedding_id`'s existing "the paper's own Paper.id" semantics
+    (docs/phase3_design.md). Chunking a paper into multiple vectors is a
+    separate, not-yet-made decision.
+    """
+
+    if paper.abstract:
+        return f"{paper.title}\n\n{paper.abstract}"
+    return paper.title
+
+
+@app.command("embedding-generate")
+def embedding_generate(
+    output: EmbeddingGenerateOutputOption,
+    generator: EmbeddingGeneratorNameOption,
+    model: EmbeddingGenerateModelOption = None,
+    paper_id: EmbeddingGeneratePaperIdsOption = None,
+) -> None:
+    """Generate embedding vectors for local papers into an externally-supplied-vectors JSONL file.
+
+    Writes the same `{"paper_id", "vector", "embedding_model"}` JSONL
+    format `ke embedding-index-build` already consumes -- this command
+    generates that file locally (via `--generator local` or
+    `--generator openai`) instead of via an out-of-band process, but does
+    not change how the index is built or searched; run
+    `ke embedding-index-build` on the output afterward. Embeds each
+    paper's title and abstract only (see `_paper_embedding_text`).
+    """
+
+    embedding_generator = _build_embedding_generator(generator, model)
+
+    database = _local_database()
+    database.initialize()
+    with database.session() as session:
+        repository = PaperRepository(session)
+        papers = repository.get_many(paper_id) if paper_id else repository.list_papers()
+        if not papers:
+            console.print("[yellow]No papers found to embed.[/yellow]")
+            return
+
+        records: list[dict[str, object]] = []
+        for paper in papers:
+            try:
+                vector = embedding_generator.generate(_paper_embedding_text(paper))
+            except (LocalEmbeddingError, OpenAiEmbeddingError) as exc:
+                console.print(f"[red]Failed to embed paper {paper.id}:[/red] {escape(str(exc))}")
+                raise typer.Exit(1) from None
+            records.append(
+                {
+                    "paper_id": paper.id,
+                    "vector": list(vector),
+                    "embedding_model": embedding_generator.model_id,
+                }
+            )
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(json.dumps(record) + "\n")
+
+    console.print(
+        f"[green]Generated {len(records)} embedding(s):[/green] {output} "
+        f"(embedding_model {embedding_generator.model_id})."
     )
 
 
