@@ -209,6 +209,12 @@ Detailed milestone records include:
 - Add embeddings using a pluggable vector index.
 - Support local FAISS and server-backed Qdrant.
 - Keep lexical search as a transparent baseline.
+- Use `docs/phase3_design.md` as the detailed design reference. Its first
+  open question -- which embedding-generation approach to use -- is a
+  new-dependency and offline-posture decision for the project owner, the
+  same way Phase 2's extraction methodology was decided before any
+  extraction code was written; no embedding or vector-index code should be
+  written before it is.
 
 ## Phase 4: Knowledge Graph
 
@@ -264,6 +270,9 @@ Detailed milestone records include:
 - `docs/roadmap/phase0.md`
 - `docs/roadmap/phase1.md`
 - `docs/roadmap/phase2.md`
+- `docs/phase3_design.md` and `docs/roadmap/phase3.md` -- design sketch and
+  goals; the embedding-generation approach is an open decision, not yet
+  started
 - `docs/roadmap/long_term_vision.md` -- the multi-package ecosystem and final
   goal these phases build toward, including the future `knowledge-engine-ai`
   layer's role once Phase 2's Evidence Records exist
