@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy.exc import DatabaseError, IntegrityError, OperationalError
 
 from knowledge_engine.database import PaperRepository
-from knowledge_engine.models import Paper, PaperAuthor, PaperKeyword, PaperText
+from knowledge_engine.models import Paper
 from knowledge_engine.parser import ParsedPaper
 from knowledge_engine.persistence_errors import (
     DatabaseIOError,
@@ -22,30 +22,7 @@ class ClassifiedPaperRepository(PaperRepository):
     def add_parsed_paper(self, parsed: ParsedPaper, keywords: list[str] | None = None) -> Paper:
         """Store one paper and classify expected relational and FTS failures."""
 
-        paper = Paper(
-            title=parsed.title,
-            doi=parsed.doi,
-            abstract=parsed.abstract,
-            source_path=str(parsed.source_path),
-            content_hash=parsed.content_hash,
-            page_count=parsed.page_count,
-            word_count=parsed.word_count,
-        )
-        paper.text = PaperText(raw_text=parsed.raw_text, body_text=parsed.body_text)
-        self.session.add(paper)
-
-        with self.session.no_autoflush:
-            for position, author_name in enumerate(parsed.authors):
-                author = self._get_or_create_author(author_name)
-                author_link = PaperAuthor(author=author, position=position)
-                paper.author_links.append(author_link)
-                self.session.add(author_link)
-
-            for keyword_value in keywords or []:
-                keyword = self._get_or_create_keyword(keyword_value)
-                keyword_link = PaperKeyword(keyword=keyword)
-                paper.keyword_links.append(keyword_link)
-                self.session.add(keyword_link)
+        paper = self._build_paper(parsed, keywords)
 
         try:
             self.session.flush()

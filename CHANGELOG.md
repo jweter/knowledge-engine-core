@@ -419,6 +419,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   silently while a table that was actually dropped or corrupted from an
   already-reached version still raises rather than being silently recreated
   empty.
+- Fixed `ClassifiedPaperRepository` (used by `ke corpus-import`, the only
+  path that has ever populated the real committed corpus) silently dropping
+  M15's per-page extraction provenance: it fully overrode
+  `PaperRepository.add_parsed_paper` with its own independent copy for
+  exception classification, and that copy never picked up the
+  `paper.pages = [...]` line M15 added to the base class. Every paper
+  imported through `corpus-import` since M15 persisted zero `PaperPage`
+  rows despite a correctly recorded `page_count`, silently blocking Phase 2
+  extraction for the entire corpus -- found by running
+  `ke extraction-review-generate` against all 605 real papers for the first
+  time, which failed on every single one with "no persisted pages." Fixed
+  by extracting the shared paper-construction logic into
+  `PaperRepository._build_paper`, used by both overrides, so this class of
+  copy-paste divergence cannot recur. Backfilled the existing local
+  database with `ke paper-pages-backfill`.
 
 ## [0.2.0-alpha.1] - 2026-07-11
 

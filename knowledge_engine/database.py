@@ -317,8 +317,13 @@ class PaperRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def add_parsed_paper(self, parsed: ParsedPaper, keywords: list[str] | None = None) -> Paper:
-        """Store a parsed paper and update the full-text index."""
+    def _build_paper(self, parsed: ParsedPaper, keywords: list[str] | None = None) -> Paper:
+        """Construct and stage an unflushed `Paper` with text, pages, authors, and keywords.
+
+        Shared by every `add_parsed_paper` override so a field added here (for
+        example `PaperPage` persistence, added in M15) cannot silently apply
+        to only one persistence path.
+        """
 
         paper = Paper(
             title=parsed.title,
@@ -347,6 +352,13 @@ class PaperRepository:
                 keyword_link = PaperKeyword(keyword=keyword)
                 paper.keyword_links.append(keyword_link)
                 self.session.add(keyword_link)
+
+        return paper
+
+    def add_parsed_paper(self, parsed: ParsedPaper, keywords: list[str] | None = None) -> Paper:
+        """Store a parsed paper and update the full-text index."""
+
+        paper = self._build_paper(parsed, keywords)
 
         try:
             self.session.flush()
