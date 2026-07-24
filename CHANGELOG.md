@@ -396,6 +396,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed `_report_text` (shared by every Markdown report renderer --
+  `evidence-report` and M29's `relationship-report`) only ASCII-normalizing
+  free-text fields without escaping Markdown structure or collapsing
+  embedded newlines. A rationale, claim text, or other reviewer-authored/
+  extracted field containing an embedded `\n\n## Final Disclaimer` line
+  could forge a fake report section, and ordinary text containing
+  `*`/`_`/`` ` ``/`[`/`]`/`<` rendered as live Markdown formatting instead
+  of the literal stored text. Found by a Codex review on PR #150. Fixed
+  by collapsing embedded whitespace/newlines and escaping
+  Markdown-significant characters centrally in `_report_text`, so every
+  report renderer is protected at once rather than only the one Codex
+  reviewed.
 - Fixed the M14 candidate-adjudication ruleset (`ADJUDICATION_RULES_VERSION`)
   accepting three kinds of out-of-scope or non-primary-content sources into
   the corpus: pediatric-titled papers (v7), correction/erratum/retraction
