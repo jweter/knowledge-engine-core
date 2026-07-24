@@ -93,6 +93,24 @@ Phase 2 completed capabilities include:
 See [docs/phase2_design.md](docs/phase2_design.md) for the Phase 2 architecture
 and milestone-by-milestone status.
 
+Phase 3 completed capabilities include:
+
+- a pluggable `VectorIndex` interface
+  (`knowledge_engine.vector_search.index`) and a local `FaissVectorIndex`
+  implementation (flat, exact L2 index; no server)
+- the `ke embedding-index-build` CLI command, which parses and validates
+  a JSONL file of externally-generated paper embeddings (no
+  embedding-generation code exists in this project yet), referentially
+  checks every `paper_id` against the local database, and builds/updates
+  the FAISS index
+- the `ke vector-search` CLI command, which searches that index by an
+  already-embedded query vector (not free text) and returns ranked papers
+  with their real title/DOI metadata
+
+See [docs/phase3_design.md](docs/phase3_design.md) for the Phase 3
+architecture, the still-open embedding-generation decision, and
+milestone-by-milestone status.
+
 ### Milestone history
 
 - **M9:** connected validated local PDFs to persisted import runs and paper/FTS
@@ -164,11 +182,20 @@ and milestone-by-milestone status.
   human judgment call. Renders each relationship's type and rationale
   next to the claim text of the two evidence records it links, reusing
   `relationship-validate`'s and `evidence-validate`'s checks unchanged.
+- **M30 (Phase 3's first milestone):** added a pluggable
+  `knowledge_engine.vector_search` package -- a `VectorIndex` interface,
+  a local `FaissVectorIndex` implementation, and an `EmbeddingGenerator`
+  interface with no implementation yet -- and two CLI commands,
+  `ke embedding-index-build` and `ke vector-search`. No embedding-
+  generation code exists yet (see `docs/phase3_design.md`'s Open
+  Questions), so both commands operate on externally-supplied vectors
+  only, proving the retrieval architecture without committing to a
+  new-dependency embedding-generation decision.
 
-Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is in
-progress through M29. M27 adds corpus-persistence infrastructure alongside
-it. See [docs/roadmap.md](docs/roadmap.md) and
-[docs/phase2_design.md](docs/phase2_design.md) for the next milestone.
+Phase 1 ingestion is complete through M14. Phase 2 evidence extraction is
+complete through M29. Phase 3 (search plus semantics) is in progress with
+M30. See [docs/roadmap.md](docs/roadmap.md) and
+[docs/phase3_design.md](docs/phase3_design.md) for the next milestone.
 
 ## Requirements
 
@@ -398,10 +425,12 @@ pipeline yet; a human reviewer supplies it before promotion. All Phase 2
 extraction is rule-based, with no LLM-based extraction, synthesis, or
 reasoning of any kind.
 
-Neither phase should be expanded into Alembic adoption, a new package manager,
-persistent telemetry, vector search, a graph, AI reasoning, an API, web
-functionality, or unrelated refactoring without separate evidence and
-authorization.
+Neither Phase 1 nor Phase 2 should be expanded into Alembic adoption, a new
+package manager, persistent telemetry, vector search, a graph, AI reasoning,
+an API, web functionality, or unrelated refactoring without separate
+evidence and authorization. Vector search itself is Phase 3's own explicit
+goal (see M30 above and [docs/phase3_design.md](docs/phase3_design.md)), not
+an out-of-scope expansion of Phases 1/2.
 
 ## Known Issues
 

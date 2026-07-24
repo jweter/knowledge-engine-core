@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -426,6 +426,34 @@ class PaperRepository:
         """Return one paper by primary key."""
 
         return self.session.get(Paper, paper_id)
+
+    def set_embedding(self, paper_id: int, *, embedding_model: str, embedding_id: str) -> None:
+        """Record a paper's embedding identity.
+
+        `embedding_model` and `embedding_id` are supplied by the caller
+        (M30's `embedding-index-build` command) rather than invented here --
+        this method only persists what it is given, mirroring how every
+        other `*_RULES_VERSION`-style provenance field in this project is
+        recorded, never guessed.
+        """
+
+        paper = self.session.get(Paper, paper_id)
+        if paper is None:
+            raise ValueError(f"Unknown paper ID: {paper_id}")
+        paper.embedding_model = embedding_model
+        paper.embedding_id = embedding_id
+
+    def get_many(self, paper_ids: Sequence[int]) -> list[Paper]:
+        """Return the papers matching `paper_ids`, in database order.
+
+        A missing ID is simply absent from the result -- the caller is
+        responsible for checking which requested IDs were not found.
+        """
+
+        if not paper_ids:
+            return []
+        statement = select(Paper).where(Paper.id.in_(paper_ids)).order_by(Paper.id)
+        return list(self.session.scalars(statement))
 
     def list_papers_without_pages(self) -> list[Paper]:
         """Return papers with zero persisted `PaperPage` rows.
