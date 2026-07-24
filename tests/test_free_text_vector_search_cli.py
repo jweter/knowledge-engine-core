@@ -12,6 +12,7 @@ from knowledge_engine.parser import ParsedPage, ParsedPaper
 from knowledge_engine.vector_search import (
     FaissVectorIndex,
     LocalEmbeddingError,
+    OpenAiEmbeddingError,
     VectorIndexMetadata,
     save_index_metadata,
 )
@@ -270,3 +271,39 @@ def test_query_text_exits_nonzero_when_embedding_fails(
 
     assert result.exit_code != 0
     assert "Failed to embed query text" in _unwrapped(result.output)
+
+
+def test_query_text_reports_an_unknown_openai_model_cleanly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A bad --model must not crash with an unhandled exception (Codex finding, PR #156).
+
+    `_build_embedding_generator` constructs the generator before any
+    try/except in the caller; an invalid model previously propagated as
+    an unhandled OpenAiEmbeddingError instead of the sanitized CLI error
+    every other failure path in this command uses.
+    """
+
+    monkeypatch.setenv("KE_OPENAI_API_KEY", "sk-test")
+    index_path = _build_index(
+        tmp_path, vectors={1: [1.0, 0.0]}, embedding_model="fake:test-v1", dimension=2
+    )
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "vector-search",
+            "--index-path",
+            str(index_path),
+            "--query-text",
+            "a question",
+            "--generator",
+            "openai",
+            "--model",
+            "not-a-real-model",
+        ],
+    )
+
+    assert not isinstance(result.exception, LocalEmbeddingError | OpenAiEmbeddingError)
+    assert result.exit_code != 0
+    assert "Unknown OpenAI embedding model" in _unwrapped(result.output)

@@ -697,7 +697,13 @@ def _build_embedding_generator(generator: str, model: str | None) -> EmbeddingGe
     """
 
     if generator == "local":
-        return SentenceTransformerEmbeddingGenerator(model_name=model or DEFAULT_LOCAL_MODEL_NAME)
+        try:
+            return SentenceTransformerEmbeddingGenerator(
+                model_name=model or DEFAULT_LOCAL_MODEL_NAME
+            )
+        except LocalEmbeddingError as exc:
+            console.print(f"[red]{escape(str(exc))}[/red]")
+            raise typer.Exit(1) from None
     if generator == "openai":
         api_key = build_settings(Path.cwd()).openai_api_key
         if not api_key:
@@ -706,9 +712,13 @@ def _build_embedding_generator(generator: str, model: str | None) -> EmbeddingGe
                 "API key; corpus text is sent to OpenAI over the network."
             )
             raise typer.Exit(1)
-        if model:
-            return OpenAiEmbeddingGenerator(api_key=api_key, model=model)
-        return OpenAiEmbeddingGenerator(api_key=api_key)
+        try:
+            if model:
+                return OpenAiEmbeddingGenerator(api_key=api_key, model=model)
+            return OpenAiEmbeddingGenerator(api_key=api_key)
+        except OpenAiEmbeddingError as exc:
+            console.print(f"[red]{escape(str(exc))}[/red]")
+            raise typer.Exit(1) from None
     console.print(f"[red]Unknown generator {generator!r}.[/red] Expected 'local' or 'openai'.")
     raise typer.Exit(1)
 
