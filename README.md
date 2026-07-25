@@ -41,6 +41,10 @@ Phase 1 completed capabilities include:
   discovery and adjudication only, not yet wired into acquisition; CORE
   never reports a license field, so every CORE candidate is held pending
   human license verification
+- an Unpaywall per-DOI OA-location/license evidence lookup (M36)
+  (`ke unpaywall-doi-lookup`, `ke unpaywall-batch-lookup`) -- a lookup
+  tool, not a fifth discovery pipeline, since Unpaywall's topic-search API
+  was confirmed broken at build time; makes no accept/reject/hold decision
 - strict mypy, Ruff formatting/linting, and pytest coverage
 
 Phase 2 completed capabilities include:
@@ -249,9 +253,18 @@ architecture and milestone-by-milestone status.
   never reports a PMCID). Scoped to discovery and adjudication only -- not
   wired into acquisition, and does not resume corpus growth (frozen at 605
   papers). See [docs/m35_core_discovery.md](docs/m35_core_discovery.md).
+- **M36 (Phase 1):** added Unpaywall as a fourth evidence source, but as a
+  per-DOI OA-location/license *lookup tool* (`ke unpaywall-doi-lookup`,
+  `ke unpaywall-batch-lookup`) rather than a fifth discovery pipeline --
+  Unpaywall's topic-search API returned a consistent `HTTP 500` on every
+  query tried at build time. Makes no accept/reject/hold decision; intended
+  to enrich a DOI already surfaced (and possibly `held`) by another
+  pipeline. Requires `KE_UNPAYWALL_EMAIL`. See
+  [docs/m36_unpaywall_lookup.md](docs/m36_unpaywall_lookup.md).
 
 Phase 1 ingestion is complete through M14, plus M34/M35's second and third
-discovery sources. Phase 2 evidence extraction is complete through M29. Phase 3
+discovery sources and M36's evidence lookup tool. Phase 2 evidence
+extraction is complete through M29. Phase 3
 (search plus semantics) is in progress with M33. See
 [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase3_design.md](docs/phase3_design.md) for the next milestone.

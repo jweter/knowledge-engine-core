@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     database_url: str | None = None
     openai_api_key: str | None = None
     core_api_key: str | None = None
+    unpaywall_email: str | None = None
 
     model_config = SettingsConfigDict(env_prefix="KE_", env_file=".env", extra="ignore")
 

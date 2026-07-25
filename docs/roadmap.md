@@ -96,6 +96,16 @@ acceptance, release validation, and optional post-release quality audits.
   not a bug. Scoped to discovery and adjudication only -- **not** wired into
   acquisition, and does not resume corpus growth: the corpus remains
   intentionally frozen at 605 papers by the project owner's prior decision.
+- **M36** added Unpaywall as a fourth evidence source, but as a per-DOI
+  OA-location/license *lookup tool* rather than a fifth discovery pipeline
+  -- `ke unpaywall-doi-lookup` and `ke unpaywall-batch-lookup`. Unpaywall's
+  topic-search API was confirmed broken (`HTTP 500` on every query tried)
+  at build time, so there is no reliable endpoint to build a `--query`
+  discovery command against; its working per-DOI endpoint also carries no
+  scientific-scope signal and no single canonical host to allowlist. Makes
+  no accept/reject/hold decision -- pure evidence for a human reviewing a
+  DOI already surfaced by another pipeline. See
+  `docs/m36_unpaywall_lookup.md`.
 
 ### M14: Controlled 500-paper rehearsal
 
@@ -198,6 +208,33 @@ prior decision (see "Scaling beyond 500 papers for Phase 2 tuning" below).
 M35 only builds the discovery/adjudication capability; using it to actually
 grow the corpus further is a separate decision for the project owner to
 make explicitly, the same way M13/M14's own scale-up was.
+
+### M36: Unpaywall, an evidence lookup tool rather than a fourth discovery pipeline
+
+The project owner asked to keep adding evidence sources, naming Unpaywall
+explicitly, without pausing for permission at each step. Unlike M14/M34/M35,
+M36 does not add a `--query` discovery pipeline: Unpaywall's `/v2/search`
+endpoint returned a consistent `HTTP 500` across multiple distinct queries
+and retries at build time (confirmed empirically, not assumed), and its
+working per-DOI endpoint carries no scientific-scope signal and no single
+canonical host to allowlist the way CORE and Europe PMC do. See
+`docs/m36_unpaywall_lookup.md` for the full design, and
+`knowledge_engine/unpaywall_lookup.py` for the implementation.
+
+Instead, M36 adds `ke unpaywall-doi-lookup` and `ke unpaywall-batch-lookup`:
+given one or more DOIs already surfaced by another pipeline (e.g. a `held`
+Europe PMC or CORE candidate), it queries Unpaywall's per-DOI endpoint and
+reports OA status, best OA location, license (normalized from Unpaywall's
+own `cc-by`-style tokens and evaluated via the shared `license_rules.py`),
+and every OA location on file. It makes **no** accept/reject/hold decision
+-- that stays the responsibility of whichever pipeline's held candidate
+this evidence is being used to re-examine. Requires `KE_UNPAYWALL_EMAIL`
+(Unpaywall's usage policy requires a contact email on every request; this
+project does not bake in a default for every installation).
+
+**Not wired into acquisition, and does not resume corpus growth.** The
+corpus remains intentionally frozen at 605 papers by the project owner's
+prior decision (see "Scaling beyond 500 papers for Phase 2 tuning" below).
 
 ### Scaling beyond 500 papers for Phase 2 tuning
 
