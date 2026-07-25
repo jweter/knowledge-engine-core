@@ -114,6 +114,16 @@ def test_prepare_preview_raises_on_malformed_pdf(tmp_path: Path) -> None:
         prepare_manual_pdf_preview(pdf_path)
 
 
+def test_prepare_preview_rejects_a_symlinked_pdf(tmp_path: Path) -> None:
+    real_path = tmp_path / "real.pdf"
+    make_pdf(real_path)
+    symlink_path = tmp_path / "link.pdf"
+    symlink_path.symlink_to(real_path)
+
+    with pytest.raises(ManualPdfPreviewError, match="symbolic link"):
+        prepare_manual_pdf_preview(symlink_path)
+
+
 def test_preview_to_json_round_trips(tmp_path: Path) -> None:
     pdf_path = tmp_path / "paper.pdf"
     make_pdf(pdf_path)

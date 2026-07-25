@@ -85,6 +85,9 @@ def prepare_manual_pdf_preview(
     `"incomplete_missing_license"` (no CORE-style silent guessing either).
     """
 
+    if pdf_path.is_symlink():
+        raise ManualPdfPreviewError("PDF input must not be a symbolic link.")
+
     active_parser = parser or PyMuPDFParser()
     try:
         parsed = active_parser.parse(pdf_path)

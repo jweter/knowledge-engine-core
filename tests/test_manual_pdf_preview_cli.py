@@ -9,6 +9,7 @@ import pytest
 from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
+from knowledge_engine.unpaywall_lookup import UnpaywallLookupError
 
 
 def make_pdf(path: Path) -> None:
@@ -87,6 +88,41 @@ def test_manual_pdf_preview_cli_reports_missing_email_for_doi_lookup(
 
     assert result.exit_code != 0
     assert "KE_UNPAYWALL_EMAIL" in result.output
+    assert not output.exists()
+
+
+def test_manual_pdf_preview_cli_reports_unpaywall_lookup_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex finding on PR #162: a retry-exhausted UnpaywallLookupError from
+    inside prepare_manual_pdf_preview must produce the same sanitized CLI
+    diagnostic as every other Unpaywall command, not an unhandled
+    traceback."""
+
+    pdf_path = tmp_path / "paper.pdf"
+    make_pdf(pdf_path)
+    output = tmp_path / "preview.json"
+
+    class FailingLookup:
+        def lookup(self, doi: str) -> None:
+            raise UnpaywallLookupError("Unpaywall lookup request failed after 3 attempt(s).")
+
+    monkeypatch.setattr(entrypoint, "_unpaywall_lookup_service", lambda: FailingLookup())
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "manual-pdf-preview",
+            "--pdf",
+            str(pdf_path),
+            "--output",
+            str(output),
+            "--doi-lookup",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Unpaywall lookup failed" in result.output
     assert not output.exists()
 
 

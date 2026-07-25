@@ -857,6 +857,9 @@ def manual_pdf_preview(
     except ManualPdfPreviewError as exc:
         console.print(f"[red]Manual PDF preview failed:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
+    except UnpaywallLookupError as exc:
+        console.print(f"[red]Unpaywall lookup failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
 
     _write_output(output, preview.to_json())
     console.print(f"[green]Wrote preview evidence:[/green] {output} (title: {preview.title!r}).")
