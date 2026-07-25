@@ -13,8 +13,9 @@ persisted somewhere durable.
 names the underlying need: tuning M16-M26's deterministic extraction rules
 against real data requires a real corpus, not the two hand-authored evidence
 records currently committed. `ke corpus-library-export`/`ke
-corpus-library-import` make that corpus a persisted, git-committable
-artifact instead of session-local scratch state.
+corpus-library-import` make that corpus a reproducible artifact -- see
+"Persistence policy" below for how that reproducibility is actually
+achieved as the corpus grows past what git can hold as a single file.
 
 ## What is (and is not) in a snapshot
 
@@ -64,7 +65,37 @@ extraction), reusing the already-committed
 `data/corpora/glp1_weight_loss/` corpus definition -- its own README
 already documents this exact intent: *"M14 builds the first 500-paper
 working corpus from verified PMC Open Access records across obesity and
-metabolic-disease therapeutics."* `ke corpus-library-export` is run
-periodically as that corpus grows, and the resulting snapshot is committed
-so every clone of the repository has the same tuning corpus without
-re-running discovery and acquisition from scratch.
+metabolic-disease therapeutics."*
+
+## Persistence policy: the snapshot is a local, regenerable cache, not a committed artifact
+
+Earlier in the corpus's growth (up through 605 papers), the
+`corpus_library` snapshot was committed to git alongside `sources.csv`,
+refreshed after every growth batch -- see `CHANGELOG.md`'s many "Refreshed
+the corpus-library snapshot" entries for that history. Growing the corpus
+to 681 papers (the retstart=1750 M14 batch) made that snapshot 137.75 MB,
+over GitHub's 100 MB single-file push limit (confirmed via `VACUUM`: this
+is real page-level text growth, not bloat). Since the corpus is explicitly
+targeting "at least a couple thousand papers" (`docs/roadmap.md`), this was
+not a one-time size accident -- committing the snapshot as a single growing
+binary file would keep failing, and worse each time.
+
+The fix is to stop treating the snapshot as something that needs
+committing at all. `sources.csv` (git-committed, kilobytes, diffable) is
+already the durable, human-reviewable record of *which* papers are in the
+corpus and on what evidence; the raw PDFs are durably archived to Google
+Drive (see above). Both of those together are sufficient to deterministically
+rebuild the snapshot at any time: `ke corpus-import` against the current
+`sources.csv` (plus the archived PDFs, pulled back down locally) reproduces
+the exact same working database, and `ke corpus-library-export` regenerates
+the snapshot from it. Since rebuilding is cheap, deterministic, and fully
+reproducible, persisting the derived binary itself in git adds size-limit
+risk for no real durability benefit -- `sources.csv` and the archived PDFs
+are the actual source of truth.
+
+As of this change, `data/corpus_library/*.sqlite3` is gitignored. A local
+snapshot file is still useful during a session (faster than re-running the
+whole pipeline, and `ke corpus-library-import` can restore a database from
+one without redoing discovery/acquisition), but it is no longer expected to
+survive a fresh clone -- rebuild it locally via the commands below whenever
+a session needs it.

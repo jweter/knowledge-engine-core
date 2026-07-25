@@ -189,9 +189,14 @@ architecture and milestone-by-milestone status.
   same conservative way as claims: a missing signal produces `None`.
 - **M27:** added `ke corpus-library-export`/`ke corpus-library-import`, a
   portable snapshot of a local database's paper-intrinsic content (papers,
-  extracted pages/text, journals, authors, keywords) that can be committed
-  and shared, since the working database itself is gitignored and does not
-  survive a fresh clone. Idempotent, content-hash-keyed import.
+  extracted pages/text, journals, authors, keywords), since the working
+  database itself is gitignored and does not survive a fresh clone.
+  Idempotent, content-hash-keyed import. The snapshot itself is a local,
+  regenerable cache (`data/corpus_library/*.sqlite3` is gitignored) rather
+  than a committed artifact -- past ~605 papers it exceeds GitHub's 100MB
+  file limit, and `sources.csv` plus the Drive-archived PDFs are sufficient
+  to deterministically rebuild it any time. See
+  [docs/m27_corpus_library.md](docs/m27_corpus_library.md).
 - **M28:** implemented deterministic PICO extraction (population,
   intervention, comparator, outcome), the second and final slice of
   non-human-typed PICO-adjacent extraction after M26. Each field is the
