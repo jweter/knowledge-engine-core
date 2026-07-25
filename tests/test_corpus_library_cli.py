@@ -113,6 +113,34 @@ def test_corpus_library_import_cli_hydrates_database(
         assert papers[0].content_hash == "b" * 64
 
 
+def test_corpus_library_export_import_cli_round_trips_compressed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = _database(tmp_path, "source")
+    with source.session() as session:
+        PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "c" * 64))
+    snapshot_output = tmp_path / "snapshot.sqlite3.gz"
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: source)
+    export_result = CliRunner().invoke(
+        entrypoint.app, ["corpus-library-export", "--output", str(snapshot_output)]
+    )
+    assert export_result.exit_code == 0, export_result.output
+    assert snapshot_output.read_bytes()[:2] == b"\x1f\x8b"
+
+    target = _database(tmp_path, "target")
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: target)
+    import_result = CliRunner().invoke(
+        entrypoint.app, ["corpus-library-import", "--input", str(snapshot_output)]
+    )
+
+    assert import_result.exit_code == 0, import_result.output
+    assert "1 paper(s) imported" in _unwrapped(import_result.output)
+    with target.session() as session:
+        papers = list(session.scalars(select(Paper)))
+        assert len(papers) == 1
+        assert papers[0].content_hash == "c" * 64
+
+
 def test_corpus_library_import_cli_reports_missing_input(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -28,6 +28,7 @@ data/*.sqlite3-*
 data/*.db
 data/*.db-*
 data/*.faiss
+data/corpus_library/*.sqlite3
 *.faiss
 papers/*.pdf
 papers/**/*.pdf

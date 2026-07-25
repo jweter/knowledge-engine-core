@@ -259,10 +259,13 @@ database is gitignored. `ke corpus-library-export`/`ke
 corpus-library-import` make the corpus's paper-intrinsic content (not raw
 PDFs -- those are archived to Google Drive instead, per the project
 owner's decision) a persisted, git-committable snapshot -- see
-`docs/m27_corpus_library.md`. Actually growing the corpus to the owner's
-"at least a couple thousand papers" target remains ongoing operational
-work using this tooling plus the existing M14 pipeline, not itself
-scheduled as a numbered milestone.
+`docs/m27_corpus_library.md`. Past ~605 papers the snapshot exceeds
+GitHub's 100MB single-file limit uncompressed; a `.gz` output path
+compresses it (roughly 3x on this corpus's page-level text), restoring
+headroom without giving up git-committed durability. Actually growing the
+corpus to the owner's "at least a couple thousand papers" target remains
+ongoing operational work using this tooling plus the existing M14
+pipeline, not itself scheduled as a numbered milestone.
 
 ### Supporting operator durability
 

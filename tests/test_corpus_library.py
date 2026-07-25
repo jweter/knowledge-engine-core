@@ -6,7 +6,12 @@ import pytest
 from sqlalchemy import select, text
 
 from knowledge_engine.config import Settings
-from knowledge_engine.corpus_library import export_corpus_library, import_corpus_library
+from knowledge_engine.corpus_library import (
+    export_corpus_library,
+    export_corpus_library_compressed,
+    import_corpus_library,
+    import_corpus_library_compressed,
+)
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.models import Author, Keyword, Paper
 from knowledge_engine.parser import ParsedPage, ParsedPaper
@@ -250,3 +255,48 @@ def test_import_corpus_library_raises_if_input_missing(tmp_path: Path) -> None:
     target = _database(tmp_path, "target")
     with target.session() as session, pytest.raises(FileNotFoundError):
         import_corpus_library(session, tmp_path / "missing.sqlite3")
+
+
+def test_export_import_compressed_round_trips(tmp_path: Path) -> None:
+    source = _database(tmp_path, "source")
+    with source.session() as session:
+        PaperRepository(session).add_parsed_paper(
+            _parsed_paper(source_path=tmp_path / "a.pdf", content_hash="a" * 64, doi="10.1/a"),
+            keywords=["obesity"],
+        )
+
+    output = tmp_path / "snapshot.sqlite3.gz"
+    summary = export_corpus_library_compressed(source.engine, output)
+
+    assert summary.paper_count == 1
+    assert output.exists()
+    # A real gzip stream starts with the two-byte magic number.
+    assert output.read_bytes()[:2] == b"\x1f\x8b"
+
+    target = _database(tmp_path, "target")
+    with target.session() as session:
+        import_summary = import_corpus_library_compressed(session, output)
+
+    assert import_summary.imported_paper_count == 1
+    with target.session() as session:
+        papers = list(session.scalars(select(Paper)))
+        assert len(papers) == 1
+        assert papers[0].doi == "10.1/a"
+        assert len(papers[0].pages) == 1
+
+
+def test_export_corpus_library_compressed_raises_if_output_already_exists(
+    tmp_path: Path,
+) -> None:
+    source = _database(tmp_path, "source")
+    output = tmp_path / "snapshot.sqlite3.gz"
+    output.write_text("existing", encoding="utf-8")
+
+    with pytest.raises(FileExistsError):
+        export_corpus_library_compressed(source.engine, output)
+
+
+def test_import_corpus_library_compressed_raises_if_input_missing(tmp_path: Path) -> None:
+    target = _database(tmp_path, "target")
+    with target.session() as session, pytest.raises(FileNotFoundError):
+        import_corpus_library_compressed(session, tmp_path / "missing.sqlite3.gz")

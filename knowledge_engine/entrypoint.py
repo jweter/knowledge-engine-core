@@ -20,7 +20,12 @@ from knowledge_engine.core_candidate_review import (
 from knowledge_engine.core_discovery import CoreDiscoveryError, CoreDiscoveryService
 from knowledge_engine.core_discovery import GetTransport as CoreGetTransport
 from knowledge_engine.core_http import UrllibCoreTransport
-from knowledge_engine.corpus_library import export_corpus_library, import_corpus_library
+from knowledge_engine.corpus_library import (
+    export_corpus_library,
+    export_corpus_library_compressed,
+    import_corpus_library,
+    import_corpus_library_compressed,
+)
 from knowledge_engine.crossref_http import UrllibCrossrefTransport
 from knowledge_engine.crossref_provider import CrossrefProvider
 from knowledge_engine.database import Database, ExtractionRunRepository, PaperRepository
@@ -1003,12 +1008,19 @@ def corpus_library_export(output: CorpusLibraryOutputOption) -> None:
     Only paper-intrinsic content is copied (papers, their extracted pages
     and text, journals, authors, keywords) -- never operational history like
     import runs or extraction runs. The output file must not already exist.
+    A `.gz` suffix (e.g. `snapshot.sqlite3.gz`) writes a gzip-compressed
+    snapshot instead of a plain one -- GitHub caps individual pushed files
+    at 100MB, and this corpus's page-level text compresses well enough to
+    stay committable for much longer than the raw SQLite file would.
     """
 
     database = _local_database()
     database.initialize()
     try:
-        summary = export_corpus_library(database.engine, output)
+        if output.suffix == ".gz":
+            summary = export_corpus_library_compressed(database.engine, output)
+        else:
+            summary = export_corpus_library(database.engine, output)
     except FileExistsError as exc:
         console.print(f"[red]{escape(str(exc))}[/red]")
         raise typer.Exit(1) from None
@@ -1024,14 +1036,18 @@ def corpus_library_import(input_path: CorpusLibraryInputOption) -> None:
     """Hydrate the local database's corpus content from a snapshot.
 
     A paper whose content hash already exists locally is skipped, so
-    importing the same or an overlapping snapshot twice is idempotent.
+    importing the same or an overlapping snapshot twice is idempotent. A
+    `.gz` suffix is read as a gzip-compressed snapshot.
     """
 
     database = _local_database()
     database.initialize()
     try:
         with database.session() as session:
-            summary = import_corpus_library(session, input_path)
+            if input_path.suffix == ".gz":
+                summary = import_corpus_library_compressed(session, input_path)
+            else:
+                summary = import_corpus_library(session, input_path)
     except FileNotFoundError as exc:
         console.print(f"[red]{escape(str(exc))}[/red]")
         raise typer.Exit(1) from None
