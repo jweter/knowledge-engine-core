@@ -13,9 +13,10 @@ persisted somewhere durable.
 names the underlying need: tuning M16-M26's deterministic extraction rules
 against real data requires a real corpus, not the two hand-authored evidence
 records currently committed. `ke corpus-library-export`/`ke
-corpus-library-import` make that corpus a reproducible artifact -- see
-"Persistence policy" below for how that reproducibility is actually
-achieved as the corpus grows past what git can hold as a single file.
+corpus-library-import` make that corpus a persisted, git-committable
+artifact instead of session-local scratch state -- see "Persistence
+policy" below for how that stays true as the corpus grows past what a raw
+SQLite file can fit under GitHub's push limit.
 
 ## What is (and is not) in a snapshot
 
@@ -46,16 +47,21 @@ or ADR." Repurposing it for bulk PDF archival was intentionally avoided.
 ## Commands
 
 ```bash
-ke corpus-library-export --output data/corpus_library/<name>.sqlite3
-ke corpus-library-import --input data/corpus_library/<name>.sqlite3
+ke corpus-library-export --output data/corpus_library/<name>.sqlite3.gz
+ke corpus-library-import --input data/corpus_library/<name>.sqlite3.gz
 ```
 
-Export fails if the output file already exists -- delete it first, or
-export to a new path. Import is idempotent: a paper whose `content_hash`
-already exists locally is skipped, never duplicated, and
-journals/authors/keywords are matched by their existing natural unique key
-(name/value) rather than re-created. A snapshot's own primary keys are
-never reused, since they are not portable across databases.
+A `.gz` suffix writes/reads a gzip-compressed snapshot
+(`export_corpus_library_compressed`/`import_corpus_library_compressed` in
+`corpus_library.py`); any other suffix uses the plain, uncompressed form.
+`.gz` is the convention for anything meant to be committed -- see
+"Persistence policy" below. Export fails if the output file already
+exists -- delete it first, or export to a new path. Import is idempotent:
+a paper whose `content_hash` already exists locally is skipped, never
+duplicated, and journals/authors/keywords are matched by their existing
+natural unique key (name/value) rather than re-created. A snapshot's own
+primary keys are never reused, since they are not portable across
+databases.
 
 ## Growing the library
 
@@ -67,7 +73,7 @@ already documents this exact intent: *"M14 builds the first 500-paper
 working corpus from verified PMC Open Access records across obesity and
 metabolic-disease therapeutics."*
 
-## Persistence policy: the snapshot is a local, regenerable cache, not a committed artifact
+## Persistence policy: the snapshot is compressed to stay committable
 
 Earlier in the corpus's growth (up through 605 papers), the
 `corpus_library` snapshot was committed to git alongside `sources.csv`,
@@ -77,25 +83,30 @@ to 681 papers (the retstart=1750 M14 batch) made that snapshot 137.75 MB,
 over GitHub's 100 MB single-file push limit (confirmed via `VACUUM`: this
 is real page-level text growth, not bloat). Since the corpus is explicitly
 targeting "at least a couple thousand papers" (`docs/roadmap.md`), this was
-not a one-time size accident -- committing the snapshot as a single growing
-binary file would keep failing, and worse each time.
+not a one-time size accident.
 
-The fix is to stop treating the snapshot as something that needs
-committing at all. `sources.csv` (git-committed, kilobytes, diffable) is
-already the durable, human-reviewable record of *which* papers are in the
-corpus and on what evidence; the raw PDFs are durably archived to Google
-Drive (see above). Both of those together are sufficient to deterministically
-rebuild the snapshot at any time: `ke corpus-import` against the current
-`sources.csv` (plus the archived PDFs, pulled back down locally) reproduces
-the exact same working database, and `ke corpus-library-export` regenerates
-the snapshot from it. Since rebuilding is cheap, deterministic, and fully
-reproducible, persisting the derived binary itself in git adds size-limit
-risk for no real durability benefit -- `sources.csv` and the archived PDFs
-are the actual source of truth.
+The first fix attempted here was to stop committing the snapshot at all,
+treating it as a cache reproducible on demand from `sources.csv` plus the
+raw PDFs. A Codex review on the growth PR correctly caught the flaw in
+that plan: reproducing the snapshot requires the raw PDFs to actually be
+durably available, and at the time this repository's Google Drive PDF
+archive (see above) was itself broken (`403 storageQuotaExceeded` --
+service accounts have no storage quota outside a genuine Shared Drive). A
+fresh clone would have had no way to rebuild anything beyond the three
+hand-authored historical records. "Easy to rebuild" was true in principle
+but not in the state the repository was actually in.
 
-As of this change, `data/corpus_library/*.sqlite3` is gitignored. A local
-snapshot file is still useful during a session (faster than re-running the
-whole pipeline, and `ke corpus-library-import` can restore a database from
-one without redoing discovery/acquisition), but it is no longer expected to
-survive a fresh clone -- rebuild it locally via the commands below whenever
-a session needs it.
+The real fix is compression, not abandoning commitment.
+`export_corpus_library_compressed`/`import_corpus_library_compressed`
+gzip/gunzip the snapshot around the same table-copying logic
+`export_corpus_library`/`import_corpus_library` already use -- this
+corpus's page-level text compresses roughly 3x (137.75MB -> ~44MB at 677
+papers), which restores real headroom under GitHub's cap without touching
+what data a snapshot holds. `data/corpus_library/*.sqlite3` remains
+gitignored (an uncompressed snapshot is still useful as a fast local
+scratch file within a session), but `data/corpus_library/*.sqlite3.gz` is
+committed and refreshed after every growth batch, same as before 681
+papers. This will need revisiting again once the corpus grows enough that
+even the compressed file approaches 100MB -- sharding by paper-ID range is
+the most likely next step, not abandoning git persistence, given how much
+this Codex review demonstrated that mattered.

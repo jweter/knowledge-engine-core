@@ -522,25 +522,34 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   if it is unset. Not wired into acquisition, and does not resume corpus
   growth, which remains intentionally frozen at 605 papers by the project
   owner's prior decision.
-- Grew the corpus 605 -> 681 papers via the existing M14 PMC pipeline
+- Grew the corpus 605 -> 677 papers via the existing M14 PMC pipeline
   (discovery retstart=1750): 250 candidates discovered, 112 deterministically
   accepted, 36 already present (query overlap, filtered before acquisition),
   76 net-new PMC OA PDFs acquired and imported via a linked resume run
-  against the prior import. The corpus is no longer intentionally frozen --
-  see `docs/roadmap.md`'s "Scaling beyond 500 papers for Phase 2 tuning".
+  against the prior import. A Codex review on the growth PR caught 4 false
+  positives the deterministic v9 ruleset let through -- a pediatric-titled
+  paper whose title's forward-looking "Adult" outcome term evaded the
+  pediatric check, two type 1 diabetes-specific papers, and one incidental
+  dermatology case report -- excluded from `sources.csv`, and the local
+  database rebuilt from the corrected manifest. The corpus is no longer
+  intentionally frozen -- see `docs/roadmap.md`'s "Scaling beyond 500
+  papers for Phase 2 tuning".
+- Added gzip-compressed `corpus_library` snapshot support (M27):
+  `export_corpus_library_compressed`/`import_corpus_library_compressed`,
+  wired into `ke corpus-library-export`/`ke corpus-library-import` via a
+  `.gz` output/input suffix. Growing the corpus past ~605 papers made the
+  snapshot exceed GitHub's 100MB single-file push limit (137.75MB
+  uncompressed at 681 papers, confirmed as real page-level text growth via
+  `VACUUM`, not bloat); a first attempt to fix this by no longer
+  git-committing the snapshot at all was reverted after a Codex review
+  correctly pointed out that reproducing it required the raw PDFs to
+  already be durably archived, which they were not (the Google Drive
+  backup was itself broken -- see below). Compression (roughly 3x on this
+  corpus's text, ~44MB at 677 papers) restores headroom without giving up
+  git-committed durability. See `docs/m27_corpus_library.md`'s
+  "Persistence policy" section.
 
 ### Changed
-
-- Stopped git-committing the `corpus_library` snapshot
-  (`data/corpus_library/*.sqlite3`, M27): growing the corpus past ~605
-  papers made it exceed GitHub's 100MB single-file push limit (137.75MB at
-  681 papers, confirmed as real page-level text growth via `VACUUM`, not
-  bloat). `sources.csv` (committed) plus the Drive-archived PDFs already
-  deterministically reproduce the snapshot via `ke corpus-import` + `ke
-  corpus-library-export`, so persisting the derived binary itself in git
-  added recurring size-limit risk for no durability benefit. The snapshot
-  is now a local, regenerable cache; see `docs/m27_corpus_library.md`'s
-  "Persistence policy" section.
 
 - Made Ruff the authoritative formatter and linter used by both developer commands
   and GitHub Actions.

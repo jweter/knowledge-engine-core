@@ -20,6 +20,9 @@ another's.
 
 from __future__ import annotations
 
+import gzip
+import shutil
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -222,6 +225,44 @@ def import_corpus_library(target_session: Session, input_path: Path) -> ImportSu
             imported += 1
 
     return ImportSummary(imported_paper_count=imported, skipped_existing_paper_count=skipped)
+
+
+def export_corpus_library_compressed(source_engine: Engine, output_path: Path) -> ExportSummary:
+    """Like `export_corpus_library`, but writes a gzip-compressed snapshot.
+
+    GitHub hard-caps individual pushed files at 100MB. This corpus's
+    paper-intrinsic text (mostly `paper_pages`) compresses well -- gzip
+    keeps a committed snapshot under that cap for much longer as the
+    corpus grows than committing the raw SQLite file would. `output_path`
+    is conventionally named `*.sqlite3.gz`, though this function does not
+    enforce it. `output_path` must not already exist, matching
+    `export_corpus_library`'s own no-clobber contract.
+    """
+
+    if output_path.exists():
+        msg = f"Corpus library output already exists: {output_path}"
+        raise FileExistsError(msg)
+
+    with tempfile.TemporaryDirectory() as raw_dir:
+        raw_path = Path(raw_dir) / "snapshot.sqlite3"
+        summary = export_corpus_library(source_engine, raw_path)
+        with raw_path.open("rb") as raw_file, gzip.open(output_path, "wb") as compressed_file:
+            shutil.copyfileobj(raw_file, compressed_file)
+    return summary
+
+
+def import_corpus_library_compressed(target_session: Session, input_path: Path) -> ImportSummary:
+    """Like `import_corpus_library`, but reads a gzip-compressed snapshot."""
+
+    if not input_path.exists():
+        msg = f"Corpus library input does not exist: {input_path}"
+        raise FileNotFoundError(msg)
+
+    with tempfile.TemporaryDirectory() as raw_dir:
+        raw_path = Path(raw_dir) / "snapshot.sqlite3"
+        with gzip.open(input_path, "rb") as compressed_file, raw_path.open("wb") as raw_file:
+            shutil.copyfileobj(compressed_file, raw_file)
+        return import_corpus_library(target_session, raw_path)
 
 
 def _copy_paper_fields(paper: Paper, *, journal: Journal | None) -> Paper:
