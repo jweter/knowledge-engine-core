@@ -601,6 +601,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `PaperRepository._build_paper` never falls back to the manifest's
   curated title. See `data/corpora/glp1_weight_loss/README.md`'s
   "Current Status" section for the full pattern breakdown.
+- Fixed the `PyMuPDFParser` title-extraction gap documented above:
+  `CorpusIngestionService`/`LinkedCorpusIngestionService` now pass the
+  manifest row's own title (`item.title`, sourced from PubMed/PMC
+  bibliographic metadata and required by `REQUIRED_CSV_HEADERS`) through
+  to `PaperRepository._build_paper`/`add_parsed_paper` as
+  `manifest_title`, which wins over `parsed.title` when present. The
+  single-file `ke import` command has no manifest to consult and keeps
+  using `parsed.title` exactly as before. A fresh corpus-import
+  confirmed this fixes all 50 of the corpus's previously wrong titles
+  (Cureus's "Review began MM/DD/YYYY" banner, Frontiers' "TYPE Review"
+  header), not just future imports, since the fix lives in the shared
+  persistence path rather than the parser itself. Regenerated the
+  compressed `corpus_library` snapshot accordingly.
 
 ### Changed
 

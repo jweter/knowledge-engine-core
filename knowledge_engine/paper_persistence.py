@@ -19,10 +19,16 @@ from knowledge_engine.persistence_errors import (
 class ClassifiedPaperRepository(PaperRepository):
     """Persist papers while exposing narrow expected operational failure types."""
 
-    def add_parsed_paper(self, parsed: ParsedPaper, keywords: list[str] | None = None) -> Paper:
+    def add_parsed_paper(
+        self,
+        parsed: ParsedPaper,
+        keywords: list[str] | None = None,
+        *,
+        manifest_title: str | None = None,
+    ) -> Paper:
         """Store one paper and classify expected relational and FTS failures."""
 
-        paper = self._build_paper(parsed, keywords)
+        paper = self._build_paper(parsed, keywords, manifest_title=manifest_title)
 
         try:
             self.session.flush()

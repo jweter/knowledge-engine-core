@@ -142,22 +142,22 @@ batches toward a target of at least a couple thousand papers -- see
 and `docs/m27_corpus_library.md` for how the resulting parsed content is
 persisted across sessions once imported.
 
-**Known follow-up (not fixed by this batch):** two systemic quality gaps
-surfaced during the `retstart=2000` batch's Codex review remain open for
-a dedicated future cleanup, since neither is specific to this batch's own
-net-new rows: (1) roughly a dozen already-merged records from earlier
-batches match the title-lacks-intervention pattern documented above --
-found by re-running this batch's stricter title check against the whole
-manifest, not just its own additions; (2) `PyMuPDFParser`'s title
-extraction is unreliable for some publisher PDF layouts (Cureus's
-"Review began MM/DD/YYYY" peer-review-date banner, Frontiers' "TYPE
-Review"/"TYPE Original Research" article-type header), so roughly 7% of
-imported `Paper.title` values across the whole corpus are not the actual
-paper title -- confirmed by direct query against the imported database,
-both before and after this batch (42 of 677 papers before, 50 of 718
-after). `Paper.title` is set purely from `parsed.title`
-(`knowledge_engine/database.py`'s `PaperRepository._build_paper`) and
-never falls back to the manifest CSV's curated `title` field, which is
-almost always correct since it comes from PubMed/PMC metadata rather
-than PDF-layout heuristics; preferring the manifest title when present
-would fix this for the whole corpus, not just future batches.
+**Known follow-up:** one of the two systemic quality gaps surfaced during
+the `retstart=2000` batch's Codex review remains open for a dedicated
+future cleanup, since it isn't specific to that batch's own net-new
+rows: roughly a dozen already-merged records from earlier batches match
+the title-lacks-intervention pattern documented above -- found by
+re-running that batch's stricter title check against the whole
+manifest, not just its own additions.
+
+The other -- `PyMuPDFParser`'s title extraction being unreliable for
+some publisher PDF layouts (Cureus's "Review began MM/DD/YYYY"
+peer-review-date banner, Frontiers' "TYPE Review"/"TYPE Original
+Research" article-type header), leaving roughly 7% of imported
+`Paper.title` values across the whole corpus not the actual paper title
+-- has since been fixed: `CorpusIngestionService`/
+`LinkedCorpusIngestionService` now pass the manifest row's own
+(PubMed/PMC-sourced, always-required) title through to
+`PaperRepository._build_paper` as `manifest_title`, which wins over
+`parsed.title` when present. A fresh corpus-import after that fix
+confirmed the bad-title count dropped from 50 of 718 to 0.
