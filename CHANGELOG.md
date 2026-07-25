@@ -548,6 +548,27 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   corpus's text, ~44MB at 677 papers) restores headroom without giving up
   git-committed durability. See `docs/m27_corpus_library.md`'s
   "Persistence policy" section.
+- Added M37: `ke manual-pdf-preview`/`ke manual-pdf-manifest-draft`
+  (`docs/m37_manual_pdf_preview.md`). `ke import`/`ke corpus-import` have
+  always accepted any local PDF; what was missing was a way to add one
+  without hand-typing a `sources.csv` row. `manual_pdf_preview.py` wires
+  `PyMuPDFParser` (the same parser `ke import` already uses -- local
+  title/authors/abstract/DOI/page-count/word-count extraction, no network)
+  together with an optional Unpaywall (M36) DOI lookup into one small
+  reviewable preview JSON, then `export_manual_pdf_manifest_draft` turns
+  an approved preview into one manifest-ready CSV row (the exact
+  `sources.csv` schema), refusing outright unless `license_rule_result`
+  is exactly `"passed"` -- never guessed. Never touches `sources.csv`
+  directly, matching `manifest_curation_cli.py`'s existing draft-only
+  contract for the automated pipelines. Exported
+  `normalize_unpaywall_license` from `unpaywall_lookup.py` (previously
+  private) so this module normalizes a raw Unpaywall license token (e.g.
+  `"cc-by"`) to `license_rules.py`'s expected format before calling
+  `license_deed_url` -- caught by a live smoke test, not a unit test,
+  since the original hand-authored preview fixtures used an
+  already-normalized license string that never exercised the real
+  `prepare_manual_pdf_preview` -> `export_manual_pdf_manifest_draft` path;
+  added an end-to-end regression test that drives both functions together.
 
 ### Changed
 

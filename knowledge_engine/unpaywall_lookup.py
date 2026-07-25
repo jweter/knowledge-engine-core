@@ -278,7 +278,7 @@ def _parse_record(raw: dict[str, object]) -> UnpaywallRecord:
         oa_status=_optional_string(raw, "oa_status"),
         best_oa_location_url=best_url,
         best_oa_location_license=best_license,
-        license_rule_result=evaluate_license(_normalize_license(best_license)),
+        license_rule_result=evaluate_license(normalize_unpaywall_license(best_license)),
         oa_locations=_parse_locations(raw.get("oa_locations")),
     )
 
@@ -320,7 +320,18 @@ def _parse_locations(raw: object) -> tuple[UnpaywallLocation, ...]:
     return tuple(locations)
 
 
-def _normalize_license(raw_license: str | None) -> str | None:
+def normalize_unpaywall_license(raw_license: str | None) -> str | None:
+    """Map Unpaywall's real license token format to `license_rules.py`'s.
+
+    Public (not `_`-prefixed) so callers outside this module -- e.g.
+    `manual_pdf_preview.py`, which stores a license string it later passes
+    to `license_deed_url` -- can normalize a raw Unpaywall token the same
+    way `evaluate_license` here already does, rather than re-deriving the
+    mapping or passing through an un-normalized token that
+    `license_deed_url` (which expects space-separated `"CC BY"`, not
+    Unpaywall's hyphenated `"cc-by"`) would reject.
+    """
+
     if raw_license is None:
         return None
     return _CC_LICENSE_TOKENS.get(raw_license.strip().lower(), raw_license.strip())

@@ -45,6 +45,11 @@ Phase 1 completed capabilities include:
   (`ke unpaywall-doi-lookup`, `ke unpaywall-batch-lookup`) -- a lookup
   tool, not a fifth discovery pipeline, since Unpaywall's topic-search API
   was confirmed broken at build time; makes no accept/reject/hold decision
+- a manual-PDF preview and manifest-draft tool (M37)
+  (`ke manual-pdf-preview`, `ke manual-pdf-manifest-draft`) -- local
+  parsing plus an optional Unpaywall DOI lookup instead of hand-typing a
+  manifest row for a manually-supplied PDF; refuses to draft a row
+  without a passed license
 - strict mypy, Ruff formatting/linting, and pytest coverage
 
 Phase 2 completed capabilities include:
@@ -265,10 +270,18 @@ architecture and milestone-by-milestone status.
   to enrich a DOI already surfaced (and possibly `held`) by another
   pipeline. Requires `KE_UNPAYWALL_EMAIL`. See
   [docs/m36_unpaywall_lookup.md](docs/m36_unpaywall_lookup.md).
+- **M37 (Phase 1):** added `ke manual-pdf-preview`/`ke
+  manual-pdf-manifest-draft`, so adding a manually-supplied PDF no longer
+  means hand-typing a `sources.csv` row -- `PyMuPDFParser` (the same
+  parser `ke import` already uses) extracts title/authors/DOI/page-count
+  locally, and an optional `--doi-lookup` checks Unpaywall (M36) for
+  OA/license evidence. Refuses to draft a manifest row unless license
+  evidence already passed. See
+  [docs/m37_manual_pdf_preview.md](docs/m37_manual_pdf_preview.md).
 
 Phase 1 ingestion is complete through M14, plus M34/M35's second and third
-discovery sources and M36's evidence lookup tool. Phase 2 evidence
-extraction is complete through M29. Phase 3
+discovery sources, M36's evidence lookup tool, and M37's manual-PDF
+preview tool. Phase 2 evidence extraction is complete through M29. Phase 3
 (search plus semantics) is in progress with M33. See
 [docs/roadmap.md](docs/roadmap.md) and
 [docs/phase3_design.md](docs/phase3_design.md) for the next milestone.

@@ -57,6 +57,11 @@ from knowledge_engine.extraction import (
 from knowledge_engine.extraction.evidence_items import PaperMetadata
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
+from knowledge_engine.manual_pdf_preview import (
+    ManualPdfPreviewError,
+    export_manual_pdf_manifest_draft,
+    prepare_manual_pdf_preview,
+)
 from knowledge_engine.metadata_enrichment import MetadataProvider, MetadataQuery
 from knowledge_engine.models import ImportRun, Paper, PaperPage
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
@@ -173,6 +178,33 @@ UnpaywallDoisFileOption = Annotated[
     typer.Option(
         "--dois-file",
         help='JSON file: {"dois": ["10.x/...", ...]} (max 100).',
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+ManualPdfPathOption = Annotated[
+    Path,
+    typer.Option(
+        "--pdf",
+        help="Local PDF file to preview.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+ManualPdfDoiLookupOption = Annotated[
+    bool,
+    typer.Option(
+        "--doi-lookup",
+        help="If a DOI is found, look it up on Unpaywall for OA/license evidence.",
+    ),
+]
+ManualPdfPreviewInputOption = Annotated[
+    Path,
+    typer.Option(
+        "--preview",
+        help="Manual PDF preview JSON path.",
         exists=True,
         dir_okay=False,
         readable=True,
@@ -787,6 +819,85 @@ def unpaywall_batch_lookup(
     )
     console.print(
         "[bold]Evidence only; no adjudication decision was made and no PDFs were downloaded.[/bold]"
+    )
+
+
+@app.command("manual-pdf-preview")
+def manual_pdf_preview(
+    pdf: ManualPdfPathOption,
+    output: CandidateOutputOption,
+    doi_lookup: ManualPdfDoiLookupOption = False,
+    force: ForceOutputOption = False,
+) -> None:
+    """Preview a manually-supplied local PDF without importing it.
+
+    Parses the PDF locally (title, authors, abstract, DOI, page/word
+    count) with the same parser `ke import` itself uses -- no manifest row
+    needs to be hand-typed to see this evidence. Fully offline unless
+    `--doi-lookup` is passed and a DOI is found, in which case Unpaywall
+    (M36) is queried for OA/license evidence over the network, requiring
+    `KE_UNPAYWALL_EMAIL`. Never writes to the corpus manifest or database;
+    see `manual-pdf-manifest-draft` for the next, explicit step.
+    """
+
+    _validate_output(output, force=force)
+    unpaywall_service = None
+    if doi_lookup:
+        try:
+            unpaywall_service = _unpaywall_lookup_service()
+        except ValueError as exc:
+            console.print(f"[red]{escape(str(exc))}[/red]")
+            raise typer.Exit(1) from None
+        console.print(
+            "[yellow]Network access:[/yellow] querying the official Unpaywall API "
+            "if a DOI is found."
+        )
+    try:
+        preview = prepare_manual_pdf_preview(pdf, unpaywall_service=unpaywall_service)
+    except ManualPdfPreviewError as exc:
+        console.print(f"[red]Manual PDF preview failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+    except UnpaywallLookupError as exc:
+        console.print(f"[red]Unpaywall lookup failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    _write_output(output, preview.to_json())
+    console.print(f"[green]Wrote preview evidence:[/green] {output} (title: {preview.title!r}).")
+    if preview.doi is None:
+        console.print("[yellow]No DOI was found in the PDF.[/yellow]")
+    elif not preview.doi_lookup_performed:
+        console.print("DOI found but not looked up; re-run with --doi-lookup to check Unpaywall.")
+    console.print(
+        "[bold]Evidence only; no manifest row was written and nothing was imported.[/bold]"
+    )
+
+
+@app.command("manual-pdf-manifest-draft")
+def manual_pdf_manifest_draft(
+    preview: ManualPdfPreviewInputOption,
+    output: CandidateOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Draft one manifest-ready CSV row from a reviewed, license-verified preview.
+
+    Refuses unless the preview's license evidence already passed (an
+    Unpaywall-verified reusable license) -- never guesses. Running this
+    command against a preview you have reviewed and accepted is itself
+    the approval act. Never modifies `sources.csv` directly, matching
+    `manifest_curation_cli.py`'s existing draft-only contract for the
+    automated pipelines.
+    """
+
+    _validate_output(output, force=force)
+    try:
+        draft = export_manual_pdf_manifest_draft(preview)
+    except ManualPdfPreviewError as exc:
+        console.print(f"[red]Manual PDF manifest draft failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    _write_output(output, draft.to_csv())
+    console.print(
+        f"[green]Wrote 1 manifest curation row:[/green] {output}. No sources.csv file was modified."
     )
 
 

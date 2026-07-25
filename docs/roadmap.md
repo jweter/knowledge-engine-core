@@ -106,6 +106,15 @@ acceptance, release validation, and optional post-release quality audits.
   no accept/reject/hold decision -- pure evidence for a human reviewing a
   DOI already surfaced by another pipeline. See
   `docs/m36_unpaywall_lookup.md`.
+- **M37** added `ke manual-pdf-preview`/`ke manual-pdf-manifest-draft`,
+  closing the "no door is closed" manual-PDF-upload path's real gap: not
+  that manual PDFs couldn't be imported (they always could), but that
+  adding one meant hand-typing a `sources.csv` row. `PyMuPDFParser` (the
+  same parser `ke import` already uses) extracts title/authors/DOI/
+  page-count locally; a found DOI can optionally be checked against
+  Unpaywall (M36) for OA/license evidence. The manifest-draft step refuses
+  to produce a row unless license evidence already passed -- never
+  guesses. See `docs/m37_manual_pdf_preview.md`.
 
 ### M14: Controlled 500-paper rehearsal
 
