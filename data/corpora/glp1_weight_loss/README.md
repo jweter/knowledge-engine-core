@@ -62,13 +62,13 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 718 sources: the small historical GLP-1
-prototype set (3 rows) plus 715 accepted records from nine small
+The committed manifest holds 706 sources: the small historical GLP-1
+prototype set (3 rows) plus 703 accepted records from nine small
 (`--limit 250`) automated discovery batches (`retstart` 0 through 2000) of
 the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
-A further sixty-nine records were manually excluded after individual
+A further eighty-one records were manually excluded after individual
 abstract review, since v9's disease/intervention keyword match has no
 automated way to catch several recurring patterns: single-patient case
 reports where the named disease is only incidental patient background or
@@ -115,14 +115,16 @@ risk-prediction model, or a conceptual framework with no treatment
 evidence. Of those 29, 17 were this batch's own net-new candidates
 (excluded from `sources.csv` before the final import below); the
 remaining 12 had already been acquired by an earlier, already-merged
-batch under query overlap and are a known, documented follow-up cleanup
-rather than something this batch's diff can retroactively fix. Several
-of the earlier exclusions were first caught by Codex reviews on the
-growth PRs, including all four `retstart=1750` exclusions and two of the
-`retstart=2000` batch's; the rest of the `retstart=2000` batch's 38
-exclusions (of 40 total: 23 in the first pass, 17 more -- 2 Codex-caught,
-15 self-audited -- in the second) were caught proactively during
-self-audit. As of the
+batch under query overlap and were left as a documented follow-up at
+the time, since that batch's own diff couldn't retroactively fix them --
+a dedicated cleanup pass later removed all 12 in one pass, confirmed
+against the same abstracts, bringing the total to 81 manual exclusions
+across the whole corpus. Several of the earlier exclusions were first
+caught by Codex reviews on the growth PRs, including all four
+`retstart=1750` exclusions and two of the `retstart=2000` batch's; the
+rest of the `retstart=2000` batch's 38 exclusions (of 40 total: 23 in
+the first pass, 17 more -- 2 Codex-caught, 15 self-audited -- in the
+second) were caught proactively during self-audit. As of the
 `retstart=1250` batch, the project owner gave explicit direction that
 this corpus-building phase should prioritize breadth over precision:
 only the clear-cut patterns above are now screened before acquisition,
@@ -142,22 +144,41 @@ batches toward a target of at least a couple thousand papers -- see
 and `docs/m27_corpus_library.md` for how the resulting parsed content is
 persisted across sessions once imported.
 
-**Known follow-up:** one of the two systemic quality gaps surfaced during
-the `retstart=2000` batch's Codex review remains open for a dedicated
-future cleanup, since it isn't specific to that batch's own net-new
-rows: roughly a dozen already-merged records from earlier batches match
-the title-lacks-intervention pattern documented above -- found by
-re-running that batch's stricter title check against the whole
-manifest, not just its own additions.
+**Resolved follow-ups:** both systemic quality gaps surfaced during the
+`retstart=2000` batch's Codex review have since been closed. The dozen
+already-merged records from earlier batches matching the
+title-lacks-intervention pattern above (found by re-running that
+batch's stricter title check against the whole manifest, not just its
+own additions) were removed in a dedicated cleanup pass, each
+re-confirmed against its full abstract before removal.
+`PyMuPDFParser`'s title extraction being unreliable for some publisher
+PDF layouts (Cureus's "Review began MM/DD/YYYY" peer-review-date
+banner, Frontiers' "TYPE Review"/"TYPE Original Research" article-type
+header), which had left roughly 7% of imported `Paper.title` values
+across the whole corpus not the actual paper title, was fixed at the
+persistence layer: `CorpusIngestionService`/`LinkedCorpusIngestionService`
+now pass the manifest row's own (PubMed/PMC-sourced, always-required)
+title through to `PaperRepository._build_paper` as `manifest_title`,
+which wins over `parsed.title` when present. A fresh corpus-import
+after that fix confirmed the bad-title count dropped from 50 to 0.
 
-The other -- `PyMuPDFParser`'s title extraction being unreliable for
-some publisher PDF layouts (Cureus's "Review began MM/DD/YYYY"
-peer-review-date banner, Frontiers' "TYPE Review"/"TYPE Original
-Research" article-type header), leaving roughly 7% of imported
-`Paper.title` values across the whole corpus not the actual paper title
--- has since been fixed: `CorpusIngestionService`/
-`LinkedCorpusIngestionService` now pass the manifest row's own
-(PubMed/PMC-sourced, always-required) title through to
-`PaperRepository._build_paper` as `manifest_title`, which wins over
-`parsed.title` when present. A fresh corpus-import after that fix
-confirmed the bad-title count dropped from 50 of 718 to 0.
+**Open follow-up (not yet acted on):** while confirming the dozen
+already-merged records above, the deterministic ruleset's own
+`evaluate_scientific_scope` function (`knowledge_engine/scientific_scope.py`)
+was run directly against each excluded title/abstract and returned
+`"passed"` for every one of them -- meaning these were never truly
+edge cases the v9 ruleset almost caught; the function's design
+evaluates the disease *and* intervention terms over title+abstract
+combined (unlike its pediatric check, which is deliberately
+title-only, per that function's own code comment), and its
+intervention-term list (`treatment`, `therapy`, `drug`, `medication`,
+etc.) is generic enough to match incidentally in nearly any clinical
+abstract regardless of whether the paper actually studies that
+intervention. This is a real, verified weakness in the deterministic
+rule, not just an interpretation difference against
+`inclusion_criteria.md`'s prose -- but tightening it would change
+`accepted`/`held` outcomes for future discovery batches and, if applied
+retroactively, could reclassify many already-included papers; that is
+a corpus-inclusion-philosophy decision for the project owner, not
+something this cleanup unilaterally changes. Left as an explicit,
+documented open question rather than acted on.

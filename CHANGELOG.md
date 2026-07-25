@@ -614,6 +614,24 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   header), not just future imports, since the fix lives in the shared
   persistence path rather than the parser itself. Regenerated the
   compressed `corpus_library` snapshot accordingly.
+- Cleaned up the corpus 718 -> 706 papers: removed the dozen
+  already-merged records (from earlier `retstart` batches, predating
+  PR #163) matching the title-lacks-intervention pattern documented
+  above -- each re-confirmed against its full abstract before removal,
+  same bar as PR #163's own exclusions. Also ran the deterministic
+  ruleset's `evaluate_scientific_scope` function directly against each
+  excluded title/abstract and found it returns `"passed"` for every
+  one: the function evaluates disease/intervention terms over
+  title+abstract combined (not title-only, unlike its pediatric check)
+  and its intervention-term list is generic enough to match
+  incidentally in nearly any clinical abstract. Documented as an open,
+  explicitly-not-acted-on follow-up in
+  `data/corpora/glp1_weight_loss/README.md`, since tightening it would
+  change future batches' `accepted`/`held` outcomes and could
+  reclassify already-included papers if applied retroactively -- a
+  corpus-inclusion-philosophy call for the project owner, not this
+  cleanup. Fresh corpus-import (706 imported, 0 failed) and regenerated
+  compressed `corpus_library` snapshot.
 
 ### Changed
 
