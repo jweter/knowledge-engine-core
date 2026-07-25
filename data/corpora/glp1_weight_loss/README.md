@@ -62,62 +62,77 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 735 sources: the small historical GLP-1
-prototype set (3 rows) plus 732 accepted records from nine small
+The committed manifest holds 718 sources: the small historical GLP-1
+prototype set (3 rows) plus 715 accepted records from nine small
 (`--limit 250`) automated discovery batches (`retstart` 0 through 2000) of
 the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
-A further fifty-two records were manually excluded after individual
+A further sixty-nine records were manually excluded after individual
 abstract review, since v9's disease/intervention keyword match has no
 automated way to catch several recurring patterns: single-patient case
 reports where the named disease is only incidental patient background or
 the reported intervention treats an unrelated coexisting condition (a
 dermatology case report was caught this way in the `retstart=1750` batch;
-five more -- a liver-abscess, a limb-ischemia/antiphospholipid, a
-renal-abscess, and a Graves'-disease case report, plus one already listed
-below -- were caught the same way in the `retstart=2000` batch);
-gene-/protein-name lexical collisions (e.g. the NOD-SCID mouse strain, the
-FTO gene's "fat mass and obesity-associated" full name); type 1
-diabetes-specific sources per `exclusion_criteria.md`'s explicit rule (two
-more caught in the `retstart=1750` batch, one an immune-tolerance
-intervention paper and one a fatty-acid/microbiota paper, both explicitly
-T1D-scoped despite matching the batch's disease/intervention keywords; a
-bioelectronic thymic-modulation immune-tolerance paper caught the same way
-in the `retstart=2000` batch); a pediatric study population whose title's
+six more -- a liver-abscess, a limb-ischemia/antiphospholipid, a
+renal-abscess, a Graves'-disease myopericarditis, a necrotizing-fasciitis
+presentation, and an invasive-mucormycosis case report -- were caught the
+same way in the `retstart=2000` batch); gene-/protein-name lexical
+collisions (e.g. the NOD-SCID mouse strain, the FTO gene's "fat mass and
+obesity-associated" full name); type 1 diabetes-specific sources per
+`exclusion_criteria.md`'s explicit rule (two more caught in the
+`retstart=1750` batch, one an immune-tolerance intervention paper and one
+a fatty-acid/microbiota paper, both explicitly T1D-scoped despite
+matching the batch's disease/intervention keywords; a bioelectronic
+thymic-modulation immune-tolerance paper caught the same way in the
+`retstart=2000` batch); a pediatric study population whose title's
 forward-looking "Adult" outcome term obscured the actual (non-adult)
 subjects (the same evasion pattern recurred once more in the
 `retstart=1750` batch: a childhood-obesity review whose title named
 "Adult Cardiometabolic Disease" only as a future burden, not an adult
 intervention); and a few papers matching a target term only via generic
-English phrasing unrelated to the actual disease entity. The
-`retstart=2000` batch's self-audit (performed proactively before export,
-rather than caught after the fact by Codex) also surfaced a distinct,
-newly-documented pattern: automated adjudication accepting a record whose
-*title* names no approved scope term and no named therapeutic
-intervention at all, because the target disease appears only as one
-incidental covariate deep in the abstract of a study whose actual subject
-is a different disease entirely (e.g. hemodialysis frailty, COPD
-hypoxemia, ventilator-weaning prediction, heart-failure diuretic
-resistance) or because the paper is a mechanism-only review, a
-methodology paper with no treatment evidence, or a conceptual framework
-with no named intervention -- eleven records were excluded under this
-pattern in the `retstart=2000` batch, checked directly against
-`inclusion_criteria.md`'s explicit title-level requirement rather than
-against any of the four previously-documented patterns above. Several of
-the earlier exclusions were first caught by Codex reviews on the growth
-PRs, including all four `retstart=1750` exclusions; the `retstart=2000`
-batch's 23 exclusions were all caught proactively during self-audit,
-before export. As of the `retstart=1250` batch, the
-project owner gave explicit direction that this corpus-building phase
-should prioritize breadth over precision: only the clear-cut patterns
-above are now screened before acquisition, not exhaustive gray-area
-sweeps for mechanism-only reviews, analytical-chemistry papers, or drugs
-studied for unrelated diseases -- drugs studied for an unrelated disease
-(e.g. an SGLT2 inhibitor trial in aortic stenosis, a GLP-1 receptor
-agonist scoping review on rotator cuff disease) remain included under
-this policy even when the target disease is absent from the title. See
-`CHANGELOG.md` for the full per-batch
+English phrasing unrelated to the actual disease entity.
+
+The `retstart=2000` batch also surfaced a distinct, newly-documented
+pattern, in two rounds: a first, proactive self-audit pass (before
+exporting approvals) excluded 23 records under the patterns above; a
+Codex review on the growth PR then caught two records this pass had
+missed (a necrotizing-fasciitis case report and a MASLD/T2D
+epidemiological-relationship review), which prompted a second, stricter
+pass checking every accepted title directly against
+`inclusion_criteria.md`'s explicit two-part requirement -- the title
+must name *both* an approved scope term *and* a named therapeutic
+intervention -- rather than relying on the four previously-documented
+patterns alone. That second pass found 29 more records where the
+deterministic ruleset had accepted a title naming no therapeutic
+intervention at all, because the target disease appeared only as an
+incidental covariate deep in an abstract about a different primary
+disease (hemodialysis frailty, COPD hypoxemia, ventilator-weaning
+prediction, heart-failure diuretic resistance, park walkability, and
+others), or because the record was a mechanism-only review, a
+data-quality or measurement-comparison methodology paper, a
+risk-prediction model, or a conceptual framework with no treatment
+evidence. Of those 29, 17 were this batch's own net-new candidates
+(excluded from `sources.csv` before the final import below); the
+remaining 12 had already been acquired by an earlier, already-merged
+batch under query overlap and are a known, documented follow-up cleanup
+rather than something this batch's diff can retroactively fix. Several
+of the earlier exclusions were first caught by Codex reviews on the
+growth PRs, including all four `retstart=1750` exclusions and two of the
+`retstart=2000` batch's; the rest of the `retstart=2000` batch's 38
+exclusions (of 40 total: 23 in the first pass, 17 more -- 2 Codex-caught,
+15 self-audited -- in the second) were caught proactively during
+self-audit. As of the
+`retstart=1250` batch, the project owner gave explicit direction that
+this corpus-building phase should prioritize breadth over precision:
+only the clear-cut patterns above are now screened before acquisition,
+not exhaustive gray-area sweeps for mechanism-only reviews,
+analytical-chemistry papers, or drugs studied for unrelated diseases --
+drugs studied for an unrelated disease (e.g. an SGLT2 inhibitor trial in
+aortic stenosis, a GLP-1 receptor agonist scoping review on rotator cuff
+disease) remain included under this policy, since they still name a
+therapeutic agent, even when the target disease itself is absent from
+the title. See `CHANGELOG.md` for the full per-batch
 history and `docs/m14_candidate_review_worksheet.md` for the v6-v9
 ruleset history. Accepted records proceed
 automatically; rejected and held records remain auditable but do not block
@@ -126,3 +141,23 @@ batches toward a target of at least a couple thousand papers -- see
 `docs/roadmap.md`'s "Scaling beyond 500 papers for Phase 2 tuning" section
 and `docs/m27_corpus_library.md` for how the resulting parsed content is
 persisted across sessions once imported.
+
+**Known follow-up (not fixed by this batch):** two systemic quality gaps
+surfaced during the `retstart=2000` batch's Codex review remain open for
+a dedicated future cleanup, since neither is specific to this batch's own
+net-new rows: (1) roughly a dozen already-merged records from earlier
+batches match the title-lacks-intervention pattern documented above --
+found by re-running this batch's stricter title check against the whole
+manifest, not just its own additions; (2) `PyMuPDFParser`'s title
+extraction is unreliable for some publisher PDF layouts (Cureus's
+"Review began MM/DD/YYYY" peer-review-date banner, Frontiers' "TYPE
+Review"/"TYPE Original Research" article-type header), so roughly 7% of
+imported `Paper.title` values across the whole corpus are not the actual
+paper title -- confirmed by direct query against the imported database,
+both before and after this batch (42 of 677 papers before, 50 of 718
+after). `Paper.title` is set purely from `parsed.title`
+(`knowledge_engine/database.py`'s `PaperRepository._build_paper`) and
+never falls back to the manifest CSV's curated `title` field, which is
+almost always correct since it comes from PubMed/PMC metadata rather
+than PDF-layout heuristics; preferring the manifest title when present
+would fix this for the whole corpus, not just future batches.
