@@ -68,6 +68,13 @@ from knowledge_engine.pubmed_discovery import (
     NcbiDiscoveryError,
     PubmedPmcDiscoveryService,
 )
+from knowledge_engine.unpaywall_http import UrllibUnpaywallTransport
+from knowledge_engine.unpaywall_lookup import GetTransport as UnpaywallGetTransport
+from knowledge_engine.unpaywall_lookup import (
+    UnpaywallLookupError,
+    UnpaywallLookupService,
+    parse_dois_file,
+)
 from knowledge_engine.vector_search import (
     DEFAULT_LOCAL_MODEL_NAME,
     EmbeddingGenerator,
@@ -147,6 +154,20 @@ CoreReviewCandidatesOption = Annotated[
     typer.Option(
         "--candidates",
         help="CORE discovery JSON path.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+UnpaywallDoiOption = Annotated[
+    str,
+    typer.Option("--doi", help="DOI to look up (e.g. from a held candidate)."),
+]
+UnpaywallDoisFileOption = Annotated[
+    Path,
+    typer.Option(
+        "--dois-file",
+        help='JSON file: {"dois": ["10.x/...", ...]} (max 100).',
         exists=True,
         dir_okay=False,
         readable=True,
@@ -300,6 +321,23 @@ def _core_discovery_service() -> CoreDiscoveryService:
     transport = cast(CoreGetTransport, UrllibCoreTransport())
     api_key = build_settings(Path.cwd()).core_api_key
     return CoreDiscoveryService(transport, api_key=api_key)
+
+
+def _unpaywall_lookup_service() -> UnpaywallLookupService:
+    """Build the production Unpaywall lookup service for an explicit command.
+
+    Raises `ValueError` if `KE_UNPAYWALL_EMAIL` is unset -- Unpaywall's
+    usage policy requires a contact email on every request, and this
+    project does not bake in a default contact for every installation.
+    """
+
+    email = build_settings(Path.cwd()).unpaywall_email
+    if not email:
+        raise ValueError(
+            "KE_UNPAYWALL_EMAIL is not set. Unpaywall requires a contact email in every request."
+        )
+    transport = cast(UnpaywallGetTransport, UrllibUnpaywallTransport())
+    return UnpaywallLookupService(transport, email=email)
 
 
 def _local_database() -> Database:
@@ -648,6 +686,102 @@ def core_candidate_review_prepare(
     console.print(
         f"[green]Prepared {worksheet.candidate_count} pending candidate reviews:[/green] {output}. "
         "No candidates were approved or promoted."
+    )
+
+
+@app.command("unpaywall-doi-lookup")
+def unpaywall_doi_lookup(
+    doi: UnpaywallDoiOption,
+    output: CandidateOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Look up one DOI's OA-location/license evidence via the official Unpaywall API.
+
+    Evidence lookup only -- not a discovery-and-adjudication pipeline like
+    `pubmed-candidate-discover`/`europepmc-candidate-discover`/
+    `core-candidate-discover`. Unpaywall's topic-search endpoint was
+    confirmed broken (HTTP 500) at build time, and even its working per-DOI
+    endpoint carries no scientific-scope signal, so this command makes no
+    accept/reject/hold decision. Intended to enrich a DOI already surfaced
+    by another pipeline (e.g. a `held` candidate) with Unpaywall's own view
+    of its best OA location and license. Requires `KE_UNPAYWALL_EMAIL`.
+    """
+
+    _validate_output(output, force=force)
+    try:
+        service = _unpaywall_lookup_service()
+    except ValueError as exc:
+        console.print(f"[red]{escape(str(exc))}[/red]")
+        raise typer.Exit(1) from None
+
+    console.print("[yellow]Network access:[/yellow] querying the official Unpaywall API.")
+    try:
+        result = service.lookup(doi)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except UnpaywallLookupError as exc:
+        console.print(f"[red]Unpaywall lookup failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    _write_output(output, result.to_json())
+    if result.found and result.record is not None:
+        console.print(
+            f"[green]Wrote OA evidence for {result.doi}:[/green] {output} "
+            f"(is_oa={result.record.is_oa})."
+        )
+    else:
+        console.print(
+            f"[yellow]DOI not found in Unpaywall's index:[/yellow] {result.doi}. Wrote {output}."
+        )
+    console.print(
+        "[bold]Evidence only; no adjudication decision was made and no PDFs were downloaded.[/bold]"
+    )
+
+
+@app.command("unpaywall-batch-lookup")
+def unpaywall_batch_lookup(
+    dois_file: UnpaywallDoisFileOption,
+    output: CandidateOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Look up a bounded batch (max 100) of DOIs' OA-location/license evidence.
+
+    See `unpaywall-doi-lookup` for the design rationale. Requires
+    `KE_UNPAYWALL_EMAIL`.
+    """
+
+    _validate_output(output, force=force)
+    try:
+        dois = parse_dois_file(dois_file)
+    except UnpaywallLookupError as exc:
+        console.print(f"[red]{escape(str(exc))}[/red]")
+        raise typer.Exit(1) from exc
+    try:
+        service = _unpaywall_lookup_service()
+    except ValueError as exc:
+        console.print(f"[red]{escape(str(exc))}[/red]")
+        raise typer.Exit(1) from None
+
+    console.print(
+        f"[yellow]Network access:[/yellow] querying the official Unpaywall API for "
+        f"{len(dois)} DOI(s)."
+    )
+    try:
+        result = service.lookup_many(dois)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except UnpaywallLookupError as exc:
+        console.print(f"[red]Unpaywall lookup failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    _write_output(output, result.to_json())
+    found = sum(1 for item in result.results if item.found)
+    console.print(
+        f"[green]Wrote OA evidence for {len(dois)} DOI(s):[/green] {output} "
+        f"({found} found, {len(dois) - found} not found)."
+    )
+    console.print(
+        "[bold]Evidence only; no adjudication decision was made and no PDFs were downloaded.[/bold]"
     )
 
 

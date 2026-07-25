@@ -497,6 +497,31 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   adjudication only -- not wired into acquisition, and does not resume
   corpus growth, which remains intentionally frozen at 605 papers by the
   project owner's prior decision.
+- Added M36: Unpaywall as a fourth evidence source, but as a per-DOI
+  OA-location/license *lookup tool* rather than a fifth discovery pipeline
+  (`docs/m36_unpaywall_lookup.md`). Unpaywall's `/v2/search` endpoint
+  returned a consistent `HTTP 500 Internal Server Error` across multiple
+  distinct queries and retries at build time (confirmed empirically), so
+  there was no reliable endpoint to build a `--query` discovery command
+  against; its working per-DOI endpoint (`GET /v2/{doi}`) also carries no
+  scientific-scope signal and no single canonical host to allowlist the
+  way CORE (`core.ac.uk`) and Europe PMC (`europepmc.org`) do -- every URL
+  it returns points to some third-party publisher or repository. New
+  `ke unpaywall-doi-lookup` and `ke unpaywall-batch-lookup` (bounded to
+  100 DOIs) commands, backed by `knowledge_engine.unpaywall_http` (bounded
+  HTTPS transport, `api.unpaywall.org` only) and
+  `knowledge_engine.unpaywall_lookup` (per-DOI OA-status/license evidence,
+  with a small normalizer mapping Unpaywall's real `cc-by`-style license
+  tokens to the format the shared `license_rules.py` expects before
+  evaluating). Makes **no** accept/reject/hold decision of its own --
+  intended to enrich a DOI already surfaced (and possibly `held`) by
+  `pubmed_discovery.py`, `europepmc_discovery.py`, or `core_discovery.py`
+  with Unpaywall's own OA-location/license evidence. Requires
+  `KE_UNPAYWALL_EMAIL` (Unpaywall's usage policy requires a contact email
+  on every request); the commands fail cleanly before any network access
+  if it is unset. Not wired into acquisition, and does not resume corpus
+  growth, which remains intentionally frozen at 605 papers by the project
+  owner's prior decision.
 
 ### Changed
 
