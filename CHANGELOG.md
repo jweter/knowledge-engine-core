@@ -569,6 +569,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   already-normalized license string that never exercised the real
   `prepare_manual_pdf_preview` -> `export_manual_pdf_manifest_draft` path;
   added an end-to-end regression test that drives both functions together.
+- Grew the corpus 677 -> 735 papers via the existing M14 PMC pipeline
+  (discovery retstart=2000): 250 candidates discovered, 98 deterministically
+  accepted after excluding 23 self-audited false positives, 40 already
+  present (query overlap, filtered before acquisition), 58 net-new PMC OA
+  PDFs acquired and imported via a fresh corpus import. Self-audited the
+  accepted set for known false-positive patterns *before* export this time,
+  rather than waiting for a Codex review to catch them post-hoc: found the
+  previously-documented incidental-comorbidity-case-report and
+  T1D-specific patterns again (5 more case reports, 1 more T1D-specific
+  paper), plus a newly-documented pattern -- 11 records the deterministic
+  v9 ruleset accepted despite their *titles* naming no approved scope term
+  and no named therapeutic intervention at all (checked directly against
+  `inclusion_criteria.md`'s explicit title-level requirement), because the
+  target disease appeared only as an incidental covariate deep in an
+  abstract about an unrelated primary disease (hemodialysis frailty, COPD
+  hypoxemia, ventilator-weaning prediction, heart-failure diuretic
+  resistance), or because the record was a mechanism-only review, a
+  data-quality methodology paper, or a conceptual framework with no
+  treatment evidence. See `data/corpora/glp1_weight_loss/README.md`'s
+  "Current Status" section for the full pattern breakdown.
 
 ### Changed
 

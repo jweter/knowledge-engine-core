@@ -62,37 +62,62 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 677 sources: the small historical GLP-1
-prototype set (3 rows) plus 674 accepted records from eight small
-(`--limit 250`) automated discovery batches (`retstart` 0 through 1750) of
+The committed manifest holds 735 sources: the small historical GLP-1
+prototype set (3 rows) plus 732 accepted records from nine small
+(`--limit 250`) automated discovery batches (`retstart` 0 through 2000) of
 the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
-A further twenty-nine records were manually excluded after individual
+A further fifty-two records were manually excluded after individual
 abstract review, since v9's disease/intervention keyword match has no
 automated way to catch several recurring patterns: single-patient case
 reports where the named disease is only incidental patient background or
 the reported intervention treats an unrelated coexisting condition (a
-dermatology case report was caught this way in the `retstart=1750` batch);
+dermatology case report was caught this way in the `retstart=1750` batch;
+five more -- a liver-abscess, a limb-ischemia/antiphospholipid, a
+renal-abscess, and a Graves'-disease case report, plus one already listed
+below -- were caught the same way in the `retstart=2000` batch);
 gene-/protein-name lexical collisions (e.g. the NOD-SCID mouse strain, the
 FTO gene's "fat mass and obesity-associated" full name); type 1
 diabetes-specific sources per `exclusion_criteria.md`'s explicit rule (two
 more caught in the `retstart=1750` batch, one an immune-tolerance
 intervention paper and one a fatty-acid/microbiota paper, both explicitly
-T1D-scoped despite matching the batch's disease/intervention keywords); a
-pediatric study population whose title's forward-looking "Adult" outcome
-term obscured the actual (non-adult) subjects (the same evasion pattern
-recurred once more in the `retstart=1750` batch: a childhood-obesity
-review whose title named "Adult Cardiometabolic Disease" only as a future
-burden, not an adult intervention); and a few papers matching a target
-term only via generic English phrasing unrelated to the actual disease
-entity. Several of these were first caught by Codex reviews on the growth
-PRs, including all four `retstart=1750` exclusions. As of the `retstart=1250` batch, the
+T1D-scoped despite matching the batch's disease/intervention keywords; a
+bioelectronic thymic-modulation immune-tolerance paper caught the same way
+in the `retstart=2000` batch); a pediatric study population whose title's
+forward-looking "Adult" outcome term obscured the actual (non-adult)
+subjects (the same evasion pattern recurred once more in the
+`retstart=1750` batch: a childhood-obesity review whose title named
+"Adult Cardiometabolic Disease" only as a future burden, not an adult
+intervention); and a few papers matching a target term only via generic
+English phrasing unrelated to the actual disease entity. The
+`retstart=2000` batch's self-audit (performed proactively before export,
+rather than caught after the fact by Codex) also surfaced a distinct,
+newly-documented pattern: automated adjudication accepting a record whose
+*title* names no approved scope term and no named therapeutic
+intervention at all, because the target disease appears only as one
+incidental covariate deep in the abstract of a study whose actual subject
+is a different disease entirely (e.g. hemodialysis frailty, COPD
+hypoxemia, ventilator-weaning prediction, heart-failure diuretic
+resistance) or because the paper is a mechanism-only review, a
+methodology paper with no treatment evidence, or a conceptual framework
+with no named intervention -- eleven records were excluded under this
+pattern in the `retstart=2000` batch, checked directly against
+`inclusion_criteria.md`'s explicit title-level requirement rather than
+against any of the four previously-documented patterns above. Several of
+the earlier exclusions were first caught by Codex reviews on the growth
+PRs, including all four `retstart=1750` exclusions; the `retstart=2000`
+batch's 23 exclusions were all caught proactively during self-audit,
+before export. As of the `retstart=1250` batch, the
 project owner gave explicit direction that this corpus-building phase
 should prioritize breadth over precision: only the clear-cut patterns
 above are now screened before acquisition, not exhaustive gray-area
 sweeps for mechanism-only reviews, analytical-chemistry papers, or drugs
-studied for unrelated diseases. See `CHANGELOG.md` for the full per-batch
+studied for unrelated diseases -- drugs studied for an unrelated disease
+(e.g. an SGLT2 inhibitor trial in aortic stenosis, a GLP-1 receptor
+agonist scoping review on rotator cuff disease) remain included under
+this policy even when the target disease is absent from the title. See
+`CHANGELOG.md` for the full per-batch
 history and `docs/m14_candidate_review_worksheet.md` for the v6-v9
 ruleset history. Accepted records proceed
 automatically; rejected and held records remain auditable but do not block
