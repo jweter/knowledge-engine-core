@@ -569,6 +569,38 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   already-normalized license string that never exercised the real
   `prepare_manual_pdf_preview` -> `export_manual_pdf_manifest_draft` path;
   added an end-to-end regression test that drives both functions together.
+- Grew the corpus 677 -> 735 papers via the existing M14 PMC pipeline
+  (discovery retstart=2000): 250 candidates discovered, 121 deterministically
+  accepted, whittled to 81 across two self-audit rounds (23 excluded before
+  export; 17 more of the resulting net-new candidates excluded after a
+  Codex review on the growth PR caught 2 the first pass had missed and
+  prompted a stricter re-check of every accepted title against
+  `inclusion_criteria.md`'s explicit two-part requirement -- an approved
+  scope term *and* a named therapeutic intervention, both in the title),
+  40 already present (query overlap, filtered before acquisition), 41
+  net-new PMC OA PDFs acquired and imported via a fresh corpus import
+  (677 -> 718). The first self-audit round re-found the
+  previously-documented incidental-comorbidity-case-report and
+  T1D-specific patterns (6 more case reports, 1 more T1D-specific paper).
+  The second round's stricter title check found 29 more records the
+  ruleset had wrongly accepted -- 17 of them this batch's own net-new
+  candidates, removed; 12 already present in the corpus from an earlier,
+  already-merged batch, left as documented follow-up cleanup rather than
+  retroactively edited by this PR -- because the target disease appeared
+  only as an incidental covariate deep in an abstract about an unrelated
+  primary disease (hemodialysis frailty, COPD hypoxemia, ventilator-weaning
+  prediction, heart-failure diuretic resistance, park walkability), or
+  because the record was a mechanism-only review, a data-quality or
+  measurement-comparison methodology paper, a risk-prediction model, or a
+  conceptual framework with no treatment evidence. Also documented, as a
+  separate known follow-up not fixed by this batch: `PyMuPDFParser`'s
+  title extraction is unreliable for some publisher PDF layouts (Cureus's
+  peer-review-date banner, Frontiers' article-type header), leaving ~7% of
+  the whole corpus's imported `Paper.title` values wrong (50 of 718,
+  confirmed by direct query; 42 of these predate this batch) since
+  `PaperRepository._build_paper` never falls back to the manifest's
+  curated title. See `data/corpora/glp1_weight_loss/README.md`'s
+  "Current Status" section for the full pattern breakdown.
 
 ### Changed
 
