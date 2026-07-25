@@ -632,6 +632,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   corpus-inclusion-philosophy call for the project owner, not this
   cleanup. Fresh corpus-import (706 imported, 0 failed) and regenerated
   compressed `corpus_library` snapshot.
+- Fixed 3 more records a Codex review on the cleanup PR caught: 2 had
+  been correctly identified as false positives during the `retstart=2000`
+  abstract review but were dropped by mistake when the final exclusion
+  list was compiled (a transcription oversight, not a judgment error);
+  the third was a third instance of the same incidental-obesity-covariate
+  pattern, dating to the much earlier `retstart=500` batch, found via a
+  full-corpus regex sweep the review comment prompted. Corpus: 706 ->
+  704. That same sweep surfaced roughly 90 more titles with neither a
+  scope term nor an intervention term present -- deliberately left
+  unaudited and unremoved, since re-auditing the whole corpus's
+  precision this way is exactly the kind of tightening the project
+  owner asked to defer until after more milestones land. Fresh
+  corpus-import (704 imported, 0 failed) and regenerated compressed
+  `corpus_library` snapshot.
 
 ### Changed
 

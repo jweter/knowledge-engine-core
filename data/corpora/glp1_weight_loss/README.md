@@ -62,13 +62,13 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 706 sources: the small historical GLP-1
-prototype set (3 rows) plus 703 accepted records from nine small
+The committed manifest holds 704 sources: the small historical GLP-1
+prototype set (3 rows) plus 701 accepted records from nine small
 (`--limit 250`) automated discovery batches (`retstart` 0 through 2000) of
 the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
-A further eighty-one records were manually excluded after individual
+A further eighty-three records were manually excluded after individual
 abstract review, since v9's disease/intervention keyword match has no
 automated way to catch several recurring patterns: single-patient case
 reports where the named disease is only incidental patient background or
@@ -150,7 +150,24 @@ already-merged records from earlier batches matching the
 title-lacks-intervention pattern above (found by re-running that
 batch's stricter title check against the whole manifest, not just its
 own additions) were removed in a dedicated cleanup pass, each
-re-confirmed against its full abstract before removal.
+re-confirmed against its full abstract before removal. A Codex review
+on that cleanup PR then caught 2 more the pass had missed -- both had
+been correctly identified as false positives during the earlier
+`retstart=2000` abstract review but were dropped by mistake when the
+final exclusion list was compiled, an oversight in transcription, not
+in the underlying judgment. Also caught by that same Codex review: a
+third instance of the identical incidental-obesity-covariate pattern
+(a high-altitude mine workers' sleep-disordered-breathing study,
+`pmc-13332975`) dating to the much earlier `retstart=500` batch, found
+via a full-corpus regex sweep (title lacks both a scope term and an
+intervention term) prompted by that review comment. All 3 removed,
+bringing the corpus to 704 papers. That same sweep surfaced roughly 90
+more titles with neither pattern present -- not individually
+abstract-verified and not removed here, since retroactively
+re-auditing the entire corpus's precision this way is exactly the kind
+of tightening the project owner has asked to defer until after more
+milestones land; flagged here for whenever that pass happens, not
+acted on now.
 `PyMuPDFParser`'s title extraction being unreliable for some publisher
 PDF layouts (Cureus's "Review began MM/DD/YYYY" peer-review-date
 banner, Frontiers' "TYPE Review"/"TYPE Original Research" article-type
