@@ -194,7 +194,9 @@ class LinkedCorpusIngestionService(CorpusIngestionService):
 
             try:
                 with self.session.begin_nested():
-                    paper = ClassifiedPaperRepository(self.session).add_parsed_paper(parsed)
+                    paper = ClassifiedPaperRepository(self.session).add_parsed_paper(
+                        parsed, manifest_title=item.title
+                    )
             except PaperPersistenceError as exc:
                 failed_count += 1
                 item.item_status = "failed"

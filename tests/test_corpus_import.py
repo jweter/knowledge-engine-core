@@ -192,6 +192,67 @@ def test_ingestion_persists_paper_pages(tmp_path: Path) -> None:
         assert paper.pages[1].text == "Page two text."
 
 
+def test_ingestion_prefers_manifest_title_over_parsed_title(tmp_path: Path) -> None:
+    """Regression test: some publisher PDF layouts defeat PyMuPDFParser's
+
+    title-extraction heuristic (Cureus's "Review began MM/DD/YYYY"
+    peer-review banner, Frontiers' "TYPE Review" article-type header),
+    producing an unusable `parsed.title`. The manifest row's own `title`
+    comes from PubMed/PMC bibliographic metadata and is authoritative when
+    present, so it must win over whatever the PDF parser extracted --
+    confirmed by direct query against a real imported corpus, where ~7% of
+    papers had a nonsense stored title despite a correct manifest title.
+    """
+
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(tmp_path, rows=[source_row(title="Manifest Title")])
+    pdf_path = declare_pdf(tmp_path, "paper.pdf")
+    parser = StubParser(
+        {
+            "paper.pdf": parsed_paper(
+                pdf_path,
+                title="Review began 03/27/2026",
+                doi="10.1234/source-1",
+                content_hash="a" * 64,
+            )
+        }
+    )
+
+    with database.session() as session:
+        CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
+            corpus_path
+        )
+
+    with database.session() as session:
+        paper = session.query(Paper).filter_by(doi="10.1234/source-1").one()
+        assert paper.title == "Manifest Title"
+
+
+def test_add_parsed_paper_falls_back_to_parsed_title_without_manifest_title(
+    tmp_path: Path,
+) -> None:
+    """`manifest_title=None` (the single-file `ke import` path has no manifest
+
+    row to consult) must preserve the pre-fix behavior of using the parsed
+    title -- a real manifest row can't reach this branch, since `title` is a
+    required CSV column (`REQUIRED_CSV_HEADERS`) enforced before import.
+    """
+
+    database = make_database(tmp_path)
+    pdf_path = tmp_path / "paper.pdf"
+    pdf_path.write_text("placeholder", encoding="utf-8")
+    parsed = parsed_paper(
+        pdf_path,
+        title="Parsed Title",
+        doi="10.1234/source-1",
+        content_hash="a" * 64,
+    )
+
+    with database.session() as session:
+        paper = ClassifiedPaperRepository(session).add_parsed_paper(parsed)
+        assert paper.title == "Parsed Title"
+
+
 def test_import_blocked_manifest_preserves_blocked_run_status(tmp_path: Path) -> None:
     database = make_database(tmp_path)
     corpus_path = make_corpus(
@@ -509,7 +570,7 @@ def test_expected_search_index_failure_rolls_back_item_and_continues(
     original_upsert = ClassifiedPaperRepository.upsert_search_index
 
     def fail_one_index(self: ClassifiedPaperRepository, paper: Paper) -> None:
-        if paper.title == "Fail Me":
+        if paper.doi == "10.1234/fail":
             raise SearchIndexWriteError("sensitive sqlite failure")
         original_upsert(self, paper)
 

@@ -343,16 +343,29 @@ class PaperRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def _build_paper(self, parsed: ParsedPaper, keywords: list[str] | None = None) -> Paper:
+    def _build_paper(
+        self,
+        parsed: ParsedPaper,
+        keywords: list[str] | None = None,
+        *,
+        manifest_title: str | None = None,
+    ) -> Paper:
         """Construct and stage an unflushed `Paper` with text, pages, authors, and keywords.
 
         Shared by every `add_parsed_paper` override so a field added here (for
         example `PaperPage` persistence, added in M15) cannot silently apply
         to only one persistence path.
+
+        `manifest_title`, when supplied, wins over `parsed.title`: PDF-layout
+        title extraction is a heuristic (`PyMuPDFParser` picks the largest text
+        on the first page) that some publisher layouts defeat -- Cureus's
+        "Review began MM/DD/YYYY" peer-review banner, Frontiers' "TYPE Review"
+        article-type header -- while a manifest row's title comes from
+        PubMed/PMC bibliographic metadata and is authoritative when present.
         """
 
         paper = Paper(
-            title=parsed.title,
+            title=manifest_title or parsed.title,
             doi=parsed.doi,
             abstract=parsed.abstract,
             source_path=str(parsed.source_path),
@@ -381,10 +394,16 @@ class PaperRepository:
 
         return paper
 
-    def add_parsed_paper(self, parsed: ParsedPaper, keywords: list[str] | None = None) -> Paper:
+    def add_parsed_paper(
+        self,
+        parsed: ParsedPaper,
+        keywords: list[str] | None = None,
+        *,
+        manifest_title: str | None = None,
+    ) -> Paper:
         """Store a parsed paper and update the full-text index."""
 
-        paper = self._build_paper(parsed, keywords)
+        paper = self._build_paper(parsed, keywords, manifest_title=manifest_title)
 
         try:
             self.session.flush()
