@@ -86,6 +86,16 @@ acceptance, release validation, and optional post-release quality audits.
   intentionally frozen at 605 papers by the project owner's prior decision
   (see "Scaling beyond 500 papers for Phase 2 tuning" below). See
   `docs/m34_europepmc_discovery.md`.
+- **M35** added CORE as a third automated discovery source -- `ke
+  core-candidate-discover` and `ke core-candidate-review-prepare`, with
+  their own adjudication engine (`core_candidate_review.py`,
+  `CORE_ADJUDICATION_RULES_VERSION`). CORE's API never returns a license
+  field (verified empirically), so every CORE candidate's license rule is
+  `incomplete_missing_license` and no CORE candidate can ever auto-accept --
+  a deliberate, honest consequence documented in `docs/m35_core_discovery.md`,
+  not a bug. Scoped to discovery and adjudication only -- **not** wired into
+  acquisition, and does not resume corpus growth: the corpus remains
+  intentionally frozen at 605 papers by the project owner's prior decision.
 
 ### M14: Controlled 500-paper rehearsal
 
@@ -157,6 +167,35 @@ of which pipeline found a candidate.
 corpus remains intentionally frozen at 605 papers by the project owner's
 prior decision (see "Scaling beyond 500 papers for Phase 2 tuning" below).
 M34 only builds the discovery/adjudication capability; using it to actually
+grow the corpus further is a separate decision for the project owner to
+make explicitly, the same way M13/M14's own scale-up was.
+
+### M35: CORE, a third discovery source
+
+The project owner asked to keep adding automated discovery sources without
+pausing for permission at each step. M35 adds CORE
+(https://core.ac.uk) as the third one -- see `docs/m35_core_discovery.md`
+for the full design, and `knowledge_engine/core_discovery.py` /
+`knowledge_engine/core_candidate_review.py` for the implementation. CORE
+aggregates open-access content broadly (not just biomedical literature),
+using offset-based pagination and an optional API key
+(`KE_CORE_API_KEY`) that raises its otherwise low unauthenticated rate
+limit. Critically, CORE's API never returns a license field at all
+(verified empirically by enumerating every key in a real response), so
+`core_candidate_review.py`'s license rule is always
+`incomplete_missing_license` and no CORE candidate can ever auto-accept --
+every candidate that clears every other rule still lands in `held`,
+pending a human visiting the original source to confirm reuse terms. PMC/
+Europe PMC overlap detection is a known, deliberate limitation for this
+milestone (CORE never reports a PMCID); see `docs/m35_core_discovery.md`.
+Scientific-scope and license rules are shared with M14 and M34's engines
+so the same corpus-inclusion criteria apply regardless of which pipeline
+found a candidate.
+
+**Not yet wired into acquisition, and does not resume corpus growth.** The
+corpus remains intentionally frozen at 605 papers by the project owner's
+prior decision (see "Scaling beyond 500 papers for Phase 2 tuning" below).
+M35 only builds the discovery/adjudication capability; using it to actually
 grow the corpus further is a separate decision for the project owner to
 make explicitly, the same way M13/M14's own scale-up was.
 

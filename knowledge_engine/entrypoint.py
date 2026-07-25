@@ -13,6 +13,13 @@ from rich.table import Table
 from knowledge_engine.cli import app as app
 from knowledge_engine.cli import console
 from knowledge_engine.config import build_settings
+from knowledge_engine.core_candidate_review import (
+    CoreCandidateReviewError,
+    prepare_core_candidate_review,
+)
+from knowledge_engine.core_discovery import CoreDiscoveryError, CoreDiscoveryService
+from knowledge_engine.core_discovery import GetTransport as CoreGetTransport
+from knowledge_engine.core_http import UrllibCoreTransport
 from knowledge_engine.corpus_library import export_corpus_library, import_corpus_library
 from knowledge_engine.crossref_http import UrllibCrossrefTransport
 from knowledge_engine.crossref_provider import CrossrefProvider
@@ -122,6 +129,24 @@ EuropePmcReviewCandidatesOption = Annotated[
     typer.Option(
         "--candidates",
         help="Europe PMC discovery JSON path.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+CoreQueryOption = Annotated[
+    str,
+    typer.Option("--query", help="CORE search expression."),
+]
+CoreOffsetOption = Annotated[
+    int,
+    typer.Option("--offset", min=0, help="Zero-based CORE page offset."),
+]
+CoreReviewCandidatesOption = Annotated[
+    Path,
+    typer.Option(
+        "--candidates",
+        help="CORE discovery JSON path.",
         exists=True,
         dir_okay=False,
         readable=True,
@@ -262,6 +287,19 @@ def _europepmc_discovery_service() -> EuropePmcDiscoveryService:
 
     transport = cast(EuropePmcGetTransport, UrllibEuropePmcTransport())
     return EuropePmcDiscoveryService(transport)
+
+
+def _core_discovery_service() -> CoreDiscoveryService:
+    """Build the production CORE discovery service for an explicit command.
+
+    `KE_CORE_API_KEY` is optional -- CORE's public API works unauthenticated
+    at a low rate limit and only raises that limit with a bearer token; see
+    `core_discovery.py`'s module docstring.
+    """
+
+    transport = cast(CoreGetTransport, UrllibCoreTransport())
+    api_key = build_settings(Path.cwd()).core_api_key
+    return CoreDiscoveryService(transport, api_key=api_key)
 
 
 def _local_database() -> Database:
@@ -532,6 +570,78 @@ def europepmc_candidate_review_prepare(
         console.print(
             f"[red]Europe PMC candidate review preparation failed:[/red] {escape(str(exc))}"
         )
+        raise typer.Exit(1) from exc
+
+    _write_output(output, worksheet.to_json())
+    console.print(
+        f"[green]Prepared {worksheet.candidate_count} pending candidate reviews:[/green] {output}. "
+        "No candidates were approved or promoted."
+    )
+
+
+@app.command("core-candidate-discover")
+def core_candidate_discover(
+    query: CoreQueryOption,
+    output: CandidateOutputOption,
+    limit: CandidateLimitOption = 25,
+    offset: CoreOffsetOption = 0,
+    force: ForceOutputOption = False,
+) -> None:
+    """Discover reviewable CORE candidates without downloading PDFs.
+
+    The third automated discovery source (M35), alongside
+    `pubmed-candidate-discover` and `europepmc-candidate-discover`. CORE
+    aggregates open-access content broadly, well beyond biomedical
+    literature. An optional `KE_CORE_API_KEY` raises CORE's low
+    unauthenticated rate limit; discovery still works without one.
+    """
+
+    _validate_output(output, force=force)
+    console.print("[yellow]Network access:[/yellow] querying the official CORE API.")
+    try:
+        result = _core_discovery_service().discover(
+            query,
+            limit=limit,
+            offset=offset,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except CoreDiscoveryError as exc:
+        console.print(f"[red]CORE discovery failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    _write_output(output, result.to_json())
+    console.print(
+        f"[green]Wrote {len(result.candidates)} candidates:[/green] {output} "
+        f"(of {result.total_hits} total hits)."
+    )
+    if result.next_offset is not None:
+        console.print(f"Next page: --offset {result.next_offset}")
+    console.print(
+        "[bold]Candidates require human inclusion and license review; "
+        "no PDFs were downloaded.[/bold]"
+    )
+
+
+@app.command("core-candidate-review-prepare")
+def core_candidate_review_prepare(
+    candidates: CoreReviewCandidatesOption,
+    output: CandidateOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Create a deterministic CORE adjudication worksheet.
+
+    Never approves or promotes a candidate. Note: CORE never supplies a
+    license field, so every candidate's license rule is
+    `"incomplete_missing_license"` and no CORE candidate can auto-accept --
+    see `core_candidate_review.py`'s module docstring.
+    """
+
+    _validate_output(output, force=force)
+    try:
+        worksheet = prepare_core_candidate_review(candidates)
+    except CoreCandidateReviewError as exc:
+        console.print(f"[red]CORE candidate review preparation failed:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
 
     _write_output(output, worksheet.to_json())
