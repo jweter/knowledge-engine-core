@@ -81,10 +81,14 @@ acceptance, release validation, and optional post-release quality audits.
   `ke europepmc-candidate-review-prepare`, with their own adjudication engine
   (`europepmc_candidate_review.py`, `EUROPEPMC_ADJUDICATION_RULES_VERSION`)
   since identity and full-text evidence work differently for Europe PMC than
-  for PMC. Scoped to discovery and adjudication only -- **not** wired into
-  acquisition, and does not resume corpus growth: the corpus remains
-  intentionally frozen at 605 papers by the project owner's prior decision
-  (see "Scaling beyond 500 papers for Phase 2 tuning" below). See
+  for PMC. A follow-up change added the matching acquisition step
+  (`europepmc_reviewed_approval.py`, `europepmc_acquisition.py`,
+  `ke europepmc-oa-acquire`), mirroring M14's own phased discovery-then-
+  acquisition history. A bounded live smoke test found that
+  `europepmc.org`'s hosted PDF endpoint, the only host this pipeline
+  allowlists, returns HTTP 403 from this project's sandboxed execution
+  environment for every candidate tried -- documented as a known
+  live-verification gap, not silently assumed working. See
   `docs/m34_europepmc_discovery.md`.
 - **M35** added CORE as a third automated discovery source -- `ke
   core-candidate-discover` and `ke core-candidate-review-prepare`, with
@@ -94,8 +98,10 @@ acceptance, release validation, and optional post-release quality audits.
   `incomplete_missing_license` and no CORE candidate can ever auto-accept --
   a deliberate, honest consequence documented in `docs/m35_core_discovery.md`,
   not a bug. Scoped to discovery and adjudication only -- **not** wired into
-  acquisition, and does not resume corpus growth: the corpus remains
-  intentionally frozen at 605 papers by the project owner's prior decision.
+  acquisition. (M14's own PubMed/PMC pipeline, separately, has continued
+  growing the corpus toward the "Scaling beyond 500 papers for Phase 2
+  tuning" target below; CORE candidates specifically are not part of that
+  growth.)
 - **M36** added Unpaywall as a fourth evidence source, but as a per-DOI
   OA-location/license *lookup tool* rather than a fifth discovery pipeline
   -- `ke unpaywall-doi-lookup` and `ke unpaywall-batch-lookup`. Unpaywall's
@@ -182,12 +188,13 @@ rules are shared with M14's engine (`scientific_scope.py`,
 `license_rules.py`) so the same corpus-inclusion criteria apply regardless
 of which pipeline found a candidate.
 
-**Not yet wired into acquisition, and does not resume corpus growth.** The
-corpus remains intentionally frozen at 605 papers by the project owner's
-prior decision (see "Scaling beyond 500 papers for Phase 2 tuning" below).
-M34 only builds the discovery/adjudication capability; using it to actually
-grow the corpus further is a separate decision for the project owner to
-make explicitly, the same way M13/M14's own scale-up was.
+A follow-up change added the matching acquisition step -- see
+`docs/m34_europepmc_discovery.md`'s Acquisition section and its "Known
+live-verification gap" note. Growing the corpus via Europe PMC candidates
+specifically (as opposed to M14's own PubMed/PMC pipeline, which has
+continued growing the corpus toward the "Scaling beyond 500 papers for
+Phase 2 tuning" target below) remains a separate decision for the project
+owner to make explicitly, the same way M13/M14's own scale-up was.
 
 ### M35: CORE, a third discovery source
 
@@ -211,12 +218,12 @@ Scientific-scope and license rules are shared with M14 and M34's engines
 so the same corpus-inclusion criteria apply regardless of which pipeline
 found a candidate.
 
-**Not yet wired into acquisition, and does not resume corpus growth.** The
-corpus remains intentionally frozen at 605 papers by the project owner's
-prior decision (see "Scaling beyond 500 papers for Phase 2 tuning" below).
-M35 only builds the discovery/adjudication capability; using it to actually
-grow the corpus further is a separate decision for the project owner to
-make explicitly, the same way M13/M14's own scale-up was.
+**Not yet wired into acquisition.** M35 only builds the discovery/
+adjudication capability for CORE specifically; using it to actually grow
+the corpus further is a separate decision for the project owner to make
+explicitly, the same way M13/M14's own scale-up was (see "Scaling beyond
+500 papers for Phase 2 tuning" below for the growth that has happened, via
+M14's own pipeline).
 
 ### M36: Unpaywall, an evidence lookup tool rather than a fourth discovery pipeline
 
@@ -241,9 +248,11 @@ this evidence is being used to re-examine. Requires `KE_UNPAYWALL_EMAIL`
 (Unpaywall's usage policy requires a contact email on every request; this
 project does not bake in a default for every installation).
 
-**Not wired into acquisition, and does not resume corpus growth.** The
-corpus remains intentionally frozen at 605 papers by the project owner's
-prior decision (see "Scaling beyond 500 papers for Phase 2 tuning" below).
+**Not wired into acquisition or corpus growth** -- Unpaywall is a lookup
+tool for evidence a human is already examining, not a discovery pipeline
+with its own accept/reject/hold decisions to acquire from (see "Scaling
+beyond 500 papers for Phase 2 tuning" below for the growth that has
+happened, via M14's own pipeline).
 
 ### Scaling beyond 500 papers for Phase 2 tuning
 
