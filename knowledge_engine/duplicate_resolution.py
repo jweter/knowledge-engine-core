@@ -35,7 +35,12 @@ def resolve_duplicate_before_persistence(
     """
 
     repository = DuplicateQueryRepository(session)
-    candidate_doi = normalize_doi(parsed.doi) if parsed.doi else item.normalized_doi
+    # The manifest's own normalized_doi (PubMed/PMC-sourced) wins over a parsed
+    # DOI: PDF DOI extraction can grab a truncated in-text citation instead of
+    # the paper's own DOI (e.g. "10.1172/jci" instead of the full
+    # "10.1172/jci.insight.198707"), which would otherwise falsely collide with
+    # an unrelated paper and route a genuinely new import to needs_review.
+    candidate_doi = item.normalized_doi or (normalize_doi(parsed.doi) if parsed.doi else None)
     manifest_metadata = metadata_for_import_item(item)
 
     exact_item = repository.same_run_item_by_content_hash(

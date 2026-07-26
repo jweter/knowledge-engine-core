@@ -349,6 +349,7 @@ class PaperRepository:
         keywords: list[str] | None = None,
         *,
         manifest_title: str | None = None,
+        manifest_doi: str | None = None,
     ) -> Paper:
         """Construct and stage an unflushed `Paper` with text, pages, authors, and keywords.
 
@@ -356,17 +357,24 @@ class PaperRepository:
         example `PaperPage` persistence, added in M15) cannot silently apply
         to only one persistence path.
 
-        `manifest_title`, when supplied, wins over `parsed.title`: PDF-layout
-        title extraction is a heuristic (`PyMuPDFParser` picks the largest text
-        on the first page) that some publisher layouts defeat -- Cureus's
-        "Review began MM/DD/YYYY" peer-review banner, Frontiers' "TYPE Review"
-        article-type header -- while a manifest row's title comes from
-        PubMed/PMC bibliographic metadata and is authoritative when present.
+        `manifest_title`/`manifest_doi`, when supplied, win over `parsed.title`/
+        `parsed.doi`: PDF-layout extraction is a heuristic (`PyMuPDFParser` picks
+        the largest text on the first page for title; DOI extraction can grab a
+        truncated in-text citation instead of the paper's own DOI) that some
+        publisher layouts defeat -- Cureus's "Review began MM/DD/YYYY" peer-review
+        banner, Frontiers' "TYPE Review" article-type header, a DOI cut short at
+        "10.1172/jci" instead of the full "10.1172/jci.insight.198707" -- while a
+        manifest row's title/DOI come from PubMed/PMC bibliographic metadata and
+        are authoritative when present. A wrong parsed DOI is not just a display
+        bug: `resolve_duplicate_before_persistence` also prefers `parsed.doi`,
+        so a truncated one can falsely collide with an unrelated paper and send a
+        genuinely new paper to `needs_review` instead of importing it -- found
+        via a live Codex review flagging exactly this on three records.
         """
 
         paper = Paper(
             title=manifest_title or parsed.title,
-            doi=parsed.doi,
+            doi=manifest_doi or parsed.doi,
             abstract=parsed.abstract,
             source_path=str(parsed.source_path),
             content_hash=parsed.content_hash,
@@ -400,10 +408,13 @@ class PaperRepository:
         keywords: list[str] | None = None,
         *,
         manifest_title: str | None = None,
+        manifest_doi: str | None = None,
     ) -> Paper:
         """Store a parsed paper and update the full-text index."""
 
-        paper = self._build_paper(parsed, keywords, manifest_title=manifest_title)
+        paper = self._build_paper(
+            parsed, keywords, manifest_title=manifest_title, manifest_doi=manifest_doi
+        )
 
         try:
             self.session.flush()

@@ -62,9 +62,9 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 704 sources: the small historical GLP-1
-prototype set (3 rows) plus 701 accepted records from nine small
-(`--limit 250`) automated discovery batches (`retstart` 0 through 2000) of
+The committed manifest holds 799 sources: the small historical GLP-1
+prototype set (3 rows) plus 796 accepted records from ten small
+(`--limit 250`) automated discovery batches (`retstart` 0 through 2250) of
 the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
@@ -143,6 +143,41 @@ batches toward a target of at least a couple thousand papers -- see
 `docs/roadmap.md`'s "Scaling beyond 500 papers for Phase 2 tuning" section
 and `docs/m27_corpus_library.md` for how the resulting parsed content is
 persisted across sessions once imported.
+
+The `retstart=2250` batch (250 candidates, 97 deterministically accepted,
+1 already present from query overlap, 96 net-new PMC OA PDFs acquired)
+deliberately ran with **no manual audit layer** -- the project owner gave
+explicit direction to prioritize shipping milestone after milestone over
+further precision tightening, and this project's own "Working-version
+review policy" (`docs/roadmap.md`, Phase 1) already states that
+"repository execution must not depend on the project owner manually
+reviewing individual candidates... before a working version exists" and
+that "deterministic automation must accept, reject, hold, retry, or
+exclude each record." The `retstart=2000` batch's manual self-audit
+rounds went beyond what that policy actually calls for; this batch
+returns to trusting the v9 ruleset's own accept/reject/hold decisions
+directly, the same way `retstart=0` through `retstart=1250` did before
+manual auditing crept in.
+
+A Codex review on the `retstart=2250` growth PR caught three real bugs
+this no-manual-audit approach surfaced, none of them scientific-scope
+judgment calls: (1) a genuine study-level duplicate the deterministic
+DOI/PMID-based dedup couldn't catch -- consecutive-DOI Portuguese and
+English translations of the same knee-arthroplasty study, resolved by
+keeping the English row; (2) a real, previously-undetected bug where
+`Paper.doi` (and, more seriously, duplicate-collision detection) trusted
+`parsed.doi` -- the PDF's own extracted DOI, which can be a truncated
+in-text citation (e.g. `10.1172/jci` instead of the full
+`10.1172/jci.insight.198707`) -- over the manifest's own correct,
+PubMed/PMC-sourced DOI; a truncated parsed DOI had falsely collided with
+an unrelated already-imported paper's DOI, silently routing a
+genuinely new paper to `needs_review` and dropping it from the imported
+corpus entirely (the same class of bug M27's manifest-title fix
+addressed for `title`, now extended to `doi`, in both
+`PaperRepository._build_paper` and
+`resolve_duplicate_before_persistence`). Fixed at the code level
+(`manifest_doi` now wins the same way `manifest_title` already did) plus
+the specific rows involved, corpus corrected 800 -> 799.
 
 **Resolved follow-ups:** both systemic quality gaps surfaced during the
 `retstart=2000` batch's Codex review have since been closed. The dozen

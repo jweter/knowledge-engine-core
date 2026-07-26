@@ -646,6 +646,41 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   owner asked to defer until after more milestones land. Fresh
   corpus-import (704 imported, 0 failed) and regenerated compressed
   `corpus_library` snapshot.
+- Grew the corpus 704 -> 800 papers via the existing M14 PMC pipeline
+  (discovery retstart=2250): 250 candidates discovered, 97
+  deterministically accepted, 1 already present (query overlap,
+  filtered before acquisition), 96 net-new PMC OA PDFs acquired and
+  imported via a fresh corpus import. Deliberately ran with no manual
+  audit layer this time, per the project owner's explicit direction to
+  prioritize shipping milestone after milestone over further precision
+  tightening -- and per this project's own "Working-version review
+  policy" (`docs/roadmap.md`, Phase 1), which already states repository
+  execution must not depend on manually reviewing individual candidates
+  before a working version exists; the `retstart=2000` batch's manual
+  self-audit rounds went beyond what that policy calls for. Regenerated
+  the compressed `corpus_library` snapshot (~52MB, well under GitHub's
+  100MB limit) and updated the corpus README's "Current Status" section.
+- Fixed a real bug a Codex review on the `retstart=2250` growth PR
+  caught: `Paper.doi` (`PaperRepository._build_paper`) and duplicate
+  detection (`resolve_duplicate_before_persistence`) both preferred
+  `parsed.doi` -- the PDF's own extracted DOI, which can be a truncated
+  in-text citation (e.g. `10.1172/jci` instead of the full
+  `10.1172/jci.insight.198707`) -- over the manifest's correct,
+  PubMed/PMC-sourced DOI. Beyond storing the wrong DOI, this had a more
+  serious consequence: a truncated parsed DOI falsely collided with an
+  unrelated already-imported paper, silently routing a genuinely new
+  paper to `needs_review` and dropping it from the imported corpus
+  entirely, undercounting the manifest's own advertised paper count.
+  Extended the same `manifest_title`-wins pattern from the M27 title fix
+  to `doi`: `CorpusIngestionService`/`LinkedCorpusIngestionService` now
+  pass `item.normalized_doi` through as `manifest_doi`, which wins over
+  `parsed.doi` in both `_build_paper` and duplicate resolution. Added
+  two regression tests: one proving `Paper.doi` prefers the manifest DOI,
+  one reproducing the exact false-collision scenario end-to-end. Also
+  fixed a genuine study-level duplicate the same review caught --
+  consecutive-DOI Portuguese and English translations of one
+  knee-arthroplasty study -- by keeping the English row. Corpus corrected
+  800 -> 799; fresh corpus-import and regenerated compressed snapshot.
 
 ### Changed
 

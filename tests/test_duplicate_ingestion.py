@@ -132,6 +132,71 @@ def test_doi_hash_conflict_requires_review_without_persistence_write(tmp_path: P
     assert _counts(database) == before
 
 
+def test_truncated_parsed_doi_does_not_falsely_collide_with_unrelated_paper(
+    tmp_path: Path,
+) -> None:
+    """Regression test: PDF DOI extraction can grab a truncated in-text
+
+    citation (e.g. "10.1172/jci" instead of the full
+    "10.1172/jci.insight.198707") instead of the paper's own DOI. Before
+    this fix, duplicate resolution preferred that truncated `parsed.doi`
+    over the manifest's own correct, PubMed/PMC-sourced
+    `item.normalized_doi`, so a genuinely new paper whose PDF happened to
+    parse to the same truncated prefix as an unrelated already-imported
+    paper was falsely routed to needs_review instead of importing --
+    found via a live Codex review on a real corpus-growth PR reporting
+    exactly this collision between two unrelated papers.
+    """
+
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(
+        tmp_path,
+        rows=[source_row(local_path="candidate.pdf", doi="10.1172/jci.insight.202213")],
+    )
+    existing_path = declare_pdf(tmp_path, "existing.pdf")
+    _seed_paper(
+        database,
+        parsed_paper(
+            existing_path,
+            title="Existing",
+            doi="10.1172/jci.insight.198707",
+            content_hash="a" * 64,
+        ),
+    )
+    before = _counts(database)
+
+    candidate_path = declare_pdf(tmp_path, "candidate.pdf")
+    parser = StubParser(
+        {
+            "candidate.pdf": parsed_paper(
+                candidate_path,
+                title="Candidate",
+                doi="10.1172/jci",
+                content_hash="b" * 64,
+            )
+        }
+    )
+
+    with database.session() as session:
+        result = CorpusIngestionService(
+            session, project_root=tmp_path, parser=parser
+        ).import_corpus(corpus_path)
+
+    run = get_run(database, result.import_run_id)
+    item = run.items[0]
+
+    assert result.run_status == "succeeded"
+    assert result.imported_count == 1
+    assert result.needs_review_count == 0
+    assert item.item_status == "imported"
+    assert item.duplicate_outcome == "none"
+    papers, paper_texts, search_rows = _counts(database)
+    before_papers, before_texts, before_search = before
+    assert papers == before_papers + 1
+    assert paper_texts == before_texts + 1
+    assert search_rows == before_search + 1
+
+
 def test_same_run_exact_hash_duplicate_references_first_item_without_second_write(
     tmp_path: Path,
 ) -> None:

@@ -25,10 +25,13 @@ class ClassifiedPaperRepository(PaperRepository):
         keywords: list[str] | None = None,
         *,
         manifest_title: str | None = None,
+        manifest_doi: str | None = None,
     ) -> Paper:
         """Store one paper and classify expected relational and FTS failures."""
 
-        paper = self._build_paper(parsed, keywords, manifest_title=manifest_title)
+        paper = self._build_paper(
+            parsed, keywords, manifest_title=manifest_title, manifest_doi=manifest_doi
+        )
 
         try:
             self.session.flush()

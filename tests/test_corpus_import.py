@@ -186,7 +186,7 @@ def test_ingestion_persists_paper_pages(tmp_path: Path) -> None:
         )
 
     with database.session() as session:
-        paper = session.query(Paper).filter_by(doi="10.1234/imported").one()
+        paper = session.query(Paper).filter_by(content_hash="a" * 64).one()
         assert [page.page_number for page in paper.pages] == [1, 2]
         assert paper.pages[0].text == "Page one text."
         assert paper.pages[1].text == "Page two text."
@@ -226,6 +226,42 @@ def test_ingestion_prefers_manifest_title_over_parsed_title(tmp_path: Path) -> N
     with database.session() as session:
         paper = session.query(Paper).filter_by(doi="10.1234/source-1").one()
         assert paper.title == "Manifest Title"
+
+
+def test_ingestion_prefers_manifest_doi_over_parsed_doi(tmp_path: Path) -> None:
+    """Regression test: PDF DOI extraction can grab a truncated in-text
+
+    citation instead of the paper's own DOI (e.g. "10.1172/jci" instead of
+    the full "10.1172/jci.insight.198707") -- found via a live Codex review
+    on a real corpus-growth PR, where a truncated parsed DOI both displayed
+    wrong and, more seriously, falsely collided with an unrelated paper's
+    duplicate-DOI check (see test_duplicate_ingestion.py for that half).
+    The manifest row's own DOI is PubMed/PMC-sourced and authoritative when
+    present, so it must win over whatever the PDF parser extracted.
+    """
+
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(tmp_path, rows=[source_row(doi="10.1172/jci.insight.198707")])
+    pdf_path = declare_pdf(tmp_path, "paper.pdf")
+    parser = StubParser(
+        {
+            "paper.pdf": parsed_paper(
+                pdf_path,
+                title="Manifest Title",
+                doi="10.1172/jci",
+                content_hash="a" * 64,
+            )
+        }
+    )
+
+    with database.session() as session:
+        CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
+            corpus_path
+        )
+
+    with database.session() as session:
+        paper = session.query(Paper).filter_by(content_hash="a" * 64).one()
+        assert paper.doi == "10.1172/jci.insight.198707"
 
 
 def test_add_parsed_paper_falls_back_to_parsed_title_without_manifest_title(
@@ -570,7 +606,7 @@ def test_expected_search_index_failure_rolls_back_item_and_continues(
     original_upsert = ClassifiedPaperRepository.upsert_search_index
 
     def fail_one_index(self: ClassifiedPaperRepository, paper: Paper) -> None:
-        if paper.doi == "10.1234/fail":
+        if paper.source_path.endswith("fail.pdf"):
             raise SearchIndexWriteError("sensitive sqlite failure")
         original_upsert(self, paper)
 
