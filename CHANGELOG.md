@@ -777,6 +777,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   batches got from a fresh import against an empty database. Regenerated
   the compressed `corpus_library` snapshot (~60MB, still under GitHub's
   100MB limit) and updated the corpus README's "Current Status" section.
+- Fixed 10 scientific-scope false positives a Codex review on the
+  `retstart=2750` growth PR caught: a kidney-cancer epidemiology review,
+  an ovarian-cancer/circadian-rhythm review, an unrelated multiple-
+  sclerosis outcomes study, two policy-only evidence briefs, a
+  Prader-Willi sarcopenia diagnostic-only study, an idiopathic
+  intracranial hypertension case report, a type 2 diabetes qualitative
+  well-being study naming no intervention, a diabetes knowledge/
+  attitudes/practices survey naming no intervention, an alcohol-
+  consumption/cancer review, and a bariatric-surgery outcomes study
+  explicitly scoped to type 1 diabetes. All match already-established
+  exclusion patterns (off-target primary disease, diagnostic/measurement-
+  only, policy-only, no-intervention-named, type 1 diabetes-specific),
+  not new gray-area calls. Removing already-imported rows required a full
+  fresh reimport rather than a surgical row deletion, since this
+  session's local database enforces foreign keys (`import_items.
+  matched_paper_id` would block a direct `DELETE`): removed the 10 rows'
+  PDFs, reinitialized the local database, and re-ran `ke corpus-import`
+  against the corrected manifest -- 920 imported, 0 failed, 0 skipped, an
+  exact one-to-one match. Corpus corrected 930 -> 920; regenerated the
+  compressed snapshot.
 
 ### Changed
 
