@@ -62,9 +62,9 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 704 sources: the small historical GLP-1
-prototype set (3 rows) plus 701 accepted records from nine small
-(`--limit 250`) automated discovery batches (`retstart` 0 through 2000) of
+The committed manifest holds 800 sources: the small historical GLP-1
+prototype set (3 rows) plus 797 accepted records from ten small
+(`--limit 250`) automated discovery batches (`retstart` 0 through 2250) of
 the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
@@ -143,6 +143,21 @@ batches toward a target of at least a couple thousand papers -- see
 `docs/roadmap.md`'s "Scaling beyond 500 papers for Phase 2 tuning" section
 and `docs/m27_corpus_library.md` for how the resulting parsed content is
 persisted across sessions once imported.
+
+The `retstart=2250` batch (250 candidates, 97 deterministically accepted,
+1 already present from query overlap, 96 net-new PMC OA PDFs acquired)
+deliberately ran with **no manual audit layer** -- the project owner gave
+explicit direction to prioritize shipping milestone after milestone over
+further precision tightening, and this project's own "Working-version
+review policy" (`docs/roadmap.md`, Phase 1) already states that
+"repository execution must not depend on the project owner manually
+reviewing individual candidates... before a working version exists" and
+that "deterministic automation must accept, reject, hold, retry, or
+exclude each record." The `retstart=2000` batch's manual self-audit
+rounds went beyond what that policy actually calls for; this batch
+returns to trusting the v9 ruleset's own accept/reject/hold decisions
+directly, the same way `retstart=0` through `retstart=1250` did before
+manual auditing crept in.
 
 **Resolved follow-ups:** both systemic quality gaps surfaced during the
 `retstart=2000` batch's Codex review have since been closed. The dozen

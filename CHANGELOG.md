@@ -646,6 +646,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   owner asked to defer until after more milestones land. Fresh
   corpus-import (704 imported, 0 failed) and regenerated compressed
   `corpus_library` snapshot.
+- Grew the corpus 704 -> 800 papers via the existing M14 PMC pipeline
+  (discovery retstart=2250): 250 candidates discovered, 97
+  deterministically accepted, 1 already present (query overlap,
+  filtered before acquisition), 96 net-new PMC OA PDFs acquired and
+  imported via a fresh corpus import. Deliberately ran with no manual
+  audit layer this time, per the project owner's explicit direction to
+  prioritize shipping milestone after milestone over further precision
+  tightening -- and per this project's own "Working-version review
+  policy" (`docs/roadmap.md`, Phase 1), which already states repository
+  execution must not depend on manually reviewing individual candidates
+  before a working version exists; the `retstart=2000` batch's manual
+  self-audit rounds went beyond what that policy calls for. Regenerated
+  the compressed `corpus_library` snapshot (~52MB, well under GitHub's
+  100MB limit) and updated the corpus README's "Current Status" section.
 
 ### Changed
 
