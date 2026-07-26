@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import TypedDict
 from urllib.parse import urlparse
 
-from knowledge_engine.europepmc_discovery import EUROPEPMC_PDF_HOST
+from knowledge_engine.europepmc_http import EUROPEPMC_PDF_HOST
 from knowledge_engine.license_rules import evaluate_license
 from knowledge_engine.scientific_scope import evaluate_scientific_scope
 from knowledge_engine.utils import normalize_doi

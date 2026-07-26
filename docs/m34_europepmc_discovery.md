@@ -1,17 +1,16 @@
-# M34 Europe PMC Candidate Discovery
+# M34 Europe PMC Candidate Discovery and Acquisition
 
 ## Purpose
 
 The project owner asked for more automated discovery sources and pipelines
 beyond M14's PubMed/PMC-only pipeline. M34 adds Europe PMC as the second
-source, using the same discovery-then-adjudication shape as M14: bounded,
-reviewable candidate output first, deterministic accept/reject/hold
-adjudication second. Neither step downloads papers, approves licenses, or
-performs ingestion. **M34 is discovery and adjudication only -- it is not
-wired into acquisition, and using it does not resume corpus growth.** The
-corpus remains intentionally frozen at 605 papers by the project owner's
-prior decision (`docs/roadmap.md`'s "Scaling beyond 500 papers for Phase 2
-tuning").
+source, using the same discovery-then-adjudication-then-acquisition shape
+as M14: bounded, reviewable candidate output first, deterministic
+accept/reject/hold adjudication second, approval-gated PDF acquisition
+third. None of the three steps performs corpus ingestion -- acquired PDFs
+land on disk with a sanitized receipt, exactly like M14's
+`pmc-oa-acquire`, and still require a separate, explicit ingestion run
+(`ke corpus-import`) to enter the queryable corpus.
 
 ## Why a second, independent pipeline rather than one reused engine
 
@@ -87,15 +86,49 @@ ke europepmc-candidate-review-prepare \
   --output work/m34/review-000.json
 ```
 
-Both commands refuse to overwrite an existing output unless `--force` is
-supplied. Symbolic-link inputs and outputs are rejected.
+After the worksheet's `held`/`rejected` decisions are settled (working-version
+policy: this can run with no manual edits, since every record already carries
+an explicit deterministic decision), export the accepted subset as
+acquisition-ready approvals:
+
+```bash
+poetry run python -m knowledge_engine.europepmc_reviewed_approval_cli export \
+  --worksheet work/m34/review-000.json \
+  --output work/m34/approvals-000.json \
+  --limit 25
+```
+
+`export` re-verifies every rule result on each `accepted` record (not just
+its `decision` label), rejects any unresolved ambiguity, and selects exactly
+`--limit` records in worksheet order -- mirroring `reviewed_approval_cli.py`'s
+contract for M14. Then acquire only those explicitly approved PDFs:
+
+```bash
+ke europepmc-oa-acquire \
+  --candidates work/m34/candidates-000.json \
+  --approvals work/m34/approvals-000.json \
+  --papers-dir work/m34/papers \
+  --receipt work/m34/receipt-000.json
+```
+
+`europepmc-oa-acquire` cross-checks every approval against its source
+candidate record (DOI, license, PDF URL must match exactly), stages every
+PDF to a temporary file, verifies the `%PDF-` signature, and only then
+commits the whole batch -- any single failure rolls back every file already
+staged or written, exactly like `pmc-oa-acquire`'s all-or-nothing contract.
+
+All three commands refuse to overwrite an existing output unless `--force`
+is supplied. Symbolic-link inputs and outputs are rejected.
 
 ## Network boundary
 
-`europepmc-candidate-discover` contacts only `www.ebi.ac.uk` (Europe PMC's
-official REST API host) over HTTPS. Redirects, URL credentials, non-HTTPS
-URLs, nonstandard ports, oversized responses, and unsupported hosts are
-rejected, mirroring `ncbi_http.py`'s transport (`europepmc_http.py`).
+`europepmc-candidate-discover` and `europepmc-oa-acquire` contact only
+`www.ebi.ac.uk` (Europe PMC's official REST API host) and `europepmc.org`
+(Europe PMC's own hosted full-text repository) over HTTPS, sharing one
+transport (`europepmc_http.py`'s `UrllibEuropePmcTransport`, allowlisting
+`EUROPEPMC_HOSTS`). Redirects, URL credentials, non-HTTPS URLs, nonstandard
+ports, oversized responses, and unsupported hosts are rejected, mirroring
+`ncbi_http.py`'s transport and its `PMC_CLOUD_PDF_HOST` precedent.
 
 ## Adjudication rules (`EUROPEPMC_ADJUDICATION_RULES_VERSION = "m34-europepmc-candidate-adjudication-v1"`)
 
@@ -133,11 +166,61 @@ result (`inclusion_rule_result`, `identity_rule_result`,
 `license_rule_result`, `full_text_rule_result`, `pmc_overlap_rule_result`,
 `duplicate_rule_result`).
 
+## Acquisition (`EuropePmcOaAcquisitionService`, `europepmc_acquisition.py`)
+
+Acquisition is approval-gated, exactly like M14's `pmc_acquisition.py`: it
+never re-derives which candidates to fetch from discovery output alone, and
+it never trusts a candidate's own `open_access`/`in_pmc` claims without an
+explicit, matching approval record. `_build_plans` cross-checks every
+approval's `doi`/`license`/`pdf_url` against its source candidate and
+additionally requires `open_access is True` and `in_pmc is False` on that
+candidate -- the latter enforces the "no single official PDF bucket"
+Europe-PMC-specific scope boundary (see above) at acquisition time too, not
+just during adjudication. Every approved `pdf_url` must resolve to
+`europepmc.org` over HTTPS with no credentials and a standard port; a
+non-`%PDF-` response, a non-200 status, or any single failure anywhere in
+the batch rolls back every file staged or committed so far, leaving the
+output directory exactly as it was before the run.
+
+## Known live-verification gap (found during a bounded smoke test)
+
+A bounded live smoke test (discover -> adjudicate -> export approvals ->
+acquire, against real preprint candidates with `in_pmc: false`,
+`open_access: true`, and a `europepmc.org`-hosted `pdf_url`) surfaced a
+real, reproducible problem: every `https://europepmc.org/api/fulltextRepo?
+pprId=...` URL Europe PMC's own REST API reports as an "Open access" PDF
+link returned HTTP 403 with the JSON body
+`{"error":"PDF link has expired or is invalid"}` -- for every candidate
+tried, immediately after discovery (so not a caching/staleness issue),
+with or without cookies, a `Referer` header, or a browser-like
+`User-Agent`, and across both curl and this service's own transport. The
+Europe PMC REST API itself (`www.ebi.ac.uk`) and the `europepmc.org`
+article HTML pages both responded normally throughout, so this is
+specific to the `fulltextRepo` endpoint, not a general connectivity
+problem.
+
+This was tested from this project's sandboxed execution environment,
+which routes all outbound HTTPS through a fixed pre-configured proxy egress
+point. A plausible, unconfirmed explanation is that Europe PMC's frontend
+applies bot/WAF protection to this internal repo-proxy endpoint (built for
+its own web app's in-browser PDF viewer, not documented as a public bulk
+API the way PMC's S3 bucket is) that flags this environment's egress IP;
+an equally plausible alternative is that the endpoint no longer serves
+unauthenticated automated requests at all, regardless of caller. This
+service's code, host-allowlisting, and error handling are correct and
+fully unit-tested against the documented contract; whether the *endpoint
+itself* is reliably reachable for real automated acquisition, from a
+normal (non-sandboxed) network, is unverified and should be re-checked by
+the project owner before this pipeline is relied on for real corpus
+growth -- unlike M14's PMC S3 bucket, which this same kind of live check
+already confirmed works.
+
 ## What is deliberately not built yet
 
-Acquisition (actually downloading a candidate's PDF) is out of scope for
-M34. Unlike PMC's single S3 bucket, Europe PMC's own hosted repository
-(`europepmc.org/api/fulltextRepo?...`) is a real, narrower target that could
-plausibly get its own acquisition service later, but that is a separate,
-not-yet-authorized milestone -- consistent with M14's own phased history
-(discovery and adjudication shipped before acquisition).
+Corpus ingestion of acquired Europe PMC PDFs is a separate, not-yet-wired
+step: `europepmc-oa-acquire` writes PDFs and a receipt, matching M14's
+`pmc-oa-acquire` contract exactly, but does not itself invoke
+`ke corpus-import` or update `sources.csv`/the compressed corpus library.
+Folding Europe PMC's acquired PDFs into the same queryable corpus M14 grows
+is a future milestone's decision, not an automatic consequence of building
+acquisition.

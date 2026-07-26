@@ -29,6 +29,14 @@ from knowledge_engine.corpus_library import (
 from knowledge_engine.crossref_http import UrllibCrossrefTransport
 from knowledge_engine.crossref_provider import CrossrefProvider
 from knowledge_engine.database import Database, ExtractionRunRepository, PaperRepository
+from knowledge_engine.europepmc_acquisition import (
+    AcquisitionTransport as EuropePmcAcquisitionTransport,
+)
+from knowledge_engine.europepmc_acquisition import (
+    EuropePmcAcquisitionError,
+    EuropePmcAcquisitionReceipt,
+    EuropePmcOaAcquisitionService,
+)
 from knowledge_engine.europepmc_candidate_review import (
     EuropePmcCandidateReviewError,
     prepare_europepmc_candidate_review,
@@ -226,6 +234,14 @@ ReceiptOutputOption = Annotated[
     Path,
     typer.Option("--receipt", help="Path for the sanitized acquisition receipt."),
 ]
+EuropePmcCandidatesPathOption = Annotated[
+    Path,
+    typer.Option("--candidates", help="Reviewed Europe PMC candidate JSON path."),
+]
+EuropePmcApprovalsPathOption = Annotated[
+    Path,
+    typer.Option("--approvals", help="Explicit operator Europe PMC approval JSON path."),
+]
 PaperIdOption = Annotated[
     int,
     typer.Option("--paper-id", help="Persisted paper's database ID."),
@@ -338,6 +354,13 @@ def _pmc_acquisition_service() -> PmcOaAcquisitionService:
 
     transport = cast(AcquisitionTransport, UrllibNcbiTransport())
     return PmcOaAcquisitionService(transport)
+
+
+def _europepmc_acquisition_service() -> EuropePmcOaAcquisitionService:
+    """Build the production approval-gated Europe PMC acquisition service."""
+
+    transport = cast(EuropePmcAcquisitionTransport, UrllibEuropePmcTransport())
+    return EuropePmcOaAcquisitionService(transport)
 
 
 def _europepmc_discovery_service() -> EuropePmcDiscoveryService:
@@ -471,6 +494,24 @@ def _write_output(output: Path, content: str) -> None:
 def _rollback_acquired_files(
     output_directory: Path,
     receipt: AcquisitionReceipt,
+) -> None:
+    """Remove files from a completed batch when its receipt cannot be persisted."""
+
+    rollback_failed = False
+    for item in receipt.items:
+        try:
+            (output_directory / item.filename).unlink(missing_ok=True)
+        except OSError:
+            rollback_failed = True
+    if rollback_failed:
+        raise typer.BadParameter(
+            "Receipt output failed and acquired PDFs could not be fully rolled back."
+        )
+
+
+def _rollback_europepmc_acquired_files(
+    output_directory: Path,
+    receipt: EuropePmcAcquisitionReceipt,
 ) -> None:
     """Remove files from a completed batch when its receipt cannot be persisted."""
 
@@ -935,6 +976,55 @@ def pmc_oa_acquire(
         ) from None
     console.print(
         f"[green]Acquired {result.acquired_count} approved PMC OA PDFs.[/green] Receipt: {receipt}"
+    )
+    console.print(
+        "[bold]Approval evidence was cross-checked exactly; no manifest rows were promoted.[/bold]"
+    )
+
+
+@app.command("europepmc-oa-acquire")
+def europepmc_oa_acquire(
+    candidates: EuropePmcCandidatesPathOption,
+    approvals: EuropePmcApprovalsPathOption,
+    papers_dir: PapersDirectoryOption,
+    receipt: ReceiptOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Acquire only explicitly approved Europe PMC OA PDFs and write a sanitized receipt.
+
+    Mirrors `pmc-oa-acquire`'s approval-gated, all-or-nothing acquisition
+    contract for M34's Europe PMC pipeline (see
+    `docs/m34_europepmc_discovery.md`). Only fetches from `europepmc.org`
+    (Europe PMC's own hosted full-text repository) -- never a third-party OA
+    mirror -- and only for candidates `europepmc-candidate-review-prepare`
+    marked `accepted`.
+    """
+
+    _validate_output(receipt, force=force)
+    console.print(
+        "[yellow]Network access:[/yellow] acquiring explicitly approved PDFs "
+        "from Europe PMC's own hosted full-text repository."
+    )
+    try:
+        result = _europepmc_acquisition_service().acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=papers_dir,
+        )
+    except EuropePmcAcquisitionError as exc:
+        console.print(f"[red]Europe PMC OA acquisition failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    try:
+        _write_output(receipt, result.to_json())
+    except typer.BadParameter:
+        _rollback_europepmc_acquired_files(papers_dir, result)
+        raise typer.BadParameter(
+            "Receipt output could not be written; acquired PDFs were rolled back."
+        ) from None
+    console.print(
+        f"[green]Acquired {result.acquired_count} approved Europe PMC OA PDFs.[/green] "
+        f"Receipt: {receipt}"
     )
     console.print(
         "[bold]Approval evidence was cross-checked exactly; no manifest rows were promoted.[/bold]"

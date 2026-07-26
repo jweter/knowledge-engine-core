@@ -712,6 +712,56 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   breadth-over-precision carve-out). Corpus corrected 880 -> 867; fresh
   corpus-import (867 imported, 0 failed) and regenerated compressed
   snapshot.
+- Added the M34 Europe PMC acquisition service, closing the gap
+  `docs/m34_europepmc_discovery.md` explicitly left open ("Acquisition ...
+  is out of scope for M34 ... that is a separate, not-yet-authorized
+  milestone"). Mirrors M14's `reviewed_approval.py` -> `pmc_acquisition.py`
+  shape but as its own independently versioned pair matched to Europe
+  PMC's real schema differences (Europe PMC ID/DOI-anchored identity
+  instead of PMCID, `europepmc.org` -- Europe PMC's own hosted full-text
+  repository -- as the only allowlisted PDF host instead of PMC's S3
+  bucket): `europepmc_reviewed_approval.py`
+  (`export_europepmc_reviewed_approvals`) re-verifies every adjudication
+  rule result on each accepted worksheet record and selects an exact
+  subset in worksheet order; `europepmc_reviewed_approval_cli.py` exposes
+  it as a standalone `export` command; `europepmc_acquisition.py`
+  (`EuropePmcOaAcquisitionService`) cross-checks every approval against
+  its source candidate (DOI, license, PDF URL, plus Europe-PMC-specific
+  `open_access is True`/`in_pmc is False` checks), stages every PDF to a
+  temporary file, verifies the `%PDF-` signature, and commits the whole
+  batch atomically -- any single failure rolls back everything staged or
+  written so far, exactly like `pmc_acquisition.py`'s all-or-nothing
+  contract. Wired into the CLI as `ke europepmc-oa-acquire`. Added a
+  single shared `EUROPEPMC_PDF_HOST` constant to `europepmc_http.py`
+  (mirroring `ncbi_http.py`'s `PMC_CLOUD_PDF_HOST` precedent) so the one
+  bounded Europe PMC transport allowlists both the discovery REST API host
+  and the PDF-acquisition host. Acquisition remains approval-gated and
+  does not itself perform corpus ingestion -- acquired PDFs still require
+  a separate, explicit `ke corpus-import` run, matching M14's own phased
+  history and this project's "no step silently expands its own authority"
+  pattern. A bounded live smoke test (real discover -> adjudicate ->
+  export -> acquire against open-access, non-PMC preprint candidates)
+  found that `europepmc.org/api/fulltextRepo`, the only PDF host this
+  pipeline allowlists, consistently returns HTTP 403
+  (`"PDF link has expired or is invalid"`) from this project's sandboxed
+  execution environment for every candidate tried, while the REST API and
+  article HTML pages both responded normally -- see
+  `docs/m34_europepmc_discovery.md`'s "Known live-verification gap" for
+  the full investigation. The code, tests, and host allowlisting are
+  correct against the documented contract; whether the endpoint itself is
+  reliably reachable for real acquisition from a non-sandboxed network is
+  unverified and flagged for the project owner to re-check. Fixed two real
+  bugs a Codex review on the acquisition PR caught: (1) `europepmc-oa-
+  acquire` did not track a PDF's temporary file path until after it wrote
+  successfully, so a mid-write `OSError` (e.g. a full disk) left an
+  untracked `.tmp` file behind that every retry then rejected as an
+  existing output -- fixed by registering the path before writing, mirroring
+  the same not-yet-fixed pattern in M14's own `pmc_acquisition.py`; (2)
+  `europepmc_reviewed_approval_cli.py`'s `export` command defaulted
+  `--limit` to 500, an unreachable default since a single discovery page
+  never exceeds 100 candidates, so every normal default invocation failed
+  with "fewer accepted approvals" -- fixed by making `--limit` optional,
+  defaulting to exporting every accepted record when omitted.
 
 ### Changed
 

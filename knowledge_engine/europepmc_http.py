@@ -14,7 +14,15 @@ EUROPEPMC_REST_HOST = "www.ebi.ac.uk"
 """Europe PMC's official REST API host (https://europepmc.org/RestfulWebService),
 operated by EMBL-EBI. Public, unauthenticated, unsigned HTTPS GET requests."""
 
-EUROPEPMC_HOSTS = {EUROPEPMC_REST_HOST}
+EUROPEPMC_PDF_HOST = "europepmc.org"
+"""Europe PMC's own hosted full-text repository -- the only PDF host
+`europepmc_candidate_review.py` ever accepts (see `europepmc_discovery.py`).
+Included here, alongside the REST API host, so this one shared transport
+serves both discovery and acquisition -- mirroring `ncbi_http.py`'s
+`NCBI_HOSTS`, which combines the E-utilities hosts with `PMC_CLOUD_PDF_HOST`
+for the exact same reason."""
+
+EUROPEPMC_HOSTS = {EUROPEPMC_REST_HOST, EUROPEPMC_PDF_HOST}
 
 
 class ResponseTooLargeError(OSError):
