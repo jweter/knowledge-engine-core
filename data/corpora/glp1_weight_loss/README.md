@@ -62,9 +62,9 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 799 sources: the small historical GLP-1
-prototype set (3 rows) plus 796 accepted records from ten small
-(`--limit 250`) automated discovery batches (`retstart` 0 through 2250) of
+The committed manifest holds 880 sources: the small historical GLP-1
+prototype set (3 rows) plus 877 accepted records from eleven small
+(`--limit 250`) automated discovery batches (`retstart` 0 through 2500) of
 the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
@@ -178,6 +178,14 @@ addressed for `title`, now extended to `doi`, in both
 `resolve_duplicate_before_persistence`). Fixed at the code level
 (`manifest_doi` now wins the same way `manifest_title` already did) plus
 the specific rows involved, corpus corrected 800 -> 799.
+
+The `retstart=2500` batch (250 candidates, 81 deterministically accepted,
+0 already present, 81 net-new PMC OA PDFs acquired) ran the same
+no-manual-audit way as `retstart=2250`, now with the manifest-DOI fix in
+place: a fresh `ke corpus-import` completed with 880 imported, 0 failed,
+0 skipped -- an exact one-to-one match against the manifest's 880 rows,
+confirming the false-collision class of bug from the previous batch did
+not recur.
 
 **Resolved follow-ups:** both systemic quality gaps surfaced during the
 `retstart=2000` batch's Codex review have since been closed. The dozen
