@@ -762,6 +762,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   never exceeds 100 candidates, so every normal default invocation failed
   with "fewer accepted approvals" -- fixed by making `--limit` optional,
   defaulting to exporting every accepted record when omitted.
+- Grew the corpus 867 -> 930 papers via the existing M14 PMC pipeline
+  (discovery `retstart=2750`): 250 candidates discovered, 77
+  deterministically accepted, 14 already present from query overlap, 63
+  net-new PMC OA PDFs acquired and imported. Ran the same no-manual-audit
+  way as the prior several batches. This batch's import used linked
+  resume (`ke corpus-import ... --resume-from <parent_run_id>`) rather
+  than a from-scratch fresh import, since this session's local database
+  already held a completed import run for the existing 867 papers
+  (restored from the committed compressed snapshot): resume mode skipped
+  re-parsing those 867 already-`imported` source_ids and processed only
+  the 63 new ones, reporting 63 imported, 0 failed, 867 skipped -- the
+  resume-mode equivalent of the exact one-to-one reconciliation prior
+  batches got from a fresh import against an empty database. Regenerated
+  the compressed `corpus_library` snapshot (~60MB, still under GitHub's
+  100MB limit) and updated the corpus README's "Current Status" section.
 
 ### Changed
 
