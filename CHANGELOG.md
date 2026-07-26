@@ -750,7 +750,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the full investigation. The code, tests, and host allowlisting are
   correct against the documented contract; whether the endpoint itself is
   reliably reachable for real acquisition from a non-sandboxed network is
-  unverified and flagged for the project owner to re-check.
+  unverified and flagged for the project owner to re-check. Fixed two real
+  bugs a Codex review on the acquisition PR caught: (1) `europepmc-oa-
+  acquire` did not track a PDF's temporary file path until after it wrote
+  successfully, so a mid-write `OSError` (e.g. a full disk) left an
+  untracked `.tmp` file behind that every retry then rejected as an
+  existing output -- fixed by registering the path before writing, mirroring
+  the same not-yet-fixed pattern in M14's own `pmc_acquisition.py`; (2)
+  `europepmc_reviewed_approval_cli.py`'s `export` command defaulted
+  `--limit` to 500, an unreachable default since a single discovery page
+  never exceeds 100 candidates, so every normal default invocation failed
+  with "fewer accepted approvals" -- fixed by making `--limit` optional,
+  defaulting to exporting every accepted record when omitted.
 
 ### Changed
 

@@ -24,11 +24,13 @@ OutputOption = Annotated[
     typer.Option("--output", help="Europe PMC acquisition approval JSON path."),
 ]
 LimitOption = Annotated[
-    int,
+    int | None,
     typer.Option(
         "--limit",
         min=1,
-        help="Select exactly this many validated accepted records in worksheet order.",
+        help="Select exactly this many validated accepted records in worksheet order. "
+        "Omit to select every accepted record (a single discovery page never exceeds "
+        "100 candidates, so a large fixed default would never be reachable).",
     ),
 ]
 ForceOption = Annotated[
@@ -46,7 +48,7 @@ def main() -> None:
 def export_command(
     worksheet: WorksheetOption,
     output: OutputOption,
-    limit: LimitOption = 500,
+    limit: LimitOption = None,
     force: ForceOption = False,
 ) -> None:
     """Export an exact deterministic subset of accepted Europe PMC adjudications."""

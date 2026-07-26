@@ -130,6 +130,33 @@ def test_cli_fails_when_limit_exceeds_accepted_count(tmp_path: Path) -> None:
     assert not output.exists()
 
 
+def test_cli_default_limit_exports_every_accepted_record(tmp_path: Path) -> None:
+    worksheet = tmp_path / "review.json"
+    _write_worksheet(worksheet, [_accepted(300), _accepted(100), _accepted(200)])
+    output = tmp_path / "approvals.json"
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "export",
+            "--worksheet",
+            str(worksheet),
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Selected 3 of 3 validated accepted" in result.output
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["selected_count"] == 3
+    assert [item["europepmc_id"] for item in payload["approvals"]] == [
+        "EPMC300",
+        "EPMC100",
+        "EPMC200",
+    ]
+
+
 def test_cli_refuses_existing_output_without_force(tmp_path: Path) -> None:
     output = tmp_path / "approvals.json"
     output.write_text("existing", encoding="utf-8")

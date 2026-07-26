@@ -112,6 +112,7 @@ class EuropePmcOaAcquisitionService:
 
         output_directory.mkdir(parents=True, exist_ok=True)
         staged: list[tuple[_AcquisitionPlan, Path, EuropePmcAcquisitionReceiptItem]] = []
+        attempted_temp_paths: list[Path] = []
         committed: list[Path] = []
         try:
             for ordinal, plan in enumerate(plans, start=1):
@@ -121,6 +122,7 @@ class EuropePmcOaAcquisitionService:
                 if not response.body.startswith(PDF_SIGNATURE):
                     raise EuropePmcAcquisitionError("Europe PMC OA resource was not a PDF payload.")
                 temporary = output_directory / f".{plan.filename}.tmp"
+                attempted_temp_paths.append(temporary)
                 temporary.write_bytes(response.body)
                 staged.append(
                     (
@@ -142,10 +144,10 @@ class EuropePmcOaAcquisitionService:
                 os.replace(temporary, destination)
                 committed.append(destination)
         except EuropePmcAcquisitionError:
-            _rollback_paths(staged=staged, committed=committed)
+            _rollback_paths(temp_paths=attempted_temp_paths, committed=committed)
             raise
         except OSError as exc:
-            _rollback_paths(staged=staged, committed=committed)
+            _rollback_paths(temp_paths=attempted_temp_paths, committed=committed)
             raise EuropePmcAcquisitionError("Approved PDF batch could not be committed.") from exc
 
         items = tuple(item for _, _, item in staged)
@@ -182,7 +184,7 @@ class _AcquisitionPlan:
 
 def _rollback_paths(
     *,
-    staged: list[tuple[_AcquisitionPlan, Path, EuropePmcAcquisitionReceiptItem]],
+    temp_paths: list[Path],
     committed: list[Path],
 ) -> None:
     rollback_failed = False
@@ -191,7 +193,7 @@ def _rollback_paths(
             path.unlink(missing_ok=True)
         except OSError:
             rollback_failed = True
-    for _, temporary, _ in staged:
+    for temporary in temp_paths:
         try:
             temporary.unlink(missing_ok=True)
         except OSError:
