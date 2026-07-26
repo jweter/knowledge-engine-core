@@ -614,6 +614,38 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   header), not just future imports, since the fix lives in the shared
   persistence path rather than the parser itself. Regenerated the
   compressed `corpus_library` snapshot accordingly.
+- Cleaned up the corpus 718 -> 706 papers: removed the dozen
+  already-merged records (from earlier `retstart` batches, predating
+  PR #163) matching the title-lacks-intervention pattern documented
+  above -- each re-confirmed against its full abstract before removal,
+  same bar as PR #163's own exclusions. Also ran the deterministic
+  ruleset's `evaluate_scientific_scope` function directly against each
+  excluded title/abstract and found it returns `"passed"` for every
+  one: the function evaluates disease/intervention terms over
+  title+abstract combined (not title-only, unlike its pediatric check)
+  and its intervention-term list is generic enough to match
+  incidentally in nearly any clinical abstract. Documented as an open,
+  explicitly-not-acted-on follow-up in
+  `data/corpora/glp1_weight_loss/README.md`, since tightening it would
+  change future batches' `accepted`/`held` outcomes and could
+  reclassify already-included papers if applied retroactively -- a
+  corpus-inclusion-philosophy call for the project owner, not this
+  cleanup. Fresh corpus-import (706 imported, 0 failed) and regenerated
+  compressed `corpus_library` snapshot.
+- Fixed 3 more records a Codex review on the cleanup PR caught: 2 had
+  been correctly identified as false positives during the `retstart=2000`
+  abstract review but were dropped by mistake when the final exclusion
+  list was compiled (a transcription oversight, not a judgment error);
+  the third was a third instance of the same incidental-obesity-covariate
+  pattern, dating to the much earlier `retstart=500` batch, found via a
+  full-corpus regex sweep the review comment prompted. Corpus: 706 ->
+  704. That same sweep surfaced roughly 90 more titles with neither a
+  scope term nor an intervention term present -- deliberately left
+  unaudited and unremoved, since re-auditing the whole corpus's
+  precision this way is exactly the kind of tightening the project
+  owner asked to defer until after more milestones land. Fresh
+  corpus-import (704 imported, 0 failed) and regenerated compressed
+  `corpus_library` snapshot.
 
 ### Changed
 
