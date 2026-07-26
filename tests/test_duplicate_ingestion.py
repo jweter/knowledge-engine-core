@@ -151,11 +151,7 @@ def test_truncated_parsed_doi_does_not_falsely_collide_with_unrelated_paper(
     database = make_database(tmp_path)
     corpus_path = make_corpus(
         tmp_path,
-        rows=[
-            source_row(
-                local_path="candidate.pdf", doi="10.1172/jci.insight.202213"
-            )
-        ],
+        rows=[source_row(local_path="candidate.pdf", doi="10.1172/jci.insight.202213")],
     )
     existing_path = declare_pdf(tmp_path, "existing.pdf")
     _seed_paper(

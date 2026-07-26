@@ -241,9 +241,7 @@ def test_ingestion_prefers_manifest_doi_over_parsed_doi(tmp_path: Path) -> None:
     """
 
     database = make_database(tmp_path)
-    corpus_path = make_corpus(
-        tmp_path, rows=[source_row(doi="10.1172/jci.insight.198707")]
-    )
+    corpus_path = make_corpus(tmp_path, rows=[source_row(doi="10.1172/jci.insight.198707")])
     pdf_path = declare_pdf(tmp_path, "paper.pdf")
     parser = StubParser(
         {
