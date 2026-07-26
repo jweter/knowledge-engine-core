@@ -660,6 +660,27 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   self-audit rounds went beyond what that policy calls for. Regenerated
   the compressed `corpus_library` snapshot (~52MB, well under GitHub's
   100MB limit) and updated the corpus README's "Current Status" section.
+- Fixed a real bug a Codex review on the `retstart=2250` growth PR
+  caught: `Paper.doi` (`PaperRepository._build_paper`) and duplicate
+  detection (`resolve_duplicate_before_persistence`) both preferred
+  `parsed.doi` -- the PDF's own extracted DOI, which can be a truncated
+  in-text citation (e.g. `10.1172/jci` instead of the full
+  `10.1172/jci.insight.198707`) -- over the manifest's correct,
+  PubMed/PMC-sourced DOI. Beyond storing the wrong DOI, this had a more
+  serious consequence: a truncated parsed DOI falsely collided with an
+  unrelated already-imported paper, silently routing a genuinely new
+  paper to `needs_review` and dropping it from the imported corpus
+  entirely, undercounting the manifest's own advertised paper count.
+  Extended the same `manifest_title`-wins pattern from the M27 title fix
+  to `doi`: `CorpusIngestionService`/`LinkedCorpusIngestionService` now
+  pass `item.normalized_doi` through as `manifest_doi`, which wins over
+  `parsed.doi` in both `_build_paper` and duplicate resolution. Added
+  two regression tests: one proving `Paper.doi` prefers the manifest DOI,
+  one reproducing the exact false-collision scenario end-to-end. Also
+  fixed a genuine study-level duplicate the same review caught --
+  consecutive-DOI Portuguese and English translations of one
+  knee-arthroplasty study -- by keeping the English row. Corpus corrected
+  800 -> 799; fresh corpus-import and regenerated compressed snapshot.
 
 ### Changed
 
