@@ -31,12 +31,9 @@ from http.client import IncompleteRead
 from typing import Protocol
 from urllib.parse import urlencode, urlsplit
 
-from knowledge_engine.europepmc_http import TransportResponse
+from knowledge_engine.europepmc_http import EUROPEPMC_PDF_HOST, TransportResponse
 
 EUROPEPMC_SEARCH_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
-EUROPEPMC_PDF_HOST = "europepmc.org"
-"""Europe PMC's own hosted full-text repository -- the only PDF host this
-module treats as acquirable evidence. See module docstring."""
 DEFAULT_HEADERS = {
     "Accept": "application/json",
     "User-Agent": "knowledge-engine-core/0.2",
