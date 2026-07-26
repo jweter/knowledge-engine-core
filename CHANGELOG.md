@@ -692,6 +692,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   collision class of bug did not recur. Regenerated the compressed
   `corpus_library` snapshot (~60MB, still under GitHub's 100MB limit)
   and updated the corpus README's "Current Status" section.
+- Fixed 13 scientific-scope false positives a Codex review on the
+  `retstart=2500` growth PR caught: 2 explicitly flagged (an
+  incidental-comorbidity pulmonary-infection case report, an explicitly
+  type 1 diabetes-specific study) plus 11 more found by abstract-verifying
+  the rest of the batch's title-level misses per the review's own
+  invitation -- eating-disorders prevalence, a Prader-Willi sarcopenia
+  diagnostic-tool study, a policy-only case-finding brief, an unrelated
+  anal-fistula surgery study, a Weight-Adjusted-Waist-Index/brain-health
+  association study, a multi-disease COVID-era review, a
+  light-exposure/dementia study, an unrelated MS lifestyle-factors study,
+  a hypertension/LV-geometry review, a kidney-cancer epidemiology study,
+  and an arsenic-exposure/pregnancy-CVD review. All match already-
+  established exclusion patterns (incidental comorbidity,
+  diagnostic/measurement-only, policy-only, off-target primary disease),
+  not new gray-area calls. 4 titles from the same sweep were kept after
+  review (a cagrilintide mechanism study, ROHHAD syndrome, and two
+  adipokine/AGE mechanism reviews under the explicit mechanism-only
+  breadth-over-precision carve-out). Corpus corrected 880 -> 867; fresh
+  corpus-import (867 imported, 0 failed) and regenerated compressed
+  snapshot.
 
 ### Changed
 

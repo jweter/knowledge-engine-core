@@ -62,13 +62,13 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 880 sources: the small historical GLP-1
-prototype set (3 rows) plus 877 accepted records from eleven small
+The committed manifest holds 867 sources: the small historical GLP-1
+prototype set (3 rows) plus 864 accepted records from eleven small
 (`--limit 250`) automated discovery batches (`retstart` 0 through 2500) of
 the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
-A further eighty-three records were manually excluded after individual
+A further ninety-six records were manually excluded after individual
 abstract review, since v9's disease/intervention keyword match has no
 automated way to catch several recurring patterns: single-patient case
 reports where the named disease is only incidental patient background or
@@ -185,7 +185,32 @@ no-manual-audit way as `retstart=2250`, now with the manifest-DOI fix in
 place: a fresh `ke corpus-import` completed with 880 imported, 0 failed,
 0 skipped -- an exact one-to-one match against the manifest's 880 rows,
 confirming the false-collision class of bug from the previous batch did
-not recur.
+not recur. As expected for a no-manual-audit batch, a Codex review then
+caught two genuine scientific-scope misses -- an incidental-comorbidity
+pulmonary-infection case report (T2D was only patient background;
+ciprofloxacin treated the unrelated infection) and an explicitly type 1
+diabetes-specific beta-cell/NOD-mouse study -- and explicitly invited
+checking the rest of the batch's title-level misses the same way. Doing
+so (abstract-verified, not title-pattern-only) found 11 more: an
+eating-disorders-prevalence study, a Prader-Willi sarcopenia diagnostic
+tool study (a diagnostic/measurement paper, not a treatment one, despite
+the syndrome's well-established obesity link), a policy-only
+case-finding evidence brief with no treatment evidence, an unrelated
+anal-fistula surgery outcomes study, a Weight-Adjusted-Waist-Index/brain
+health association study, a multi-disease COVID-era public-health
+narrative review, a light-exposure/dementia association study, an
+unrelated MS lifestyle-factors study, a hypertension/LV-geometry review,
+a kidney-cancer epidemiology study, and an arsenic-exposure/pregnancy-CVD
+review -- all matching already-established patterns (incidental
+comorbidity, diagnostic/measurement-only, policy-only, or off-target
+primary disease with only an incidental obesity/T2D mention), not new
+gray-area judgment calls. Four titles found by the same sweep were kept
+after review: a cagrilintide (an anti-obesity drug) mechanism study a
+generic intervention-term list had missed, ROHHAD syndrome (obesity is
+literally in the syndrome's name), and two adipokine/AGE mechanism
+reviews kept under the explicit "mechanism-only reviews" breadth-over-
+precision carve-out. All 13 exclusions removed, corpus corrected 880 ->
+867.
 
 **Resolved follow-ups:** both systemic quality gaps surfaced during the
 `retstart=2000` batch's Codex review have since been closed. The dozen
