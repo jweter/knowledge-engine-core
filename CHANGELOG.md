@@ -786,6 +786,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed `pmc_acquisition.py`'s `PmcOaAcquisitionService.acquire` not
+  tracking a PDF's temporary file path until after `write_bytes`
+  succeeded. A mid-write `OSError` (e.g. a full disk) left an untracked
+  `.tmp` file behind that `_rollback_paths` never cleaned up, so every
+  retry was then rejected by `_validate_output_directory` as an existing
+  output. Found by a Codex review on the M34 Europe PMC acquisition PR
+  (#168), which surfaced the identical pattern newly introduced in
+  `europepmc_acquisition.py`; fixed there first, then applied the same
+  fix here since this is the production M14 path real corpus growth
+  depends on. Fixed by registering the temporary path before writing.
+  Added a regression test that simulates a partial write failure and
+  asserts the output directory ends up empty.
 - Fixed M30's `embedding-index-build`/`vector-search` silently permitting
   vectors from different `embedding_model`s into the same FAISS index --
   L2 distance between vectors from incompatible embedding spaces is

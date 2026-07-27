@@ -201,6 +201,34 @@ def test_non_pdf_payload_is_rejected_without_persisting_file(tmp_path: Path) -> 
     assert not (output / "PMC999.pdf").exists()
 
 
+def test_partial_write_failure_does_not_leave_a_stray_temp_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    candidates = _write_candidates(tmp_path)
+    approvals = _write_approvals(tmp_path)
+    output = tmp_path / "papers"
+    transport = FakeTransport([FakeResponse(200, b"%PDF-1.7\nbody", {})])
+
+    original_write_bytes = Path.write_bytes
+
+    def failing_write_bytes(self: Path, data: bytes) -> int:
+        if self.name.endswith(".tmp"):
+            original_write_bytes(self, data[: len(data) // 2])
+            raise OSError("disk full")
+        return original_write_bytes(self, data)
+
+    monkeypatch.setattr(Path, "write_bytes", failing_write_bytes)
+
+    with pytest.raises(AcquisitionError, match="could not be committed"):
+        PmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=output,
+        )
+
+    assert list(output.iterdir()) == []
+
+
 def test_non_success_status_is_reported_with_status_code_and_locator(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path)
