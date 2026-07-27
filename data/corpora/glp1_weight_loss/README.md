@@ -62,9 +62,9 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 867 sources: the small historical GLP-1
-prototype set (3 rows) plus 864 accepted records from eleven small
-(`--limit 250`) automated discovery batches (`retstart` 0 through 2500) of
+The committed manifest holds 920 sources: the small historical GLP-1
+prototype set (3 rows) plus 917 accepted records from twelve small
+(`--limit 250`) automated discovery batches (`retstart` 0 through 2750) of
 the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
@@ -267,3 +267,38 @@ retroactively, could reclassify many already-included papers; that is
 a corpus-inclusion-philosophy decision for the project owner, not
 something this cleanup unilaterally changes. Left as an explicit,
 documented open question rather than acted on.
+
+The `retstart=2750` batch (250 candidates, 77 deterministically accepted,
+14 already present from query overlap, 63 net-new PMC OA PDFs acquired)
+ran the same no-manual-audit way as the prior several batches. This
+batch's import used linked resume rather than a from-scratch fresh
+import: this session's local database already held a completed import
+run for the existing 867 papers (restored from the committed compressed
+snapshot), so `ke corpus-import ... --resume-from <parent_run_id>`
+skipped re-parsing those 867 already-`imported` source_ids and processed
+only the 63 new ones, reporting 63 imported, 0 failed, 867 skipped --
+the resume-mode equivalent of the exact one-to-one reconciliation prior
+batches got from a fresh import against an empty database. Corpus grew
+867 -> 930.
+
+A Codex review on the `retstart=2750` growth PR then caught 10 genuine
+scientific-scope false positives among those 63, all matching patterns
+this corpus had already documented and excluded in earlier batches
+(kidney-cancer and ovarian-cancer/circadian-rhythm epidemiology reviews,
+an unrelated multiple-sclerosis outcomes study, two policy-only evidence
+briefs, a Prader-Willi sarcopenia diagnostic-only study, an idiopathic
+intracranial hypertension case report, a type 2 diabetes qualitative
+well-being study naming no intervention, a diabetes knowledge/attitudes/
+practices survey naming no intervention, an alcohol-consumption/cancer
+review, and a bariatric-surgery outcomes study explicitly scoped to type
+1 diabetes) -- not new gray-area judgment calls, the same v9 ruleset gap
+(a generic intervention-term list matching incidentally in an abstract
+about a different primary disease or population) this corpus's README
+already documents at length. All 10 removed from `sources.csv`; since
+this session's local database enforces foreign keys, correcting the
+already-imported rows meant a full fresh reimport (removing the 10 rows'
+PDFs, reinitializing the local database, and re-running `ke corpus-import`
+against the corrected manifest) rather than a surgical row deletion --
+reported 920 imported, 0 failed, 0 skipped, an exact one-to-one match
+against the corrected manifest. Corpus corrected 930 -> 920. Regenerated
+the compressed `corpus_library` snapshot accordingly.
