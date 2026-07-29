@@ -147,9 +147,9 @@ section).
 
 ## What is deliberately not built yet
 
-- No PubChem lookup -- named candidate for a later milestone if a
-  corpus-relevant gap in Wikipedia/RxNorm/MeSH's combined coverage
-  (chemical-compound structure/property data specifically) turns up.
+- No PubChem lookup -- built next, in M44
+  (`docs/m44_pubchem_lookup.md`), which fills exactly this gap
+  (chemical-compound structure/property data).
 - No stored-textbook path -- unchanged from M41/M42; still pending the
   project owner's own storage/hosting/per-title-licensing decisions.
 - No integration into the extraction pipeline (M16-M28) or

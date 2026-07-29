@@ -80,6 +80,12 @@ from knowledge_engine.pmc_acquisition import (
     AcquisitionTransport,
     PmcOaAcquisitionService,
 )
+from knowledge_engine.pubchem_http import UrllibPubchemTransport
+from knowledge_engine.pubchem_lookup import GetTransport as PubchemLookupGetTransport
+from knowledge_engine.pubchem_lookup import (
+    PubchemLookupError,
+    PubchemLookupService,
+)
 from knowledge_engine.pubmed_discovery import (
     GetTransport,
     NcbiDiscoveryError,
@@ -222,6 +228,13 @@ MeshLookupTermArgument = Annotated[
     str, typer.Argument(help="A medical term to look up (e.g. 'obesity', 'type 2 diabetes').")
 ]
 MeshLookupOutputOption = Annotated[
+    Path | None,
+    typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
+]
+PubchemLookupTermArgument = Annotated[
+    str, typer.Argument(help="A compound name to look up (e.g. 'metformin', 'empagliflozin').")
+]
+PubchemLookupOutputOption = Annotated[
     Path | None,
     typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
 ]
@@ -1104,6 +1117,69 @@ def mesh_lookup(
     console.print()
     console.print(
         "[bold]This is background reference context from MeSH, not evidence -- "
+        "no scientific synthesis has been performed.[/bold]"
+    )
+
+
+@app.command("pubchem-lookup")
+def pubchem_lookup(
+    term: PubchemLookupTermArgument,
+    output: PubchemLookupOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Resolve a compound name to its PubChem record via NLM/NCBI's public PUG REST API.
+
+    M44's fourth slice of the reference knowledge layer
+    (`docs/reference_knowledge_layer_design.md`), alongside M41's
+    Wikipedia lookup, M42's RxNorm lookup, and M43's MeSH lookup:
+    background context for a compound name a paper's claim text uses
+    (e.g. "metformin", "empagliflozin"), not primary-research evidence.
+    Never routed through `EvidenceRecord` promotion, and never merged
+    with the evidence corpus's own search commands (`ke search`/
+    `ke answer`/`ke vector-search`/`ke fused-search`) -- this is a
+    separate, explicitly non-evidentiary lookup. A name PubChem does not
+    recognize returns `found: false` rather than a guess.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    console.print("[yellow]Network access:[/yellow] querying PubChem's public PUG REST API.")
+    transport = cast(PubchemLookupGetTransport, UrllibPubchemTransport())
+    service = PubchemLookupService(transport)
+    try:
+        result = service.lookup(term)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except PubchemLookupError as exc:
+        console.print(f"[red]PubChem lookup failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    if output is not None:
+        _write_output(output, result.to_json())
+
+    if not result.found:
+        console.print(f"[yellow]No PubChem compound found for:[/yellow] {escape(term)}")
+    else:
+        console.print(f"[bold]{escape(result.title or term)}[/bold]")
+        if result.molecular_formula:
+            console.print(f"Molecular formula: {escape(result.molecular_formula)}")
+        if result.molecular_weight:
+            console.print(f"Molecular weight: {escape(result.molecular_weight)}")
+        if result.iupac_name:
+            console.print(f"IUPAC name: {escape(result.iupac_name)}")
+        if result.smiles:
+            console.print(f"SMILES: {escape(result.smiles)}")
+        console.print()
+        console.print(
+            f"CID: {escape(result.cid or 'unknown')}  "
+            f"Source: {escape(result.source_url or 'unknown')}  "
+            f"License: {escape(result.license or 'unknown')}"
+        )
+
+    console.print()
+    console.print(
+        "[bold]This is background reference context from PubChem, not evidence -- "
         "no scientific synthesis has been performed.[/bold]"
     )
 
