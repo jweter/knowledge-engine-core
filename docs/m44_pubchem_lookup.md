@@ -150,8 +150,12 @@ section).
   the project owner's own storage/hosting/per-title-licensing decisions.
 - No integration into the extraction pipeline (M16-M28) or
   `ke extraction-review-generate`/`ke extraction-review-batch-generate` --
-  same as M41/M42/M43, this is a standalone lookup tool a human runs
-  directly.
+  same as M41/M43, this is a standalone lookup tool a human runs
+  directly. M45's `ke extraction-review-annotate` wires M42's RxNorm and
+  M43's MeSH lookups into the Phase 2 review workflow via PICO's
+  intervention/comparator/population/outcome fields, but PubChem has no
+  PICO field it cleanly maps onto, so it remains unwired -- see
+  `docs/m45_extraction_review_annotate.md`.
 - No caching or persistence of lookup results -- `retrieved_at` exists
   so a future caching layer has the field it would need, but nothing
   persists a lookup today; every call queries PubChem live.

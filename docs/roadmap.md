@@ -267,9 +267,48 @@ acceptance, release validation, and optional post-release quality audits.
   (CID 177864544) rather than an empty result, and this module reports
   that rather than guessing what a caller "probably" meant. `Molecular
   Weight` is tolerated as either a JSON string or number, matching a
-  real variance observed in API responses. Explicitly background
+  real variance observed in API responses. Codex review on PR #183
+  caught two further real gaps before merge: (1) a name resolving to
+  more than one compound (live-verified: "estrogen" returns two distinct
+  CIDs) was silently resolved to whichever entry came first; fixed to
+  decline (`found: false`) whenever more than one candidate matches,
+  the same posture M43 uses for ambiguous MeSH matches. (2) the license
+  field labeled every result a blanket U.S. government public-domain
+  work, but PubChem aggregates data from many external depositors
+  (live-verified: CID 4091/metformin's own description is sourced from
+  ChEBI, not NCBI); fixed to state that provenance is mixed and reuse
+  terms should be verified source-by-source. Explicitly background
   context, not evidence, with the same non-`EvidenceRecord` boundary
   M41/M42/M43 drew. See `docs/m44_pubchem_lookup.md`.
+- **M45** wired three of `docs/reference_knowledge_layer_design.md`'s
+  Addendum items (2-4) into the Phase 2 review workflow: a new `ke
+  extraction-review-annotate` command reads the draft evidence items `ke
+  extraction-review-generate`/`extraction-review-batch-generate` already
+  produce and attaches a `reference_context` object to each one, built
+  only from PICO fields M28's deterministic extraction already
+  populated -- `intervention`/`comparator` through M42's RxNorm lookup
+  (both name a drug or treatment), `population`/`outcome` through M43's
+  MeSH lookup (both describe a medical concept). A term with no
+  reference-layer match is written out as `found: false`, never silently
+  omitted (item 2); every embedded result keeps its own
+  `source_url`/`license`/`retrieved_at` (item 3); a reviewer sees the
+  definition inline in the same file they edit to add
+  `research_question`/`evidence_direction`, before running `ke
+  extraction-review-promote` (item 4). Deliberately a separate, opt-in
+  step from generation: `ke extraction-review-generate`/
+  `-batch-generate` must stay network-free even at the corpus's real
+  scale (M40: 13,588 draft items across 943 papers), so annotation is a
+  reviewer-initiated command run against the specific paper(s) actually
+  under review, with identical terms cached within one run (bounding
+  network calls to the number of distinct terms, not items). Live-
+  verified: `intervention: "semaglutide"` and `intervention: "Ozempic"`
+  resolve to the same underlying RxNorm ingredient (RxCUI 1991302);
+  `population: "obesity"` and `outcome: "type 2 diabetes"` resolve to
+  their MeSH descriptors with full scope notes and synonym lists; a
+  nonsense term correctly returns `found: false`. Never touches
+  `research_question`/`evidence_direction`, and never changes `ke
+  extraction-review-promote`'s existing refusal to promote a record
+  missing either. See `docs/m45_extraction_review_annotate.md`.
 
 ### M14: Controlled 500-paper rehearsal
 
@@ -546,11 +585,15 @@ Detailed milestone records include:
   question's confidence rating (on M42's `ingredients` field), a
   coverage-gap disclosure flag for terms with no reference-layer match,
   provenance-footer discipline for any reference text surfaced anywhere,
-  and a reviewer aid surfacing definitions inline in
+  and a reviewer aid surfacing definitions inline around
   `ke extraction-review-promote`. None of them touch the confidence
   rating, including indirectly through the compounding step's
   participant set -- see that section for the precise boundary, tightened
-  after Codex review on PR #180.
+  after Codex review on PR #180. **Items 2-4 shipped in M45**
+  (`ke extraction-review-annotate`, see `docs/m45_extraction_review_annotate.md`):
+  a new command attaches RxNorm/MeSH reference context directly onto
+  draft evidence items before a reviewer runs
+  `ke extraction-review-promote`.
 
 ## Phase 3: Search Plus Semantics
 
@@ -673,18 +716,22 @@ Detailed milestone records include:
   **M43** added a third slice, `ke mesh-lookup` against NLM's MeSH
   database for medical-concept terminology; **M44** added a fourth and
   last named slice, `ke pubchem-lookup` against NLM/NCBI's PubChem PUG
-  REST API for chemical-compound structure data. The stored-textbook path
+  REST API for chemical-compound structure data. **M45** then wired
+  three of the design doc's Addendum items (coverage-gap flag,
+  provenance-footer discipline, reviewer aid) into the Phase 2 review
+  workflow via `ke extraction-review-annotate`. The stored-textbook path
   (open-license chemistry/biology/microbiology/physics/pharmacology
   textbooks) remains unbuilt pending real licensing/storage decisions.
   Explicitly not evidence and not part of the paper corpus's
   1,000-paper cap. See `docs/roadmap/long_term_vision.md`'s matching
   section, `docs/m41_reference_lookup.md`, `docs/m42_rxnorm_lookup.md`,
-  `docs/m43_mesh_lookup.md`, and `docs/m44_pubchem_lookup.md`. The
-  design doc's "Addendum: where this plugs into the final report" section
-  records ten concrete ways reference-layer content can shape the future
-  AI Interface Layer's report (grouping, gap disclosure, provenance
-  labeling, glossary/appendix content, Knowledge Graph concept nodes),
-  ordered cheapest-to-build first, with the owner's direction to
-  eventually build all ten -- explicitly none of them feed the report's
-  confidence rating, which stays evidence-only per Confidence Rating
-  Design Guidance in `docs/roadmap/long_term_vision.md`.
+  `docs/m43_mesh_lookup.md`, `docs/m44_pubchem_lookup.md`, and
+  `docs/m45_extraction_review_annotate.md`. The design doc's "Addendum:
+  where this plugs into the final report" section records ten concrete
+  ways reference-layer content can shape the future AI Interface Layer's
+  report (grouping, gap disclosure, provenance labeling, glossary/appendix
+  content, Knowledge Graph concept nodes), ordered cheapest-to-build
+  first, with the owner's direction to eventually build all ten --
+  explicitly none of them feed the report's confidence rating, which
+  stays evidence-only per Confidence Rating Design Guidance in
+  `docs/roadmap/long_term_vision.md`.

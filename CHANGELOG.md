@@ -1099,8 +1099,49 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `EvidenceRecord` promotion, never merged into the evidence corpus's
   own search commands. Live-verified against real compounds
   (`metformin`, `semaglutide`, `empagliflozin`) and a not-found name
-  before writing the parser and again after, via the built CLI. See
-  `docs/m44_pubchem_lookup.md`.
+  before writing the parser and again after, via the built CLI. Codex
+  review on PR #183 caught two further real gaps before merge: (1) a
+  name resolving to more than one compound (live-verified: "estrogen"
+  returns two distinct CIDs, 21628493 and 12115739) was silently
+  resolved to whichever entry PubChem listed first; fixed to decline
+  (`found: false`) whenever more than one candidate matches, the same
+  posture M43 uses for ambiguous MeSH matches. (2) the license field
+  labeled every result a blanket U.S. government public-domain work, but
+  PubChem aggregates data from many external depositors (live-verified:
+  CID 4091/metformin's own PubChem-hosted description is sourced from
+  ChEBI, not NCBI); fixed to state that provenance is mixed and reuse
+  terms should be verified source-by-source rather than asserting a
+  specific reuse right. See `docs/m44_pubchem_lookup.md`.
+- Added the M45 reviewer-aid annotation step for the reference knowledge
+  layer: a new `ke extraction-review-annotate` command reads the draft
+  evidence items `ke extraction-review-generate`/
+  `extraction-review-batch-generate` already produce and attaches a
+  `reference_context` object to each one, built only from PICO fields
+  M28's deterministic extraction already populated --
+  `intervention`/`comparator` through M42's RxNorm lookup (both name a
+  drug or treatment), `population`/`outcome` through M43's MeSH lookup
+  (both describe a medical concept). Wires three of
+  `docs/reference_knowledge_layer_design.md`'s Addendum items at once: a
+  term with no reference-layer match is written out as `found: false`,
+  never silently omitted (item 2, coverage-gap flag); every embedded
+  result keeps its own `source_url`/`license`/`retrieved_at` (item 3,
+  provenance-footer discipline); a reviewer sees the definition inline in
+  the same file they edit to add `research_question`/`evidence_direction`,
+  before running `ke extraction-review-promote` (item 4, reviewer aid).
+  Deliberately a separate, opt-in step from generation: `ke
+  extraction-review-generate`/`-batch-generate` must stay network-free
+  even at the corpus's real scale (M40: 13,588 draft items across 943
+  papers), so annotation is a reviewer-initiated command run against the
+  specific paper(s) actually under review, with identical terms cached
+  within one run so network calls are bounded by the number of distinct
+  terms, not items. Live-verified: `intervention: "semaglutide"` and
+  `intervention: "Ozempic"` resolve to the same underlying RxNorm
+  ingredient (RxCUI 1991302); `population: "obesity"` and `outcome: "type
+  2 diabetes"` resolve to their MeSH descriptors with full scope notes
+  and synonym lists; a nonsense term correctly returns `found: false`.
+  Never touches `research_question`/`evidence_direction`, and never
+  changes `ke extraction-review-promote`'s existing refusal to promote a
+  record missing either. See `docs/m45_extraction_review_annotate.md`.
 
 ### Changed
 

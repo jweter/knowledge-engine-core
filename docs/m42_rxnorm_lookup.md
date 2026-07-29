@@ -157,9 +157,12 @@ is explicitly not part of that corpus (see
   `docs/m43_mesh_lookup.md`.
 - No stored-textbook path -- unchanged from M41; still pending the
   project owner's own storage/hosting/per-title-licensing decisions.
-- No integration into the extraction pipeline (M16-M28) or
-  `ke extraction-review-generate`/`ke extraction-review-batch-generate` --
-  same as M41, this is a standalone lookup tool a human runs directly.
+- No integration into `ke extraction-review-generate`/
+  `ke extraction-review-batch-generate` themselves -- those stay
+  network-free by design. **M45** added a separate, opt-in step,
+  `ke extraction-review-annotate`, that attaches this lookup's results
+  (via PICO's `intervention`/`comparator` fields) onto a draft review
+  queue after generation -- see `docs/m45_extraction_review_annotate.md`.
 - No caching or persistence of lookup results -- `retrieved_at` exists so
   a future caching layer has the field it would need, but nothing
   persists a lookup today; every call queries RxNav live.
