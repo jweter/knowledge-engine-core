@@ -22,13 +22,27 @@ from collections import Counter
 from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
 
-from knowledge_engine.extraction.claims import detect_claim_candidates
-from knowledge_engine.extraction.pico import extract_pico
-from knowledge_engine.extraction.sections import detect_sections
-from knowledge_engine.extraction.study_design import classify_study_type, extract_limitations
+from knowledge_engine.extraction.claims import (
+    CLAIM_CANDIDATE_RULES_VERSION,
+    detect_claim_candidates,
+)
+from knowledge_engine.extraction.pico import PICO_EXTRACTION_RULES_VERSION, extract_pico
+from knowledge_engine.extraction.sections import SECTION_DETECTION_RULES_VERSION, detect_sections
+from knowledge_engine.extraction.study_design import (
+    STUDY_DESIGN_RULES_VERSION,
+    classify_study_type,
+    extract_limitations,
+)
 from knowledge_engine.parser import ParsedPage
 
 EXTRACTION_CORPUS_REPORT_RULES_VERSION = "m38-extraction-corpus-report-v1"
+
+COMPONENT_RULES_VERSIONS: dict[str, str] = {
+    "sections": SECTION_DETECTION_RULES_VERSION,
+    "claims": CLAIM_CANDIDATE_RULES_VERSION,
+    "study_design": STUDY_DESIGN_RULES_VERSION,
+    "pico": PICO_EXTRACTION_RULES_VERSION,
+}
 
 
 @dataclass(frozen=True)
@@ -53,6 +67,7 @@ class ExtractionCorpusReport:
     """Deterministic-extraction coverage aggregated across a paper set."""
 
     rules_version: str
+    component_rules_versions: dict[str, str]
     paper_count: int
     papers_with_zero_pages: int
     papers_with_zero_sections: int
@@ -151,6 +166,7 @@ def build_extraction_corpus_report(
 
     return ExtractionCorpusReport(
         rules_version=EXTRACTION_CORPUS_REPORT_RULES_VERSION,
+        component_rules_versions=dict(COMPONENT_RULES_VERSIONS),
         paper_count=len(summaries),
         papers_with_zero_pages=zero_pages,
         papers_with_zero_sections=zero_sections,

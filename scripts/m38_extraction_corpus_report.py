@@ -45,6 +45,7 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(report.to_json(), encoding="utf-8")
 
+    print(f"Component rule versions: {report.component_rules_versions}")
     print(
         f"Summarized {report.paper_count} paper(s) "
         f"({report.papers_with_zero_pages} with zero pages excluded)."

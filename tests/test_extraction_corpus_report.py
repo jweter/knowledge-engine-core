@@ -1,4 +1,5 @@
 from knowledge_engine.extraction_corpus_report import (
+    COMPONENT_RULES_VERSIONS,
     EXTRACTION_CORPUS_REPORT_RULES_VERSION,
     build_extraction_corpus_report,
     summarize_paper_extraction,
@@ -69,6 +70,7 @@ def test_build_extraction_corpus_report_aggregates_across_papers() -> None:
     report = build_extraction_corpus_report(paper_pages)
 
     assert report.rules_version == EXTRACTION_CORPUS_REPORT_RULES_VERSION
+    assert report.component_rules_versions == COMPONENT_RULES_VERSIONS
     assert report.paper_count == 2
     assert report.papers_with_zero_pages == 1
     assert report.papers_with_zero_sections == 1
@@ -97,6 +99,7 @@ def test_build_extraction_corpus_report_handles_no_papers() -> None:
     assert report.section_type_coverage == {}
     assert report.study_type_coverage == {}
     assert report.per_paper == ()
+    assert report.component_rules_versions == COMPONENT_RULES_VERSIONS
 
 
 def test_report_to_json_is_stable_and_complete() -> None:
@@ -105,5 +108,6 @@ def test_report_to_json_is_stable_and_complete() -> None:
     payload = report.to_json()
 
     assert '"rules_version": "m38-extraction-corpus-report-v1"' in payload
+    assert '"component_rules_versions"' in payload
     assert '"paper_id": 1' in payload
     assert payload.endswith("\n")
