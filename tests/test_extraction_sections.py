@@ -6,6 +6,8 @@ from knowledge_engine.extraction import (
     SECTION_DETECTION_RULES_VERSION,
     SectionSpan,
     detect_sections,
+    section_content,
+    section_text,
 )
 from knowledge_engine.parser import ParsedPage, PyMuPDFParser
 
@@ -125,6 +127,59 @@ def test_section_span_is_frozen_and_hashable() -> None:
     )
 
     assert hash(span) is not None
+
+
+def test_detects_inline_label_heading_followed_by_body_on_same_line() -> None:
+    """v2 (M38 follow-up): a structured layout like "Results: <finding>" on one
+    line -- as seen in real PMC papers -- must be recognized, not just a
+    heading alone on its own line."""
+
+    text = "Results: Mean weight loss was 15.3% versus 2.6% with placebo."
+    pages = [ParsedPage(page_number=1, text=text)]
+
+    spans = detect_sections(pages)
+
+    assert len(spans) == 1
+    span = spans[0]
+    assert span.section_type == "results"
+    assert span.heading_text == "Results:"
+    assert section_content(pages, span) == "Mean weight loss was 15.3% versus 2.6% with placebo."
+
+
+def test_inline_label_heading_does_not_match_without_a_colon() -> None:
+    """Guards the narrow v2 extension: "results" still must not match
+    mid-sentence, and a bare word followed by more text with no colon is not
+    an inline label."""
+
+    pages = [ParsedPage(page_number=1, text="Results were mixed across the two cohorts.")]
+
+    assert detect_sections(pages) == ()
+
+
+def test_inline_label_heading_still_excludes_combined_headings() -> None:
+    """ "Results and Discussion" must still not match either alternative."""
+
+    pages = [ParsedPage(page_number=1, text="Results and Discussion\n\nWe observed an effect.")]
+
+    assert detect_sections(pages) == ()
+
+
+def test_inline_label_heading_followed_by_another_section_on_a_later_line() -> None:
+    text = (
+        "Discussion\n\n"
+        "General findings here.\n\n"
+        "Results: Mean weight loss was 15.3%.\n\n"
+        "Limitations\n\n"
+        "Short follow-up."
+    )
+    pages = [ParsedPage(page_number=1, text=text)]
+
+    spans = detect_sections(pages)
+
+    assert [span.section_type for span in spans] == ["discussion", "results", "limitations"]
+    results_span = spans[1]
+    assert results_span.heading_text == "Results:"
+    assert section_text(pages, results_span).strip().startswith("Results: Mean weight loss")
 
 
 def test_detects_sections_from_real_parser_output(tmp_path: Path) -> None:

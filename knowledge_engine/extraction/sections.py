@@ -17,7 +17,7 @@ from dataclasses import dataclass
 
 from knowledge_engine.parser import ParsedPage
 
-SECTION_DETECTION_RULES_VERSION = "m16-section-detection-v1"
+SECTION_DETECTION_RULES_VERSION = "m16-section-detection-v2"
 
 SECTION_TYPES = (
     "abstract",
@@ -30,25 +30,43 @@ SECTION_TYPES = (
     "references",
 )
 
-# Every pattern matches a full trimmed line -- optionally preceded by a
-# numbered-heading prefix like "3." or "3.1" -- never a sentence that merely
-# contains the word. This mirrors parser.py's REFERENCE_HEADING_PATTERN, the
-# established precedent for this style in this codebase. Combined headings
-# (e.g. "Results and Discussion") deliberately do not match any pattern in
-# this v1 ruleset: missing a section is safe, mislabeling one is not.
+# Every pattern matches a heading word at the start of a line -- optionally
+# preceded by a numbered-heading prefix like "3." or "3.1" -- never a
+# sentence that merely contains the word. This mirrors parser.py's
+# REFERENCE_HEADING_PATTERN, the established precedent for this style in
+# this codebase. Combined headings (e.g. "Results and Discussion")
+# deliberately do not match any pattern in this ruleset: missing a section
+# is safe, mislabeling one is not.
+#
+# v2 (M38 follow-up): a heading is recognized either alone on its own line
+# (the original v1 behavior) or immediately followed by a colon and further
+# text on the *same* line -- e.g. "Results: SGLT2 inhibitor use was
+# associated with...", a structured-abstract/discussion layout M38's
+# corpus-scale measurement found real PMC papers actually use, which v1's
+# full-line-only match silently missed entirely (the heading's own text
+# then fell through into whichever earlier section was open, and any
+# quantitative claims in it were invisible to M17's results/conclusion-only
+# claim-candidate scan). The colon requirement keeps this narrow: "results"
+# appearing mid-sentence, or as part of a combined heading like "Results and
+# Discussion", still does not match either alternative.
 _NUMBERING_PREFIX = r"(?:\d+(?:\.\d+)*\.?\s+)?"
+_INLINE_LABEL_SUFFIX = r"\s*(?:$|:\s*(?=\S))"
 _SECTION_HEADING_PATTERNS: dict[str, re.Pattern[str]] = {
-    "abstract": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}abstract\s*$"),
-    "introduction": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}(?:introduction|background)\s*$"),
-    "methods": re.compile(
-        rf"(?im)^\s*{_NUMBERING_PREFIX}(?:methods|materials and methods|study design)\s*$"
+    "abstract": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}abstract{_INLINE_LABEL_SUFFIX}"),
+    "introduction": re.compile(
+        rf"(?im)^\s*{_NUMBERING_PREFIX}(?:introduction|background){_INLINE_LABEL_SUFFIX}"
     ),
-    "results": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}results\s*$"),
-    "discussion": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}discussion\s*$"),
-    "limitations": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}limitations\s*$"),
-    "conclusion": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}conclusions?\s*$"),
+    "methods": re.compile(
+        rf"(?im)^\s*{_NUMBERING_PREFIX}(?:methods|materials and methods|study design)"
+        rf"{_INLINE_LABEL_SUFFIX}"
+    ),
+    "results": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}results{_INLINE_LABEL_SUFFIX}"),
+    "discussion": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}discussion{_INLINE_LABEL_SUFFIX}"),
+    "limitations": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}limitations{_INLINE_LABEL_SUFFIX}"),
+    "conclusion": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}conclusions?{_INLINE_LABEL_SUFFIX}"),
     "references": re.compile(
-        rf"(?im)^\s*{_NUMBERING_PREFIX}(?:references|bibliography|literature cited)\s*$"
+        rf"(?im)^\s*{_NUMBERING_PREFIX}(?:references|bibliography|literature cited)"
+        rf"{_INLINE_LABEL_SUFFIX}"
     ),
 }
 
