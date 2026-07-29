@@ -91,17 +91,28 @@ that per-title review, not a pre-approved acquisition list.
    M15's `paper_pages` precedent (page-level provenance so a claim can
    cite an exact span), a reference lookup should be able to cite "OpenStax
    Biochemistry, Chapter 12.3" precisely, not just "some textbook, somewhere."
-3. **Reuse the existing retrieval layer, on a separate index.** M30-M39
-   already built a generic FTS5 + FAISS/Qdrant + Reciprocal-Rank-Fusion
-   retrieval stack that has no dependency on paper-specific fields --
-   it operates on arbitrary indexed text. The reference layer should get
-   its **own** index (e.g. a `ke reference-search` command, or a
-   `--corpus reference` scope on the existing commands), not be merged
-   into the evidence corpus's index. Blending the two would let a
+3. **A separate index -- and real new persistence/search work, not a
+   drop-in reuse.** Only the lowest-level pieces of M30-M39's stack are
+   actually generic: `VectorIndex` (FAISS/Qdrant) and `fuse_rankings`
+   (RRF) operate on arbitrary vectors and paper_id rankings with no
+   paper-specific assumptions. Everything above that layer is coupled to
+   `Paper`: `SearchService` joins SQLite's `paper_search` FTS table
+   directly to the `papers` table; `_paper_embedding_text` reads
+   `Paper.title`/`Paper.abstract`; `embedding-index-build` validates
+   every vector's `paper_id` through `PaperRepository`; `fused-search`
+   looks up and prints paper metadata for its results. A reference-layer
+   implementation cannot just point these commands at a second index --
+   it needs its own persistence and search services (a
+   `ReferenceSectionRepository`-equivalent, a reference-scoped
+   `SearchService` counterpart) or a generalized document abstraction
+   `Paper`-specific code migrates onto, either of which is real,
+   unbuilt work, not something this design gets for free. Whatever form
+   it takes, it must stay a genuinely **separate** index from the
+   evidence corpus's, not merged into it -- blending the two would let a
    textbook definition surface as if it were paper-derived evidence,
-   which is exactly the epistemic distinction this whole project has been
-   careful to preserve (`ke answer`'s own disclaimer: "No scientific
-   synthesis has been performed").
+   exactly the epistemic distinction this whole project has been careful
+   to preserve (`ke answer`'s own disclaimer: "No scientific synthesis
+   has been performed").
 4. **Consumers, not owners, of the content.** The near-term use is
    grounding: given a term or mechanism a paper's claim text names, look
    it up in the reference layer for context. The longer-term use is
