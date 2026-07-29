@@ -1134,6 +1134,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `PaperRepository._build_paper`, used by both overrides, so this class of
   copy-paste divergence cannot recur. Backfilled the existing local
   database with `ke paper-pages-backfill`.
+- Fixed a latent bug in `Database`'s SQLite engine setup: without
+  SQLAlchemy's documented pysqlite-SAVEPOINT workaround (disabling
+  pysqlite's own transaction heuristics via `isolation_level=None` and
+  issuing explicit `BEGIN` statements), a `session.begin_nested()`
+  SAVEPOINT that completed successfully was not actually undone by a
+  *later*, unrelated `session.rollback()` on the same session -- found
+  by a Codex review on the M40 PR (#177) of `ke
+  extraction-review-batch-generate`'s per-paper SAVEPOINT isolation, and
+  confirmed with a minimal repro before and after the fix. Affects every
+  existing `session.begin_nested()` use in the codebase
+  (`import_runs/linked.py`, `ingestion.py`, `linked_ingestion.py`), not
+  just the new command; fixed once at the engine level in
+  `knowledge_engine/database.py`. Full test suite green after the change;
+  re-verified against the real 943-paper corpus with identical results.
 
 ## [0.2.0-alpha.1] - 2026-07-11
 
