@@ -110,16 +110,61 @@ that per-title review, not a pre-approved acquisition list.
    the paper-level evidence nodes that cite it) and, eventually, the
    `knowledge-engine-ai` layer's synthesis step.
 
+## A third option: live lookup instead of stored text
+
+Storing full textbooks is not the only way to get this grounding. Several
+free, no-storage-needed APIs cover real slices of the same background
+knowledge:
+
+- **NLM/NCBI's own APIs** (RxNorm for drug/pharmacology terminology, MeSH
+  for medical-concept hierarchy, PubChem for chemical compound data) --
+  free, mostly no API key required, and this project already has NCBI
+  HTTP infrastructure (`ncbi_http.py`, `UrllibNcbiTransport`) a live
+  lookup could extend rather than duplicate.
+- **Wikipedia/Wiktionary** -- free, CC-BY-SA (a license family this
+  project's `license_rules.py` already recognizes), and closer to actual
+  textbook-style explanatory prose than the structured-data APIs above.
+- **UniProt** -- free API for protein/biochemistry data.
+
+This mirrors a decision this project has already made once: M31's
+`EmbeddingGenerator` offers both a `local` (offline, no per-query cost)
+and an `openai` (external API, network-dependent) option behind the same
+interface, with the tradeoff labeled explicitly rather than picked for
+the user. A live-lookup reference option would follow the same shape.
+
+The real cost is not storage, it's the offline-reproducibility posture
+Phase 0 set as a design goal and every milestone since has upheld
+(deterministic, rules-versioned extraction; a hash-verified local
+corpus). A live lookup means a term's definition can change, or an API
+can go down, between two runs of the same command -- the opposite of the
+provenance discipline this project applies everywhere else. It also
+doesn't fully substitute for stored text: RxNorm/MeSH/PubChem return
+structured facts and identifiers, not the explanatory prose or worked
+mechanisms an actual textbook chapter has; Wikipedia's prose comes
+closer, but with encyclopedia framing rather than textbook depth.
+
+Not a replacement for the stored-textbook option above -- a third,
+independently viable path, likely the better starting point precisely
+because it sidesteps the storage and per-title licensing questions
+below, at the cost of the reproducibility guarantee this project has
+consistently prioritized elsewhere.
+
 ## Open questions (owner decisions, not resolved here)
 
-- **Storage and hosting.** A handful of full textbooks plausibly runs to
-  hundreds of MB or more -- likely too large to live in this git repo
-  the way the (already space-capped) paper corpus does. Candidates: a
-  separate `knowledge-engine-reference` package/repo (the multi-package
-  ecosystem `docs/roadmap/long_term_vision.md` already anticipates this
-  shape of split); an external cache downloaded and verified at setup
-  time rather than committed; or storing only extracted/chunked text
-  rather than source PDFs. Not decided here.
+- **Storage and hosting** (only applies to the stored-text option above;
+  live lookup sidesteps this entirely). A handful of full textbooks
+  plausibly runs to hundreds of MB or more -- likely too large to live in
+  this git repo the way the (already space-capped) paper corpus does.
+  Candidates: a separate `knowledge-engine-reference` package/repo (the
+  multi-package ecosystem `docs/roadmap/long_term_vision.md` already
+  anticipates this shape of split); an external cache downloaded and
+  verified at setup time rather than committed; or storing only
+  extracted/chunked text rather than source PDFs. Not decided here.
+- **Stored text vs. live lookup vs. both.** The two approaches answer
+  different needs (deep, citable, reproducible chapters vs. broad,
+  zero-storage, always-available facts) and are not mutually exclusive,
+  but which one to build first is an explicit owner decision, not a
+  default.
 - **Exact title list and per-title license verification.** Real work,
   not a formality -- the existing PMC license-adjudication history in
   this project found real edge cases (CC-BY-NC misclassified as

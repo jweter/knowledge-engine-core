@@ -191,15 +191,18 @@ it, currently have no equivalent grounding to draw on -- they read a
 claim about "GLP-1 receptor agonism, assessed by ELISA" with no more
 context than the paper itself provides.
 
-The proposed fix is a separate reference corpus of open-license
-textbooks and reference material, explicitly **not** evidence and never
-routed through `EvidenceRecord` promotion -- background context a future
-reasoning step consults, the same way a human expert's own training
-functions, not a citable finding. See
+The proposed fix is a separate reference layer -- either stored
+open-license textbooks, or live lookups against free APIs (NLM's
+RxNorm/MeSH/PubChem, Wikipedia/Wiktionary), or both -- explicitly
+**not** evidence and never routed through `EvidenceRecord` promotion:
+background context a future reasoning step consults, the same way a
+human expert's own training functions, not a citable finding. See
 `docs/reference_knowledge_layer_design.md` for the design sketch:
-candidate open-license sources, why it needs its own manifest and index
-rather than reusing the paper corpus's, and the real open decisions
-(storage/hosting chief among them) still pending explicit owner
+candidate open-license sources, the live-lookup alternative and its
+reproducibility tradeoff against this project's offline-by-default
+posture, why it needs its own manifest and index rather than reusing the
+paper corpus's, and the real open decisions (storage/hosting chief among
+them, if the stored-text path is chosen) still pending explicit owner
 sign-off. Nothing here is built yet.
 
 ## Tracking the Unknown
