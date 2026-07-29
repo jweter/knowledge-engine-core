@@ -83,6 +83,8 @@ class Database:
         self.settings = settings
         self.engine = create_engine(settings.resolved_database_url, future=True)
         event.listen(self.engine, "connect", _enable_sqlite_foreign_keys)
+        event.listen(self.engine, "connect", _disable_pysqlite_transaction_management)
+        event.listen(self.engine, "begin", _begin_sqlite_transaction)
         self.session_factory = sessionmaker(self.engine, expire_on_commit=False, future=True)
 
     @contextmanager
@@ -114,6 +116,34 @@ def _enable_sqlite_foreign_keys(dbapi_connection: Any, connection_record: object
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
+
+
+def _disable_pysqlite_transaction_management(
+    dbapi_connection: Any, connection_record: object
+) -> None:
+    """Hand transaction control to SQLAlchemy instead of pysqlite's own heuristics.
+
+    pysqlite (the stdlib `sqlite3` driver) implicitly commits before certain
+    statements and tracks its own notion of "in a transaction" separately
+    from SQLAlchemy's. Left in that default mode, a `Session.begin_nested()`
+    SAVEPOINT that completes normally can end up not actually undone by a
+    later, unrelated `Session.rollback()` on the same session -- found via
+    M40's `ke extraction-review-batch-generate` (a per-paper SAVEPOINT
+    released successfully, followed by an unrelated write failure, left the
+    released SAVEPOINT's row committed instead of rolled back). This is
+    SQLAlchemy's own documented workaround for pysqlite's SAVEPOINT support:
+    disable pysqlite's isolation-level heuristics entirely and let
+    `_begin_sqlite_transaction` below issue explicit `BEGIN` statements.
+    """
+
+    del connection_record
+    dbapi_connection.isolation_level = None
+
+
+def _begin_sqlite_transaction(conn: Connection) -> None:
+    """Issue an explicit `BEGIN`, replacing pysqlite's own (now-disabled) heuristics."""
+
+    conn.exec_driver_sql("BEGIN")
 
 
 def migrate_schema(engine: Engine) -> None:

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
@@ -141,21 +142,7 @@ def test_batch_generate_reports_no_papers_found(
     assert not output.exists()
 
 
-def test_batch_generate_excludes_a_paper_whose_run_cannot_be_recorded(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A DB-recording failure for one paper must not abort the whole batch --
-    the other papers' items still get written, and the failed paper is
-    reported by ID rather than silently dropped."""
-
-    database = _database(tmp_path)
-    with database.session() as session:
-        repository = PaperRepository(session)
-        first = repository.add_parsed_paper(_parsed_paper(tmp_path, "a" * 64, title="Paper A"))
-        second = repository.add_parsed_paper(_parsed_paper(tmp_path, "b" * 64, title="Paper B"))
-        first_id, second_id = first.id, second.id
-    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
-
+def _patch_flaky_create(monkeypatch: pytest.MonkeyPatch, failing_paper_id: int) -> None:
     original_create = ExtractionRunRepository.create
 
     def _flaky_create(
@@ -174,7 +161,7 @@ def test_batch_generate_excludes_a_paper_whose_run_cannot_be_recorded(
         study_design_rules_version: str,
         pico_extraction_rules_version: str,
     ) -> ExtractionRun:
-        if paper_id == first_id:
+        if paper_id == failing_paper_id:
             raise RuntimeError("database is locked")
         return original_create(
             self,
@@ -194,6 +181,23 @@ def test_batch_generate_excludes_a_paper_whose_run_cannot_be_recorded(
 
     monkeypatch.setattr(ExtractionRunRepository, "create", _flaky_create)
 
+
+def test_batch_generate_excludes_a_paper_whose_run_cannot_be_recorded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A DB-recording failure for one paper must not abort the whole batch --
+    the other papers' items still get written, and the failed paper is
+    reported by ID rather than silently dropped."""
+
+    database = _database(tmp_path)
+    with database.session() as session:
+        repository = PaperRepository(session)
+        first = repository.add_parsed_paper(_parsed_paper(tmp_path, "a" * 64, title="Paper A"))
+        second = repository.add_parsed_paper(_parsed_paper(tmp_path, "b" * 64, title="Paper B"))
+        first_id, second_id = first.id, second.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_flaky_create(monkeypatch, failing_paper_id=first_id)
+
     output = tmp_path / "batch.jsonl"
     result = CliRunner().invoke(
         entrypoint.app, ["extraction-review-batch-generate", "--output", str(output)]
@@ -208,3 +212,96 @@ def test_batch_generate_excludes_a_paper_whose_run_cannot_be_recorded(
     lines = output.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == 1
     assert json.loads(lines[0])["source_span"]["paper_id"] == second_id
+
+
+def test_batch_generate_preserves_earlier_successful_runs_after_a_later_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex finding (PR #177): a bare session.rollback() after a later
+    paper's failure previously undid every earlier paper's already-flushed
+    ExtractionRun insert in the same shared transaction, even though their
+    JSON lines had already been queued for the output. A per-paper
+    savepoint must isolate the failure to just that paper."""
+
+    database = _database(tmp_path)
+    with database.session() as session:
+        repository = PaperRepository(session)
+        first = repository.add_parsed_paper(_parsed_paper(tmp_path, "a" * 64, title="Paper A"))
+        second = repository.add_parsed_paper(_parsed_paper(tmp_path, "b" * 64, title="Paper B"))
+        third = repository.add_parsed_paper(_parsed_paper(tmp_path, "c" * 64, title="Paper C"))
+        first_id, second_id, third_id = first.id, second.id, third.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_flaky_create(monkeypatch, failing_paper_id=second_id)
+
+    output = tmp_path / "batch.jsonl"
+    result = CliRunner().invoke(
+        entrypoint.app, ["extraction-review-batch-generate", "--output", str(output)]
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = " ".join(result.output.split())
+    assert "Wrote 2 draft evidence item(s) across 2 paper(s)" in unwrapped
+
+    lines = output.read_text(encoding="utf-8").strip().splitlines()
+    output_paper_ids = {json.loads(line)["source_span"]["paper_id"] for line in lines}
+    assert output_paper_ids == {first_id, third_id}
+
+    with database.session() as session:
+        first_runs = ExtractionRunRepository(session).list_for_paper(first_id)
+        third_runs = ExtractionRunRepository(session).list_for_paper(third_id)
+    assert len(first_runs) == 1
+    assert len(third_runs) == 1
+
+
+def test_batch_generate_rejects_an_unknown_paper_id(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    with database.session() as session:
+        repository = PaperRepository(session)
+        repository.add_parsed_paper(_parsed_paper(tmp_path, "a" * 64, title="Paper A"))
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    output = tmp_path / "batch.jsonl"
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["extraction-review-batch-generate", "--output", str(output), "--paper-id", "9999"],
+    )
+
+    assert result.exit_code != 0
+    assert "Unknown paper ID" in result.output
+    assert "9999" in result.output
+    assert not output.exists()
+
+
+def test_batch_generate_does_not_commit_extraction_runs_when_output_write_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex finding (PR #177): the DB session used to commit before the
+    output write happened, so a write failure (full disk, bad permissions)
+    could leave committed ExtractionRun rows pointing at a queue that was
+    never produced. The write must happen inside the same transaction so a
+    failure rolls both back together."""
+
+    database = _database(tmp_path)
+    with database.session() as session:
+        repository = PaperRepository(session)
+        paper = repository.add_parsed_paper(_parsed_paper(tmp_path, "a" * 64, title="Paper A"))
+        paper_id = paper.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    def _raise(output: Path, content: str) -> None:
+        raise typer.BadParameter("Output file could not be written.")
+
+    monkeypatch.setattr(entrypoint, "_write_output", _raise)
+
+    output = tmp_path / "batch.jsonl"
+    result = CliRunner().invoke(
+        entrypoint.app, ["extraction-review-batch-generate", "--output", str(output)]
+    )
+
+    assert result.exit_code != 0
+
+    with database.session() as session:
+        runs = ExtractionRunRepository(session).list_for_paper(paper_id)
+    assert runs == []

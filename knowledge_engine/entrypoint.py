@@ -1179,7 +1179,10 @@ def extraction_review_batch_generate(
     it still refuses any item missing a human-supplied
     `research_question`/`evidence_direction`. A paper with no persisted
     pages is skipped and counted, not a hard failure, so one incomplete
-    paper cannot abort the whole batch.
+    paper cannot abort the whole batch. An unknown `--paper-id` is rejected
+    outright, matching `ke embedding-index-build`'s existing dangling-ID
+    behavior -- an explicit request naming a paper that doesn't exist is
+    reported, never silently dropped from the batch.
     """
 
     _validate_output(output, force=force)
@@ -1191,7 +1194,17 @@ def extraction_review_batch_generate(
     unrecorded_paper_ids: list[int] = []
     with database.session() as session:
         repository = PaperRepository(session)
-        papers = repository.get_many(paper_id) if paper_id else repository.list_papers()
+        if paper_id:
+            papers = repository.get_many(paper_id)
+            missing_ids = sorted(set(paper_id) - {paper.id for paper in papers})
+            if missing_ids:
+                console.print(
+                    f"[red]Unknown paper ID(s):[/red] "
+                    f"{', '.join(str(missing_id) for missing_id in missing_ids)}"
+                )
+                raise typer.Exit(1)
+        else:
+            papers = repository.list_papers()
         if not papers:
             console.print("[yellow]No papers found to process.[/yellow]")
             return
@@ -1208,28 +1221,28 @@ def extraction_review_batch_generate(
         run_repository = ExtractionRunRepository(session)
         for result in summary.results:
             try:
-                run_repository.create(
-                    paper_id=result.paper_id,
-                    output_path=str(output),
-                    page_count=result.page_count,
-                    section_count=result.section_count,
-                    candidate_count=result.candidate_count,
-                    draft_item_count=len(result.draft_items),
-                    section_detection_rules_version=SECTION_DETECTION_RULES_VERSION,
-                    claim_candidate_rules_version=CLAIM_CANDIDATE_RULES_VERSION,
-                    claim_framing_rules_version=CLAIM_FRAMING_RULES_VERSION,
-                    draft_evidence_item_rules_version=DRAFT_EVIDENCE_ITEM_RULES_VERSION,
-                    study_design_rules_version=STUDY_DESIGN_RULES_VERSION,
-                    pico_extraction_rules_version=PICO_EXTRACTION_RULES_VERSION,
-                )
+                with session.begin_nested():
+                    run_repository.create(
+                        paper_id=result.paper_id,
+                        output_path=str(output),
+                        page_count=result.page_count,
+                        section_count=result.section_count,
+                        candidate_count=result.candidate_count,
+                        draft_item_count=len(result.draft_items),
+                        section_detection_rules_version=SECTION_DETECTION_RULES_VERSION,
+                        claim_candidate_rules_version=CLAIM_CANDIDATE_RULES_VERSION,
+                        claim_framing_rules_version=CLAIM_FRAMING_RULES_VERSION,
+                        draft_evidence_item_rules_version=DRAFT_EVIDENCE_ITEM_RULES_VERSION,
+                        study_design_rules_version=STUDY_DESIGN_RULES_VERSION,
+                        pico_extraction_rules_version=PICO_EXTRACTION_RULES_VERSION,
+                    )
             except Exception:
-                session.rollback()
                 unrecorded_paper_ids.append(result.paper_id)
                 continue
             recorded_paper_count += 1
             lines.extend(json.dumps(item.to_dict()) for item in result.draft_items)
 
-    _write_output(output, "\n".join(lines) + ("\n" if lines else ""))
+        _write_output(output, "\n".join(lines) + ("\n" if lines else ""))
 
     if unrecorded_paper_ids:
         console.print(
