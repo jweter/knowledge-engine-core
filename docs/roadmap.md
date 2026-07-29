@@ -194,6 +194,22 @@ acceptance, release validation, and optional post-release quality audits.
   (`semaglutide`, `SGLT2 inhibitor`, a disambiguation page, a not-found
   term) before and after building the parser. See
   `docs/m41_reference_lookup.md`.
+- **M42** added a second live-lookup reference source, NLM's RxNorm API,
+  alongside M41's Wikipedia lookup. A new `ke rxnorm-lookup <term>`
+  command and `knowledge_engine/rxnorm_lookup.py` resolve a drug name to
+  its RxNorm normalized concept (RxCUI, canonical name, term type, and
+  synonym) via RxNav's public REST API (`rxnorm_http.py`'s
+  `UrllibRxNavTransport` -- a dedicated host-allowlisted transport, since
+  RxNav is a distinct NLM host from the literature-scoped
+  `ncbi_http.py`). Chosen as the second source because it needs no API
+  key and closes a gap Wikipedia's title-matching lookup leaves open for
+  this corpus specifically: normalizing a generic name (e.g.
+  "semaglutide") and its brand name (e.g. "Ozempic") to the same
+  underlying concept. Explicitly background context, not evidence, with
+  the same non-`EvidenceRecord` boundary M41 drew. Live-verified against
+  real terms (`semaglutide`, `Ozempic`, `empagliflozin`, and mechanism
+  terms RxNorm correctly does not match, like "SGLT2 inhibitor") before
+  and after building the parser. See `docs/m42_rxnorm_lookup.md`.
 
 ### M14: Controlled 500-paper rehearsal
 
@@ -536,9 +552,11 @@ Detailed milestone records include:
   Interface Layer the background context a primary-research paper always
   assumes but never restates. **M41** (see below) built the sketch's
   recommended live-lookup path's first slice, `ke reference-lookup`
-  against Wikipedia; the stored-textbook path (open-license
+  against Wikipedia; **M42** added a second slice, `ke rxnorm-lookup`
+  against NLM's RxNorm API for structured drug-name normalization. The
+  stored-textbook path (open-license
   chemistry/biology/microbiology/physics/pharmacology textbooks) remains
   unbuilt pending real licensing/storage decisions. Explicitly not
   evidence and not part of the paper corpus's 1,000-paper cap. See
-  `docs/roadmap/long_term_vision.md`'s matching section and
-  `docs/m41_reference_lookup.md`.
+  `docs/roadmap/long_term_vision.md`'s matching section,
+  `docs/m41_reference_lookup.md`, and `docs/m42_rxnorm_lookup.md`.
