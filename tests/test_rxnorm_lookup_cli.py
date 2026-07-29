@@ -7,7 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
-from knowledge_engine.rxnorm_lookup import RxNormLookupError, RxNormLookupResult
+from knowledge_engine.rxnorm_lookup import RxNormIngredient, RxNormLookupError, RxNormLookupResult
 
 
 def _unwrapped(output: str) -> str:
@@ -40,6 +40,7 @@ def _found_result(term: str = "semaglutide") -> RxNormLookupResult:
         name="semaglutide",
         term_type="IN",
         synonym=None,
+        ingredients=(RxNormIngredient(rxcui="1991302", name="semaglutide"),),
         source_url="https://mor.nlm.nih.gov/RxNav/search?searchBy=RXCUI&searchTerm=1991302",
         license="Non-proprietary content, National Library of Medicine (RxNorm API)",
         retrieved_at="2026-07-29T00:00:00+00:00",
@@ -54,6 +55,7 @@ def _not_found_result(term: str = "xyzzy") -> RxNormLookupResult:
         name=None,
         term_type=None,
         synonym=None,
+        ingredients=(),
         source_url=None,
         license=None,
         retrieved_at="2026-07-29T00:00:00+00:00",
@@ -78,6 +80,7 @@ def test_rxnorm_lookup_prints_grounding_for_a_found_term(
     assert "https://mor.nlm.nih.gov/RxNav/search?searchBy=RXCUI&searchTerm=1991302" in unwrapped
     assert "National Library of Medicine" in unwrapped
     assert "not evidence" in unwrapped
+    assert "Ingredient(s): semaglutide (RXCUI 1991302)" in unwrapped
 
 
 def test_rxnorm_lookup_reports_no_concept_found(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -90,7 +93,7 @@ def test_rxnorm_lookup_reports_no_concept_found(monkeypatch: pytest.MonkeyPatch)
     assert "No RxNorm concept found for: xyzzy" in _unwrapped(result.output)
 
 
-def test_rxnorm_lookup_surfaces_a_brand_name_synonym(
+def test_rxnorm_lookup_surfaces_a_brand_name_synonym_and_its_ingredient(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     brand = _found_result(term="Ozempic")
@@ -101,6 +104,7 @@ def test_rxnorm_lookup_surfaces_a_brand_name_synonym(
             "name": "Ozempic",
             "term_type": "BN",
             "synonym": "Ozempic Pen",
+            "ingredients": (RxNormIngredient(rxcui="1991302", name="semaglutide"),),
         }
     )
     service = FakeLookupService(result=brand)
@@ -109,7 +113,9 @@ def test_rxnorm_lookup_surfaces_a_brand_name_synonym(
     result = CliRunner().invoke(entrypoint.app, ["rxnorm-lookup", "Ozempic"])
 
     assert result.exit_code == 0, result.output
-    assert "Synonym: Ozempic Pen" in _unwrapped(result.output)
+    unwrapped = _unwrapped(result.output)
+    assert "Synonym: Ozempic Pen" in unwrapped
+    assert "Ingredient(s): semaglutide (RXCUI 1991302)" in unwrapped
 
 
 def test_rxnorm_lookup_writes_output_json_when_requested(

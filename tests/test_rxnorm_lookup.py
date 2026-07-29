@@ -9,6 +9,7 @@ import pytest
 
 from knowledge_engine.rxnorm_lookup import (
     RXNORM_CONTENT_LICENSE,
+    RxNormIngredient,
     RxNormLookupError,
     RxNormLookupService,
 )
@@ -81,8 +82,25 @@ def _properties_response(**overrides: object) -> FakeResponse:
     return _json_response({"properties": base})
 
 
+def _related_response(*ingredients: tuple[str, str]) -> FakeResponse:
+    """A `related.json?tty=IN` response naming zero or more ingredient concepts."""
+
+    group: dict[str, object] = {"tty": "IN"}
+    if ingredients:
+        group["conceptProperties"] = [
+            {"rxcui": rxcui, "name": name, "tty": "IN"} for rxcui, name in ingredients
+        ]
+    return _json_response({"relatedGroup": {"rxcui": None, "conceptGroup": [group]}})
+
+
 def test_lookup_returns_a_found_result_with_grounding_fields() -> None:
-    transport = FakeTransport([_rxcui_response("1991302"), _properties_response()])
+    transport = FakeTransport(
+        [
+            _rxcui_response("1991302"),
+            _properties_response(),
+            _related_response(("1991302", "semaglutide")),
+        ]
+    )
     service = _service(transport)
 
     result = service.lookup("semaglutide")
@@ -93,6 +111,7 @@ def test_lookup_returns_a_found_result_with_grounding_fields() -> None:
     assert result.name == "semaglutide"
     assert result.term_type == "IN"
     assert result.synonym is None
+    assert result.ingredients == (RxNormIngredient(rxcui="1991302", name="semaglutide"),)
     assert result.source_url == (
         "https://mor.nlm.nih.gov/RxNav/search?searchBy=RXCUI&searchTerm=1991302"
     )
@@ -102,7 +121,11 @@ def test_lookup_returns_a_found_result_with_grounding_fields() -> None:
 
 def test_lookup_url_encodes_the_term() -> None:
     transport = FakeTransport(
-        [_rxcui_response("1545653"), _properties_response(name="empagliflozin")]
+        [
+            _rxcui_response("1545653"),
+            _properties_response(rxcui="1545653", name="empagliflozin"),
+            _related_response(("1545653", "empagliflozin")),
+        ]
     )
     service = _service(transport)
 
@@ -120,25 +143,73 @@ def test_lookup_returns_not_found_when_rxnorm_has_no_match() -> None:
     assert result.found is False
     assert result.rxcui is None
     assert result.name is None
+    assert result.ingredients == ()
     assert result.source_url is None
     assert result.license is None
     assert result.retrieved_at
 
 
-def test_lookup_surfaces_a_brand_name_synonym() -> None:
-    transport = FakeTransport(
+def test_lookup_normalizes_a_brand_name_to_the_same_ingredient_as_its_generic() -> None:
+    """A brand name and its generic have different rxcuis but must share `ingredients`."""
+
+    generic_transport = FakeTransport(
+        [
+            _rxcui_response("1991302"),
+            _properties_response(),
+            _related_response(("1991302", "semaglutide")),
+        ]
+    )
+    brand_transport = FakeTransport(
         [
             _rxcui_response("1991307"),
-            _properties_response(rxcui="1991307", name="Ozempic", synonym="Ozempic Pen", tty="BN"),
+            _properties_response(rxcui="1991307", name="Ozempic", tty="BN"),
+            _related_response(("1991302", "semaglutide")),
+        ]
+    )
+
+    generic_result = _service(generic_transport).lookup("semaglutide")
+    brand_result = _service(brand_transport).lookup("Ozempic")
+
+    assert generic_result.rxcui != brand_result.rxcui
+    assert generic_result.ingredients == brand_result.ingredients
+    assert brand_result.ingredients == (RxNormIngredient(rxcui="1991302", name="semaglutide"),)
+
+
+def test_lookup_resolves_multiple_ingredients_for_a_combination_drug() -> None:
+    transport = FakeTransport(
+        [
+            _rxcui_response("1602110"),
+            _properties_response(rxcui="1602110", name="Glyxambi", tty="BN"),
+            _related_response(
+                ("1100699", "linagliptin"),
+                ("1545653", "empagliflozin"),
+            ),
         ]
     )
     service = _service(transport)
 
-    result = service.lookup("Ozempic")
+    result = service.lookup("Glyxambi")
+
+    assert result.ingredients == (
+        RxNormIngredient(rxcui="1100699", name="linagliptin"),
+        RxNormIngredient(rxcui="1545653", name="empagliflozin"),
+    )
+
+
+def test_lookup_tolerates_a_concept_with_no_related_ingredients() -> None:
+    transport = FakeTransport(
+        [
+            _rxcui_response("1649570"),
+            _properties_response(rxcui="1649570", name="Auto-Injector", tty="DF"),
+            _related_response(),
+        ]
+    )
+    service = _service(transport)
+
+    result = service.lookup("Auto-Injector")
 
     assert result.found is True
-    assert result.term_type == "BN"
-    assert result.synonym == "Ozempic Pen"
+    assert result.ingredients == ()
 
 
 def test_lookup_rejects_an_empty_term() -> None:
@@ -156,6 +227,7 @@ def test_lookup_retries_a_retryable_status_and_succeeds() -> None:
             FakeResponse(status_code=503, body=b"", headers={}),
             _rxcui_response("1991302"),
             _properties_response(),
+            _related_response(("1991302", "semaglutide")),
         ]
     )
     service = _service(transport, delays=delays)
@@ -163,7 +235,7 @@ def test_lookup_retries_a_retryable_status_and_succeeds() -> None:
     result = service.lookup("semaglutide")
 
     assert result.found is True
-    assert len(transport.urls) == 3
+    assert len(transport.urls) == 4
     assert delays == [2.0]
 
 
@@ -215,8 +287,24 @@ def test_lookup_raises_when_properties_response_is_malformed() -> None:
         service.lookup("semaglutide")
 
 
+def test_lookup_raises_when_related_response_is_malformed() -> None:
+    transport = FakeTransport(
+        [_rxcui_response("1991302"), _properties_response(), _json_response({})]
+    )
+    service = _service(transport)
+
+    with pytest.raises(RxNormLookupError, match="missing required evidence"):
+        service.lookup("semaglutide")
+
+
 def test_lookup_uses_the_first_rxcui_when_more_than_one_matches() -> None:
-    transport = FakeTransport([_rxcui_response("1991302", "9999999"), _properties_response()])
+    transport = FakeTransport(
+        [
+            _rxcui_response("1991302", "9999999"),
+            _properties_response(),
+            _related_response(("1991302", "semaglutide")),
+        ]
+    )
     service = _service(transport)
 
     result = service.lookup("semaglutide")
@@ -226,7 +314,13 @@ def test_lookup_uses_the_first_rxcui_when_more_than_one_matches() -> None:
 
 
 def test_to_json_is_stable_and_complete() -> None:
-    transport = FakeTransport([_rxcui_response("1991302"), _properties_response()])
+    transport = FakeTransport(
+        [
+            _rxcui_response("1991302"),
+            _properties_response(),
+            _related_response(("1991302", "semaglutide")),
+        ]
+    )
     service = _service(transport)
 
     result = service.lookup("semaglutide")
@@ -234,4 +328,5 @@ def test_to_json_is_stable_and_complete() -> None:
 
     assert '"found": true' in payload
     assert '"rxcui": "1991302"' in payload
+    assert '"ingredients"' in payload
     assert payload.endswith("\n")

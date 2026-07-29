@@ -16,10 +16,22 @@ other live-lookup candidates) because it needs no API key, is the
 candidate the design doc specifically called out as reusing NCBI-adjacent
 infrastructure, and complements Wikipedia's broad-but-encyclopedic
 coverage with an authoritative, structured drug-name normalization this
-project's diabetes/GLP-1 corpus concretely needs (RxNorm resolves brand
-names like "Ozempic" and generic names like "semaglutide" to the same
-underlying concept, which Wikipedia's title-matching lookup does not).
-RxNorm returns structured facts (a name and a term type), not
+project's diabetes/GLP-1 corpus concretely needs. RxNorm's own concept
+model does *not* merge a brand name and its generic ingredient into one
+identifier -- "Ozempic" (RxCUI 1991307, term type "BN") and "semaglutide"
+(RxCUI 1991302, term type "IN") are, correctly, two distinct RxNorm
+concepts, the same way this project's own schema keeps genuinely
+different entities separate rather than collapsing them for convenience.
+What *does* recognize them as the same underlying drug is RxNorm's own
+ingredient relationship: this module resolves every term's `ingredients`
+-- the underlying "IN"-type concept(s) reachable from its RxCUI via
+RxNav's `related.json?tty=IN` endpoint, verified live to return
+`semaglutide` (RxCUI 1991302) for both "semaglutide" and "Ozempic", and
+to return multiple ingredients for a combination-drug brand (e.g.
+"Glyxambi" resolves to both "linagliptin" and "empagliflozin"). A caller
+that needs to recognize a brand name and its generic as equivalent
+compares `ingredients`, not the top-level `rxcui`. RxNorm returns
+structured facts (names, term types, ingredient relationships), not
 explanatory prose -- the design doc's own caveat about the
 RxNorm/MeSH/PubChem family versus Wikipedia's prose.
 
@@ -53,6 +65,7 @@ from knowledge_engine.rxnorm_http import TransportResponse
 
 RXNORM_RXCUI_URL = "https://rxnav.nlm.nih.gov/REST/rxcui.json"
 RXNORM_PROPERTIES_URL = "https://rxnav.nlm.nih.gov/REST/rxcui"
+RXNORM_RELATED_INGREDIENT_TTY = "IN"
 RXNORM_CONCEPT_PERMALINK = "https://mor.nlm.nih.gov/RxNav/search"
 RXNORM_CONTENT_LICENSE = "Non-proprietary content, National Library of Medicine (RxNorm API)"
 
@@ -82,6 +95,14 @@ class GetTransport(Protocol):
 
 
 @dataclass(frozen=True)
+class RxNormIngredient:
+    """One ingredient-level RxNorm concept reachable from a looked-up term."""
+
+    rxcui: str
+    name: str
+
+
+@dataclass(frozen=True)
 class RxNormLookupResult:
     """One term's drug-terminology lookup outcome.
 
@@ -90,6 +111,13 @@ class RxNormLookupResult:
     caller deciding whether a drug's identity is relevant to a specific
     paper's claim is a human or future-reasoning-layer judgment this
     module does not make.
+
+    `rxcui`/`name`/`term_type` describe the term's *own* RxNorm concept,
+    which for a brand name is the brand concept itself, not its generic
+    ingredient -- RxNorm keeps those distinct by design. `ingredients`
+    holds the underlying ingredient-level concept(s) this term resolves
+    to; compare `ingredients` (not `rxcui`) to recognize a brand name and
+    its generic as the same underlying drug.
     """
 
     term: str
@@ -98,6 +126,7 @@ class RxNormLookupResult:
     name: str | None
     term_type: str | None
     synonym: str | None
+    ingredients: tuple[RxNormIngredient, ...]
     source_url: str | None
     license: str | None
     retrieved_at: str
@@ -154,12 +183,14 @@ class RxNormLookupService:
                 name=None,
                 term_type=None,
                 synonym=None,
+                ingredients=(),
                 source_url=None,
                 license=None,
                 retrieved_at=retrieved_at,
             )
 
         properties = self._fetch_properties(rxcui)
+        ingredients = self._fetch_ingredients(rxcui)
         source_url = f"{RXNORM_CONCEPT_PERMALINK}?searchBy=RXCUI&searchTerm={quote(rxcui, safe='')}"
         return RxNormLookupResult(
             term=normalized,
@@ -168,6 +199,7 @@ class RxNormLookupService:
             name=_optional_string(properties, "name"),
             term_type=_optional_string(properties, "tty"),
             synonym=_optional_string(properties, "synonym"),
+            ingredients=ingredients,
             source_url=source_url,
             license=RXNORM_CONTENT_LICENSE,
             retrieved_at=retrieved_at,
@@ -193,6 +225,38 @@ class RxNormLookupService:
         if not isinstance(properties, dict):
             raise RxNormLookupError("RxNorm response was missing required evidence.")
         return properties
+
+    def _fetch_ingredients(self, rxcui: str) -> tuple[RxNormIngredient, ...]:
+        url = (
+            f"{RXNORM_PROPERTIES_URL}/{quote(rxcui, safe='')}/related.json"
+            f"?tty={RXNORM_RELATED_INGREDIENT_TTY}"
+        )
+        value = _parse_json_object(self._get(url))
+        related_group = value.get("relatedGroup")
+        if not isinstance(related_group, dict):
+            raise RxNormLookupError("RxNorm response was missing required evidence.")
+        concept_groups = related_group.get("conceptGroup")
+        if not isinstance(concept_groups, list):
+            raise RxNormLookupError("RxNorm response was missing required evidence.")
+
+        ingredients: list[RxNormIngredient] = []
+        for group in concept_groups:
+            if not isinstance(group, dict) or group.get("tty") != RXNORM_RELATED_INGREDIENT_TTY:
+                continue
+            concept_properties = group.get("conceptProperties")
+            if concept_properties is None:
+                continue
+            if not isinstance(concept_properties, list):
+                raise RxNormLookupError("RxNorm response contained malformed evidence.")
+            for concept in concept_properties:
+                if not isinstance(concept, dict):
+                    raise RxNormLookupError("RxNorm response contained malformed evidence.")
+                ingredient_rxcui = _optional_string(concept, "rxcui")
+                ingredient_name = _optional_string(concept, "name")
+                if ingredient_rxcui is None or ingredient_name is None:
+                    raise RxNormLookupError("RxNorm response contained malformed evidence.")
+                ingredients.append(RxNormIngredient(rxcui=ingredient_rxcui, name=ingredient_name))
+        return tuple(ingredients)
 
     def _get(self, url: str) -> TransportResponse:
         for attempt in range(self.max_attempts):

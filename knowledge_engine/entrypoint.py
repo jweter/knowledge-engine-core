@@ -1020,6 +1020,11 @@ def rxnorm_lookup(
             console.print(f"Term type: {escape(result.term_type)}")
         if result.synonym:
             console.print(f"Synonym: {escape(result.synonym)}")
+        if result.ingredients:
+            ingredient_list = ", ".join(
+                f"{ingredient.name} (RXCUI {ingredient.rxcui})" for ingredient in result.ingredients
+            )
+            console.print(f"Ingredient(s): {escape(ingredient_list)}")
         console.print()
         console.print(
             f"RxCUI: {escape(result.rxcui or 'unknown')}  "

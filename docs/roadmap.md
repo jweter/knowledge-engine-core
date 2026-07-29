@@ -197,19 +197,26 @@ acceptance, release validation, and optional post-release quality audits.
 - **M42** added a second live-lookup reference source, NLM's RxNorm API,
   alongside M41's Wikipedia lookup. A new `ke rxnorm-lookup <term>`
   command and `knowledge_engine/rxnorm_lookup.py` resolve a drug name to
-  its RxNorm normalized concept (RxCUI, canonical name, term type, and
-  synonym) via RxNav's public REST API (`rxnorm_http.py`'s
-  `UrllibRxNavTransport` -- a dedicated host-allowlisted transport, since
-  RxNav is a distinct NLM host from the literature-scoped
+  its own RxNorm concept (RxCUI, canonical name, term type, and synonym)
+  plus its underlying ingredient concept(s) (an `ingredients` list, via
+  RxNav's `related.json?tty=IN` relationship) through a dedicated
+  host-allowlisted transport (`rxnorm_http.py`'s `UrllibRxNavTransport`,
+  since RxNav is a distinct NLM host from the literature-scoped
   `ncbi_http.py`). Chosen as the second source because it needs no API
   key and closes a gap Wikipedia's title-matching lookup leaves open for
-  this corpus specifically: normalizing a generic name (e.g.
-  "semaglutide") and its brand name (e.g. "Ozempic") to the same
-  underlying concept. Explicitly background context, not evidence, with
-  the same non-`EvidenceRecord` boundary M41 drew. Live-verified against
-  real terms (`semaglutide`, `Ozempic`, `empagliflozin`, and mechanism
-  terms RxNorm correctly does not match, like "SGLT2 inhibitor") before
-  and after building the parser. See `docs/m42_rxnorm_lookup.md`.
+  this corpus specifically: a generic name (e.g. "semaglutide") and its
+  brand name (e.g. "Ozempic") get different top-level RxCUIs -- RxNorm's
+  own model correctly keeps those distinct -- but resolve to the *same*
+  `ingredients` entry, which is what a caller compares to recognize them
+  as the same underlying drug. Codex review on PR #179 caught that the
+  first version of this milestone claimed that normalization without
+  actually following the ingredient relationship (the top-level `rxcui`
+  was returned unchanged either way); fixed before merge by adding the
+  `related.json` call, verified live that `semaglutide` and `Ozempic`
+  then share one `ingredients` entry, and that a combination-drug brand
+  ("Glyxambi") resolves to more than one. Explicitly background context,
+  not evidence, with the same non-`EvidenceRecord` boundary M41 drew.
+  See `docs/m42_rxnorm_lookup.md`.
 
 ### M14: Controlled 500-paper rehearsal
 
