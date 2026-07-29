@@ -388,3 +388,124 @@ class ExtractionRun(Base):
         CheckConstraint("candidate_count >= 0", name="ck_extraction_runs_candidate_count"),
         CheckConstraint("draft_item_count >= 0", name="ck_extraction_runs_draft_item_count"),
     )
+
+
+class GraphConcept(Base):
+    """Phase 4 graph node: one resolved reference-layer term or PICO field value.
+
+    See `docs/phase4_design.md`'s Architecture section. `definition`/
+    `source_url`/`license` hold the actual M41-M45 lookup content (Wikipedia's
+    `extract`, MeSH's `scope_note`, etc.) -- those lookup results are not
+    persisted anywhere else, so a row here is their only durable home once a
+    concept is linked into the graph. `source_reference_id` (the lookup's own
+    `mesh_id`/`rxcui`/`cid`) is null for a bare PICO-derived concept with no
+    resolved reference-layer match; `UniqueConstraint` below only dedupes
+    real, identified lookups -- SQLite treats each `NULL` as distinct, so
+    multiple bare PICO concepts are never falsely deduped by this constraint
+    (see the design doc's "Concept-node duplication across sources" risk:
+    no PICO-label deduplication is attempted in this first slice).
+    """
+
+    __tablename__ = "graph_concepts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    label: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    source_reference_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    definition: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    license: Mapped[str | None] = mapped_column(Text, nullable=True)
+    retrieved_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "source IN ('wikipedia','rxnorm','mesh','pubchem','pico')",
+            name="ck_graph_concepts_source",
+        ),
+        UniqueConstraint(
+            "source", "source_reference_id", name="uq_graph_concepts_source_reference"
+        ),
+    )
+
+
+class GraphClaim(Base):
+    """Phase 4 graph node: one *validated* `EvidenceRecord`, not a raw claim candidate.
+
+    `evidence_record_id` is a plain, application-validated string reference,
+    not a SQL foreign key -- `EvidenceRecord`s are JSONL objects appended by
+    `_promote_evidence_records`, never rows in any SQLAlchemy table, so
+    there is no table for a `ForeignKey()` to target. This node inherits its
+    parent record's `research_question`/`evidence_direction`/`confidence_note`
+    by reference; none of those judgment fields are duplicated here.
+    """
+
+    __tablename__ = "graph_claims"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    evidence_record_id: Mapped[str] = mapped_column(
+        String(128), nullable=False, unique=True, index=True
+    )
+    created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+class GraphClaimConcept(Base):
+    """Phase 4 graph edge: which PICO field linked a claim to a concept.
+
+    Real SQL foreign keys on both sides -- both endpoints are genuine
+    `graph_*` rows, unlike `GraphClaim.evidence_record_id` above.
+    """
+
+    __tablename__ = "graph_claim_concepts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    claim_id: Mapped[int] = mapped_column(ForeignKey("graph_claims.id"), nullable=False, index=True)
+    concept_id: Mapped[int] = mapped_column(
+        ForeignKey("graph_concepts.id"), nullable=False, index=True
+    )
+    edge_role: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "edge_role IN ('population','intervention','comparator','outcome')",
+            name="ck_graph_claim_concepts_edge_role",
+        ),
+        UniqueConstraint(
+            "claim_id", "concept_id", "edge_role", name="uq_graph_claim_concepts_edge"
+        ),
+    )
+
+
+class GraphClaimRelationship(Base):
+    """Phase 4 graph edge: a graph-queryable projection of an M24 `RelationshipRecord`.
+
+    `relationship_id` is a plain, application-validated string reference,
+    the same non-enforced posture as `GraphClaim.evidence_record_id`, for
+    the same reason: `RelationshipRecord`s are JSONL too, with no table to
+    reference. This table does not replace `RelationshipRecord`s or `ke
+    relationship-validate` -- it is a projection of the same validated data,
+    not a second source of truth.
+    """
+
+    __tablename__ = "graph_claim_relationships"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    relationship_id: Mapped[str] = mapped_column(
+        String(128), nullable=False, unique=True, index=True
+    )
+    source_claim_id: Mapped[int] = mapped_column(
+        ForeignKey("graph_claims.id"), nullable=False, index=True
+    )
+    target_claim_id: Mapped[int] = mapped_column(
+        ForeignKey("graph_claims.id"), nullable=False, index=True
+    )
+    relationship_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "relationship_type IN ('supports','contradicts','qualifies','contextualizes')",
+            name="ck_graph_claim_relationships_type",
+        ),
+    )

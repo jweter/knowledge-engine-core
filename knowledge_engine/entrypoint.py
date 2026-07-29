@@ -28,7 +28,12 @@ from knowledge_engine.corpus_library import (
 )
 from knowledge_engine.crossref_http import UrllibCrossrefTransport
 from knowledge_engine.crossref_provider import CrossrefProvider
-from knowledge_engine.database import Database, ExtractionRunRepository, PaperRepository
+from knowledge_engine.database import (
+    Database,
+    ExtractionRunRepository,
+    GraphRepository,
+    PaperRepository,
+)
 from knowledge_engine.europepmc_acquisition import (
     AcquisitionTransport as EuropePmcAcquisitionTransport,
 )
@@ -315,6 +320,33 @@ ExtractionReviewAnnotateOutputOption = Annotated[
     Path,
     typer.Option("--output", help="Path for the annotated draft extraction review JSONL file."),
 ]
+GraphBuildEvidenceOption = Annotated[
+    Path,
+    typer.Option(
+        "--evidence",
+        help="Validated EvidenceRecord JSONL file (already passed `ke evidence-validate`).",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+GraphBuildRelationshipsOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--relationships",
+        help=(
+            "Optional validated RelationshipRecord JSONL file "
+            "(already passed `ke relationship-validate`)."
+        ),
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+GraphBuildOutputOption = Annotated[
+    Path | None,
+    typer.Option("--output", help="Optional path to save the population summary as JSON."),
+]
 DryRunOption = Annotated[
     bool,
     typer.Option("--dry-run", help="Report what would happen without writing anything."),
@@ -554,6 +586,30 @@ def _record_extraction_run(
             study_design_rules_version=STUDY_DESIGN_RULES_VERSION,
             pico_extraction_rules_version=PICO_EXTRACTION_RULES_VERSION,
         )
+
+
+def _read_jsonl_records(path: Path) -> list[dict[str, Any]]:
+    """Parse a JSONL file into a list of JSON object records.
+
+    Exits with a clear per-line error on malformed JSON or a non-object
+    record, rather than skipping or guessing.
+    """
+
+    records: list[dict[str, Any]] = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            record = json.loads(stripped)
+        except json.JSONDecodeError as exc:
+            console.print(f"[red]{path}, line {line_number}: invalid JSON.[/red]")
+            raise typer.Exit(1) from exc
+        if not isinstance(record, dict):
+            console.print(f"[red]{path}, line {line_number}: record must be a JSON object.[/red]")
+            raise typer.Exit(1)
+        records.append(record)
+    return records
 
 
 def _validate_output(output: Path, *, force: bool) -> None:
@@ -1663,6 +1719,166 @@ def extraction_review_annotate(
         "research_question and evidence_direction still require human completion "
         "before ke extraction-review-promote will accept any item.[/bold]"
     )
+
+
+@app.command("graph-build")
+def graph_build(
+    evidence: GraphBuildEvidenceOption,
+    relationships: GraphBuildRelationshipsOption = None,
+    output: GraphBuildOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Populate the Phase 4 knowledge graph from validated evidence and relationship records.
+
+    See `docs/phase4_design.md`. Reads an `--evidence` JSONL file (already
+    passed `ke evidence-validate`) and creates one `graph_claims` row per
+    record. Reuses M45's `annotate_draft_items` unchanged to resolve each
+    record's `population`/`intervention`/`comparator`/`outcome` PICO field
+    against RxNorm/MeSH -- the same live-network reference-layer lookup
+    `extraction-review-annotate` already runs, so the same "expect on the
+    order of a minute or more of network calls, not a near-instant
+    operation" cost applies here too. A field that has no confident
+    reference-layer match (`found: false`) contributes no concept node --
+    unlike `extraction-review-annotate`'s output, this command does not
+    keep the miss on record, since nothing else here reads it back.
+
+    An optional `--relationships` JSONL file (already passed `ke
+    relationship-validate`) adds one `graph_claim_relationships` row per
+    record, projecting M24's typed `supports`/`contradicts`/`qualifies`/
+    `contextualizes` edges into the graph unchanged -- this command never
+    infers or computes a relationship. A relationship whose endpoint is
+    not among the records in `--evidence` is skipped with a clear message,
+    never silently dropped or a hard failure of the whole run.
+
+    Every method this command calls stays on the same side of the seam
+    `docs/roadmap/long_term_vision.md` establishes: it stores and links
+    already-authored signals, never computes, defaults, or infers a
+    confidence rating. `graph_citations` is out of scope here -- see the
+    design doc's Open Questions.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    evidence_records = _read_jsonl_records(evidence)
+    if not evidence_records:
+        console.print("[yellow]No evidence records found in --evidence file.[/yellow]")
+        return
+
+    relationship_records = _read_jsonl_records(relationships) if relationships is not None else []
+
+    console.print(
+        "[yellow]Network access:[/yellow] querying NLM's public RxNav and E-utilities APIs "
+        "to resolve PICO fields into reference-layer concepts."
+    )
+    rxnorm_transport = cast(RxNormLookupGetTransport, UrllibRxNavTransport())
+    mesh_transport = cast(MeshLookupGetTransport, UrllibNcbiTransport())
+    rxnorm_service = RxNormLookupService(rxnorm_transport)
+    mesh_service = MeshLookupService(mesh_transport)
+    try:
+        annotated, _summary = annotate_draft_items(
+            evidence_records, rxnorm_service=rxnorm_service, mesh_service=mesh_service
+        )
+    except (RxNormLookupError, MeshLookupError) as exc:
+        console.print(f"[red]Reference-layer annotation failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    database = _local_database()
+    database.initialize()
+
+    concepts_linked = 0
+    relationships_created = 0
+    relationships_skipped: list[str] = []
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claims_by_evidence_id: dict[str, int] = {}
+
+        for item in annotated:
+            evidence_record_id = item.get("evidence_record_id")
+            if not isinstance(evidence_record_id, str) or not evidence_record_id.strip():
+                console.print(
+                    "[yellow]Skipped an evidence record with no evidence_record_id.[/yellow]"
+                )
+                continue
+
+            claim = repository.get_or_create_claim(evidence_record_id)
+            claims_by_evidence_id[evidence_record_id] = claim.id
+
+            reference_context = item.get("reference_context") or {}
+            for field, payload in reference_context.items():
+                if not isinstance(payload, dict) or not payload.get("found"):
+                    continue
+                source = payload.get("source")
+                if source == "rxnorm":
+                    label = payload.get("name") or payload.get("term")
+                    source_reference_id = payload.get("rxcui")
+                    definition = None
+                elif source == "mesh":
+                    label = payload.get("heading") or payload.get("term")
+                    source_reference_id = payload.get("mesh_id")
+                    definition = payload.get("scope_note")
+                else:
+                    continue
+                if not label or not source_reference_id:
+                    continue
+
+                concept = repository.get_or_create_concept(
+                    label=str(label),
+                    source=source,
+                    source_reference_id=str(source_reference_id),
+                    definition=definition,
+                    source_url=payload.get("source_url"),
+                    license=payload.get("license"),
+                    retrieved_at=str(payload.get("retrieved_at")),
+                )
+                repository.link_claim_concept(claim.id, concept.id, field)
+                concepts_linked += 1
+
+        for record in relationship_records:
+            relationship_id = record.get("relationship_id")
+            source_evidence_record_id = record.get("source_evidence_record_id")
+            target_evidence_record_id = record.get("target_evidence_record_id")
+            source_claim_id = claims_by_evidence_id.get(str(source_evidence_record_id))
+            target_claim_id = claims_by_evidence_id.get(str(target_evidence_record_id))
+            if (
+                not isinstance(relationship_id, str)
+                or source_claim_id is None
+                or target_claim_id is None
+            ):
+                relationships_skipped.append(str(relationship_id or "<missing relationship_id>"))
+                continue
+
+            repository.get_or_create_relationship_edge(
+                relationship_id,
+                source_claim_id=source_claim_id,
+                target_claim_id=target_claim_id,
+                relationship_type=str(record.get("relationship_type")),
+                rationale=str(record.get("rationale")),
+            )
+            relationships_created += 1
+
+        counts = repository.population_counts()
+
+    console.print(
+        f"[green]Graph build complete:[/green] {len(claims_by_evidence_id)} claim(s) processed, "
+        f"{concepts_linked} claim-concept link(s) created, "
+        f"{relationships_created} relationship edge(s) created."
+    )
+    if relationships_skipped:
+        console.print(
+            f"[yellow]Skipped {len(relationships_skipped)} relationship(s) with a missing "
+            f"relationship_id or an endpoint outside --evidence:[/yellow] "
+            f"{', '.join(relationships_skipped)}"
+        )
+    console.print(
+        f"Graph totals -- concepts: {counts['concepts']} {counts['concepts_by_source']}, "
+        f"claims: {counts['claims']}, claim-concept edges: {counts['claim_concept_edges']}, "
+        f"relationship edges: {counts['relationship_edges']}."
+    )
+
+    if output is not None:
+        _write_output(output, json.dumps(counts, indent=2) + "\n")
 
 
 @app.command("paper-pages-backfill")

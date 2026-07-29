@@ -121,6 +121,17 @@ itself, but may need to trigger for a specific paper):**
   `ke extraction-review-annotate` requires `--output` (it always writes a
   file).
 
+**Phase 4 knowledge graph (M46, see "the seam" above):**
+- `ke graph-build --evidence <records.jsonl> [--relationships <records.jsonl>] [--output <path.json>]`
+  -- populates `graph_concepts`/`graph_claims`/`graph_claim_concepts`/
+  `graph_claim_relationships` in the SQLite database from an already-
+  validated Evidence Record file (and optional Relationship Record
+  file), reusing M45's `annotate_draft_items` to resolve PICO fields into
+  concept nodes. Writes to the database always; `--output` is an
+  optional JSON summary of total graph row counts, not the graph data
+  itself. `graph_citations` does not exist yet -- see
+  `docs/m46_graph_repository.md`.
+
 **Do not assume `--output` (or any machine-readable output) exists on a
 command not listed above as having it.** `search`/`answer`/
 `vector-search`/`fused-search` -- the four primary retrieval commands --
@@ -290,10 +301,15 @@ decides when to re-invoke extraction for a given paper.
 
 ## What does not exist yet
 
-- No Knowledge Graph (Phase 4, unstarted) -- there is no `concept`,
-  `claim`-as-graph-node, or typed contradiction/support edge beyond the
-  Relationship Record's flat four-type vocabulary above. This document
-  will need a Graph section once Phase 4 exists.
+- No `graph_citations` table or citation-graph edges (M46 built the rest
+  of Phase 4's first schema slice -- concept/claim nodes and
+  claim-concept/claim-relationship edges -- see `ke graph-build` above
+  and `docs/m46_graph_repository.md`). Citation-list extraction from
+  paper text is unscoped, real-corpus-verification-requiring work, not
+  yet built.
+- No Neo4j or other dedicated graph backend -- the graph lives in the
+  same SQLite database as everything else, behind `GraphRepository`,
+  mirroring Phase 3's FAISS-before-Qdrant sequencing.
 - No HTTP/RPC API -- the CLI and direct SQLite/corpus-library access are
   the only interfaces.
 - No published Python package -- importing `knowledge_engine` modules

@@ -1215,6 +1215,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   explicitly as this phase's motivation rather than something the first
   schema delivers, with their own schema work named as a deliberately
   deferred Open Question rather than guessed under time pressure.
+- Added M46 (`docs/m46_graph_repository.md`), the first Phase 4 code: the
+  `graph_concepts`/`graph_claims`/`graph_claim_concepts`/
+  `graph_claim_relationships` schema (schema version 8), the
+  `GraphRepository` persistence layer (`get_or_create_concept`/
+  `get_or_create_claim`/`link_claim_concept`/
+  `get_or_create_relationship_edge`, plus traversal queries and
+  `population_counts()`), and a new `ke graph-build` CLI command that
+  populates the graph from a validated `EvidenceRecord` JSONL file and an
+  optional validated `RelationshipRecord` JSONL file, reusing M45's
+  `annotate_draft_items` unchanged to resolve PICO fields into RxNorm/MeSH
+  concept nodes. `graph_citations` remains deliberately absent, per the
+  design doc's Open Questions. Live-verified against the repo's real
+  committed evidence corpus (2 hand-authored records): 2 claims, 2
+  concepts, 4 claim-concept edges, 0 relationship edges (no relationship
+  file exists in the repo yet).
 
 ### Changed
 
