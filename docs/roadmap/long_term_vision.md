@@ -130,6 +130,9 @@ trustworthy, source-linked, deterministic, and never silently guessed. This
 layer's responsibility is everything that requires judgment about what that
 evidence means. Building this into `core` itself, or blurring the seam
 between the two, is explicitly out of scope for every `core` milestone.
+See `docs/core_interface_contract.md` for the concrete configuration,
+CLI surface, and data schemas this layer (or any other) actually
+consumes from `core` today.
 
 ### Confidence Rating Design Guidance
 

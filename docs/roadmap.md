@@ -640,7 +640,12 @@ Detailed milestone records include:
   consumable interface (not new reasoning logic in `core` itself) so the
   separately versioned `knowledge-engine-ai` package can begin its own
   reasoning experiments on top of it; see
-  `docs/roadmap/long_term_vision.md`.
+  `docs/roadmap/long_term_vision.md`. **`docs/core_interface_contract.md`**
+  documents this contract as it exists today (config, CLI surface, Evidence/
+  Relationship Record schemas, reference-layer output shapes), written ahead
+  of the graph so a consuming layer already knows what to expect from
+  everything through Phase 3; it will need a Graph section once Phase 4
+  ships.
 - `v0.9.0`: Feature-complete beta.
 - `v1.0.0`: Stable public release.
 - Post-`v1.0.0`: `docs/roadmap/long_term_vision.md`'s Discovery Metrics
