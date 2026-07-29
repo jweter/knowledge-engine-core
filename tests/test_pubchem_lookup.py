@@ -102,6 +102,30 @@ def test_lookup_url_encodes_the_term() -> None:
     )
 
 
+def test_lookup_declines_to_resolve_when_multiple_compounds_match() -> None:
+    """Real PubChem behavior: "estrogen" resolves to two distinct CIDs (21628493,
+    12115739) sharing the same synonym. Picking the first would misidentify the
+    compound, so the service must decline rather than guess."""
+
+    body = {
+        "PropertyTable": {
+            "Properties": [
+                {"CID": 21628493, "Title": "Estrogen"},
+                {"CID": 12115739, "Title": "13-methyl-..."},
+            ]
+        }
+    }
+    transport = FakeTransport(
+        [FakeResponse(status_code=200, body=json.dumps(body).encode("utf-8"), headers={})]
+    )
+    service = _service(transport)
+
+    result = service.lookup("estrogen")
+
+    assert result.found is False
+    assert result.cid is None
+
+
 def test_lookup_returns_not_found_on_404_without_raising() -> None:
     transport = FakeTransport([FakeResponse(status_code=404, body=b"", headers={})])
     service = _service(transport)

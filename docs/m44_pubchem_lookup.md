@@ -82,6 +82,17 @@ term.
 API responses, not always a string; the module's optional-field parser
 tolerates both, with a dedicated regression test proving it.
 
+**A name can also resolve to more than one compound, not just zero or
+one.** Verified live: querying "estrogen" returns two distinct CIDs
+(21628493 and 12115739) sharing the same synonym. Codex review on PR
+#183 caught that the first version silently returned whichever entry
+PubChem listed first (`properties[0]`), discarding the ambiguity --
+exactly the guessing-among-candidates mistake M43's original MeSH
+lookup made. Fixed before merge: the service now resolves a name only
+when the response contains exactly one candidate property record,
+declining (`found: false`) otherwise, matching M43's precedent for
+ambiguous MeSH matches.
+
 ## Command
 
 ```bash
@@ -111,15 +122,23 @@ other lookup module in this project already established.
 When `found` is `false`, every field past `term`/`found`/`retrieved_at`
 is `null` -- never a guessed or partial value.
 
-`license` records NCBI/NLM's general public-domain policy for
-government-created content on its sites ("information created by or for
-the US government on this site is within the public domain,"
-`https://www.ncbi.nlm.nih.gov/home/about/policies/`) -- the same
-public-domain basis PubMed/PMC metadata already carries, not a Creative
-Commons license string. This deliberately does not run through
-`license_rules.py`'s `ALLOWED_LICENSE_PATTERN`: that pattern governs the
-separate paper corpus's CC BY/CC0 adjudication, and this reference layer
-is explicitly not part of that corpus (see
+`license` does **not** assert PubChem records are a blanket U.S.
+government public-domain work. The first version of this milestone
+claimed exactly that, citing NCBI/NLM's general policy for
+government-created content ("information created by or for the US
+government on this site is within the public domain,"
+`https://www.ncbi.nlm.nih.gov/home/about/policies/`) -- the same basis
+PubMed/PMC metadata carries. Codex review on PR #183 caught that this
+overstates reuse rights: PubChem aggregates compound names and
+identifiers from many external depositors, and NCBI's policy only
+covers content NCBI itself creates. Verified live: CID 4091
+(metformin)'s own PubChem-hosted description is sourced from ChEBI, a
+UK-based database, not authored by NCBI. `license` now records that
+provenance is mixed and reuse terms should be verified source-by-source,
+rather than asserting a specific reuse right. This deliberately does not
+run through `license_rules.py`'s `ALLOWED_LICENSE_PATTERN`: that pattern
+governs the separate paper corpus's CC BY/CC0 adjudication, and this
+reference layer is explicitly not part of that corpus (see
 `docs/reference_knowledge_layer_design.md`'s "What this is not"
 section).
 

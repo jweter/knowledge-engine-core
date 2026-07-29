@@ -7,7 +7,11 @@ import pytest
 from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
-from knowledge_engine.pubchem_lookup import PubchemLookupError, PubchemLookupResult
+from knowledge_engine.pubchem_lookup import (
+    PUBCHEM_CONTENT_LICENSE,
+    PubchemLookupError,
+    PubchemLookupResult,
+)
 
 
 def _unwrapped(output: str) -> str:
@@ -43,7 +47,7 @@ def _found_result(term: str = "metformin") -> PubchemLookupResult:
         molecular_weight="129.16",
         smiles="CN(C)C(=N)N=C(N)N",
         source_url="https://pubchem.ncbi.nlm.nih.gov/compound/4091",
-        license="Public domain, U.S. government work (National Library of Medicine, PubChem)",
+        license=PUBCHEM_CONTENT_LICENSE,
         retrieved_at="2026-07-29T00:00:00+00:00",
     )
 

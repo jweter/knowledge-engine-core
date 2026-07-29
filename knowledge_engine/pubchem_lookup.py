@@ -42,14 +42,30 @@ name, not the general mechanism class a reader might expect. This
 module reports whatever PubChem actually returns rather than guessing
 what a caller "probably" meant.
 
-PubChem content is a U.S. government work -- NCBI/NLM's general policy
-states "information created by or for the US government on this site is
-within the public domain" (https://www.ncbi.nlm.nih.gov/home/about/
-policies/), the same public-domain basis PubMed/PMC metadata already
-carries -- not a Creative Commons license, so `license` records that
-phrase directly rather than forcing it into the `license_rules.py`
+A name can also resolve to more than one compound record -- verified
+live: querying "estrogen" returns two distinct CIDs (21628493 and
+12115739) sharing the same synonym. Silently returning the first would
+misidentify the compound, the same guessing-among-ambiguous-candidates
+mistake M43's original MeSH lookup made (and Codex review on this PR
+caught here too); this module resolves a name only when the response
+contains exactly one candidate, declining (`found: false`) otherwise --
+never a guess among ambiguous candidates.
+
+PubChem is not a blanket U.S. government work: it aggregates compound
+names and identifiers from many external depositors -- verified live
+that CID 4091 (metformin)'s own PubChem-hosted description is sourced
+from ChEBI, a UK-based database, not authored by NCBI. NCBI/NLM's
+general public-domain policy ("information created by or for the US
+government on this site is within the public domain",
+https://www.ncbi.nlm.nih.gov/home/about/policies/) covers only content
+NCBI itself creates, not depositor-submitted content -- so `license`
+does not assert a blanket public-domain claim for PubChem records (a
+real gap Codex review on this PR caught in the first version, which had
+wrongly labeled every result a U.S. government work). It instead states
+that provenance is mixed and reuse terms should be verified
+source-by-source, deliberately not forced into the `license_rules.py`
 CC-family pattern that governs the separate paper corpus (which this
-reference layer, per the design doc, is deliberately not part of).
+reference layer, per the design doc, is not part of).
 """
 
 from __future__ import annotations
@@ -69,7 +85,14 @@ PUBCHEM_PROPERTY_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name"
 PUBCHEM_PROPERTIES = "Title,IUPACName,MolecularFormula,MolecularWeight,ConnectivitySMILES"
 PUBCHEM_COMPOUND_PERMALINK = "https://pubchem.ncbi.nlm.nih.gov/compound"
 PUBCHEM_CONTENT_LICENSE = (
-    "Public domain, U.S. government work (National Library of Medicine, PubChem)"
+    "PubChem (National Library of Medicine) aggregates compound names and "
+    "identifiers from many external depositors (verified live: CID 4091's "
+    "own PubChem description is sourced from ChEBI, not NCBI). NCBI's "
+    "public-domain policy for government-authored content "
+    "(https://www.ncbi.nlm.nih.gov/home/about/policies/) does not cover "
+    "depositor-submitted content, so this is not asserted as a blanket "
+    "public-domain license -- verify source-specific reuse terms before "
+    "redistribution."
 )
 
 DEFAULT_HEADERS = {
@@ -179,9 +202,11 @@ class PubchemLookupService:
         if (
             not isinstance(properties, list)
             or not properties
-            or not isinstance(properties[0], dict)
+            or not all(isinstance(entry, dict) for entry in properties)
         ):
             raise PubchemLookupError("PubChem response was missing required evidence.")
+        if len(properties) > 1:
+            return _not_found_result(normalized, retrieved_at)
 
         return _parse_result(normalized, properties[0], retrieved_at=retrieved_at)
 
