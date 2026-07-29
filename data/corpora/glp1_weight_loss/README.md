@@ -62,8 +62,8 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 951 sources: the small historical GLP-1
-prototype set (3 rows) plus 948 accepted records from thirteen small
+The committed manifest holds 943 sources: the small historical GLP-1
+prototype set (3 rows) plus 940 accepted records from thirteen small
 (`--limit 250`) automated discovery batches (`retstart` 0 through 3000) of
 the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
@@ -333,3 +333,28 @@ intervention. All 13 excluded before acquisition -- 31 net-new PMC OA
 PDFs acquired and imported via linked resume against the same local
 import run (31 imported, 0 failed, 920 skipped). Corpus grew 920 -> 951.
 Regenerated the compressed `corpus_library` snapshot.
+
+A Codex review on the `retstart=3000` growth PR then caught 8 more
+false positives the proactive title screen above missed, all failing
+`inclusion_criteria.md`'s explicit two-part title requirement (an
+approved scope term *and* a named therapeutic intervention) the same way
+as before: an NHANES observational obesity/cardiovascular-disease
+association study, a hospitalised-adults hypoglycaemia-episodes
+observational study, an in-hospital-outcomes study of T2D as a covariate
+for STEMI (an off-target primary disease), a diabetic-eye-disease
+progression/risk-factor study, a T2D-development sibling-pairs genetics
+study, and three primary mechanistic/model papers (a novel mouse model
+for cardiovascular-kidney-metabolic syndrome, a macrophage lysosomal
+acid lipase deletion phenotype study, an H19 lncRNA prenatal-programming
+study) that name no therapeutic intervention at all. The screen's own
+title scan had actually flagged several of these correctly during
+review, but they were dropped when the final exclusion list was
+compiled -- the same transcription-error failure mode a much earlier
+batch's Codex review caught (see the "retstart=2000" history above); the
+other three reflect applying this corpus's "mechanism-only reviews"
+breadth carve-out too broadly, to primary mechanistic *research* papers
+naming no intervention rather than the review articles the carve-out's
+own wording names. All 8 removed from `sources.csv` and their PDFs;
+corrected with a full fresh reimport (943 imported, 0 failed, 0
+skipped, an exact one-to-one match). Corpus corrected 951 -> 943.
+Regenerated the compressed `corpus_library` snapshot again.

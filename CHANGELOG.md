@@ -824,6 +824,28 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   920 skipped). Regenerated the compressed `corpus_library` snapshot
   (~61MB, still under GitHub's 100MB limit) and updated the corpus
   README's "Current Status" section.
+- Fixed 8 scientific-scope false positives a Codex review on the
+  `retstart=3000` growth PR caught, all failing `inclusion_criteria.md`'s
+  explicit two-part title requirement (an approved scope term and a
+  named therapeutic intervention): an NHANES observational obesity/
+  cardiovascular-disease association study, a hospitalised-adults
+  hypoglycaemia-episodes observational study, a T2D-as-covariate STEMI
+  in-hospital-outcomes study (off-target primary disease), a diabetic-
+  eye-disease progression study, a T2D-development sibling-pairs
+  genetics study, and three primary mechanistic/model papers (a novel
+  cardiovascular-kidney-metabolic-syndrome mouse model, a macrophage
+  lysosomal acid lipase deletion study, an H19 lncRNA prenatal-
+  programming study) naming no intervention. Several of these were
+  actually flagged correctly during that PR's own proactive title screen
+  but dropped when the final exclusion list was compiled -- the same
+  transcription-error failure mode a much earlier batch's Codex review
+  caught; the rest reflect applying the corpus's "mechanism-only
+  reviews" breadth carve-out too broadly, to primary mechanistic
+  *research* naming no intervention rather than the review articles the
+  carve-out's own wording names. Removing already-imported rows required
+  a full fresh reimport (943 imported, 0 failed, 0 skipped, an exact
+  one-to-one match). Corpus corrected 951 -> 943; regenerated the
+  compressed snapshot.
 
 ### Changed
 
