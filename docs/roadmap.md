@@ -655,6 +655,17 @@ Detailed milestone records include:
 - Add Neo4j or another graph backend behind a repository interface.
 - Corresponds to `knowledge-engine-graph` in the long-term ecosystem; see
   `docs/roadmap/long_term_vision.md`.
+- **`docs/phase4_design.md`** is the implementation-ready design sketch,
+  written before any Phase 4 code, mirroring `docs/phase2_design.md`/
+  `docs/phase3_design.md`'s role for their phases. Grounded in a fresh
+  measurement of the real 951-paper corpus (44% study-type coverage, 26%
+  full-PICO coverage, 0% structured citations -- citation extraction is
+  real, unscoped prerequisite work, not yet built). Resolves the graph
+  backend question: relational tables in the existing SQLite database
+  first, behind a `GraphRepository` interface, no Neo4j for the first
+  slice -- mirroring Phase 3's own FAISS-before-Qdrant sequencing
+  (embedded/no-server first; a dedicated graph database added later only
+  if a real, evidenced need for graph-native traversal appears).
 - This is also the natural home for `docs/roadmap/long_term_vision.md`'s
   Stability Score (claim revision history) and Tracking the Unknown
   (missing experiments, weak-evidence areas, and unanswered questions as
