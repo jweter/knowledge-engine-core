@@ -12,10 +12,14 @@ mesh-lookup` -- see `docs/m43_mesh_lookup.md`; and a live lookup
 against NLM/NCBI's PubChem PUG REST API for chemical-compound structure
 data, `ke pubchem-lookup` -- see `docs/m44_pubchem_lookup.md`),
 confirming the "third option" section below's recommendation that live
-lookup was the better starting point. The stored-textbook path remains
-unbuilt and still needs the licensing and storage decisions below
-actually made before any code assumes a title list -- nothing here
-authorizes starting that path.
+lookup was the better starting point. **M45 then built three of the
+Addendum's buildable-now integration points** (`ke
+extraction-review-annotate`, see `docs/m45_extraction_review_annotate.md`
+and the Addendum section below), attaching RxNorm/MeSH context directly
+onto draft evidence items. The stored-textbook path remains unbuilt and
+still needs the licensing and storage decisions below actually made
+before any code assumes a title list -- nothing here authorizes starting
+that path.
 
 ## Motivation
 
@@ -261,17 +265,30 @@ all ten; this ordering is the build sequence, not a cut list.
    match at all (`found: false` from either M41 or M42), surface that as
    a footnote ("no background definition available for this term")
    rather than silently saying nothing. Discloses thinner context
-   without touching the evidence's own confidence.
+   without touching the evidence's own confidence. **Built in M45**
+   (`ke extraction-review-annotate`): a PICO field that resolves to no
+   reference-layer match is written out as `found: false`, never
+   silently omitted, on the draft item's own `reference_context`.
 3. **Provenance footer discipline.** Any reference-layer text actually
    surfaced in a report must print its own `source_url`/`license`/
    `retrieved_at` (or M41's `permanent_url`), visually distinct from an
    evidence citation -- already fully captured by both `ReferenceLookupResult`
    and `RxNormLookupResult`; this item is a rendering rule, not new data.
+   **Built in M45**: every embedded result in `reference_context` keeps
+   its own `source_url`/`license`/`retrieved_at` unchanged.
 4. **Reviewer aid in `ke extraction-review-promote`.** Surface a term's
    reference-layer definition inline for the *human* deciding
    `research_question`/`evidence_direction`, the same background a
    domain expert would already have. Upstream of any report; speeds a
-   judgment call that stays human, exactly as designed.
+   judgment call that stays human, exactly as designed. **Built in M45**
+   (`ke extraction-review-annotate`, see `docs/m45_extraction_review_annotate.md`):
+   a new command attaches RxNorm (`intervention`/`comparator`) and MeSH
+   (`population`/`outcome`) reference context directly onto the draft
+   evidence items `ke extraction-review-generate`/
+   `extraction-review-batch-generate` produce, before a reviewer runs
+   `ke extraction-review-promote`. A separate, opt-in step -- generation
+   itself stays network-free even at the corpus's M40 scale (13,588 draft
+   items).
 
 **Needs a report renderer to exist first (Phase 5, `knowledge-engine-web`/`-ai`):**
 

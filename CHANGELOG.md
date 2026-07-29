@@ -1099,8 +1099,70 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `EvidenceRecord` promotion, never merged into the evidence corpus's
   own search commands. Live-verified against real compounds
   (`metformin`, `semaglutide`, `empagliflozin`) and a not-found name
-  before writing the parser and again after, via the built CLI. See
-  `docs/m44_pubchem_lookup.md`.
+  before writing the parser and again after, via the built CLI. Codex
+  review on PR #183 caught two further real gaps before merge: (1) a
+  name resolving to more than one compound (live-verified: "estrogen"
+  returns two distinct CIDs, 21628493 and 12115739) was silently
+  resolved to whichever entry PubChem listed first; fixed to decline
+  (`found: false`) whenever more than one candidate matches, the same
+  posture M43 uses for ambiguous MeSH matches. (2) the license field
+  labeled every result a blanket U.S. government public-domain work, but
+  PubChem aggregates data from many external depositors (live-verified:
+  CID 4091/metformin's own PubChem-hosted description is sourced from
+  ChEBI, not NCBI); fixed to state that provenance is mixed and reuse
+  terms should be verified source-by-source rather than asserting a
+  specific reuse right. See `docs/m44_pubchem_lookup.md`.
+- Added the M45 reviewer-aid annotation step for the reference knowledge
+  layer: a new `ke extraction-review-annotate` command reads the draft
+  evidence items `ke extraction-review-generate`/
+  `extraction-review-batch-generate` already produce and attaches a
+  `reference_context` object to each one, built only from PICO fields
+  M28's deterministic extraction already populated --
+  `intervention`/`comparator` through M42's RxNorm lookup (both name a
+  drug or treatment), `population`/`outcome` through M43's MeSH lookup
+  (both describe a medical concept). Wires three of
+  `docs/reference_knowledge_layer_design.md`'s Addendum items at once: a
+  term with no reference-layer match is written out as `found: false`,
+  never silently omitted (item 2, coverage-gap flag); every embedded
+  result keeps its own `source_url`/`license`/`retrieved_at` (item 3,
+  provenance-footer discipline); a reviewer sees the definition inline in
+  the same file they edit to add `research_question`/`evidence_direction`,
+  before running `ke extraction-review-promote` (item 4, reviewer aid).
+  Deliberately a separate, opt-in step from generation: `ke
+  extraction-review-generate`/`-batch-generate` must stay network-free
+  even at the corpus's real scale (M40: 13,588 draft items across 943
+  papers), so annotation is a reviewer-initiated command run against the
+  specific paper(s) actually under review. Codex review on PR #184 caught
+  two real gaps before merge: (1) the first version passed a PICO field's
+  entire raw value to RxNorm's/MeSH's exact-match lookups, assuming M28
+  stores an isolated term; re-sampling the real 951-paper corpus showed
+  real field values are routinely entire multi-line, citation-laden
+  paragraphs (live-verified: passing a full sentence to RxNorm's
+  exact-name endpoint returns nothing, even though the drug name alone
+  resolves immediately), so the original version returned `found: false`
+  for nearly every real draft item. Fixed by scanning a small, bounded
+  set of single-word candidates (first 30 tokens, stopwords dropped,
+  capped at 20 per field) from the raw text against the unchanged
+  exact-match lookups, declining (`found: false`) when more than one
+  distinct concept resolves among the candidates tried -- the same
+  ambiguity discipline M43/M44 established -- rather than guessing which
+  one is "the" term. Live-verified against the real corpus after the fix:
+  a comparator field naming both "semaglutide" and "placebo" together
+  correctly declines; a fisetin-supplementation paper's
+  `comparator`/`population` fields correctly resolve "fisetin" (RxCUI
+  2667741) and "screening" (MeSH `D008403`) across every draft item drawn
+  from that paper. (2) an empty result queue left a `--force`-targeted
+  output file untouched instead of clearing it, risking a stale prior
+  run's records being mistaken for current; fixed to always overwrite the
+  output path, even when there is nothing to write. With identical
+  candidate terms cached within one run, network calls are bounded to the
+  number of distinct candidates actually tried, not items -- measured
+  honestly, not fast: roughly 30 distinct RxNorm and 30 distinct MeSH
+  terms for a single real paper's full draft-item set, on the order of a
+  minute or more of network calls. Never touches
+  `research_question`/`evidence_direction`, and never changes `ke
+  extraction-review-promote`'s existing refusal to promote a record
+  missing either. See `docs/m45_extraction_review_annotate.md`.
 - Added `docs/core_interface_contract.md`, the `v0.6.0` release
   milestone's "consumable interface" deliverable written ahead of the
   graph: what a future layer (`knowledge-engine-ai` or otherwise) needs
