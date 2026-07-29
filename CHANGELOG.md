@@ -1163,6 +1163,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `research_question`/`evidence_direction`, and never changes `ke
   extraction-review-promote`'s existing refusal to promote a record
   missing either. See `docs/m45_extraction_review_annotate.md`.
+- Added `docs/core_interface_contract.md`, the `v0.6.0` release
+  milestone's "consumable interface" deliverable written ahead of the
+  graph: what a future layer (`knowledge-engine-ai` or otherwise) needs
+  to configure itself against `core` and consume what it produces --
+  `KE_*` environment variables, the CLI as the primary API surface, the
+  Evidence Record/Relationship Record/draft-evidence-item/reference-layer
+  output schemas, the corpus `sources.csv` shape, and an explicit
+  stability note on what's safe to depend on before `v1.0` versus what
+  isn't. Restates "the seam" (research_question/evidence_direction/
+  confidence rating are never `core`'s to decide) as the one boundary
+  every milestone in this repository has held to, now collected in one
+  place instead of scattered across each milestone's own doc.
 
 ### Changed
 
