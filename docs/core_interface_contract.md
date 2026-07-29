@@ -92,26 +92,41 @@ most likely to actually call:
 
 **Reading what `core` has already validated:**
 - `ke search <query>` / `ke answer <question>` -- lexical (FTS5) retrieval.
-- `ke vector-search --query-text <text>` -- semantic retrieval (FAISS/Qdrant).
-- `ke fused-search <query-text>` -- Reciprocal Rank Fusion of both.
+  Console-table output only; no `--output` option today.
+- `ke vector-search --query-text <text>` -- semantic retrieval. **FAISS
+  only via this command** -- `entrypoint.vector_search`/`fused_search`
+  hardcode `FaissVectorIndex.load`. M33's `QdrantVectorIndex` exists and
+  is tested, but is Python-only: there is no CLI backend selector wiring
+  it up (`docs/phase3_design.md`'s Open Questions records this as
+  deliberately not built, not an oversight). Console-table output only.
+- `ke fused-search <query-text>` -- Reciprocal Rank Fusion of the two
+  above. Same FAISS-only, console-only caveats apply.
 - `ke evidence <records.jsonl>` / `ke evidence-report` -- read/report on
-  persisted manual Evidence Records.
-- `ke relationship-report` -- read Relationship Records.
+  persisted manual Evidence Records. `evidence-report` supports
+  `--output <path.md>` (Markdown, not JSON).
+- `ke relationship-report` -- read Relationship Records. Console output
+  only.
 
 **Corpus-building (the pipeline a consumer generally does not re-run
 itself, but may need to trigger for a specific paper):**
 - `ke corpus-import`, `ke extraction-review-generate`/`-batch-generate`,
   `ke extraction-review-annotate` (M45), `ke extraction-review-promote`.
+  These write JSONL to `--output` by design (they are pipeline steps
+  producing an artifact for the next step to consume).
 
 **Reference-layer live lookups (M41-M45, always background context, see
 "the seam" above):**
 - `ke reference-lookup` (Wikipedia), `ke rxnorm-lookup`, `ke mesh-lookup`,
-  `ke pubchem-lookup`, `ke extraction-review-annotate`.
+  `ke pubchem-lookup` each support an optional `--output <path.json>`.
+  `ke extraction-review-annotate` requires `--output` (it always writes a
+  file).
 
-Every command supports `--output <path>` (JSON/JSONL) where scripting
-against it matters, rather than requiring stdout scraping -- prefer that
-over parsing Rich-formatted console output, which is for humans and may
-reflow.
+**Do not assume `--output` (or any machine-readable output) exists on a
+command not listed above as having it.** `search`/`answer`/
+`vector-search`/`fused-search` -- the four primary retrieval commands --
+currently have no such option; prefer the JSONL-producing pipeline
+commands above, or read the SQLite database directly, over parsing
+Rich-formatted console tables, which are for humans and may reflow.
 
 ## Data schemas
 
@@ -137,9 +152,15 @@ Optional review fields (`REVIEW_EVIDENCE_FIELDS`): `review_status`
 (`ALLOWED_EXTRACTION_STATUSES`): `draft_review_required` (every
 M19-generated draft, including after promotion -- promotion never
 overwrites this) or `draft_manual_prototype` (pre-M19 hand-authored
-records). `source_span` validates `paper_id` always, and
-`start_offset`/`end_offset` together as non-negative integers with
-`start_offset < end_offset` when present.
+records). `source_span` is required to be a non-empty object;
+`start_offset`/`end_offset` are validated together as non-negative
+integers with `start_offset < end_offset` when present, and
+`page_number` as a positive integer when present -- but `paper_id`
+inside `source_span` is **not** enforced by the promotion validator,
+only populated by convention: M19's `build_draft_evidence_item` always
+sets it, but a hand-authored or externally-supplied Evidence Record can
+pass validation without it. Do not assume `source_span.paper_id` is
+present; check for it.
 
 A record only becomes real evidence via `ke extraction-review-promote`,
 which validates with `_validate_evidence_record` (the same validator `ke
@@ -189,9 +210,10 @@ Every lookup source returns a JSON object with the same shape family:
 `null` when `found: false`), `source_url`, `license`, `retrieved_at`.
 Source-specific fields:
 
-- **Wikipedia** (`ReferenceLookupResult`, M41): `title`, `summary`,
-  `page_type` (including `"disambiguation"`), `revision`,
-  `permanent_url`.
+- **Wikipedia** (`ReferenceLookupResult`, M41): `title`, `description`
+  (short), `extract` (longer summary paragraph), `page_type` (including
+  `"disambiguation"`), `revision`, `permanent_url`,
+  `page_last_modified`.
 - **RxNorm** (`RxNormLookupResult`, M42): `rxcui`, `name`, `term_type`,
   `synonym`, `ingredients` (list of `{rxcui, name}` -- compare this, not
   `rxcui`, to recognize a brand name and its generic as the same drug).
