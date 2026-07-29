@@ -1026,6 +1026,34 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Added an addendum to `docs/reference_knowledge_layer_design.md`
+  recording ten concrete ways reference-layer content (M41's Wikipedia
+  lookup, M42's RxNorm lookup, and the still-unbuilt stored-textbook
+  path) can shape the future AI Interface Layer's final report --
+  display-only evidence grouping, coverage-gap disclosure, provenance
+  labeling, reviewer aid, glossary/appendix content, and Knowledge Graph
+  concept nodes -- ordered cheapest-to-build-now first rather than by
+  report polish. Reaffirms the existing boundary explicitly for each
+  one: none of the ten ever feed the report's confidence rating, which
+  per `docs/roadmap/long_term_vision.md`'s Confidence Rating Design
+  Guidance stays computed from evidence-layer signals only. Codex review
+  on PR #180 caught that item 1's original wording ("group evidence
+  before scoring") left a real loophole: since the compounded rating
+  combines "every relevant evidence record," letting reference-layer
+  grouping decide record relevance/pooling would be an indirect
+  confidence input even without touching a score directly. Fixed by
+  restricting item 1 to report-display grouping only, explicitly
+  excluding any use of it to decide the compounding step's participant
+  set (that stays the human-assigned `research_question`/
+  `evidence_direction` per record, per Phase 2's existing boundary), and
+  tightening the addendum's boundary paragraph to name that loophole
+  directly rather than only ruling out score adjustments. Project owner
+  direction: build all ten eventually, easiest first. Cross-linked from
+  `docs/roadmap.md`'s Phase 2 (items 1-4), Phase 4 (item 10), and Phase 5
+  (items 5-9) sections, and from `docs/roadmap/long_term_vision.md`'s
+  Reference Knowledge Layer section, so the list stays discoverable from
+  wherever a future milestone would actually pick one up; no new milestone
+  scheduled by this addendum alone.
 - Revised the corpus-growth target in `docs/roadmap.md`'s "Scaling beyond
   500 papers for Phase 2 tuning" section down from "at least a couple
   thousand papers" to a **1,000-paper hard cap**, explicitly for GitHub

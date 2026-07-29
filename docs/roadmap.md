@@ -455,6 +455,18 @@ Detailed milestone records include:
   extraction shipped in M28, once the corpus described above under
   Phase 1 was large enough to tune against and the project owner decided
   605 papers was sufficient to stop growing it further.
+- `docs/reference_knowledge_layer_design.md`'s Addendum (items 1-4) names
+  four reference-layer integration points buildable here without waiting
+  on Phase 4/5: drug identity normalization for report-*display*
+  grouping only, never for deciding which records get pooled into a
+  question's confidence rating (on M42's `ingredients` field), a
+  coverage-gap disclosure flag for terms with no reference-layer match,
+  provenance-footer discipline for any reference text surfaced anywhere,
+  and a reviewer aid surfacing definitions inline in
+  `ke extraction-review-promote`. None of them touch the confidence
+  rating, including indirectly through the compounding step's
+  participant set -- see that section for the precise boundary, tightened
+  after Codex review on PR #180.
 
 ## Phase 3: Search Plus Semantics
 
@@ -503,6 +515,12 @@ Detailed milestone records include:
   (missing experiments, weak-evidence areas, and unanswered questions as
   first-class, graph-shaped entities) -- neither has a path before the
   graph exists to hold them.
+- `docs/reference_knowledge_layer_design.md`'s Addendum (item 10) names
+  reference-layer definitions (M41 Wikipedia, M42 RxNorm, or the
+  still-unbuilt stored-textbook path) as future content for Graph
+  concept nodes, distinct from the paper-level evidence nodes that cite
+  them -- the same distinction the Architecture sketch section above
+  already drew before any Graph code existed.
 
 ## Phase 5: Human Interface
 
@@ -516,6 +534,13 @@ Detailed milestone records include:
   generation, experiment suggestion) and Education Engine (adaptive
   explanations, learning paths) are not yet claimed by any phase or
   package here -- an open decision, not a silent omission.
+- `docs/reference_knowledge_layer_design.md`'s Addendum (items 5-9) names
+  five reference-layer report features that need a renderer to exist
+  here first: inline glossary/definitions, a disambiguation guard,
+  pre-synthesis term-extraction caching, a reading-level toggle, and an
+  "assumed background" appendix. Same non-negotiable boundary as
+  everywhere else in that addendum: none of them feed the confidence
+  rating.
 
 ## Release Milestones
 
@@ -566,4 +591,12 @@ Detailed milestone records include:
   unbuilt pending real licensing/storage decisions. Explicitly not
   evidence and not part of the paper corpus's 1,000-paper cap. See
   `docs/roadmap/long_term_vision.md`'s matching section,
-  `docs/m41_reference_lookup.md`, and `docs/m42_rxnorm_lookup.md`.
+  `docs/m41_reference_lookup.md`, and `docs/m42_rxnorm_lookup.md`. The
+  design doc's "Addendum: where this plugs into the final report" section
+  records ten concrete ways reference-layer content can shape the future
+  AI Interface Layer's report (grouping, gap disclosure, provenance
+  labeling, glossary/appendix content, Knowledge Graph concept nodes),
+  ordered cheapest-to-build first, with the owner's direction to
+  eventually build all ten -- explicitly none of them feed the report's
+  confidence rating, which stays evidence-only per Confidence Rating
+  Design Guidance in `docs/roadmap/long_term_vision.md`.

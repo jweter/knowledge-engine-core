@@ -214,6 +214,12 @@ REST API live, and `ke rxnorm-lookup`, querying NLM's RxNorm API live for
 structured drug-name normalization -- both background context only,
 never evidence -- see `docs/m41_reference_lookup.md` and
 `docs/m42_rxnorm_lookup.md`. The stored-textbook path remains unbuilt.
+`docs/reference_knowledge_layer_design.md`'s Addendum names ten concrete
+ways this layer's content could shape the AI Interface Layer's eventual
+report (grouping, gap disclosure, provenance labeling, glossary/appendix
+content, Knowledge Graph concept nodes), ordered cheapest-to-build first
+-- explicitly none of them ever become a confidence-rating input, per
+the Confidence Rating Design Guidance above.
 
 ## Tracking the Unknown
 

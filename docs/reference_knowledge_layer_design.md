@@ -192,6 +192,110 @@ API, for structured drug-name normalization Wikipedia's title-matching
 lookup doesn't provide -- see `docs/m42_rxnorm_lookup.md`. MeSH, PubChem,
 and UniProt remain unbuilt.
 
+## Addendum: where this plugs into the final report (and where it never does)
+
+`docs/roadmap/long_term_vision.md`'s AI Interface Layer eventually
+produces a report scoped to a person's research question, carrying an
+explicit confidence rating built from evidence-layer signals only (see
+that doc's Confidence Rating Design Guidance: per-record signals are
+study design, sample size, recency, and recorded limitations; question-level
+confidence compounds those through the Relationship Layer's typed links).
+**Nothing below changes that.** Reference-layer content -- whether from
+M41's Wikipedia lookup, M42's RxNorm lookup, or a future stored-textbook
+path -- never becomes a confidence input, no matter how indirectly it's
+phrased, for the same reason it was never evidence in the first place
+(see Motivation and What this is not above). This rules out more than
+adjusting a per-record quality score: the compounded question-level
+rating combines "every *relevant* evidence record" (see Confidence
+Rating Design Guidance above), so anything that decides which records
+count as relevant or get pooled together is itself an indirect
+confidence input, even if it never touches a score directly. Deciding
+that is, and stays, the human-assigned `research_question`/
+`evidence_direction` per record -- the same boundary Phase 2 already
+drew for exactly this reason (see `docs/roadmap/long_term_vision.md`'s
+Minimizing Human-Typed Fields section: `research_question` is "genuinely
+external," a human/AI-layer judgment, not an extraction target).
+Reference-layer content may never substitute an automated match for that
+judgment. What it *can* legitimately do is shape the report *around*
+that already-decided score: display grouping, disclosure, provenance
+labeling, and explanatory scaffolding, the same supporting role a domain
+expert's own background knowledge plays without ever being cited as the
+paper's finding.
+
+Ten concrete integration points, ordered by what's cheapest to build
+given what already exists today -- not by how much polish they'd add to
+a finished report. The project owner's direction is to eventually build
+all ten; this ordering is the build sequence, not a cut list.
+
+**Buildable now, directly on M41/M42, no Phase 4/5 dependency:**
+
+1. **Drug identity normalization for report-display grouping only.**
+   M42's `ingredients` field already lets a caller recognize that a
+   paper citing "Ozempic" and one citing "semaglutide" concern the same
+   underlying drug. Authorized use: presenting already-scored results
+   for both names together under one heading in a rendered report.
+   **Not authorized:** using that match to decide which evidence records
+   count as "relevant" and get pooled into a question's compounded
+   rating -- that would make an automated drug-name match a stand-in for
+   the human `research_question`/`evidence_direction` judgment the
+   boundary above requires, exactly the kind of indirect confidence
+   input Codex review caught in the first draft of this item on PR #180
+   (the original wording, "group evidence before scoring," left that
+   door open). The compounding step's participant set stays untouched by
+   this milestone; only how an already-computed set of results is
+   organized on screen is in scope.
+2. **Coverage-gap flag.** When a claim's key term has no reference-layer
+   match at all (`found: false` from either M41 or M42), surface that as
+   a footnote ("no background definition available for this term")
+   rather than silently saying nothing. Discloses thinner context
+   without touching the evidence's own confidence.
+3. **Provenance footer discipline.** Any reference-layer text actually
+   surfaced in a report must print its own `source_url`/`license`/
+   `retrieved_at` (or M41's `permanent_url`), visually distinct from an
+   evidence citation -- already fully captured by both `ReferenceLookupResult`
+   and `RxNormLookupResult`; this item is a rendering rule, not new data.
+4. **Reviewer aid in `ke extraction-review-promote`.** Surface a term's
+   reference-layer definition inline for the *human* deciding
+   `research_question`/`evidence_direction`, the same background a
+   domain expert would already have. Upstream of any report; speeds a
+   judgment call that stays human, exactly as designed.
+
+**Needs a report renderer to exist first (Phase 5, `knowledge-engine-web`/`-ai`):**
+
+5. **Inline glossary/definitions.** A jargon term in report text links to
+   its M41/M42 definition on demand, purely explanatory.
+6. **Disambiguation guard.** Before synthesis, flag ambiguous terms
+   (Wikipedia's `page_type: "disambiguation"`) so the report doesn't
+   quietly conflate two different meanings of the same word.
+7. **Pre-synthesis term-extraction + caching pass.** A future extraction
+   step batches reference lookups per paper ahead of time (the "ordinary
+   engineering" hook `retrieved_at`/M41's `revision` already exist for),
+   so report generation isn't making live network calls on the
+   report-serving path.
+8. **Reading-level toggle.** A non-expert-facing report mode splices in
+   reference-layer prose to explain a mechanism inline, without altering
+   the underlying evidence text -- an explicit user-facing option, not a
+   silent rewrite.
+9. **"Assumed background" appendix.** An optional, auditable list of
+   every technical term's definition a report leaned on, so an expert
+   can check the system understood the vocabulary correctly -- a
+   transparency feature, separate from the main findings.
+
+**Needs the Knowledge Graph to exist first (Phase 4):**
+
+10. **Knowledge Graph concept-node content.** Reference-layer definitions
+    become the textbook-style content hanging off a Graph concept node
+    (e.g. "GLP-1 receptor agonism"), distinct from the paper-level
+    evidence nodes that cite it -- exactly the longer-term use the
+    Architecture sketch's item 4 above already named.
+
+None of these ten are scheduled as a numbered milestone by this
+addendum; each becomes real work for whichever future milestone actually
+builds a report renderer, a Knowledge Graph, or extends
+`ke extraction-review-promote`. Recorded here so the sequence is decided
+once, in the open, rather than re-litigated piecemeal each time a report
+feature is proposed.
+
 ## Open questions (owner decisions, not resolved here)
 
 - **Storage and hosting** (only applies to the stored-text option above;
