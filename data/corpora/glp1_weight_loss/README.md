@@ -139,10 +139,11 @@ history and `docs/m14_candidate_review_worksheet.md` for the v6-v9
 ruleset history. Accepted records proceed
 automatically; rejected and held records remain auditable but do not block
 the batch or require owner review. The corpus continues to grow in small
-batches toward a target of at least a couple thousand papers -- see
-`docs/roadmap.md`'s "Scaling beyond 500 papers for Phase 2 tuning" section
-and `docs/m27_corpus_library.md` for how the resulting parsed content is
-persisted across sessions once imported.
+batches toward a 1,000-paper cap (revised down from an earlier "at least
+a couple thousand" target, explicitly for GitHub space reasons -- see
+`docs/roadmap.md`'s "Scaling beyond 500 papers for Phase 2 tuning"
+section) and `docs/m27_corpus_library.md` for how the resulting parsed
+content is persisted across sessions once imported.
 
 The `retstart=2250` batch (250 candidates, 97 deterministically accepted,
 1 already present from query overlap, 96 net-new PMC OA PDFs acquired)
