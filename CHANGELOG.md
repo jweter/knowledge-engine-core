@@ -797,6 +797,55 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   against the corrected manifest -- 920 imported, 0 failed, 0 skipped, an
   exact one-to-one match. Corpus corrected 930 -> 920; regenerated the
   compressed snapshot.
+- Grew the corpus 920 -> 951 papers via the existing M14 PMC pipeline
+  (discovery `retstart=3000`): 250 candidates discovered, 60
+  deterministically accepted, 16 already present from query overlap. Of
+  the 44 remaining candidates, 3 were exact-duplicate PMIDs of the
+  kidney-cancer, diabetes-KAP-survey, and alcohol/cancer false positives
+  the `retstart=2750` correction had just removed from `sources.csv` --
+  since removing a row doesn't add it to any persistent "already
+  rejected" registry, an overlapping later batch can legitimately
+  re-discover and re-accept the same PMID under the same v9 ruleset gap.
+  Rather than wait for Codex to catch the same three papers twice, all 44
+  candidates were checked by title against the categories the last two
+  Codex reviews established (off-target primary disease with no scope/
+  intervention term, policy-only or prediction-model-only papers with no
+  treatment evaluated, type 1 diabetes-specific sources, no-intervention-
+  named qualitative/survey studies) before acquisition. 13 matched and
+  were excluded: the 3 exact duplicates plus a type 1 diabetes-specific
+  adjunct-medications study, an ankle-fracture-fixation study, two
+  dementia/Alzheimer's risk-factor studies, a coronary ischaemia-
+  reperfusion antiplatelet/antithrombin study, a busulfan pharmacokinetics
+  study, a frailty/socioeconomic-inequalities study, a type 2 diabetes
+  policy model with no treatment evaluated, a bariatric-surgery weight-
+  regain prediction-model study, and a qualitative-interviews study naming
+  no intervention. 31 net-new PMC OA PDFs acquired and imported via
+  linked resume against the same local import run (31 imported, 0 failed,
+  920 skipped). Regenerated the compressed `corpus_library` snapshot
+  (~61MB, still under GitHub's 100MB limit) and updated the corpus
+  README's "Current Status" section.
+- Fixed 8 scientific-scope false positives a Codex review on the
+  `retstart=3000` growth PR caught, all failing `inclusion_criteria.md`'s
+  explicit two-part title requirement (an approved scope term and a
+  named therapeutic intervention): an NHANES observational obesity/
+  cardiovascular-disease association study, a hospitalised-adults
+  hypoglycaemia-episodes observational study, a T2D-as-covariate STEMI
+  in-hospital-outcomes study (off-target primary disease), a diabetic-
+  eye-disease progression study, a T2D-development sibling-pairs
+  genetics study, and three primary mechanistic/model papers (a novel
+  cardiovascular-kidney-metabolic-syndrome mouse model, a macrophage
+  lysosomal acid lipase deletion study, an H19 lncRNA prenatal-
+  programming study) naming no intervention. Several of these were
+  actually flagged correctly during that PR's own proactive title screen
+  but dropped when the final exclusion list was compiled -- the same
+  transcription-error failure mode a much earlier batch's Codex review
+  caught; the rest reflect applying the corpus's "mechanism-only
+  reviews" breadth carve-out too broadly, to primary mechanistic
+  *research* naming no intervention rather than the review articles the
+  carve-out's own wording names. Removing already-imported rows required
+  a full fresh reimport (943 imported, 0 failed, 0 skipped, an exact
+  one-to-one match). Corpus corrected 951 -> 943; regenerated the
+  compressed snapshot.
 
 ### Changed
 

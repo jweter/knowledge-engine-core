@@ -62,9 +62,9 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 920 sources: the small historical GLP-1
-prototype set (3 rows) plus 917 accepted records from twelve small
-(`--limit 250`) automated discovery batches (`retstart` 0 through 2750) of
+The committed manifest holds 943 sources: the small historical GLP-1
+prototype set (3 rows) plus 940 accepted records from thirteen small
+(`--limit 250`) automated discovery batches (`retstart` 0 through 3000) of
 the project owner's larger corpus-building effort, following M14's rules.
 Ruleset corrections along the way held 3 pediatric-titled records and 1
 correction-notice record that earlier rule versions had wrongly accepted.
@@ -302,3 +302,59 @@ against the corrected manifest) rather than a surgical row deletion --
 reported 920 imported, 0 failed, 0 skipped, an exact one-to-one match
 against the corrected manifest. Corpus corrected 930 -> 920. Regenerated
 the compressed `corpus_library` snapshot accordingly.
+
+The `retstart=3000` batch (250 candidates, 60 deterministically accepted,
+16 already present from query overlap) applied a lesson directly from the
+`retstart=2750` correction: since a previously-excluded false positive is
+removed from `sources.csv` rather than tracked in a persistent "already
+seen and rejected" registry, an overlapping later batch can legitimately
+re-discover the exact same PMID and re-accept it under the same v9
+ruleset gap -- which is exactly what happened here. Three of this batch's
+60 accepted candidates were the identical kidney-cancer, diabetes
+knowledge/attitudes/practices, and alcohol/cancer PMIDs the
+`retstart=2750` correction had just removed. Rather than wait for another
+Codex review to catch the same three papers a second time, this batch's
+44 net-new candidates (after the 16-way overlap filter) were checked by
+title against every documented exclusion pattern before acquisition --
+the same categories the last two Codex reviews established (off-target
+primary disease with no scope/intervention term, policy-only or
+prediction-model-only papers with no treatment evaluated, type 1
+diabetes-specific sources, no-intervention-named qualitative/survey
+studies) -- rather than an exhaustive gray-area sweep. 13 matched: the 3
+exact-duplicate false positives above, a type 1 diabetes-specific
+adjunct-medications study, an ankle-fracture-fixation study, two
+dementia/Alzheimer's risk-factor studies, a coronary
+ischaemia-reperfusion antiplatelet/antithrombin study, a busulfan
+(chemotherapy) pharmacokinetics study, a frailty/socioeconomic-
+inequalities study, a type 2 diabetes policy model predicting life
+expectancy with no treatment evaluated, a bariatric-surgery weight-regain
+prediction-model study, and a qualitative-interviews study naming no
+intervention. All 13 excluded before acquisition -- 31 net-new PMC OA
+PDFs acquired and imported via linked resume against the same local
+import run (31 imported, 0 failed, 920 skipped). Corpus grew 920 -> 951.
+Regenerated the compressed `corpus_library` snapshot.
+
+A Codex review on the `retstart=3000` growth PR then caught 8 more
+false positives the proactive title screen above missed, all failing
+`inclusion_criteria.md`'s explicit two-part title requirement (an
+approved scope term *and* a named therapeutic intervention) the same way
+as before: an NHANES observational obesity/cardiovascular-disease
+association study, a hospitalised-adults hypoglycaemia-episodes
+observational study, an in-hospital-outcomes study of T2D as a covariate
+for STEMI (an off-target primary disease), a diabetic-eye-disease
+progression/risk-factor study, a T2D-development sibling-pairs genetics
+study, and three primary mechanistic/model papers (a novel mouse model
+for cardiovascular-kidney-metabolic syndrome, a macrophage lysosomal
+acid lipase deletion phenotype study, an H19 lncRNA prenatal-programming
+study) that name no therapeutic intervention at all. The screen's own
+title scan had actually flagged several of these correctly during
+review, but they were dropped when the final exclusion list was
+compiled -- the same transcription-error failure mode a much earlier
+batch's Codex review caught (see the "retstart=2000" history above); the
+other three reflect applying this corpus's "mechanism-only reviews"
+breadth carve-out too broadly, to primary mechanistic *research* papers
+naming no intervention rather than the review articles the carve-out's
+own wording names. All 8 removed from `sources.csv` and their PDFs;
+corrected with a full fresh reimport (943 imported, 0 failed, 0
+skipped, an exact one-to-one match). Corpus corrected 951 -> 943.
+Regenerated the compressed `corpus_library` snapshot again.
