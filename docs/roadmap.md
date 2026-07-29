@@ -566,4 +566,12 @@ Detailed milestone records include:
   unbuilt pending real licensing/storage decisions. Explicitly not
   evidence and not part of the paper corpus's 1,000-paper cap. See
   `docs/roadmap/long_term_vision.md`'s matching section,
-  `docs/m41_reference_lookup.md`, and `docs/m42_rxnorm_lookup.md`.
+  `docs/m41_reference_lookup.md`, and `docs/m42_rxnorm_lookup.md`. The
+  design doc's "Addendum: where this plugs into the final report" section
+  records ten concrete ways reference-layer content can shape the future
+  AI Interface Layer's report (grouping, gap disclosure, provenance
+  labeling, glossary/appendix content, Knowledge Graph concept nodes),
+  ordered cheapest-to-build first, with the owner's direction to
+  eventually build all ten -- explicitly none of them feed the report's
+  confidence rating, which stays evidence-only per Confidence Rating
+  Design Guidance in `docs/roadmap/long_term_vision.md`.
