@@ -208,7 +208,11 @@ option (likely the better starting point, since it needs no storage
 decision), why it needs its own manifest and index rather than reusing
 the paper corpus's, and the real open decisions (storage/hosting chief
 among them, if the stored-text path is chosen) still pending explicit
-owner sign-off. Nothing here is built yet.
+owner sign-off. **M41 has since built the live-lookup path's first
+slice** -- `ke reference-lookup`, querying Wikipedia's public REST API
+live, background context only, never evidence -- see
+`docs/m41_reference_lookup.md`. The stored-textbook path remains
+unbuilt.
 
 ## Tracking the Unknown
 
