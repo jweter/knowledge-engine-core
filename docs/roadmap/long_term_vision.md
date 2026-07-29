@@ -196,14 +196,19 @@ open-license textbooks, or live lookups against free APIs (NLM's
 RxNorm/MeSH/PubChem, Wikipedia/Wiktionary), or both -- explicitly
 **not** evidence and never routed through `EvidenceRecord` promotion:
 background context a future reasoning step consults, the same way a
-human expert's own training functions, not a citable finding. See
-`docs/reference_knowledge_layer_design.md` for the design sketch:
-candidate open-license sources, the live-lookup alternative and its
-reproducibility tradeoff against this project's offline-by-default
-posture, why it needs its own manifest and index rather than reusing the
-paper corpus's, and the real open decisions (storage/hosting chief among
-them, if the stored-text path is chosen) still pending explicit owner
-sign-off. Nothing here is built yet.
+human expert's own training functions, not a citable finding. Live
+lookup is not a departure from this project's direction: "The Finished
+Product Is Not an Offline PDF Archive" above is explicit that Phase 0's
+offline-by-default posture describes `core`'s own engineering property
+for the primary evidence pipeline, not a claim about the finished,
+live, connected ecosystem -- a live-queried reference layer fits that
+end state naturally. See `docs/reference_knowledge_layer_design.md` for
+the design sketch: candidate open-license sources, the live-lookup
+option (likely the better starting point, since it needs no storage
+decision), why it needs its own manifest and index rather than reusing
+the paper corpus's, and the real open decisions (storage/hosting chief
+among them, if the stored-text path is chosen) still pending explicit
+owner sign-off. Nothing here is built yet.
 
 ## Tracking the Unknown
 

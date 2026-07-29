@@ -143,22 +143,39 @@ and an `openai` (external API, network-dependent) option behind the same
 interface, with the tradeoff labeled explicitly rather than picked for
 the user. A live-lookup reference option would follow the same shape.
 
-The real cost is not storage, it's the offline-reproducibility posture
-Phase 0 set as a design goal and every milestone since has upheld
-(deterministic, rules-versioned extraction; a hash-verified local
-corpus). A live lookup means a term's definition can change, or an API
-can go down, between two runs of the same command -- the opposite of the
-provenance discipline this project applies everywhere else. It also
-doesn't fully substitute for stored text: RxNorm/MeSH/PubChem return
-structured facts and identifiers, not the explanatory prose or worked
-mechanisms an actual textbook chapter has; Wikipedia's prose comes
-closer, but with encyclopedia framing rather than textbook depth.
+**This is not a departure from the project's direction -- it's aligned
+with it.** `docs/roadmap/long_term_vision.md`'s "The Finished Product Is
+Not an Offline PDF Archive" section is explicit that Phase 0's "run fully
+offline" describes `core`'s own engineering property for the primary
+evidence pipeline specifically -- testable, reproducible, safe to run in
+isolation -- not a claim about the finished ecosystem, which that same
+document calls "a live, AI-powered search and discovery engine." A
+reference layer that queries live sources is a natural, forward-looking
+piece of exactly that end state, not an exception to a permanent offline
+mandate. Building it live-first, rather than defaulting to stored PDFs
+out of habit, is arguably the more consistent choice given where this
+project is headed.
+
+The real engineering question a live-lookup reference layer raises is
+narrower than "offline vs. online": it's whether anything that consumes
+a live-looked-up definition needs it to be reproducible later (a term's
+definition can change, or an API can go down, between two runs). Where
+that matters -- e.g. if a future extraction or reasoning step cites a
+looked-up definition as part of its own provenance -- the fix is
+ordinary engineering (caching or snapshotting the response actually
+used, the same way this project already records `embedding_model` and
+rules-version fields for reproducibility elsewhere), not a reason to
+avoid live lookup altogether. It also doesn't fully substitute for
+stored text on its own terms: RxNorm/MeSH/PubChem return structured
+facts and identifiers, not the explanatory prose or worked mechanisms an
+actual textbook chapter has; Wikipedia's prose comes closer, but with
+encyclopedia framing rather than textbook depth.
 
 Not a replacement for the stored-textbook option above -- a third,
-independently viable path, likely the better starting point precisely
-because it sidesteps the storage and per-title licensing questions
-below, at the cost of the reproducibility guarantee this project has
-consistently prioritized elsewhere.
+independently viable path, and likely the better starting point: it
+sidesteps the storage and per-title licensing questions below entirely,
+and fits the live, connected direction this project is actually building
+toward.
 
 ## Open questions (owner decisions, not resolved here)
 
