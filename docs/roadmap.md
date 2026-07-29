@@ -140,10 +140,21 @@ acceptance, release validation, and optional post-release quality audits.
   pattern); study-type classification covers 40.6%, an expected
   consequence of an 8-design closed vocabulary against a more diverse
   real corpus; PICO fields range 45-74% individually, 23.3% for all four
-  together. No rule was changed -- both diagnosed gaps interact with
-  corpus-inclusion-philosophy-adjacent tradeoffs reserved for explicit
+  together. Both diagnosed gaps were flagged, not fixed, pending explicit
   owner decision, the same way `evaluate_scientific_scope`'s documented
-  weakness was flagged rather than unilaterally fixed. See
+  weakness was flagged rather than unilaterally fixed -- **since
+  authorized and fixed**: `detect_sections` now also recognizes an inline
+  `"Label: text"` heading (not just alone on its own line);
+  `classify_study_type`'s vocabulary grew by five designs
+  (narrative_review, cross_over_trial, retrospective_study, case_series,
+  case_report); and PICO's own section scoping was widened to offset a
+  regression the section-detection fix otherwise introduced (structured
+  abstracts that used to stay one scanned `abstract` blob now correctly
+  split into fragments PICO's original scoping didn't cover). Re-measured
+  after the fix: results-section detection 63.1% -> 72.4%,
+  conclusion-section detection 64.4% -> 75.6%, claim candidates 63.2% ->
+  72.0%, study type classified 40.6% -> 43.7%, PICO all-four-fields 23.3%
+  -> 26.2% -- every signal improved or held steady. See
   `docs/m38_extraction_scale_assessment.md`.
 
 ### M14: Controlled 500-paper rehearsal
@@ -285,12 +296,13 @@ synthetic fixtures; M38 (see above) closed the "never run at scale against
 real papers" half of this gap, measuring deterministic-extraction coverage
 across the full 943-paper real corpus for the first time and finding two
 concrete, diagnosed recall gaps (structured-section heading matching,
-study-type's closed vocabulary). The other half remains open: the real
-corpus still has exactly two `EvidenceRecord` rows, both hand-authored
-before automated extraction existed -- M38 measured coverage only and
-deliberately promoted nothing. Whether and how to act on M38's findings
-(relaxing section-heading matching, broadening the study-type vocabulary)
-is the project owner's call, per `docs/m38_extraction_scale_assessment.md`.
+study-type's closed vocabulary), both since authorized and fixed (see M38's
+roadmap entry above and `docs/m38_extraction_scale_assessment.md`'s
+"Resolved follow-up" section for the fixes and the re-measured numbers). The
+other half remains open: the real corpus still has exactly two
+`EvidenceRecord` rows, both hand-authored before automated extraction
+existed -- M38 and its follow-up fixes only measured and improved coverage;
+neither promoted anything to `EvidenceRecord`.
 The project owner's initial target was "at least a
 couple thousand papers"; that was revised down to **1,000 papers as a
 hard cap**, explicitly for GitHub space reasons -- the committed

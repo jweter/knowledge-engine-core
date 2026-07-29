@@ -18,22 +18,48 @@ from collections.abc import Sequence
 from knowledge_engine.extraction.sections import SectionSpan, section_content, section_text
 from knowledge_engine.parser import ParsedPage
 
-STUDY_DESIGN_RULES_VERSION = "m26-study-design-v1"
+STUDY_DESIGN_RULES_VERSION = "m26-study-design-v2"
 
 _STUDY_TYPE_SECTION_TYPES = ("abstract", "methods")
 
-# Checked most-specific first: meta-analyses and systematic reviews often
-# summarize randomized trials in their own text, so those two must win over
-# the RCT pattern below when both could match the same abstract.
+# Checked most-specific first, and in a deliberate order since the first
+# pattern to match wins:
+#   - meta-analyses and systematic reviews often summarize randomized trials
+#     in their own text, so those two must win over the RCT pattern below
+#     when both could match the same abstract.
+#   - narrative_review is checked before randomized_controlled_trial for the
+#     same reason: a narrative review discussing "randomized controlled
+#     trials" in prior literature is not itself one.
+#   - cross_over_trial is checked before randomized_controlled_trial because
+#     a crossover trial's own abstract routinely also says "randomized" (e.g.
+#     "a randomized, double-blind, crossover trial") -- the more specific
+#     crossover-trial phrase should win.
+#   - retrospective_study is checked after cohort_study so a "retrospective
+#     cohort study" -- already matched by cohort_study's own optional
+#     "retrospective|prospective" prefix -- is not double-counted as the
+#     more generic retrospective_study.
+#   - case_series and case_report are checked after case_control_study so
+#     "case-control study" is never miscounted as either.
+# v2 (M38 follow-up): M38's corpus-scale measurement found 59.4% of the real
+# corpus classified as "none" under v1's 8-pattern closed vocabulary --
+# largely narrative reviews, crossover trials, case series/reports, and
+# retrospective analyses not phrased as "cohort study", none of which v1
+# recognized at all. This adds those five design types; it does not change
+# any v1 pattern's matching behavior.
 _STUDY_TYPE_PATTERNS: dict[str, re.Pattern[str]] = {
     "meta_analysis": re.compile(r"(?i)\bmeta-analysis\b"),
     "systematic_review": re.compile(r"(?i)\bsystematic review\b"),
+    "narrative_review": re.compile(r"(?i)\bnarrative review\b"),
+    "cross_over_trial": re.compile(r"(?i)\bcross-?over trial\b"),
     "randomized_controlled_trial": re.compile(
         r"(?i)\brandomi[sz]ed(?:,|\s)+(?:double-blind(?:,|\s)+)?"
         r"(?:placebo-controlled(?:,|\s)+)?(?:clinical\s+)?(?:controlled\s+)?trial\b"
     ),
     "cohort_study": re.compile(r"(?i)\b(?:prospective|retrospective)?\s*cohort study\b"),
+    "retrospective_study": re.compile(r"(?i)\bretrospective (?:study|analysis|review)\b"),
     "case_control_study": re.compile(r"(?i)\bcase-control study\b"),
+    "case_series": re.compile(r"(?i)\bcase series\b"),
+    "case_report": re.compile(r"(?i)\bcase reports?\b"),
     "cross_sectional_study": re.compile(r"(?i)\bcross-sectional study\b"),
     "pilot_study": re.compile(r"(?i)\bpilot study\b"),
     "observational_study": re.compile(r"(?i)\bobservational study\b"),

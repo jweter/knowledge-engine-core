@@ -21,7 +21,7 @@ def _section(
 
 
 def test_pico_extraction_rules_version_is_stable() -> None:
-    assert PICO_EXTRACTION_RULES_VERSION == "m28-pico-v1"
+    assert PICO_EXTRACTION_RULES_VERSION == "m28-pico-v2"
 
 
 def test_extract_pico_detects_population_from_cohort_size_clause() -> None:
@@ -68,6 +68,45 @@ def test_extract_pico_outcome_also_scans_results() -> None:
     fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
 
     assert fields.outcome == "The main outcome improved significantly by week 12."
+
+
+def test_extract_pico_population_also_scans_results() -> None:
+    """v2 (M38 follow-up): a structured "Results:" fragment split out of what
+    used to be one undivided abstract span can restate the cohort size."""
+
+    text = "Results\n\nAmong the 253 adults with obesity, weight loss was significant."
+    sections = [_section("results", text, "Results")]
+
+    fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
+
+    assert fields.population == "Among the 253 adults with obesity, weight loss was significant."
+
+
+def test_extract_pico_intervention_also_scans_results() -> None:
+    text = "Results\n\nParticipants who received semaglutide lost more weight."
+    sections = [_section("results", text, "Results")]
+
+    fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
+
+    assert fields.intervention == "Participants who received semaglutide lost more weight."
+
+
+def test_extract_pico_comparator_also_scans_conclusion() -> None:
+    text = "Conclusion\n\nWeight loss was greater compared with placebo."
+    sections = [_section("conclusion", text, "Conclusion")]
+
+    fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
+
+    assert fields.comparator == "Weight loss was greater compared with placebo."
+
+
+def test_extract_pico_outcome_also_scans_conclusion() -> None:
+    text = "Conclusion\n\nThe primary outcome was significantly improved."
+    sections = [_section("conclusion", text, "Conclusion")]
+
+    fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
+
+    assert fields.outcome == "The primary outcome was significantly improved."
 
 
 def test_extract_pico_ignores_population_cue_outside_scoped_sections() -> None:

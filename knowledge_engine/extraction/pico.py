@@ -36,7 +36,7 @@ from knowledge_engine.extraction.sections import SectionSpan, section_content
 from knowledge_engine.parser import ParsedPage
 from knowledge_engine.sentence_split import split_sentence_spans
 
-PICO_EXTRACTION_RULES_VERSION = "m28-pico-v1"
+PICO_EXTRACTION_RULES_VERSION = "m28-pico-v2"
 
 # A study-design phrase or heading is usually reused verbatim; PICO values are
 # not, so each field is scoped only to the section types most likely to state
@@ -44,10 +44,23 @@ PICO_EXTRACTION_RULES_VERSION = "m28-pico-v1"
 # `classify_study_type`'s Abstract/Methods-only scoping rationale). Outcome
 # and comparator cues also appear in Results, since a paper's own primary
 # outcome or comparison arm is frequently restated there.
-_POPULATION_SECTION_TYPES = frozenset({"abstract", "methods"})
-_INTERVENTION_SECTION_TYPES = frozenset({"abstract", "methods"})
-_COMPARATOR_SECTION_TYPES = frozenset({"abstract", "methods", "results"})
-_OUTCOME_SECTION_TYPES = frozenset({"abstract", "methods", "results"})
+#
+# v2 (M38 follow-up): M16's section-detection v2 change (recognizing inline
+# "Label: text" headings, not just a heading alone on its own line) now
+# correctly splits a structured abstract's "Background: ... Methods: ...
+# Results: ... Conclusion: ..." into separate methods/results/conclusion
+# spans, where previously the whole thing stayed one undivided `abstract`
+# span -- which every PICO field already scanned. Re-measuring after that fix
+# showed PICO coverage regressed across the board (e.g. all-four-fields
+# coverage dropped from 220 to 184 papers out of 943) because population and
+# intervention cues that used to be reachable inside that single scanned
+# abstract blob are now correctly labeled `results`/`conclusion`, section
+# types those two fields never scanned. Widening scoping to match restores
+# that reachability without loosening the cue patterns themselves.
+_POPULATION_SECTION_TYPES = frozenset({"abstract", "methods", "results"})
+_INTERVENTION_SECTION_TYPES = frozenset({"abstract", "methods", "results"})
+_COMPARATOR_SECTION_TYPES = frozenset({"abstract", "methods", "results", "conclusion"})
+_OUTCOME_SECTION_TYPES = frozenset({"abstract", "methods", "results", "conclusion"})
 
 # A numeric cohort-size clause ("1,840,044 women without...", "253 patients
 # with STEMI...", "4234 adults aged >= 18 years...") was the single most

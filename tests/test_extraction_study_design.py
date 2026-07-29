@@ -22,7 +22,7 @@ def _section(
 
 
 def test_study_design_rules_version_is_stable() -> None:
-    assert STUDY_DESIGN_RULES_VERSION == "m26-study-design-v1"
+    assert STUDY_DESIGN_RULES_VERSION == "m26-study-design-v2"
 
 
 def test_classify_study_type_detects_randomized_controlled_trial() -> None:
@@ -77,6 +77,81 @@ def test_classify_study_type_returns_none_without_a_cue() -> None:
     sections = [_section("methods", text, "Methods")]
 
     assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) is None
+
+
+def test_classify_study_type_detects_narrative_review() -> None:
+    text = "In this narrative review, we summarize the evidence on GLP-1 agonists."
+    sections = [_section("abstract", text, "Abstract")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == (
+        "narrative_review"
+    )
+
+
+def test_classify_study_type_prefers_narrative_review_over_rct_mention() -> None:
+    text = "This narrative review discusses several randomized controlled trials."
+    sections = [_section("abstract", text, "Abstract")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == (
+        "narrative_review"
+    )
+
+
+def test_classify_study_type_prefers_cross_over_trial_over_rct_mention() -> None:
+    text = "This was a randomized, double-blind, placebo-controlled crossover trial."
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == (
+        "cross_over_trial"
+    )
+
+
+def test_classify_study_type_detects_hyphenated_cross_over_trial() -> None:
+    text = "We conducted a cross-over trial comparing the two dosing regimens."
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == (
+        "cross_over_trial"
+    )
+
+
+def test_classify_study_type_detects_retrospective_study_without_cohort_phrasing() -> None:
+    text = "We performed a retrospective analysis of electronic health records."
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == (
+        "retrospective_study"
+    )
+
+
+def test_classify_study_type_prefers_cohort_study_over_retrospective_study() -> None:
+    text = "We conducted a retrospective cohort study of adults with obesity."
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == ("cohort_study")
+
+
+def test_classify_study_type_detects_case_series() -> None:
+    text = "We describe a case series of five patients with severe hypoglycemia."
+    sections = [_section("abstract", text, "Abstract")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == ("case_series")
+
+
+def test_classify_study_type_detects_case_report() -> None:
+    text = "We present a case report of a patient with a rare adverse event."
+    sections = [_section("abstract", text, "Abstract")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == ("case_report")
+
+
+def test_classify_study_type_prefers_case_control_study_over_case_report() -> None:
+    text = "We conducted a case-control study of adults with obesity."
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == (
+        "case_control_study"
+    )
 
 
 def test_extract_limitations_returns_section_text_without_heading() -> None:
