@@ -217,6 +217,31 @@ acceptance, release validation, and optional post-release quality audits.
   ("Glyxambi") resolves to more than one. Explicitly background context,
   not evidence, with the same non-`EvidenceRecord` boundary M41 drew.
   See `docs/m42_rxnorm_lookup.md`.
+- **M43** added a third live-lookup reference source, NLM's MeSH
+  database, alongside M41's Wikipedia lookup and M42's RxNorm lookup. A
+  new `ke mesh-lookup <term>` command and `knowledge_engine/
+  mesh_lookup.py` resolve a term to its canonical MeSH descriptor (MeSH
+  ID, preferred heading, scope note/definition, and entry-term
+  synonyms) via NCBI's public E-utilities API (`db=mesh`), reusing
+  `ncbi_http.py`'s existing `UrllibNcbiTransport` directly -- no new
+  transport module needed, since `eutils.ncbi.nlm.nih.gov` is already
+  allowlisted for literature discovery. Chosen as the third source
+  because it fills a gap neither Wikipedia (prose) nor RxNorm
+  (drug-only) closes: NLM's own controlled vocabulary for diseases,
+  procedures, and biomedical concepts generally. MeSH's `esearch` is a
+  full-text search, not an exact-match lookup -- live-verified that
+  searching "obesity" returns 37 loosely related candidates whose first
+  result ("Anti-Obesity Agents") is the wrong concept entirely, so the
+  service resolves a term only when exactly one candidate is both a
+  true MeSH descriptor record and has the queried term as one of its
+  own entry-term synonyms (case-insensitive exact match), never the
+  closest guess -- confirmed correct for "obesity" -> "Obesity" (MeSH
+  ID D009765), "type 2 diabetes" -> "Diabetes Mellitus, Type 2" (MeSH ID
+  D003924), and confirmed correctly `found: false` for "GLP-1 receptor
+  agonist" (singular), since MeSH only records the plural entry term.
+  Explicitly background context, not evidence, with the same
+  non-`EvidenceRecord` boundary M41/M42 drew. See
+  `docs/m43_mesh_lookup.md`.
 
 ### M14: Controlled 500-paper rehearsal
 
@@ -616,14 +641,16 @@ Detailed milestone records include:
   assumes but never restates. **M41** (see below) built the sketch's
   recommended live-lookup path's first slice, `ke reference-lookup`
   against Wikipedia; **M42** added a second slice, `ke rxnorm-lookup`
-  against NLM's RxNorm API for structured drug-name normalization. The
-  stored-textbook path (open-license
-  chemistry/biology/microbiology/physics/pharmacology textbooks) remains
-  unbuilt pending real licensing/storage decisions. Explicitly not
-  evidence and not part of the paper corpus's 1,000-paper cap. See
-  `docs/roadmap/long_term_vision.md`'s matching section,
-  `docs/m41_reference_lookup.md`, and `docs/m42_rxnorm_lookup.md`. The
-  design doc's "Addendum: where this plugs into the final report" section
+  against NLM's RxNorm API for structured drug-name normalization;
+  **M43** added a third slice, `ke mesh-lookup` against NLM's MeSH
+  database for medical-concept terminology. The stored-textbook path
+  (open-license chemistry/biology/microbiology/physics/pharmacology
+  textbooks) remains unbuilt pending real licensing/storage decisions.
+  Explicitly not evidence and not part of the paper corpus's
+  1,000-paper cap. See `docs/roadmap/long_term_vision.md`'s matching
+  section, `docs/m41_reference_lookup.md`, `docs/m42_rxnorm_lookup.md`,
+  and `docs/m43_mesh_lookup.md`. The design doc's "Addendum: where this
+  plugs into the final report" section
   records ten concrete ways reference-layer content can shape the future
   AI Interface Layer's report (grouping, gap disclosure, provenance
   labeling, glossary/appendix content, Knowledge Graph concept nodes),

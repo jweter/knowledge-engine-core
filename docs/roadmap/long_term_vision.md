@@ -208,12 +208,14 @@ option (likely the better starting point, since it needs no storage
 decision), why it needs its own manifest and index rather than reusing
 the paper corpus's, and the real open decisions (storage/hosting chief
 among them, if the stored-text path is chosen) still pending explicit
-owner sign-off. **M41 and M42 have since built the live-lookup path's
-first two slices** -- `ke reference-lookup`, querying Wikipedia's public
-REST API live, and `ke rxnorm-lookup`, querying NLM's RxNorm API live for
-structured drug-name normalization -- both background context only,
-never evidence -- see `docs/m41_reference_lookup.md` and
-`docs/m42_rxnorm_lookup.md`. The stored-textbook path remains unbuilt.
+owner sign-off. **M41, M42, and M43 have since built the live-lookup
+path's first three slices** -- `ke reference-lookup`, querying
+Wikipedia's public REST API live; `ke rxnorm-lookup`, querying NLM's
+RxNorm API live for structured drug-name normalization; and `ke
+mesh-lookup`, querying NLM's MeSH database live for medical-concept
+terminology -- all background context only, never evidence -- see
+`docs/m41_reference_lookup.md`, `docs/m42_rxnorm_lookup.md`, and
+`docs/m43_mesh_lookup.md`. The stored-textbook path remains unbuilt.
 `docs/reference_knowledge_layer_design.md`'s Addendum names ten concrete
 ways this layer's content could shape the AI Interface Layer's eventual
 report (grouping, gap disclosure, provenance labeling, glossary/appendix
