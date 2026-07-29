@@ -1618,15 +1618,18 @@ def fused_search(
     Resolves `docs/phase3_design.md`'s last open Phase 3 design question:
     the two retrieval signals have run as separate commands since M30/M32,
     with no combined ranking. This runs both against the same free-text
-    query -- lexical via SQLite FTS5, semantic by embedding the query live
-    (via `--generator`, the same generators `ke vector-search --query-text`
-    uses) and searching the local FAISS index -- and fuses the two ranked
-    paper_id lists with Reciprocal Rank Fusion (see
-    `knowledge_engine.search_fusion`): a paper appearing in both rankings
-    outranks one appearing in only one. `--candidate-limit` controls how
-    many results are pulled from each individual ranking before fusing
-    (wider than `--limit`, the final result count, so fusion has enough
-    breadth to work with).
+    query -- lexical via `SearchService.answer_retrieval` (the same
+    natural-language-safe FTS5 tokenizer `ke answer` uses, so punctuation
+    like "Crohn's disease" or "heart-failure" cannot raise a raw FTS5 syntax
+    error), semantic by embedding the query live (via `--generator`, the
+    same generators `ke vector-search --query-text` uses) and searching the
+    local FAISS index -- and fuses the two ranked paper_id lists with
+    Reciprocal Rank Fusion (see `knowledge_engine.search_fusion`): a paper
+    appearing in both rankings outranks one appearing in only one.
+    `--candidate-limit` controls how many results are pulled from each
+    individual ranking before fusing; the effective candidate pool is never
+    narrower than `--limit` itself, so a requested result count can always
+    be satisfied when enough matches exist.
     """
 
     index_metadata = load_index_metadata(index_path)
@@ -1659,14 +1662,19 @@ def fused_search(
         console.print(f"[red]{escape(str(exc))}[/red]")
         raise typer.Exit(1) from None
 
-    semantic_paper_ids = [match.vector_id for match in index.search(vector, k=candidate_limit)]
+    effective_candidate_limit = max(candidate_limit, limit)
+    semantic_paper_ids = [
+        match.vector_id for match in index.search(vector, k=effective_candidate_limit)
+    ]
 
     database = _local_database()
     database.initialize()
     with database.session() as session:
         lexical_paper_ids = [
             result.paper_id
-            for result in SearchService(session).search(query_text, limit=candidate_limit)
+            for result in SearchService(session).answer_retrieval(
+                query_text, limit=effective_candidate_limit
+            )
         ]
         fused = fuse_rankings(lexical_paper_ids, semantic_paper_ids)[:limit]
         repository = PaperRepository(session)

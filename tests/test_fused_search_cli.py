@@ -226,6 +226,85 @@ def test_fused_search_exits_nonzero_when_embedding_fails(
     assert "Failed to embed query text" in _unwrapped(result.output)
 
 
+def test_fused_search_handles_punctuation_in_the_query_without_crashing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex finding (PR #175): raw punctuation/apostrophes passed straight to
+    SQLite FTS5's MATCH parser raise an uncaught OperationalError. `query_text`
+    is documented as free text, so it must go through the same
+    natural-language-safe tokenizer `ke answer` uses."""
+
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        PaperRepository(session).add_parsed_paper(
+            _parsed_paper(tmp_path, "a" * 64, title="Crohn's Disease Outcomes")
+        )
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    index_path = _build_index(
+        tmp_path, vectors={1: [1.0, 0.0]}, embedding_model="fake:test-v1", dimension=2
+    )
+    fake = _FakeGenerator()
+    monkeypatch.setattr(entrypoint, "_build_embedding_generator", lambda generator, model: fake)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "fused-search",
+            "What is Crohn's disease?",
+            "--index-path",
+            str(index_path),
+            "--generator",
+            "local",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Crohn's Disease Outcomes" in _unwrapped(result.output)
+
+
+def test_fused_search_expands_the_candidate_pool_to_satisfy_a_larger_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex finding (PR #175): independent defaults let --limit exceed
+    --candidate-limit, silently truncating the result below what was asked
+    for even when enough matches exist. The effective candidate pool must
+    never be narrower than --limit."""
+
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        repository = PaperRepository(session)
+        for index in range(5):
+            repository.add_parsed_paper(
+                _parsed_paper(tmp_path, f"{index}" * 64, title=f"Semaglutide Trial {index}")
+            )
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    index_path = _build_index(
+        tmp_path, vectors={1: [1.0, 0.0]}, embedding_model="fake:test-v1", dimension=2
+    )
+    fake = _FakeGenerator()
+    monkeypatch.setattr(entrypoint, "_build_embedding_generator", lambda generator, model: fake)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "fused-search",
+            "semaglutide",
+            "--index-path",
+            str(index_path),
+            "--generator",
+            "local",
+            "--limit",
+            "5",
+            "--candidate-limit",
+            "1",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert all(f"Semaglutide Trial {index}" in unwrapped for index in range(5))
+
+
 def test_fused_search_rejects_an_index_with_no_metadata(tmp_path: Path) -> None:
     index_path = tmp_path / "index.faiss"
     FaissVectorIndex(2).save(index_path)
