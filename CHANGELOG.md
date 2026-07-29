@@ -1037,7 +1037,11 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   of the ten ever feed the report's confidence rating, which per
   `docs/roadmap/long_term_vision.md`'s Confidence Rating Design Guidance
   stays computed from evidence-layer signals only. Project owner
-  direction: build all ten eventually, easiest first; no new milestone
+  direction: build all ten eventually, easiest first. Cross-linked from
+  `docs/roadmap.md`'s Phase 2 (items 1-4), Phase 4 (item 10), and Phase 5
+  (items 5-9) sections, and from `docs/roadmap/long_term_vision.md`'s
+  Reference Knowledge Layer section, so the list stays discoverable from
+  wherever a future milestone would actually pick one up; no new milestone
   scheduled by this addendum alone.
 - Revised the corpus-growth target in `docs/roadmap.md`'s "Scaling beyond
   500 papers for Phase 2 tuning" section down from "at least a couple
