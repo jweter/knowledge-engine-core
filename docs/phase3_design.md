@@ -37,7 +37,13 @@ matching this doc's own prior framing of Qdrant as "a second backend...
 to be added only if a real operator need for a server-backed index
 appears": no operator has asked for the CLI integration yet, and there is
 no live Qdrant server in this project's development/CI environment to
-verify that wiring against.
+verify that wiring against. M39 then closed the "combining this with
+lexical FTS5 results into one ranked list" gap named above: a new
+`ke fused-search` command runs `ke search`'s lexical retrieval and
+`ke vector-search`'s semantic retrieval against the same free-text query
+and combines the two ranked paper_id lists with Reciprocal Rank Fusion
+(`knowledge_engine/search_fusion.py`). See the Open Questions section's
+"Result combination" entry for the decision and rationale.
 
 ## Mission
 
@@ -298,14 +304,27 @@ Following the same pattern M14/Phase 2 established:
   (`ke embedding-index-build`/`ke vector-search` targeting a collection
   instead of a local file) remains deliberately not built, to be added
   only if a real operator need for it appears.
-- **Result combination** -- partially unblocked by M32: `ke vector-search
-  --query-text` now accepts a free-text query directly, so "what real
-  query patterns look like" is no longer blocked on an embedding approach
-  existing. Still undesigned: how lexical (`ke search`/`ke answer`, FTS5)
-  and semantic (`ke vector-search`) results get combined into one ranked
-  list (interleaved, semantic as a re-ranker over lexical candidates,
-  separate result sections) -- they remain two separate commands today,
-  not merged.
+- **Result combination** -- resolved by M39: unblocked by M32's
+  `--query-text` (no embedding approach was needed to know real query
+  patterns), M39 added a new `ke fused-search <query-text>` command that
+  runs both `ke search` (lexical, FTS5) and `ke vector-search` (semantic,
+  FAISS) against the same free-text query and combines the two ranked
+  paper_id lists with Reciprocal Rank Fusion (RRF): a paper's fused score
+  is `sum(1 / (k + rank))` across every ranking it appears in, `k = 60`
+  (RRF's standard constant). Chosen over the two other options this entry
+  named -- semantic-as-re-ranker (would make lexical retrieval's own recall
+  a hard ceiling on the combined result, since a paper lexical never
+  retrieves at all could never be re-ranked) and separate result sections
+  (defers the combination decision rather than making it) -- because RRF
+  needs only each system's rank position, not their incomparable raw scores
+  (FTS5's bm25 vs FAISS's squared L2 distance), imposes no arbitrary
+  cross-system weight to tune, and a paper found by both signals naturally
+  outranks one found by only one. `ke search`/`ke answer`/`ke vector-search`
+  are unchanged and remain available as separate commands -- `fused-search`
+  is additive, not a replacement, matching the pattern M30-M33 already
+  established of each milestone adding a new command rather than mutating
+  an existing one's behavior. See `knowledge_engine/search_fusion.py` and
+  `docs/roadmap.md`'s M39 entry.
 - **`embedding_id` semantics** -- resolved for M30's own mechanism:
   `embedding_id` is the paper's own `Paper.id` (as a string), matching the
   ID `FaissVectorIndex` itself is keyed by. This may need revisiting if a

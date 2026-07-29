@@ -410,10 +410,16 @@ Detailed milestone records include:
   deliberately left in place. **M33** added `QdrantVectorIndex`, the
   second `VectorIndex` implementation the roadmap named from the start,
   targeting an operator-run Qdrant server -- usable via direct Python
-  import today; CLI wiring is a future step. Combining lexical
-  (`ke search`/`ke answer`) and semantic (`ke vector-search`) results into
-  one ranked list remains a separate, not-yet-designed question (see
-  `docs/phase3_design.md`'s Open Questions).
+  import today; CLI wiring is a future step. **M39** closed the last open
+  Phase 3 design question: combining lexical (`ke search`/`ke answer`) and
+  semantic (`ke vector-search`) results into one ranked list. A new
+  `ke fused-search <query-text>` command runs both retrieval signals
+  against the same free-text query and combines the two ranked paper_id
+  lists with Reciprocal Rank Fusion (`knowledge_engine/search_fusion.py`) --
+  a paper found by both signals outranks one found by only one, with no
+  arbitrary cross-system weight to tune. `ke search`/`ke answer`/
+  `ke vector-search` are unchanged; `fused-search` is additive. See
+  `docs/phase3_design.md`'s Open Questions.
 
 ## Phase 4: Knowledge Graph
 
@@ -471,8 +477,9 @@ Detailed milestone records include:
 - `docs/roadmap/phase2.md`
 - `docs/phase3_design.md` and `docs/roadmap/phase3.md` -- design sketch and
   goals; M30 (FAISS retrieval plumbing), M31 (local + OpenAI embedding
-  generators), M32 (free-text `ke vector-search --query-text`), and M33
-  (`QdrantVectorIndex`, not yet CLI-wired) are implemented
+  generators), M32 (free-text `ke vector-search --query-text`), M33
+  (`QdrantVectorIndex`, not yet CLI-wired), and M39 (`ke fused-search`,
+  lexical+semantic Reciprocal Rank Fusion) are implemented
 - `docs/roadmap/long_term_vision.md` -- the multi-package ecosystem and final
   goal these phases build toward, including the future `knowledge-engine-ai`
   layer's role once Phase 2's Evidence Records exist
