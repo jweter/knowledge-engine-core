@@ -457,12 +457,16 @@ Detailed milestone records include:
   605 papers was sufficient to stop growing it further.
 - `docs/reference_knowledge_layer_design.md`'s Addendum (items 1-4) names
   four reference-layer integration points buildable here without waiting
-  on Phase 4/5: drug identity normalization for evidence grouping (on
-  M42's `ingredients` field), a coverage-gap disclosure flag for terms
-  with no reference-layer match, provenance-footer discipline for any
-  reference text surfaced anywhere, and a reviewer aid surfacing
-  definitions inline in `ke extraction-review-promote`. None of them
-  touch the confidence rating -- see that section for the boundary.
+  on Phase 4/5: drug identity normalization for report-*display*
+  grouping only, never for deciding which records get pooled into a
+  question's confidence rating (on M42's `ingredients` field), a
+  coverage-gap disclosure flag for terms with no reference-layer match,
+  provenance-footer discipline for any reference text surfaced anywhere,
+  and a reviewer aid surfacing definitions inline in
+  `ke extraction-review-promote`. None of them touch the confidence
+  rating, including indirectly through the compounding step's
+  participant set -- see that section for the precise boundary, tightened
+  after Codex review on PR #180.
 
 ## Phase 3: Search Plus Semantics
 

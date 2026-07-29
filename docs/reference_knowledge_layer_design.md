@@ -204,11 +204,23 @@ confidence compounds those through the Relationship Layer's typed links).
 M41's Wikipedia lookup, M42's RxNorm lookup, or a future stored-textbook
 path -- never becomes a confidence input, no matter how indirectly it's
 phrased, for the same reason it was never evidence in the first place
-(see Motivation and What this is not above). What it *can* legitimately
-do is shape the report around that score: grouping, disclosure,
-provenance labeling, and explanatory scaffolding, the same supporting
-role a domain expert's own background knowledge plays without ever being
-cited as the paper's finding.
+(see Motivation and What this is not above). This rules out more than
+adjusting a per-record quality score: the compounded question-level
+rating combines "every *relevant* evidence record" (see Confidence
+Rating Design Guidance above), so anything that decides which records
+count as relevant or get pooled together is itself an indirect
+confidence input, even if it never touches a score directly. Deciding
+that is, and stays, the human-assigned `research_question`/
+`evidence_direction` per record -- the same boundary Phase 2 already
+drew for exactly this reason (see `docs/roadmap/long_term_vision.md`'s
+Minimizing Human-Typed Fields section: `research_question` is "genuinely
+external," a human/AI-layer judgment, not an extraction target).
+Reference-layer content may never substitute an automated match for that
+judgment. What it *can* legitimately do is shape the report *around*
+that already-decided score: display grouping, disclosure, provenance
+labeling, and explanatory scaffolding, the same supporting role a domain
+expert's own background knowledge plays without ever being cited as the
+paper's finding.
 
 Ten concrete integration points, ordered by what's cheapest to build
 given what already exists today -- not by how much polish they'd add to
@@ -217,12 +229,21 @@ all ten; this ordering is the build sequence, not a cut list.
 
 **Buildable now, directly on M41/M42, no Phase 4/5 dependency:**
 
-1. **Drug identity normalization for evidence grouping.** M42's
-   `ingredients` field already lets a caller recognize that a paper
-   citing "Ozempic" and one citing "semaglutide" concern the same
-   underlying drug. Using that to group evidence before scoring (not to
-   score it) is a pure grouping/deduplication step on top of code that
-   already exists -- the smallest possible unit of this addendum.
+1. **Drug identity normalization for report-display grouping only.**
+   M42's `ingredients` field already lets a caller recognize that a
+   paper citing "Ozempic" and one citing "semaglutide" concern the same
+   underlying drug. Authorized use: presenting already-scored results
+   for both names together under one heading in a rendered report.
+   **Not authorized:** using that match to decide which evidence records
+   count as "relevant" and get pooled into a question's compounded
+   rating -- that would make an automated drug-name match a stand-in for
+   the human `research_question`/`evidence_direction` judgment the
+   boundary above requires, exactly the kind of indirect confidence
+   input Codex review caught in the first draft of this item on PR #180
+   (the original wording, "group evidence before scoring," left that
+   door open). The compounding step's participant set stays untouched by
+   this milestone; only how an already-computed set of results is
+   organized on screen is in scope.
 2. **Coverage-gap flag.** When a claim's key term has no reference-layer
    match at all (`found: false` from either M41 or M42), surface that as
    a footnote ("no background definition available for this term")
