@@ -8,10 +8,18 @@ claims, citations, support, contradiction, and uncertainty"; "add Neo4j
 or another graph backend behind a repository interface") into an
 implementation-ready architecture, grounded in a fresh measurement of the
 real 951-paper corpus rather than the abstract roadmap bullet alone (see
-Prerequisite below), and surfaces the one real open decision (graph
-backend) before any graph-storage code is written, the same way Phase 2's
-Extraction Methodology section and Phase 3's embedding-generation section
-did. No Phase 4 code exists yet; this document is the plan.
+Prerequisite below), and resolves the graph backend decision before any
+graph-storage code is written, the same way Phase 2's Extraction
+Methodology section and Phase 3's embedding-generation section did. It
+also names, rather than papers over, the real gaps Codex review on PR
+#186 caught between this design's stated goals and its first schema --
+`EvidenceRecord`/`RelationshipRecord` references are application-level,
+not database-enforced foreign keys (both are JSONL, not tables); concept
+nodes store the actual reference-layer definition and provenance, not
+just an identity; and Stability Score/Tracking the Unknown are named as
+this phase's motivation but deliberately not schema-designed in this
+first slice (see Open Questions). No Phase 4 code exists yet; this
+document is the plan.
 
 ## Mission
 
@@ -91,10 +99,18 @@ roadmap bullet:
   pattern `PaperRepository`/`VectorIndex` already established --
   Phase 4's own code should not care which concrete backend answers a
   query.
-- Give Stability Score (claim revision history) and Tracking the Unknown
+- **Named here as the roadmap's stated motivation for Phase 4, not
+  delivered by this first schema.** `docs/roadmap/long_term_vision.md`
+  says Stability Score (claim revision history) and Tracking the Unknown
   (missing experiments, weak-evidence areas, unanswered questions as
-  first-class entities) the graph-shaped home `docs/roadmap/long_term_vision.md`
-  says neither has before Phase 4 exists.
+  first-class entities) have no graph-shaped home before Phase 4 exists
+  -- true, and the reason this phase is worth building at all. Codex
+  review on PR #186 correctly caught that the Architecture section below
+  does not actually include a claim-version/revision-history table or an
+  uncertainty/gap-entity table, so this first slice makes the graph
+  *exist* (a real prerequisite neither capability had before) without
+  yet *populating* either one. See Open Questions for why that schema
+  design is deliberately deferred rather than guessed here.
 - Give reference-layer definitions (M41 Wikipedia, M42 RxNorm, M43 MeSH,
   M44 PubChem) a home as Graph concept-node content, distinct from the
   paper-level evidence nodes that cite them -- `docs/reference_knowledge_layer_design.md`'s
@@ -191,30 +207,58 @@ unchanged posture, not revisited by this phase):
   `rxnorm`/`mesh`/`pubchem`/`pico`), `source_reference_id` (the M41-M45
   lookup result's own identity -- `mesh_id`, `rxcui`, `cid`, or null for
   a bare PICO-derived concept with no resolved reference-layer match),
+  `definition` (the actual content the Addendum item 10 goal above
+  requires: Wikipedia's `extract`, MeSH's `scope_note`, RxNorm's
+  `name`/`term_type`/`synonym` joined into one string, or PubChem's
+  `iupac_name`/`molecular_formula` joined -- null for a bare
+  PICO-derived concept with nothing to store), `source_url`, `license`,
   `retrieved_at`. A concept node is created only when a reference-layer
   lookup actually resolved (`found: true`) or a PICO field was actually
-  detected -- never speculatively.
-- **`graph_claims`** -- one row per *validated* `EvidenceRecord`
-  (`evidence_record_id` foreign key), not per raw claim candidate. A
-  claim node inherits its parent `EvidenceRecord`'s own
-  `research_question`/`evidence_direction`/`confidence_note` by
-  reference (not duplicated) -- the graph never stores a second copy of
-  judgment fields that could drift from the source record.
+  detected -- never speculatively. Codex review on PR #186 caught that
+  the first version of this table stored only identity fields, not the
+  actual definition/provenance content the stated goal (concept nodes as
+  "the textbook-style content hanging off a Graph concept node")
+  requires -- a real gap between the claim and the schema, fixed here.
+  This means a `graph_concepts` row *is* the persisted lookup record for
+  that concept -- M41-M45's own lookup results are not separately
+  persisted anywhere today, so this table becomes their only durable
+  home once a concept is linked into the graph.
+- **`graph_claims`** -- one row per *validated* `EvidenceRecord`, not per
+  raw claim candidate. **Not a real SQL foreign key**: Codex review on
+  PR #186 caught that `EvidenceRecord`s are JSONL objects appended by
+  `_promote_evidence_records` (`knowledge_engine/cli.py`), never rows in
+  any SQLAlchemy table -- there is no `evidence_records` table for a
+  `ForeignKey()` to reference, so `Database` would refuse to create this
+  constraint as originally described. `evidence_record_id` is instead a
+  plain indexed string column holding the JSONL record's own
+  `evidence_record_id` value, an application-level reference the
+  `GraphRepository` layer validates against the JSONL file at write time
+  (the same way `ke relationship-validate --evidence` already validates
+  `RelationshipRecord` endpoint IDs against a supplied evidence file),
+  not one the database enforces. A claim node inherits its parent
+  `EvidenceRecord`'s own `research_question`/`evidence_direction`/
+  `confidence_note` by reference (not duplicated) -- the graph never
+  stores a second copy of judgment fields that could drift from the
+  source record.
 - **`graph_claim_concepts`** -- many-to-many edge table linking a
   `graph_claims` row to the `graph_concepts` row(s) its PICO fields or
   `reference_context` (M45) resolved, with an `edge_role` column
   (`population`/`intervention`/`comparator`/`outcome`) recording *which*
-  PICO field produced the link.
+  PICO field produced the link. Real SQL foreign keys on both sides --
+  both endpoints are genuine `graph_*` table rows.
 - **`graph_claim_relationships`** -- Phase 4's storage for M24's existing
   `RelationshipRecord`s as graph edges: `source_claim_id`,
-  `target_claim_id`, `relationship_type` (reusing
-  `ALLOWED_RELATIONSHIP_TYPES` unchanged: `supports`/`contradicts`/
-  `qualifies`/`contextualizes`), `rationale`, `relationship_record_id`
-  foreign key back to the original record. This table does not replace
-  `RelationshipRecord`s or `ke relationship-validate`; it is a
-  graph-queryable projection of the same validated data, same "one
-  source of truth, graph is a view over it" posture `graph_claims` uses
-  for `EvidenceRecord`s.
+  `target_claim_id` (both real foreign keys into `graph_claims`),
+  `relationship_type` (reusing `ALLOWED_RELATIONSHIP_TYPES` unchanged:
+  `supports`/`contradicts`/`qualifies`/`contextualizes`), `rationale`,
+  and `relationship_id` -- the same non-enforced, application-validated
+  string reference as `graph_claims.evidence_record_id` above, for the
+  same reason: `RelationshipRecord`s are JSONL too, with no table to
+  reference. This table does not replace `RelationshipRecord`s or `ke
+  relationship-validate`; it is a graph-queryable projection of the same
+  validated data, same "one source of truth, graph is a view over it"
+  posture `graph_claims` uses for `EvidenceRecord`s -- "projection," not
+  "foreign key," is the accurate description of that relationship.
 - **`graph_citations`** (blocked on new extraction work -- see
   Prerequisite above) -- `citing_paper_id`, `cited_paper_id` (both
   foreign keys into `papers`, only populated when a reference-list entry
@@ -247,6 +291,29 @@ discipline continuous from design through implementation.
 
 ## Open Questions (owner decisions, not resolved here)
 
+- **Stability Score / Tracking the Unknown schema.** Deliberately not
+  designed in this document. A claim-revision-history table needs a real
+  answer to "what counts as a revision" (a new `EvidenceRecord` promoted
+  for the same underlying finding? a `research_question`/
+  `evidence_direction` edit? neither exists as a defined event today) and
+  an uncertainty/gap-entity table needs a real answer to "what makes a
+  gap real rather than just 'no evidence record happens to exist yet'" --
+  both are the same class of "verify against real data before writing a
+  schema" question M28's PICO patterns and M45's Codex-caught term-extraction
+  fix already went through, not something to guess under time pressure
+  in this design doc. The first Phase 4 milestone builds the schema
+  below (fully populatable today); Stability Score and Tracking the
+  Unknown get their own dedicated follow-up design once the graph itself
+  exists to prototype against.
+- **Whether `evidence_record_id`/`relationship_id` should become real
+  foreign keys eventually**, i.e. whether `EvidenceRecord`/
+  `RelationshipRecord` should move from JSONL to a proper SQLAlchemy
+  table. A real, separate architectural question (JSONL has served
+  Phase 2 fine for validation-only purposes; Phase 4 is the first
+  consumer that would benefit from a DB-enforced reference) -- not
+  decided here, since it's bigger than Phase 4's own scope and would
+  affect `ke evidence-validate`/`ke extraction-review-promote`/`ke
+  relationship-validate` too, not just the graph.
 - **Citation-list parsing approach.** A real, separate design question
   with its own real-corpus verification needed before writing any
   pattern-matching code (matching M28's PICO precedent and M45's

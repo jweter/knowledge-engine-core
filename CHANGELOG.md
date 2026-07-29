@@ -1198,7 +1198,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   verified against real corpus text). Restates and holds to "the seam"
   explicitly for the phase most likely to tempt a violation of it: typed
   support/contradiction edges are stored, never compounded into a
-  confidence rating by `core` itself.
+  confidence rating by `core` itself. Codex review on PR #186 caught
+  three real gaps before merge, all fixed: (1) `evidence_record_id`/
+  `relationship_id` were described as SQL foreign keys, but
+  `EvidenceRecord`/`RelationshipRecord` are JSONL objects with no backing
+  table -- `Database` cannot create that constraint; fixed to describe
+  them as plain, application-validated string references instead. (2)
+  `graph_concepts` stored only identity fields, discarding the actual
+  Wikipedia `extract`/MeSH `scope_note`/RxNorm/PubChem content and
+  `source_url`/`license` the stated "concept nodes as reference-layer
+  content" goal requires; fixed by adding `definition`/`source_url`/
+  `license` columns, making a `graph_concepts` row the only durable home
+  for a resolved lookup result once it's linked into the graph. (3)
+  Stability Score and Tracking the Unknown were listed as Goals with no
+  corresponding schema anywhere in the design; fixed by reframing them
+  explicitly as this phase's motivation rather than something the first
+  schema delivers, with their own schema work named as a deliberately
+  deferred Open Question rather than guessed under time pressure.
 
 ### Changed
 
