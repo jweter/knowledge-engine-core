@@ -874,6 +874,34 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   for explicit owner decision, the same way `evaluate_scientific_scope`'s
   documented weakness was flagged rather than unilaterally fixed. See
   `docs/m38_extraction_scale_assessment.md`.
+- Fixed both M38-flagged extraction recall gaps, since authorized by the
+  project owner. `detect_sections` (`SECTION_DETECTION_RULES_VERSION`
+  v1 -> v2) now also recognizes an inline `"Label: text"` heading (e.g.
+  `"Results: SGLT2 inhibitor use was associated with..."`), not just a
+  heading alone on its own line, closing the exact `PMC13366639.pdf`-style
+  gap M38 diagnosed; the colon requirement keeps this narrow (`"results"`
+  mid-sentence, or a combined heading like `"Results and Discussion"`,
+  still matches neither alternative). `classify_study_type`
+  (`STUDY_DESIGN_RULES_VERSION` v1 -> v2) grew its closed vocabulary by
+  five designs -- `narrative_review`, `cross_over_trial`,
+  `retrospective_study`, `case_series`, `case_report` -- ordered so the
+  existing more-specific patterns still win. Re-running the M38 report
+  after the section-detection fix alone surfaced an unplanned regression:
+  every PICO field's coverage dropped (population 425 -> 364, intervention
+  563 -> 510, comparator 695 -> 665, outcome 533 -> 503, all-four
+  220 -> 184), because a structured abstract's inline `"Background: ...
+  Methods: ... Results: ... Conclusion: ..."` layout used to stay one
+  undivided `abstract` span that every PICO field already scanned, and now
+  correctly splits into `methods`/`results`/`conclusion` fragments PICO's
+  original section scoping never covered. Fixed by widening `extract_pico`
+  (`PICO_EXTRACTION_RULES_VERSION` v1 -> v2) so population/intervention
+  also scan `results` and comparator/outcome also scan `conclusion`. Final
+  re-measurement against the same 943-paper corpus: results-section
+  detection 63.1% -> 72.4%, conclusion-section detection 64.4% -> 75.6%,
+  claim candidates 63.2% -> 72.0%, study type classified 40.6% -> 43.7%,
+  PICO all-four-fields 23.3% -> 26.2% -- every signal improved or held
+  steady. See `docs/m38_extraction_scale_assessment.md`'s "Resolved
+  follow-up" section.
 
 ### Changed
 
