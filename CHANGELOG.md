@@ -1175,6 +1175,46 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   confidence rating are never `core`'s to decide) as the one boundary
   every milestone in this repository has held to, now collected in one
   place instead of scattered across each milestone's own doc.
+- Added `docs/phase4_design.md`, the implementation-ready Phase 4 design
+  sketch (mirroring `docs/phase2_design.md`/`docs/phase3_design.md`'s
+  role), written before any Phase 4 code. Grounded in a fresh measurement
+  of the real 951-paper corpus rather than the abstract roadmap bullet:
+  44% study-type coverage, 26% full-PICO coverage, 12% limitations
+  coverage, 0% structured citations (citation-list parsing is real,
+  unscoped prerequisite work -- `parser.py`'s `REFERENCE_HEADING_PATTERN`
+  only detects where a References section starts, it does not parse
+  entries). Resolves the graph backend question: relational tables in the
+  existing SQLite database first, behind a `GraphRepository` interface
+  mirroring `PaperRepository`, no Neo4j for the first slice -- the same
+  "embedded/no-server first, dedicated backend only if a real evidenced
+  need appears" sequencing Phase 3 used for FAISS before Qdrant.
+  Schema sketch: `graph_concepts` (M41-M45 reference-layer resolutions and
+  PICO field values), `graph_claims` (one row per *validated*
+  `EvidenceRecord`, never a raw claim candidate), `graph_claim_concepts`
+  (the PICO-role-tagged edges between them), `graph_claim_relationships`
+  (a graph-queryable projection of M24's existing `RelationshipRecord`s,
+  not a replacement for them), and `graph_citations` (designed now,
+  deliberately left unpopulated until citation-list parsing is scoped and
+  verified against real corpus text). Restates and holds to "the seam"
+  explicitly for the phase most likely to tempt a violation of it: typed
+  support/contradiction edges are stored, never compounded into a
+  confidence rating by `core` itself. Codex review on PR #186 caught
+  three real gaps before merge, all fixed: (1) `evidence_record_id`/
+  `relationship_id` were described as SQL foreign keys, but
+  `EvidenceRecord`/`RelationshipRecord` are JSONL objects with no backing
+  table -- `Database` cannot create that constraint; fixed to describe
+  them as plain, application-validated string references instead. (2)
+  `graph_concepts` stored only identity fields, discarding the actual
+  Wikipedia `extract`/MeSH `scope_note`/RxNorm/PubChem content and
+  `source_url`/`license` the stated "concept nodes as reference-layer
+  content" goal requires; fixed by adding `definition`/`source_url`/
+  `license` columns, making a `graph_concepts` row the only durable home
+  for a resolved lookup result once it's linked into the graph. (3)
+  Stability Score and Tracking the Unknown were listed as Goals with no
+  corresponding schema anywhere in the design; fixed by reframing them
+  explicitly as this phase's motivation rather than something the first
+  schema delivers, with their own schema work named as a deliberately
+  deferred Open Question rather than guessed under time pressure.
 
 ### Changed
 
