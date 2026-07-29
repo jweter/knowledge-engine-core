@@ -1927,7 +1927,6 @@ def graph_citations_build(
     database.initialize()
 
     papers_scanned = 0
-    edges_created = 0
 
     with database.session() as session:
         papers = PaperRepository(session).list_papers()
@@ -1936,6 +1935,8 @@ def graph_citations_build(
         }
 
         graph_repository = GraphRepository(session)
+        citation_edges_before = graph_repository.population_counts()["citation_edges"]
+
         for paper in papers:
             if paper.text is None:
                 continue
@@ -1949,13 +1950,13 @@ def graph_citations_build(
                     cited_paper_id=cited_paper_id,
                     raw_citation_text=candidate.raw_snippet,
                 )
-                edges_created += 1
 
         counts = graph_repository.population_counts()
+        edges_created = counts["citation_edges"] - citation_edges_before
 
     console.print(
         f"[green]Citation build complete:[/green] {papers_scanned} paper(s) scanned, "
-        f"{edges_created} citation edge(s) created."
+        f"{edges_created} new citation edge(s) created."
     )
     console.print(
         f"Graph totals -- concepts: {counts['concepts']} {counts['concepts_by_source']}, "
