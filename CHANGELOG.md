@@ -1052,8 +1052,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   only records the plural entry term. Explicitly background context,
   not evidence: never routed through `EvidenceRecord` promotion, never
   merged into the evidence corpus's own search commands. Live-verified
-  against real terms before writing the parser and again after. See
-  `docs/m43_mesh_lookup.md`.
+  against real terms before writing the parser and again after. Codex
+  review on PR #182 caught two further gaps before merge: (1) the
+  original `esearch` call fetched only the first 20 candidates, when
+  "obesity" alone reports 37 (and "cancer" reports 409), so a term
+  ranked below the cutoff would falsely resolve to `found: false`; fixed
+  by checking `esearch`'s own reported total against what was actually
+  fetched (bounded to 200) and declining to resolve rather than
+  searching a partial window. (2) the original match logic returned the
+  first exact match found while scanning candidates, silently picking
+  one if more than one true descriptor happened to share the same exact
+  entry term -- contradicting the code's own "resolves only when exactly
+  one candidate matches" claim; fixed by collecting every exact match
+  and requiring precisely one, treating two-or-more the same as
+  zero (`found: false`). See `docs/m43_mesh_lookup.md`.
 
 ### Changed
 

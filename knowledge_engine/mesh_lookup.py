@@ -34,15 +34,26 @@ instead resolves a term only when exactly one candidate is both a true
 MeSH descriptor record (`ds_recordtype == "descriptor"`, excluding the
 "pharmacological-action" and "supplemental-record" candidates that
 otherwise share the same entry terms) and has the queried term as one
-of its own entry-term synonyms, verified case-insensitively. A term
-with no such exact match returns `found: false` rather than guessing
-the closest candidate -- confirmed live for "GLP-1 receptor agonist"
-(singular), which MeSH's own entry terms only record in the plural
-("GLP-1 Receptor Agonists"), so it correctly does not resolve; a
-caller wanting that concept needs the plural form MeSH actually uses,
-the same precision-over-recall tradeoff a controlled vocabulary always
-makes relative to Wikipedia's title-matching or RxNorm's brand-name
-coverage.
+of its own entry-term synonyms, verified case-insensitively -- and only
+when that is true of *exactly one* candidate among *every* candidate
+`esearch` reports, not just a first-page sample: a Codex review on
+PR #182 caught that the original version capped `esearch` at 20
+results and returned whichever candidate matched first, when the
+project's own documentation already recorded 37 candidates for
+"obesity" alone (and "cancer" returns 409). Fixed by fetching up to
+`MESH_SEARCH_MAX_CANDIDATES` candidates and explicitly declining to
+resolve (returning `found: false`, the same as a genuine no-match) if
+the reported total exceeds what was fetched, or if more than one exact
+match exists among what was checked -- an overly broad or genuinely
+ambiguous term is never resolved by guessing which candidate is
+"probably" right. A term with no exact match, or too many candidates to
+check exhaustively, returns `found: false` rather than guessing --
+confirmed live for "GLP-1 receptor agonist" (singular), which MeSH's
+own entry terms only record in the plural ("GLP-1 Receptor Agonists"),
+so it correctly does not resolve; a caller wanting that concept needs
+the plural form MeSH actually uses, the same precision-over-recall
+tradeoff a controlled vocabulary always makes relative to Wikipedia's
+title-matching or RxNorm's brand-name coverage.
 
 MeSH data is NLM's own free, non-proprietary content (no license fee
 or royalty per NLM's published MeSH Terms and Conditions,
@@ -70,7 +81,16 @@ MESH_ESEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 MESH_ESUMMARY_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
 MESH_PERMALINK = "https://id.nlm.nih.gov/mesh"
 MESH_CONTENT_LICENSE = "Free, non-proprietary content, National Library of Medicine (MeSH)"
-MESH_SEARCH_RETMAX = 20
+MESH_SEARCH_MAX_CANDIDATES = 200
+"""Upper bound on how many `esearch` candidates one lookup will fetch and
+check. Verified generous for real medical terms this project has tested
+(37 for "obesity", the broadest single disease term tried) -- but a
+single generic word like "cancer" (409) or "diabetes" (102, within bound
+but still broad) can exceed or approach it. When `esearch` reports more
+candidates than this bound fetches, `lookup` declines to resolve rather
+than searching a partial, arbitrarily-ordered subset and risking a false
+`found: false` for a term whose true descriptor just wasn't in the
+window checked."""
 MESH_DESCRIPTOR_RECORD_TYPE = "descriptor"
 
 DEFAULT_HEADERS = {
@@ -162,30 +182,38 @@ class MeshLookupService:
             raise ValueError("Term must not be empty.")
 
         retrieved_at = datetime.now(UTC).isoformat()
-        candidate_uids = self._search(normalized)
-        if not candidate_uids:
+        total_count, candidate_uids = self._search(normalized)
+        if total_count == 0:
+            return _not_found_result(normalized, retrieved_at)
+        if total_count > len(candidate_uids):
+            # More candidates exist than this lookup fetched -- too broad to
+            # check exhaustively, so decline rather than risk missing the
+            # true match outside the window actually checked.
             return _not_found_result(normalized, retrieved_at)
 
         summaries = self._fetch_summaries(candidate_uids)
-        match = _find_exact_descriptor_match(normalized, candidate_uids, summaries)
-        if match is None:
+        matches = _find_exact_descriptor_matches(normalized, candidate_uids, summaries)
+        if len(matches) != 1:
             return _not_found_result(normalized, retrieved_at)
 
-        return _parse_result(normalized, match, retrieved_at=retrieved_at)
+        return _parse_result(normalized, matches[0], retrieved_at=retrieved_at)
 
-    def _search(self, term: str) -> list[str]:
+    def _search(self, term: str) -> tuple[int, list[str]]:
         url = (
-            f"{MESH_ESEARCH_URL}?db=mesh&retmode=json&retmax={MESH_SEARCH_RETMAX}"
+            f"{MESH_ESEARCH_URL}?db=mesh&retmode=json&retmax={MESH_SEARCH_MAX_CANDIDATES}"
             f"&term={quote(term, safe='')}"
         )
         value = _parse_json_object(self._get(url))
         esearchresult = value.get("esearchresult")
         if not isinstance(esearchresult, dict):
             raise MeshLookupError("MeSH response was missing required evidence.")
+        count_text = esearchresult.get("count")
+        if not isinstance(count_text, str) or not count_text.isdigit():
+            raise MeshLookupError("MeSH response contained malformed evidence.")
         idlist = esearchresult.get("idlist")
         if not isinstance(idlist, list) or not all(isinstance(uid, str) for uid in idlist):
             raise MeshLookupError("MeSH response contained malformed evidence.")
-        return idlist
+        return int(count_text), idlist
 
     def _fetch_summaries(self, uids: list[str]) -> dict[str, object]:
         joined = ",".join(quote(uid, safe="") for uid in uids)
@@ -230,10 +258,15 @@ class MeshLookupService:
         raise MeshLookupError("MeSH lookup request retry state was invalid.")
 
 
-def _find_exact_descriptor_match(
+def _find_exact_descriptor_matches(
     term: str, ordered_uids: list[str], summaries: dict[str, object]
-) -> dict[str, object] | None:
+) -> list[dict[str, object]]:
+    """Return every candidate that is both a true descriptor and an exact entry-term
+    match. Callers must treat anything other than exactly one match as unresolved --
+    never guess among multiple candidates that all claim the same entry term."""
+
     normalized_term = term.lower()
+    matches: list[dict[str, object]] = []
     for uid in ordered_uids:
         record = summaries.get(uid)
         if not isinstance(record, dict):
@@ -247,8 +280,8 @@ def _find_exact_descriptor_match(
             isinstance(entry, str) and entry.strip().lower() == normalized_term
             for entry in meshterms
         ):
-            return record
-    return None
+            matches.append(record)
+    return matches
 
 
 def _not_found_result(term: str, retrieved_at: str) -> MeshLookupResult:

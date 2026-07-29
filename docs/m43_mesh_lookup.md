@@ -59,6 +59,29 @@ recognize returns `found: false` rather than a guess -- the same
 "absence is never guessed into a value" posture every extraction module
 in this project already holds to.
 
+**Two safety properties, both added after Codex review on PR #182 caught
+real gaps in the first version.** First, `esearch` reports a total
+candidate count separately from the (bounded) list of IDs it actually
+returns; the original version fetched only the first 20 candidates and
+returned whichever matched first, when the project's own verification
+had already found 37 candidates for "obesity" alone (and "cancer"
+returns 409). The fixed version fetches up to
+`MESH_SEARCH_MAX_CANDIDATES` (200) candidates and explicitly declines to
+resolve -- `found: false`, not an error -- if the reported total exceeds
+what was fetched, rather than searching a partial, arbitrarily-ordered
+window and risking a false negative for a term whose true descriptor
+just wasn't in it. Second, the original version returned the *first*
+exact match found while iterating candidates, silently picking one if
+more than one candidate happened to be a true descriptor with the exact
+same entry term -- contradicting the "resolves only when exactly one
+candidate matches" claim already in the code's own docstring. The fixed
+version collects every exact match and only resolves when there is
+`exactly one`; two or more is treated the same as zero, `found: false`,
+never a guess among ambiguous candidates. Verified live afterward that
+`obesity`/`type 2 diabetes`/`SGLT2 inhibitor` still resolve correctly
+and that `cancer` (409 candidates) now correctly declines instead of
+either crashing or guessing.
+
 **MeSH's search is full-text, not exact-match, and naively trusting it
 would have been wrong.** Live-verified: searching `obesity` returns 37
 loosely related candidates, and the *first* one is "Anti-Obesity

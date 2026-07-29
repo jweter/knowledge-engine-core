@@ -63,8 +63,9 @@ def _json_response(payload: object, status_code: int = 200) -> FakeResponse:
     )
 
 
-def _esearch_response(*uids: str) -> FakeResponse:
-    return _json_response({"esearchresult": {"idlist": list(uids)}})
+def _esearch_response(*uids: str, count: int | None = None) -> FakeResponse:
+    reported_count = len(uids) if count is None else count
+    return _json_response({"esearchresult": {"count": str(reported_count), "idlist": list(uids)}})
 
 
 def _record(record_type: str, meshterms: list[str], **overrides: object) -> dict[str, object]:
@@ -161,6 +162,43 @@ def test_lookup_returns_not_found_when_search_has_no_candidates() -> None:
     assert result.source_url is None
     assert result.license is None
     assert result.retrieved_at
+
+
+def test_lookup_declines_to_resolve_when_more_candidates_exist_than_fetched() -> None:
+    """Real MeSH behavior: "obesity" reports far more candidates than this module
+    fetches (e.g. 37, or "cancer"'s 409); if the true descriptor could be outside
+    the fetched window, this must decline rather than risk a false not-found."""
+
+    transport = FakeTransport(
+        [_esearch_response("2028264", "2027927", count=409)],
+    )
+    service = _service(transport)
+
+    result = service.lookup("cancer")
+
+    assert result.found is False
+
+
+def test_lookup_declines_to_resolve_when_more_than_one_exact_match_exists() -> None:
+    """Never guess among multiple candidates that all claim the same entry term."""
+
+    transport = FakeTransport(
+        [
+            _esearch_response("11111111", "22222222"),
+            _esummary_response(
+                {
+                    "11111111": _record("descriptor", ["Ambiguous Term"], ds_meshui="D000001"),
+                    "22222222": _record("descriptor", ["Ambiguous Term"], ds_meshui="D000002"),
+                }
+            ),
+        ]
+    )
+    service = _service(transport)
+
+    result = service.lookup("Ambiguous Term")
+
+    assert result.found is False
+    assert result.mesh_id is None
 
 
 def test_lookup_returns_not_found_when_no_candidate_is_an_exact_descriptor_match() -> None:
