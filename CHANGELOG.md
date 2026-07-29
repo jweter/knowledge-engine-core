@@ -849,6 +849,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Revised the corpus-growth target in `docs/roadmap.md`'s "Scaling beyond
+  500 papers for Phase 2 tuning" section down from "at least a couple
+  thousand papers" to a **1,000-paper hard cap**, explicitly for GitHub
+  space reasons: the committed compressed `corpus_library` snapshot grows
+  with the corpus, and a smaller ceiling keeps it comfortably under
+  GitHub's 100MB single-file push limit rather than approaching it as
+  the corpus scaled toward a couple thousand. At 943 papers (~61MB
+  compressed) the corpus is already close to the new cap. Updated the
+  corpus README's growth-target framing to match.
 - Made Ruff the authoritative formatter and linter used by both developer commands
   and GitHub Actions.
 - Unexpected parser and duplicate-resolution exceptions now propagate as systemic

@@ -264,11 +264,17 @@ extraction rules (structured-section detection, claim-candidate signals,
 and the PICO/study-type/limitations extraction named in
 `docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed Fields
 section) needs a real corpus large enough to reveal patterns a 500-paper
-sample may not; the project owner has set an initial target of at least a
-couple thousand papers. Following the M12->M13->M14 precedent, this needs
-its own scale-readiness assessment -- measured stop conditions and
-license/provenance validation re-checked at the new scale -- before a
-bounded discovery/acquisition run, not an unbounded scale-up.
+sample may not. The project owner's initial target was "at least a
+couple thousand papers"; that was revised down to **1,000 papers as a
+hard cap**, explicitly for GitHub space reasons -- the committed
+compressed `corpus_library` snapshot (see below) grows with the corpus,
+and a smaller committed ceiling keeps it comfortably under GitHub's
+100MB single-file push limit with headroom to spare, rather than
+approaching it as the corpus scales toward a couple thousand. Following
+the M12->M13->M14 precedent, this needs its own scale-readiness
+assessment -- measured stop conditions and license/provenance validation
+re-checked at the new scale -- before a bounded discovery/acquisition
+run, not an unbounded scale-up.
 
 M27 (issue #133) addressed the other half of this gap: nothing downloaded
 survived past a session before, since this project's remote execution
@@ -281,9 +287,13 @@ owner's decision) a persisted, git-committable snapshot -- see
 GitHub's 100MB single-file limit uncompressed; a `.gz` output path
 compresses it (roughly 3x on this corpus's page-level text), restoring
 headroom without giving up git-committed durability. Actually growing the
-corpus to the owner's "at least a couple thousand papers" target remains
-ongoing operational work using this tooling plus the existing M14
-pipeline, not itself scheduled as a numbered milestone.
+corpus toward the owner's 1,000-paper cap remains ongoing operational
+work using this tooling plus the existing M14 pipeline, not itself
+scheduled as a numbered milestone. At 943 papers (~61MB compressed) the
+corpus is already close to that cap; the remaining headroom is small
+enough that further growth batches should land close to the ceiling
+rather than assume the multi-batch runway earlier "couple thousand"
+planning implied.
 
 ### Supporting operator durability
 

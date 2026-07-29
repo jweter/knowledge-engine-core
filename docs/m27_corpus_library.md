@@ -81,9 +81,13 @@ refreshed after every growth batch -- see `CHANGELOG.md`'s many "Refreshed
 the corpus-library snapshot" entries for that history. Growing the corpus
 to 681 papers (the retstart=1750 M14 batch) made that snapshot 137.75 MB,
 over GitHub's 100 MB single-file push limit (confirmed via `VACUUM`: this
-is real page-level text growth, not bloat). Since the corpus is explicitly
-targeting "at least a couple thousand papers" (`docs/roadmap.md`), this was
-not a one-time size accident.
+is real page-level text growth, not bloat). At the time, the corpus was
+targeting "at least a couple thousand papers" (`docs/roadmap.md`), so this
+was not a one-time size accident -- and that projected scale is exactly
+why `docs/roadmap.md` later revised the target down to a 1,000-paper hard
+cap, explicitly to keep this compressed snapshot comfortably under
+GitHub's limit rather than repeatedly re-fighting this same size problem
+as the corpus grew further.
 
 The first fix attempted here was to stop committing the snapshot at all,
 treating it as a cache reproducible on demand from `sources.csv` plus the
