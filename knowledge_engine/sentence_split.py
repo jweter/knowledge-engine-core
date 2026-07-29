@@ -43,6 +43,12 @@ ABBREVIATIONS = frozenset(
 _SENTENCE_BOUNDARY_PATTERN = re.compile(r"[.!?]+(?=\s+[A-Z])")
 _TRAILING_WORD_PATTERN = re.compile(r"([A-Za-z]+(?:\.[A-Za-z]+)?)\s*$")
 _TRAILING_TWO_WORDS_PATTERN = re.compile(r"([A-Za-z]+\s+[A-Za-z]+)\s*$")
+# No entry in ABBREVIATIONS (or its two-word combinations, e.g. "et al") comes
+# close to this length, so bounding the search window to it cannot change which
+# boundaries match -- it only stops each check from re-scanning the entire
+# preceding document text on every sentence boundary (see
+# _ends_with_abbreviation).
+_ABBREVIATION_CHECK_WINDOW = 40
 
 
 def split_sentence_spans(text: str) -> list[tuple[int, int]]:
@@ -74,8 +80,21 @@ def split_sentences(text: str) -> list[str]:
 
 
 def _ends_with_abbreviation(preceding: str) -> bool:
-    word_match = _TRAILING_WORD_PATTERN.search(preceding)
+    """Check whether `preceding` ends with a known abbreviation.
+
+    `preceding` is `text[:match.start()]` for each sentence-boundary
+    candidate, so it grows with every match found later in a document --
+    searching it in full made this function, and the paper-scale M40
+    extraction-review batch that first exercised long real documents
+    through it, quadratic in document length (one real paper's ~180K
+    characters took 30+ seconds). Only the last few characters can ever
+    matter for a trailing-word/trailing-two-word match, so bounding the
+    search window makes each check O(1) regardless of document length.
+    """
+
+    window = preceding[-_ABBREVIATION_CHECK_WINDOW:]
+    word_match = _TRAILING_WORD_PATTERN.search(window)
     if word_match and word_match.group(1).lower().rstrip(".") in ABBREVIATIONS:
         return True
-    two_word_match = _TRAILING_TWO_WORDS_PATTERN.search(preceding)
+    two_word_match = _TRAILING_TWO_WORDS_PATTERN.search(window)
     return bool(two_word_match and two_word_match.group(1).lower() in ABBREVIATIONS)

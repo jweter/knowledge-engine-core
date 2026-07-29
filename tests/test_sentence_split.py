@@ -1,3 +1,5 @@
+import time
+
 from knowledge_engine.sentence_split import split_sentence_spans, split_sentences
 
 
@@ -43,3 +45,19 @@ def test_split_sentence_spans_returns_offsets_into_original_text() -> None:
         "First sentence.",
         "Second sentence.",
     ]
+
+
+def test_split_sentence_spans_stays_fast_on_a_long_document() -> None:
+    """Regression test (M40 follow-up): `_ends_with_abbreviation` used to
+    search all of `text[:match.start()]` on every sentence boundary, which
+    grows with the boundary's position -- quadratic in document length. A
+    real ~180K-character paper found via M40's first real-corpus run took
+    30+ seconds under the old behavior; this must now stay fast."""
+
+    text = "This is an ordinary sentence with no abbreviations in it. " * 6000
+    start = time.monotonic()
+    spans = split_sentence_spans(text)
+    elapsed = time.monotonic() - start
+
+    assert len(spans) > 1000
+    assert elapsed < 3.0, f"split_sentence_spans took {elapsed:.2f}s on a long document"
