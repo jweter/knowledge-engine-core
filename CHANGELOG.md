@@ -1230,6 +1230,32 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   committed evidence corpus (2 hand-authored records): 2 claims, 2
   concepts, 4 claim-concept edges, 0 relationship edges (no relationship
   file exists in the repo yet).
+- Fixed two real, Codex-caught gaps on M46's `ke graph-build`/
+  `GraphRepository` (PR #187) before merge: (1) resolved RxNorm concepts
+  always persisted `definition=NULL`, discarding `name`/`term_type`/
+  `synonym` even though `docs/phase4_design.md` documents `graph_concepts`
+  as their only durable home -- fixed with a `_rxnorm_definition` helper
+  joining those fields, live-verified against the real corpus
+  (`"semaglutide; IN"`/`"placebo; IN"`). (2) `concepts_for_claim`/
+  `claims_for_concept` had no `.distinct()`, so a claim linked to the same
+  concept under two edge roles (which the schema's own unique constraint
+  explicitly allows) returned duplicate nodes -- fixed, with a new
+  regression test.
+- Added M47 (`docs/m47_graph_citations.md`): the citation-list
+  real-corpus verification pass `docs/phase4_design.md` called for before
+  writing any parsing code, plus the resulting build. Sampling real
+  reference-list text found at least three distinct citation styles
+  (numbered-period, numbered-bracket, unnumbered author-year) and a rare
+  (~1.6% of papers) case where `REFERENCE_HEADING_PATTERN` matches a
+  spurious earlier "References" occurrence before the real bibliography
+  -- but also found `graph_citations`' own schema only needs DOI-identity
+  matching against papers already in the corpus, not structured
+  per-entry parsing. Added `knowledge_engine/citation_extraction.py`
+  (`find_cited_dois`), the `graph_citations` table (schema version 9),
+  `GraphRepository.add_citation_edge`/`citations_for_paper`, and `ke
+  graph-citations-build`. Live-verified against the real local
+  960-paper corpus: exactly 5 intra-corpus citation edges, individually
+  confirmed genuine.
 
 ### Changed
 

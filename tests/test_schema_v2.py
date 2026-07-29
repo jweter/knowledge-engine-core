@@ -52,7 +52,7 @@ def test_fresh_database_initializes_at_current_schema_version(tmp_path: Path) ->
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
         foreign_keys_enabled = connection.execute(text("PRAGMA foreign_keys")).scalar_one()
 
-    assert version == CURRENT_SCHEMA_VERSION == 8
+    assert version == CURRENT_SCHEMA_VERSION == 9
     assert "review_status" in _column_names(database, "import_runs")
     assert foreign_keys_enabled == 1
     assert "run_mode" in _column_names(database, "import_runs")
@@ -169,7 +169,7 @@ def test_upgrading_older_database_adds_new_table_without_error(tmp_path: Path) -
     assert "paper_pages" in _table_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 8
+    assert version == CURRENT_SCHEMA_VERSION == 9
 
 
 def test_dropping_paper_pages_at_current_version_is_not_silently_repaired(
@@ -211,7 +211,7 @@ def test_upgrading_older_database_adds_extraction_runs_table_without_error(
     assert "extraction_runs" in _table_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 8
+    assert version == CURRENT_SCHEMA_VERSION == 9
 
 
 def test_dropping_extraction_runs_at_current_version_is_not_silently_repaired(
@@ -256,7 +256,7 @@ def test_upgrading_older_database_adds_study_design_rules_version_column(
     assert "study_design_rules_version" in _column_names(database, "extraction_runs")
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 8
+    assert version == CURRENT_SCHEMA_VERSION == 9
 
 
 def test_upgrading_older_database_adds_pico_extraction_rules_version_column(
@@ -282,4 +282,28 @@ def test_upgrading_older_database_adds_pico_extraction_rules_version_column(
     assert "pico_extraction_rules_version" in _column_names(database, "extraction_runs")
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 8
+    assert version == CURRENT_SCHEMA_VERSION == 9
+
+
+def test_upgrading_older_database_adds_graph_citations_table_without_error(
+    tmp_path: Path,
+) -> None:
+    """graph_citations (introduced at version 9, M47) must be silently added
+    when upgrading an older database, exactly like paper_pages/extraction_runs
+    were at their own introduction versions."""
+
+    database = _database(tmp_path)
+    database.initialize()
+
+    with database.engine.begin() as connection:
+        connection.execute(text("DROP TABLE graph_citations"))
+        connection.execute(
+            text(f"UPDATE schema_versions SET version = 8 WHERE version = {CURRENT_SCHEMA_VERSION}")
+        )
+
+    database.initialize()
+
+    assert "graph_citations" in _table_names(database)
+    with database.engine.connect() as connection:
+        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+    assert version == CURRENT_SCHEMA_VERSION == 9

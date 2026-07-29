@@ -4,7 +4,8 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from knowledge_engine.config import Settings
-from knowledge_engine.database import Database, GraphRepository
+from knowledge_engine.database import Database, GraphRepository, PaperRepository
+from knowledge_engine.parser import ParsedPaper
 
 
 def build_database(tmp_path: Path) -> Database:
@@ -16,6 +17,21 @@ def build_database(tmp_path: Path) -> Database:
     database = Database(settings)
     database.initialize()
     return database
+
+
+def _parsed_paper(tmp_path: Path, suffix: str) -> ParsedPaper:
+    return ParsedPaper(
+        source_path=tmp_path / f"paper-{suffix}.pdf",
+        content_hash=suffix * 64,
+        title=f"Paper {suffix}",
+        authors=["Author One"],
+        abstract="An abstract.",
+        doi=f"10.1234/{suffix}",
+        page_count=1,
+        word_count=10,
+        raw_text="Body text.",
+        body_text="Body text.",
+    )
 
 
 def test_get_or_create_concept_dedupes_by_source_and_reference_id(tmp_path: Path) -> None:
@@ -285,3 +301,73 @@ def test_traversal_queries_dedupe_concept_linked_via_multiple_edge_roles(
 
         claims = repository.claims_for_concept(concept_id)
         assert [c.id for c in claims] == [claim_id]
+
+
+def test_add_citation_edge_is_idempotent(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        paper_repository = PaperRepository(session)
+        citing = paper_repository.add_parsed_paper(_parsed_paper(tmp_path, "a"))
+        cited = paper_repository.add_parsed_paper(_parsed_paper(tmp_path, "b"))
+
+        repository = GraphRepository(session)
+        first = repository.add_citation_edge(
+            citing_paper_id=citing.id,
+            cited_paper_id=cited.id,
+            raw_citation_text="1. Some cited work. doi: 10.1234/b",
+        )
+        second = repository.add_citation_edge(
+            citing_paper_id=citing.id,
+            cited_paper_id=cited.id,
+            raw_citation_text="1. Some cited work. doi: 10.1234/b",
+        )
+        assert first.id == second.id
+
+
+def test_add_citation_edge_rejects_self_citation(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with pytest.raises(IntegrityError), database.session() as session:
+        paper_repository = PaperRepository(session)
+        paper = paper_repository.add_parsed_paper(_parsed_paper(tmp_path, "a"))
+
+        repository = GraphRepository(session)
+        repository.add_citation_edge(
+            citing_paper_id=paper.id,
+            cited_paper_id=paper.id,
+            raw_citation_text="Self-citation, should be rejected.",
+        )
+
+
+def test_citations_for_paper_returns_edges_in_both_directions(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        paper_repository = PaperRepository(session)
+        citing = paper_repository.add_parsed_paper(_parsed_paper(tmp_path, "a"))
+        cited = paper_repository.add_parsed_paper(_parsed_paper(tmp_path, "b"))
+
+        repository = GraphRepository(session)
+        repository.add_citation_edge(
+            citing_paper_id=citing.id,
+            cited_paper_id=cited.id,
+            raw_citation_text="1. Some cited work. doi: 10.1234/b",
+        )
+
+        citing_id = citing.id
+        cited_id = cited.id
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+
+        as_citer = repository.citations_for_paper(citing_id)
+        assert len(as_citer) == 1
+        assert as_citer[0].citing_paper_id == citing_id
+
+        as_cited = repository.citations_for_paper(cited_id)
+        assert len(as_cited) == 1
+        assert as_cited[0].cited_paper_id == cited_id
+
+        counts = repository.population_counts()
+        assert counts["citation_edges"] == 1
