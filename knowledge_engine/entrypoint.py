@@ -1186,6 +1186,9 @@ def extraction_review_batch_generate(
 
     database = _local_database()
     database.initialize()
+    lines: list[str] = []
+    recorded_paper_count = 0
+    unrecorded_paper_ids: list[int] = []
     with database.session() as session:
         repository = PaperRepository(session)
         papers = repository.get_many(paper_id) if paper_id else repository.list_papers()
@@ -1200,26 +1203,31 @@ def extraction_review_batch_generate(
             for paper in sorted(papers, key=lambda paper: paper.id)
         ]
 
-    summary = run_batch_extraction_review(paper_pages)
+        summary = run_batch_extraction_review(paper_pages)
 
-    lines: list[str] = []
-    recorded_paper_count = 0
-    unrecorded_paper_ids: list[int] = []
-    for result in summary.results:
-        try:
-            _record_extraction_run(
-                paper_id=result.paper_id,
-                output_path=output,
-                page_count=result.page_count,
-                section_count=result.section_count,
-                candidate_count=result.candidate_count,
-                draft_item_count=len(result.draft_items),
-            )
-        except Exception:
-            unrecorded_paper_ids.append(result.paper_id)
-            continue
-        recorded_paper_count += 1
-        lines.extend(json.dumps(item.to_dict()) for item in result.draft_items)
+        run_repository = ExtractionRunRepository(session)
+        for result in summary.results:
+            try:
+                run_repository.create(
+                    paper_id=result.paper_id,
+                    output_path=str(output),
+                    page_count=result.page_count,
+                    section_count=result.section_count,
+                    candidate_count=result.candidate_count,
+                    draft_item_count=len(result.draft_items),
+                    section_detection_rules_version=SECTION_DETECTION_RULES_VERSION,
+                    claim_candidate_rules_version=CLAIM_CANDIDATE_RULES_VERSION,
+                    claim_framing_rules_version=CLAIM_FRAMING_RULES_VERSION,
+                    draft_evidence_item_rules_version=DRAFT_EVIDENCE_ITEM_RULES_VERSION,
+                    study_design_rules_version=STUDY_DESIGN_RULES_VERSION,
+                    pico_extraction_rules_version=PICO_EXTRACTION_RULES_VERSION,
+                )
+            except Exception:
+                session.rollback()
+                unrecorded_paper_ids.append(result.paper_id)
+                continue
+            recorded_paper_count += 1
+            lines.extend(json.dumps(item.to_dict()) for item in result.draft_items)
 
     _write_output(output, "\n".join(lines) + ("\n" if lines else ""))
 

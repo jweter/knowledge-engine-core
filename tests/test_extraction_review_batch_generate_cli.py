@@ -8,7 +8,8 @@ from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.config import Settings
-from knowledge_engine.database import Database, PaperRepository
+from knowledge_engine.database import Database, ExtractionRunRepository, PaperRepository
+from knowledge_engine.models import ExtractionRun
 from knowledge_engine.parser import ParsedPage, ParsedPaper
 
 
@@ -155,29 +156,43 @@ def test_batch_generate_excludes_a_paper_whose_run_cannot_be_recorded(
         first_id, second_id = first.id, second.id
     monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
 
-    original_record = entrypoint._record_extraction_run
+    original_create = ExtractionRunRepository.create
 
-    def _flaky_record(
+    def _flaky_create(
+        self: ExtractionRunRepository,
         *,
         paper_id: int,
-        output_path: Path,
+        output_path: str,
         page_count: int,
         section_count: int,
         candidate_count: int,
         draft_item_count: int,
-    ) -> None:
+        section_detection_rules_version: str,
+        claim_candidate_rules_version: str,
+        claim_framing_rules_version: str,
+        draft_evidence_item_rules_version: str,
+        study_design_rules_version: str,
+        pico_extraction_rules_version: str,
+    ) -> ExtractionRun:
         if paper_id == first_id:
             raise RuntimeError("database is locked")
-        original_record(
+        return original_create(
+            self,
             paper_id=paper_id,
             output_path=output_path,
             page_count=page_count,
             section_count=section_count,
             candidate_count=candidate_count,
             draft_item_count=draft_item_count,
+            section_detection_rules_version=section_detection_rules_version,
+            claim_candidate_rules_version=claim_candidate_rules_version,
+            claim_framing_rules_version=claim_framing_rules_version,
+            draft_evidence_item_rules_version=draft_evidence_item_rules_version,
+            study_design_rules_version=study_design_rules_version,
+            pico_extraction_rules_version=pico_extraction_rules_version,
         )
 
-    monkeypatch.setattr(entrypoint, "_record_extraction_run", _flaky_record)
+    monkeypatch.setattr(ExtractionRunRepository, "create", _flaky_create)
 
     output = tmp_path / "batch.jsonl"
     result = CliRunner().invoke(
