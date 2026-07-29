@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Annotated, cast
+from typing import Annotated, Any, cast
 
 import typer
 from rich.markup import escape
@@ -56,6 +56,7 @@ from knowledge_engine.extraction import (
     STUDY_DESIGN_RULES_VERSION,
 )
 from knowledge_engine.extraction.evidence_items import PaperMetadata
+from knowledge_engine.extraction_review_annotate import annotate_draft_items
 from knowledge_engine.extraction_review_batch import (
     run_batch_extraction_review,
     run_extraction_review_for_paper,
@@ -303,6 +304,16 @@ ExtractionReviewBatchPaperIdsOption = Annotated[
         "--paper-id",
         help="Restrict the batch to this paper ID (repeatable; default: every persisted paper).",
     ),
+]
+ExtractionReviewAnnotateInputOption = Annotated[
+    Path,
+    typer.Option(
+        "--input", help="Draft extraction review JSONL file (from extraction-review-generate)."
+    ),
+]
+ExtractionReviewAnnotateOutputOption = Annotated[
+    Path,
+    typer.Option("--output", help="Path for the annotated draft extraction review JSONL file."),
 ]
 DryRunOption = Annotated[
     bool,
@@ -1559,6 +1570,98 @@ def extraction_review_batch_generate(
         "[bold]Draft items are a review queue, not validated evidence -- "
         "research_question and evidence_direction require human completion before "
         "ke extraction-review-promote will accept any of them.[/bold]"
+    )
+
+
+@app.command("extraction-review-annotate")
+def extraction_review_annotate(
+    input_path: ExtractionReviewAnnotateInputOption,
+    output: ExtractionReviewAnnotateOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Attach reference-layer context (RxNorm/MeSH) to a draft review queue.
+
+    Reads `ke extraction-review-generate`/`extraction-review-batch-generate`'s
+    JSONL output and writes an annotated copy where each draft item carries a
+    new `reference_context` object: `intervention`/`comparator` looked up
+    against M42's RxNorm (both name a drug or treatment), `population`/
+    `outcome` against M43's MeSH (both describe a medical concept). Builds
+    three of `docs/reference_knowledge_layer_design.md`'s Addendum items at
+    once: a coverage-gap flag when a term has no reference-layer match
+    (`found: false`, never silently omitted), full provenance on every
+    embedded result (`source_url`/`license`/`retrieved_at`), and background
+    definitions inline for the human deciding `research_question`/
+    `evidence_direction` before running `ke extraction-review-promote`.
+
+    Never touches `research_question`, `evidence_direction`, or any other
+    field `ke extraction-review-promote` requires -- purely additive context
+    a reviewer can read or ignore. A separate, opt-in step from generation:
+    run it by hand against the paper(s) you are about to review, not
+    automatically across the whole corpus -- generating the review queue
+    itself must stay network-free even at the corpus's real scale (M40:
+    13,588 draft items across 943 papers). Live-verified against real
+    papers: expect on the order of a minute or more of network calls for
+    one paper's full draft-item set, not a near-instant operation -- see
+    `knowledge_engine/extraction_review_annotate.py` for the measured
+    numbers. An input file with no draft items still overwrites an
+    existing `--output` (clearing any stale prior run's results) rather
+    than leaving it untouched.
+    """
+
+    if not input_path.exists():
+        console.print(f"[red]Input file does not exist:[/red] {input_path}")
+        raise typer.Exit(1)
+    _validate_output(output, force=force)
+
+    items: list[dict[str, Any]] = []
+    for line_number, line in enumerate(
+        input_path.read_text(encoding="utf-8").splitlines(), start=1
+    ):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            record = json.loads(stripped)
+        except json.JSONDecodeError as exc:
+            console.print(f"[red]Line {line_number}: invalid JSON.[/red]")
+            raise typer.Exit(1) from exc
+        if not isinstance(record, dict):
+            console.print(f"[red]Line {line_number}: record must be a JSON object.[/red]")
+            raise typer.Exit(1)
+        items.append(record)
+
+    if not items:
+        _write_output(output, "")
+        console.print("[yellow]No draft items found in input file.[/yellow]")
+        return
+
+    console.print(
+        "[yellow]Network access:[/yellow] querying NLM's public RxNav and E-utilities APIs."
+    )
+    rxnorm_transport = cast(RxNormLookupGetTransport, UrllibRxNavTransport())
+    mesh_transport = cast(MeshLookupGetTransport, UrllibNcbiTransport())
+    rxnorm_service = RxNormLookupService(rxnorm_transport)
+    mesh_service = MeshLookupService(mesh_transport)
+    try:
+        annotated, summary = annotate_draft_items(
+            items, rxnorm_service=rxnorm_service, mesh_service=mesh_service
+        )
+    except (RxNormLookupError, MeshLookupError) as exc:
+        console.print(f"[red]Reference-layer annotation failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    lines = "\n".join(json.dumps(item) for item in annotated) + "\n"
+    _write_output(output, lines)
+
+    console.print(
+        f"[green]Annotated {summary.item_count} draft item(s):[/green] {output} "
+        f"({summary.rxnorm_terms_looked_up} distinct RxNorm term(s), "
+        f"{summary.mesh_terms_looked_up} distinct MeSH term(s) looked up)."
+    )
+    console.print(
+        "[bold]reference_context is background context, not evidence -- "
+        "research_question and evidence_direction still require human completion "
+        "before ke extraction-review-promote will accept any item.[/bold]"
     )
 
 
