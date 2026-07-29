@@ -1066,6 +1066,41 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   one candidate matches" claim; fixed by collecting every exact match
   and requiring precisely one, treating two-or-more the same as
   zero (`found: false`). See `docs/m43_mesh_lookup.md`.
+- Added the M44 reference knowledge layer's fourth and, per the design
+  doc's original candidate list, last named live-lookup source: `ke
+  pubchem-lookup <term>` and `knowledge_engine/pubchem_lookup.py` query
+  NLM/NCBI's public PubChem PUG REST API to resolve a chemical compound
+  name to its PubChem Compound ID (CID) and structured chemical
+  identifiers -- title, IUPAC name, molecular formula, molecular weight,
+  and canonical SMILES -- through a new dedicated, host-allowlisted
+  transport (`pubchem_http.py`'s `UrllibPubchemTransport`), since
+  `pubchem.ncbi.nlm.nih.gov` is a distinct NLM/NCBI host from both
+  `eutils.ncbi.nlm.nih.gov` (M43's MeSH lookup) and `rxnav.nlm.nih.gov`
+  (M42's RxNorm lookup). Chosen as the fourth source because it fills a
+  gap none of the first three cover: real chemical-structure data (a
+  compound's molecular formula, weight, and SMILES string), not just a
+  normalized name or a controlled medical-concept vocabulary. Two real
+  API behaviors were verified live (`curl`) before writing the parser:
+  requesting the `CanonicalSMILES` property (PubChem's older, still
+  publicly documented name) returns the result under a *different*
+  response key, `ConnectivitySMILES` -- PubChem renamed the property
+  internally but left the old request-parameter name aliased without
+  renaming the response key to match -- so this module requests
+  `ConnectivitySMILES` directly rather than relying on that alias; and
+  PubChem indexes whatever name strings were actually deposited
+  alongside real compounds, not a curated concept vocabulary --
+  querying "GLP-1 receptor agonist" (a mechanism class, not a specific
+  drug) resolves to a real, specific compound (CID 177864544) rather
+  than an empty result, and this module reports that rather than
+  guessing what a caller "probably" meant. `MolecularWeight` is
+  tolerated as either a JSON string or number, matching a real variance
+  observed in API responses, with a dedicated regression test.
+  Explicitly background context, not evidence: never routed through
+  `EvidenceRecord` promotion, never merged into the evidence corpus's
+  own search commands. Live-verified against real compounds
+  (`metformin`, `semaglutide`, `empagliflozin`) and a not-found name
+  before writing the parser and again after, via the built CLI. See
+  `docs/m44_pubchem_lookup.md`.
 
 ### Changed
 

@@ -1,18 +1,21 @@
 # Reference Knowledge Layer Design (Sketch)
 
 Status: This was a design sketch, written before any implementation --
-the same role `docs/phase3_design.md` played before M30. **M41, M42, and
-M43 have since built the live-lookup path's first three slices** (a live
-lookup against Wikipedia's REST summary API, `ke reference-lookup` --
-see `docs/m41_reference_lookup.md`; a live lookup against NLM's RxNorm
-API for drug-name normalization, `ke rxnorm-lookup` -- see
-`docs/m42_rxnorm_lookup.md`; and a live lookup against NLM's MeSH
-database for medical-concept terminology, `ke mesh-lookup` -- see
-`docs/m43_mesh_lookup.md`), confirming the "third option" section
-below's recommendation that live lookup was the better starting point.
-The stored-textbook path remains unbuilt and still needs the licensing
-and storage decisions below actually made before any code assumes a
-title list -- nothing here authorizes starting that path.
+the same role `docs/phase3_design.md` played before M30. **M41, M42,
+M43, and M44 have since built the live-lookup path's first four
+slices** (a live lookup against Wikipedia's REST summary API, `ke
+reference-lookup` -- see `docs/m41_reference_lookup.md`; a live lookup
+against NLM's RxNorm API for drug-name normalization, `ke
+rxnorm-lookup` -- see `docs/m42_rxnorm_lookup.md`; a live lookup
+against NLM's MeSH database for medical-concept terminology, `ke
+mesh-lookup` -- see `docs/m43_mesh_lookup.md`; and a live lookup
+against NLM/NCBI's PubChem PUG REST API for chemical-compound structure
+data, `ke pubchem-lookup` -- see `docs/m44_pubchem_lookup.md`),
+confirming the "third option" section below's recommendation that live
+lookup was the better starting point. The stored-textbook path remains
+unbuilt and still needs the licensing and storage decisions below
+actually made before any code assumes a title list -- nothing here
+authorizes starting that path.
 
 ## Motivation
 
@@ -195,7 +198,12 @@ lookup doesn't provide -- see `docs/m42_rxnorm_lookup.md`. **Extended
 again in M43** (`ke mesh-lookup`, `knowledge_engine/mesh_lookup.py`)
 with a third source, NLM's MeSH database, for medical-concept
 terminology (diseases, procedures) beyond drug names -- see
-`docs/m43_mesh_lookup.md`. PubChem and UniProt remain unbuilt.
+`docs/m43_mesh_lookup.md`. **Extended again in M44** (`ke
+pubchem-lookup`, `knowledge_engine/pubchem_lookup.py`) with a fourth
+and, per this section's original list, last named source, NLM/NCBI's
+PubChem PUG REST API, for chemical-compound structure data (molecular
+formula, weight, SMILES) none of the first three sources cover -- see
+`docs/m44_pubchem_lookup.md`. UniProt remains unbuilt.
 
 ## Addendum: where this plugs into the final report (and where it never does)
 

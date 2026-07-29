@@ -242,6 +242,34 @@ acceptance, release validation, and optional post-release quality audits.
   Explicitly background context, not evidence, with the same
   non-`EvidenceRecord` boundary M41/M42 drew. See
   `docs/m43_mesh_lookup.md`.
+- **M44** added a fourth live-lookup reference source, NLM/NCBI's
+  PubChem PUG REST API, alongside M41's Wikipedia lookup, M42's RxNorm
+  lookup, and M43's MeSH lookup. A new `ke pubchem-lookup <term>`
+  command and `knowledge_engine/pubchem_lookup.py` resolve a chemical
+  compound name to its PubChem Compound ID (CID) and structured
+  chemical identifiers -- title, IUPAC name, molecular formula,
+  molecular weight, and canonical SMILES -- through a dedicated
+  host-allowlisted transport (`pubchem_http.py`'s
+  `UrllibPubchemTransport`, since `pubchem.ncbi.nlm.nih.gov` is a
+  distinct NLM/NCBI host from both `eutils.ncbi.nlm.nih.gov` and
+  `rxnav.nlm.nih.gov`). Chosen as the fourth and, per the design doc's
+  "third option" section, last named live-lookup candidate because it
+  fills a gap none of the first three cover: real chemical-structure
+  data, not just a normalized name or a controlled vocabulary. Two real
+  API behaviors were verified live before writing the parser: requesting
+  the `CanonicalSMILES` property returns the result under a *different*
+  response key, `ConnectivitySMILES` (PubChem renamed the property
+  internally but left the old request-parameter name aliased), so this
+  module requests `ConnectivitySMILES` directly; and PubChem indexes
+  whatever name strings were actually deposited alongside real
+  compounds, not a curated concept vocabulary -- "GLP-1 receptor
+  agonist" (a mechanism class) resolves to a real, specific compound
+  (CID 177864544) rather than an empty result, and this module reports
+  that rather than guessing what a caller "probably" meant. `Molecular
+  Weight` is tolerated as either a JSON string or number, matching a
+  real variance observed in API responses. Explicitly background
+  context, not evidence, with the same non-`EvidenceRecord` boundary
+  M41/M42/M43 drew. See `docs/m44_pubchem_lookup.md`.
 
 ### M14: Controlled 500-paper rehearsal
 
@@ -643,14 +671,16 @@ Detailed milestone records include:
   against Wikipedia; **M42** added a second slice, `ke rxnorm-lookup`
   against NLM's RxNorm API for structured drug-name normalization;
   **M43** added a third slice, `ke mesh-lookup` against NLM's MeSH
-  database for medical-concept terminology. The stored-textbook path
+  database for medical-concept terminology; **M44** added a fourth and
+  last named slice, `ke pubchem-lookup` against NLM/NCBI's PubChem PUG
+  REST API for chemical-compound structure data. The stored-textbook path
   (open-license chemistry/biology/microbiology/physics/pharmacology
   textbooks) remains unbuilt pending real licensing/storage decisions.
   Explicitly not evidence and not part of the paper corpus's
   1,000-paper cap. See `docs/roadmap/long_term_vision.md`'s matching
   section, `docs/m41_reference_lookup.md`, `docs/m42_rxnorm_lookup.md`,
-  and `docs/m43_mesh_lookup.md`. The design doc's "Addendum: where this
-  plugs into the final report" section
+  `docs/m43_mesh_lookup.md`, and `docs/m44_pubchem_lookup.md`. The
+  design doc's "Addendum: where this plugs into the final report" section
   records ten concrete ways reference-layer content can shape the future
   AI Interface Layer's report (grouping, gap disclosure, provenance
   labeling, glossary/appendix content, Knowledge Graph concept nodes),
