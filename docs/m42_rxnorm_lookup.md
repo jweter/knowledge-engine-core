@@ -54,7 +54,10 @@ RxNorm was chosen over MeSH/PubChem/UniProt as the second source because:
   discipline M36/M41 used.
 
 MeSH, PubChem, and UniProt remain named, real candidates for a later
-milestone -- not ruled out, just not built yet.
+milestone -- not ruled out, just not built yet. **M43 has since added
+MeSH** (`ke mesh-lookup`) as a third source, for medical-concept
+terminology (diseases, procedures) beyond drug names -- see
+`docs/m43_mesh_lookup.md`. PubChem and UniProt remain unbuilt.
 
 ## What it does
 
@@ -148,9 +151,10 @@ is explicitly not part of that corpus (see
 
 ## What is deliberately not built yet
 
-- No MeSH/PubChem/UniProt lookups -- named candidates for a later
-  milestone if a corpus-relevant gap in RxNorm/Wikipedia's combined
-  coverage turns up.
+- No PubChem/UniProt lookups -- named candidates for a later milestone
+  if a corpus-relevant gap in RxNorm/Wikipedia/MeSH's combined coverage
+  turns up. **M43 has since added MeSH** (`ke mesh-lookup`) -- see
+  `docs/m43_mesh_lookup.md`.
 - No stored-textbook path -- unchanged from M41; still pending the
   project owner's own storage/hosting/per-title-licensing decisions.
 - No integration into the extraction pipeline (M16-M28) or

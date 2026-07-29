@@ -67,6 +67,8 @@ from knowledge_engine.manual_pdf_preview import (
     export_manual_pdf_manifest_draft,
     prepare_manual_pdf_preview,
 )
+from knowledge_engine.mesh_lookup import GetTransport as MeshLookupGetTransport
+from knowledge_engine.mesh_lookup import MeshLookupError, MeshLookupService
 from knowledge_engine.metadata_enrichment import MetadataProvider, MetadataQuery
 from knowledge_engine.models import ImportRun, Paper, PaperPage
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
@@ -213,6 +215,13 @@ RxNormLookupTermArgument = Annotated[
     str, typer.Argument(help="A drug name to look up (e.g. 'semaglutide', 'Ozempic').")
 ]
 RxNormLookupOutputOption = Annotated[
+    Path | None,
+    typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
+]
+MeshLookupTermArgument = Annotated[
+    str, typer.Argument(help="A medical term to look up (e.g. 'obesity', 'type 2 diabetes').")
+]
+MeshLookupOutputOption = Annotated[
     Path | None,
     typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
 ]
@@ -1035,6 +1044,66 @@ def rxnorm_lookup(
     console.print()
     console.print(
         "[bold]This is background reference context from RxNorm, not evidence -- "
+        "no scientific synthesis has been performed.[/bold]"
+    )
+
+
+@app.command("mesh-lookup")
+def mesh_lookup(
+    term: MeshLookupTermArgument,
+    output: MeshLookupOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Resolve a medical term to its NLM MeSH descriptor via NCBI's public E-utilities API.
+
+    M43's third slice of the reference knowledge layer
+    (`docs/reference_knowledge_layer_design.md`), alongside M41's Wikipedia
+    lookup and M42's RxNorm lookup: background context for a disease,
+    procedure, or mechanism term a paper's claim text uses (e.g.
+    "obesity", "type 2 diabetes"), not primary-research evidence. Never
+    routed through `EvidenceRecord` promotion, and never merged with the
+    evidence corpus's own search commands (`ke search`/`ke answer`/
+    `ke vector-search`/`ke fused-search`) -- this is a separate, explicitly
+    non-evidentiary lookup. MeSH is a controlled vocabulary, not a fuzzy
+    search: a term with no exact matching MeSH entry term returns
+    `found: false` rather than guessing the closest candidate.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    console.print("[yellow]Network access:[/yellow] querying NCBI's public E-utilities API.")
+    transport = cast(MeshLookupGetTransport, UrllibNcbiTransport())
+    service = MeshLookupService(transport)
+    try:
+        result = service.lookup(term)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except MeshLookupError as exc:
+        console.print(f"[red]MeSH lookup failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    if output is not None:
+        _write_output(output, result.to_json())
+
+    if not result.found:
+        console.print(f"[yellow]No exact MeSH descriptor found for:[/yellow] {escape(term)}")
+    else:
+        console.print(f"[bold]{escape(result.heading or term)}[/bold]")
+        if result.scope_note:
+            console.print(escape(result.scope_note))
+        if result.synonyms:
+            console.print(f"Synonyms: {escape(', '.join(result.synonyms))}")
+        console.print()
+        console.print(
+            f"MeSH ID: {escape(result.mesh_id or 'unknown')}  "
+            f"Source: {escape(result.source_url or 'unknown')}  "
+            f"License: {escape(result.license or 'unknown')}"
+        )
+
+    console.print()
+    console.print(
+        "[bold]This is background reference context from MeSH, not evidence -- "
         "no scientific synthesis has been performed.[/bold]"
     )
 

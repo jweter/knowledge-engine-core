@@ -1023,6 +1023,49 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Glyxambi`, and mechanism-class terms RxNorm correctly does not match,
   like "SGLT2 inhibitor" and "GLP-1") before writing the parser and again
   after. See `docs/m42_rxnorm_lookup.md`.
+- Added the M43 reference knowledge layer's third live-lookup source:
+  `ke mesh-lookup <term>` and `knowledge_engine/mesh_lookup.py` query
+  NCBI's public E-utilities API (`db=mesh`) to resolve a term to its
+  canonical NLM MeSH descriptor -- MeSH ID, preferred heading, scope
+  note (definition), and entry-term synonyms -- reusing `ncbi_http.py`'s
+  existing `UrllibNcbiTransport` directly, since `eutils.ncbi.nlm.nih.gov`
+  is already allowlisted for literature discovery (no new transport
+  module needed, unlike M42's RxNorm lookup, which required one because
+  RxNav is a different host). Chosen as the third source over PubChem
+  because it closes a gap neither Wikipedia (prose) nor RxNorm
+  (drug-only) does: NLM's own controlled vocabulary for diseases,
+  procedures, and biomedical concepts generally. MeSH's `esearch` proved
+  to be a full-text search, not an exact-match lookup -- live-verified
+  that searching "obesity" returns 37 loosely related candidates whose
+  first result ("Anti-Obesity Agents") is the wrong concept, and that
+  "SGLT2 inhibitor"/"GLP-1 receptor agonist" each return a true
+  descriptor record alongside a near-duplicate "pharmacological-action"
+  record sharing the same entry terms -- so the service resolves a term
+  only when exactly one candidate is both a true descriptor
+  (`ds_recordtype == "descriptor"`) and has the queried term as one of
+  its own entry-term synonyms, matched case-insensitively, never the
+  closest guess. Confirmed correct for "obesity" -> "Obesity" (MeSH ID
+  D009765) and "type 2 diabetes" -> "Diabetes Mellitus, Type 2" (MeSH ID
+  D003924, matched via an entry-term synonym since the query doesn't
+  match the canonical heading's word order), and confirmed correctly
+  `found: false` for "GLP-1 receptor agonist" (singular), since MeSH
+  only records the plural entry term. Explicitly background context,
+  not evidence: never routed through `EvidenceRecord` promotion, never
+  merged into the evidence corpus's own search commands. Live-verified
+  against real terms before writing the parser and again after. Codex
+  review on PR #182 caught two further gaps before merge: (1) the
+  original `esearch` call fetched only the first 20 candidates, when
+  "obesity" alone reports 37 (and "cancer" reports 409), so a term
+  ranked below the cutoff would falsely resolve to `found: false`; fixed
+  by checking `esearch`'s own reported total against what was actually
+  fetched (bounded to 200) and declining to resolve rather than
+  searching a partial window. (2) the original match logic returned the
+  first exact match found while scanning candidates, silently picking
+  one if more than one true descriptor happened to share the same exact
+  entry term -- contradicting the code's own "resolves only when exactly
+  one candidate matches" claim; fixed by collecting every exact match
+  and requiring precisely one, treating two-or-more the same as
+  zero (`found: false`). See `docs/m43_mesh_lookup.md`.
 
 ### Changed
 
