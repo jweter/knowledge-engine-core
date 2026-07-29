@@ -62,7 +62,9 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 943 sources: the small historical GLP-1
+The committed manifest holds 951 sources (see the `retstart=3250` batch
+below for the most recent addition). It began as 943 sources: the small
+historical GLP-1
 prototype set (3 rows) plus 940 accepted records from thirteen small
 (`--limit 250`) automated discovery batches (`retstart` 0 through 3000) of
 the project owner's larger corpus-building effort, following M14's rules.
@@ -359,3 +361,71 @@ own wording names. All 8 removed from `sources.csv` and their PDFs;
 corrected with a full fresh reimport (943 imported, 0 failed, 0
 skipped, an exact one-to-one match). Corpus corrected 951 -> 943.
 Regenerated the compressed `corpus_library` snapshot again.
+
+The `retstart=3250` batch (300 candidates, 93 deterministically accepted)
+selected 50 for acquisition, comfortably under the 57-paper headroom then
+remaining before the 1,000-paper cap. A manual title/abstract scope
+review before merging (following the `retstart=3000` lesson, not an
+exhaustive gray-area sweep) excluded 17 as off-topic false positives:
+a busulfan (chemotherapy) pharmacokinetics study, two dementia/
+Alzheimer's risk-factor studies, a frailty/socioeconomic-inequalities
+study, a BMI/dexamethasone response study in immune thrombocytopenia
+(an off-target primary disease), a prediabetes cortical-thickness
+imaging study, a COPD primary-care study, a food-security policy paper,
+an insomnia/depression mediation study naming no intervention, a
+policy lecture transcript (not primary or synthesized evidence), an
+exercise/thromboxane mechanism study, a physical-activity/healthy-eating
+exploratory study, a type 1 diabetes-specific adjunct-medications
+review, a chronic-liver-disease proteomic biomarker study, an H19 lncRNA
+maternal-obesity mechanism study, a microbiome/obesity-cancer Mendelian
+randomisation study, and an epigenetic-regulation review naming no
+specific intervention. Of the 33 that passed, comparing new candidates'
+`source_id`s against `sources.csv` caught 16 already-present records
+(the `retstart=2750`/`retstart=3000` cross-batch overlap lesson
+recurring, since PubMed's `sort=pub_date` pagination shifts across
+calendar days), leaving 17 believed net-new and imported (17 imported,
+0 failed, 943 skipped). Corpus grew 943 -> 960.
+
+A Codex review on the `retstart=3250` growth PR then caught what the
+`retstart=2750`/`retstart=3000` lesson above had only half-learned:
+comparing against `sources.csv`'s currently-*included* rows catches a
+PMID that's still in the corpus, but not one that was already
+discovered and manually *rejected* in an earlier batch and is now
+resurfacing under a different retstart offset with nothing recording
+that prior decision. 6 of the batch's 17 apparently-net-new records were
+exact PMID matches for papers this README already documents as excluded
+from `retstart=3000` (the bariatric-surgery weight-regain
+prediction-model study, the T2D/STEMI in-hospital-outcomes study, the
+diabetic-eye-disease progression study, the T2D sibling-pairs genetics
+study, the coronary ischaemia-reperfusion antiplatelet study, and the
+T2D policy-life-expectancy model) -- the exact same six papers, not
+new candidates that happened to resemble them. Prompted by that finding,
+a closer re-read of this README's own established exclusion patterns
+(specifically "diagnostic/measurement-only, no treatment evaluated" and
+"off-target primary disease, target disease only an incidental
+covariate") caught 3 more of the remaining 11 that the initial scope
+pass had missed: a metabolic-syndrome scoring-method validation study
+(diagnostic-only), a BMI-vs-Lancet-Commission diagnostic-criteria
+comparison study (diagnostic-only), and a metabolic-monitoring-rate
+study in antipsychotic-treated patients (the treated condition is
+psychiatric; metabolic syndrome is the monitored side effect, not the
+intervention target). All 9 removed from `sources.csv` and their PDFs;
+corrected with a full fresh reimport against an empty database (951
+imported, 0 failed, 0 skipped, an exact one-to-one match). Corpus
+corrected 960 -> 951. Regenerated the compressed `corpus_library`
+snapshot again.
+
+**Open follow-up (not yet acted on):** this is now the second time
+(`retstart=3000`, then `retstart=3250`) a previously-rejected PMID has
+resurfaced and been re-accepted under a later batch's different
+retstart offset, because `sources.csv` records only what is currently
+included, not a durable ledger of every PMID this project has already
+reviewed and rejected. Both times the fix was re-deriving the rejection
+by re-reading this README's prose history and manually checking new
+candidates against it -- correct, but not something a future batch (or
+a different person running one) can rely on catching automatically. A
+persistent rejected-PMID registry, checked automatically before merging
+a new batch, would close this gap; not built here, since it is a
+process/tooling change beyond what one growth batch's correction should
+unilaterally decide, the same reasoning `retstart=2000`'s
+`evaluate_scientific_scope` open follow-up above already applied.

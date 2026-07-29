@@ -399,11 +399,42 @@ compresses it (roughly 3x on this corpus's page-level text), restoring
 headroom without giving up git-committed durability. Actually growing the
 corpus toward the owner's 1,000-paper cap remains ongoing operational
 work using this tooling plus the existing M14 pipeline, not itself
-scheduled as a numbered milestone. At 943 papers (~61MB compressed) the
-corpus is already close to that cap; the remaining headroom is small
-enough that further growth batches should land close to the ceiling
-rather than assume the multi-batch runway earlier "couple thousand"
-planning implied.
+scheduled as a numbered milestone. At 951 papers (~64MB compressed) the
+corpus is already close to that cap; the remaining headroom (49 papers)
+is small enough that further growth batches should land close to the
+ceiling rather than assume the multi-batch runway earlier "couple
+thousand" planning implied. The retstart=3250 batch (943 -> 951) also
+surfaced two real limitations worth naming for future batches. First,
+PubMed's `sort=pub_date` pagination is not stable across different
+calendar days -- newer papers indexed between batches shift what a
+given `retstart` offset points to, so 16 of that batch's 50 discovered
+candidates turned out to already be in the corpus under an earlier
+retstart's results; caught by comparing new candidates' `source_id`s
+against `sources.csv` before merging, not by the automated discovery/
+adjudication pipeline itself, which only deduplicates PMIDs within a
+single run. Second, and more serious -- caught by Codex review on the
+growth PR, not by that same manual check -- comparing only against
+`sources.csv`'s currently-*included* rows missed that a PMID can also
+be a previously-*rejected* record resurfacing under a new retstart
+offset: 6 of the batch's remaining 33 scope-passed candidates were
+exact PMID matches for papers `data/corpora/glp1_weight_loss/README.md`
+already documents as manually excluded from the `retstart=3000` batch
+(a bariatric weight-regain prediction model, a T2D/STEMI in-hospital-
+outcomes study, a diabetic-eye-disease progression study, a T2D
+sibling-pairs genetics study, a coronary ischaemia-reperfusion
+antiplatelet study, and a T2D policy-life-expectancy model), and a
+closer re-read of the same established exclusion patterns (in
+particular "diagnostic/measurement-only, no treatment evaluated" and
+"off-target primary disease, target disease only an incidental
+covariate") caught 3 more the initial scope pass missed. This project
+has now hit this exact failure mode -- a previously-rejected PMID
+resurfacing under a later batch's different retstart offset -- at both
+`retstart=3000` and `retstart=3250`; `sources.csv` only records what is
+currently included, not a durable ledger of what has already been
+reviewed and rejected. A future milestone could build that ledger (a
+persistent rejected-PMID registry checked automatically before merging)
+rather than relying on rediscovering the same README history by hand
+each batch, but that is not yet built.
 
 ### Supporting operator durability
 
