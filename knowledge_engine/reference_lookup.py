@@ -18,11 +18,18 @@ response shape, and its content is under CC BY-SA -- a license family
 scientific term, not just drug names. Live lookup, not a stored corpus:
 sidesteps the storage and per-title licensing decisions a stored-textbook
 approach would require (see the design doc's "third option" section).
-`retrieved_at` and `page_last_modified` are recorded on every result so a
-future consumer needing this lookup's own reproducibility (e.g. citing it
-as part of extraction provenance) has the ordinary engineering hook the
-design doc named -- caching or snapshotting the response actually used --
-without this module needing to guess that need in advance.
+`retrieved_at`, `page_last_modified`, `revision`, and `permanent_url` are
+recorded on every result so a future consumer needing this lookup's own
+reproducibility (e.g. citing it as part of extraction provenance) has the
+ordinary engineering hook the design doc named -- caching or snapshotting
+the response actually used -- without this module needing to guess that
+need in advance. `page_last_modified`/`source_url` alone are not enough
+for that: `page_last_modified` is only second-resolution (two rapid edits
+can share a timestamp) and `source_url` is Wikipedia's canonical page URL,
+which always shows the *current* revision, not the one this lookup
+actually returned. `revision` (Wikipedia's own stable revision ID) and
+`permanent_url` (`{source_url}?oldid={revision}`, verified to resolve)
+pin down the exact content this result reflects.
 """
 
 from __future__ import annotations
@@ -88,6 +95,8 @@ class ReferenceLookupResult:
     extract: str | None
     page_type: str | None
     source_url: str | None
+    revision: str | None
+    permanent_url: str | None
     license: str | None
     page_last_modified: str | None
     retrieved_at: str
@@ -146,6 +155,8 @@ class ReferenceLookupService:
                 extract=None,
                 page_type=None,
                 source_url=None,
+                revision=None,
+                permanent_url=None,
                 license=None,
                 page_last_modified=None,
                 retrieved_at=retrieved_at,
@@ -205,6 +216,9 @@ def _parse_result(term: str, raw: dict[str, object], *, retrieved_at: str) -> Re
         if isinstance(desktop, dict):
             source_url = _optional_string(desktop, "page")
 
+    revision = _optional_string(raw, "revision")
+    permanent_url = f"{source_url}?oldid={revision}" if source_url and revision else None
+
     return ReferenceLookupResult(
         term=term,
         found=True,
@@ -213,6 +227,8 @@ def _parse_result(term: str, raw: dict[str, object], *, retrieved_at: str) -> Re
         extract=_optional_string(raw, "extract"),
         page_type=_optional_string(raw, "type"),
         source_url=source_url,
+        revision=revision,
+        permanent_url=permanent_url,
         license=WIKIPEDIA_CONTENT_LICENSE,
         page_last_modified=_optional_string(raw, "timestamp"),
         retrieved_at=retrieved_at,

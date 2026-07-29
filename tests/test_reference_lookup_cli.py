@@ -42,6 +42,8 @@ def _found_result(term: str = "semaglutide") -> ReferenceLookupResult:
         "type 2 diabetes.",
         page_type="standard",
         source_url="https://en.wikipedia.org/wiki/Semaglutide",
+        revision="1366562225",
+        permanent_url="https://en.wikipedia.org/wiki/Semaglutide?oldid=1366562225",
         license="CC BY-SA",
         page_last_modified="2026-07-28T19:10:18Z",
         retrieved_at="2026-07-29T00:00:00+00:00",
@@ -57,6 +59,8 @@ def _not_found_result(term: str = "xyzzy") -> ReferenceLookupResult:
         extract=None,
         page_type=None,
         source_url=None,
+        revision=None,
+        permanent_url=None,
         license=None,
         page_last_modified=None,
         retrieved_at="2026-07-29T00:00:00+00:00",
@@ -81,6 +85,8 @@ def test_reference_lookup_prints_grounding_for_a_found_term(
     assert "https://en.wikipedia.org/wiki/Semaglutide" in unwrapped
     assert "CC BY-SA" in unwrapped
     assert "not evidence" in unwrapped
+    assert "Permanent link" in unwrapped
+    assert "https://en.wikipedia.org/wiki/Semaglutide?oldid=1366562225" in unwrapped
 
 
 def test_reference_lookup_reports_no_article_found(monkeypatch: pytest.MonkeyPatch) -> None:

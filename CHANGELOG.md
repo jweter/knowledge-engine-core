@@ -978,10 +978,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   evidence corpus's own search commands (`ke search`/`ke answer`/
   `ke vector-search`/`ke fused-search`). No API key required, unlike
   Unpaywall's `KE_UNPAYWALL_EMAIL`. Every result records its own
-  `retrieved_at` timestamp alongside the page's `page_last_modified`, the
-  reproducibility hook a future consumer citing a lookup's result would
-  need, without this milestone needing to build caching speculatively
-  ahead of an actual consumer. Live-verified against real terms
+  `retrieved_at` timestamp alongside the page's `page_last_modified`, plus
+  Wikipedia's own stable `revision` ID and a `permanent_url`
+  (`{source_url}?oldid={revision}`) -- added after Codex review noted
+  `page_last_modified` (second-resolution) and `source_url` (Wikipedia's
+  always-current canonical URL) don't alone pin down the exact content a
+  lookup returned -- the reproducibility hook a future consumer citing a
+  lookup's result would need, without this milestone needing to build
+  caching speculatively ahead of an actual consumer. Live-verified against
+  real terms
   (`semaglutide`, `SGLT2 inhibitor`, the `Mercury` disambiguation page,
   and a not-found term) before writing the parser and again after. See
   `docs/m41_reference_lookup.md`.

@@ -953,6 +953,8 @@ def reference_lookup(
             f"Source: {escape(result.source_url or 'unknown')}  "
             f"License: {escape(result.license or 'unknown')}"
         )
+        if result.permanent_url:
+            console.print(f"Permanent link (this exact revision): {escape(result.permanent_url)}")
 
     console.print()
     console.print(

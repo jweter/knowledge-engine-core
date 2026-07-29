@@ -86,9 +86,23 @@ already established, mirrored here in `reference_lookup_http.py`.
 ## Output contract
 
 `{"term", "found", "title", "description", "extract", "page_type",
-"source_url", "license", "page_last_modified", "retrieved_at"}`. When
-`found` is `false`, every field past `term`/`found`/`retrieved_at` is
-`null` -- never a guessed or partial value.
+"source_url", "revision", "permanent_url", "license",
+"page_last_modified", "retrieved_at"}`. When `found` is `false`, every
+field past `term`/`found`/`retrieved_at` is `null` -- never a guessed or
+partial value.
+
+`page_last_modified` (Wikipedia's edit timestamp, second-resolution) and
+`source_url` (Wikipedia's canonical page URL, which always resolves to
+the *current* revision) are not enough on their own to pin down exactly
+what content a given lookup returned -- two rapid edits can share a
+timestamp, and a later visit to `source_url` can show newer content than
+what this result actually captured. `revision` (Wikipedia's own stable
+revision ID) and `permanent_url` (`{source_url}?oldid={revision}`,
+verified to resolve to that exact revision) exist so a future consumer
+that needs this lookup's own reproducibility -- e.g. citing it as part of
+extraction provenance -- has that hook without this module needing to
+guess the need in advance. Both are `null` when Wikipedia's response
+omits a revision ID or a `content_urls.desktop.page` URL.
 
 ## What is deliberately not built yet
 

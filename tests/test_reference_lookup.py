@@ -66,6 +66,7 @@ def _summary_response(**overrides: object) -> FakeResponse:
         "type 2 diabetes.",
         "timestamp": "2026-07-28T19:10:18Z",
         "content_urls": {"desktop": {"page": "https://en.wikipedia.org/wiki/Semaglutide"}},
+        "revision": "1366562225",
     }
     base.update(overrides)
     return FakeResponse(status_code=200, body=json.dumps(base).encode("utf-8"), headers={})
@@ -85,6 +86,8 @@ def test_lookup_returns_a_found_result_with_grounding_fields() -> None:
     assert result.extract.startswith("Semaglutide is an anti-diabetic medication")
     assert result.page_type == "standard"
     assert result.source_url == "https://en.wikipedia.org/wiki/Semaglutide"
+    assert result.revision == "1366562225"
+    assert result.permanent_url == "https://en.wikipedia.org/wiki/Semaglutide?oldid=1366562225"
     assert result.license == WIKIPEDIA_CONTENT_LICENSE
     assert result.page_last_modified == "2026-07-28T19:10:18Z"
     assert result.retrieved_at
@@ -109,6 +112,8 @@ def test_lookup_returns_not_found_on_404_without_raising() -> None:
     assert result.title is None
     assert result.extract is None
     assert result.license is None
+    assert result.revision is None
+    assert result.permanent_url is None
     assert result.retrieved_at
 
 
@@ -200,6 +205,27 @@ def test_lookup_tolerates_a_missing_content_urls_block() -> None:
     assert result.source_url is None
     assert result.description is None
     assert result.extract is None
+    assert result.revision is None
+    assert result.permanent_url is None
+
+
+def test_lookup_omits_permanent_url_when_revision_is_missing() -> None:
+    body = {
+        "type": "standard",
+        "title": "Semaglutide",
+        "content_urls": {"desktop": {"page": "https://en.wikipedia.org/wiki/Semaglutide"}},
+    }
+    transport = FakeTransport(
+        [FakeResponse(status_code=200, body=json.dumps(body).encode("utf-8"), headers={})]
+    )
+    service = _service(transport)
+
+    result = service.lookup("semaglutide")
+
+    assert result.found is True
+    assert result.source_url == "https://en.wikipedia.org/wiki/Semaglutide"
+    assert result.revision is None
+    assert result.permanent_url is None
 
 
 def test_to_json_is_stable_and_complete() -> None:
