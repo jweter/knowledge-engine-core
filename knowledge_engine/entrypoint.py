@@ -612,6 +612,21 @@ def _read_jsonl_records(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+def _rxnorm_definition(payload: dict[str, Any]) -> str | None:
+    """Join a resolved RxNorm result's structured facts into `graph_concepts.definition`.
+
+    Per `docs/phase4_design.md`'s Architecture section: RxNorm has no
+    single free-text definition field like MeSH's `scope_note`, so
+    `name`/`term_type`/`synonym` are joined into one string instead --
+    the same content a `graph_concepts` row is documented as the only
+    durable home for, once linked into the graph.
+    """
+
+    parts = [payload.get("name"), payload.get("term_type"), payload.get("synonym")]
+    joined = "; ".join(str(part) for part in parts if part)
+    return joined or None
+
+
 def _validate_output(output: Path, *, force: bool) -> None:
     """Reject symbolic links and accidental overwrites before external or database access."""
 
@@ -1813,7 +1828,7 @@ def graph_build(
                 if source == "rxnorm":
                     label = payload.get("name") or payload.get("term")
                     source_reference_id = payload.get("rxcui")
-                    definition = None
+                    definition = _rxnorm_definition(payload)
                 elif source == "mesh":
                     label = payload.get("heading") or payload.get("term")
                     source_reference_id = payload.get("mesh_id")

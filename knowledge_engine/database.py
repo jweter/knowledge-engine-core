@@ -771,24 +771,38 @@ class GraphRepository:
         return edge
 
     def concepts_for_claim(self, claim_id: int) -> list[GraphConcept]:
-        """Return every concept linked to one claim, via any edge role."""
+        """Return every concept linked to one claim, via any edge role.
+
+        A claim may link to the same concept under more than one edge role
+        (the `graph_claim_concepts` unique constraint is per
+        `(claim_id, concept_id, edge_role)`, not per `(claim_id,
+        concept_id)`) -- `distinct()` collapses that to one node per claim,
+        matching the traversal's own "every concept" contract rather than
+        "every edge."
+        """
 
         statement = (
             select(GraphConcept)
             .join(GraphClaimConcept, GraphClaimConcept.concept_id == GraphConcept.id)
             .where(GraphClaimConcept.claim_id == claim_id)
             .order_by(GraphConcept.id)
+            .distinct()
         )
         return list(self.session.scalars(statement))
 
     def claims_for_concept(self, concept_id: int) -> list[GraphClaim]:
-        """Return every claim linked to one concept, via any edge role."""
+        """Return every claim linked to one concept, via any edge role.
+
+        See `concepts_for_claim` -- the same multi-role duplication is
+        possible in this direction too.
+        """
 
         statement = (
             select(GraphClaim)
             .join(GraphClaimConcept, GraphClaimConcept.claim_id == GraphClaim.id)
             .where(GraphClaimConcept.concept_id == concept_id)
             .order_by(GraphClaim.id)
+            .distinct()
         )
         return list(self.session.scalars(statement))
 

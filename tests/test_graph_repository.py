@@ -252,3 +252,36 @@ def test_traversal_queries(tmp_path: Path) -> None:
         relationships_from_target = repository.relationships_for_claim(other_claim_id)
         assert len(relationships_from_target) == 1
         assert relationships_from_target[0].relationship_id == "rel-1"
+
+
+def test_traversal_queries_dedupe_concept_linked_via_multiple_edge_roles(
+    tmp_path: Path,
+) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claim = repository.get_or_create_claim("ev-1")
+        concept = repository.get_or_create_concept(
+            label="Placebo",
+            source="rxnorm",
+            source_reference_id="999999",
+            definition=None,
+            source_url=None,
+            license=None,
+            retrieved_at="2026-07-29T00:00:00Z",
+        )
+        repository.link_claim_concept(claim.id, concept.id, "intervention")
+        repository.link_claim_concept(claim.id, concept.id, "comparator")
+
+        claim_id = claim.id
+        concept_id = concept.id
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+
+        concepts = repository.concepts_for_claim(claim_id)
+        assert [c.id for c in concepts] == [concept_id]
+
+        claims = repository.claims_for_concept(concept_id)
+        assert [c.id for c in claims] == [claim_id]
