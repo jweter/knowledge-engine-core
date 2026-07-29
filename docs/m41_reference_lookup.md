@@ -112,6 +112,10 @@ omits a revision ID or a `content_urls.desktop.page` URL.
   milestone needed to make.
 - No RxNorm/MeSH/PubChem/UniProt lookups -- named candidates for a later
   milestone if Wikipedia's coverage proves insufficient for some domain.
+  **M42 has since added RxNorm** (`ke rxnorm-lookup`) as a second,
+  complementary source for structured drug-name normalization Wikipedia's
+  title-matching doesn't provide -- see `docs/m42_rxnorm_lookup.md`. MeSH,
+  PubChem, and UniProt remain unbuilt.
 - No integration into the extraction pipeline (M16-M28) or
   `ke extraction-review-generate`/`ke extraction-review-batch-generate` --
   this is a standalone lookup tool a human runs directly, not yet wired

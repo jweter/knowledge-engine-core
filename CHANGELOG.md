@@ -990,6 +990,39 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`semaglutide`, `SGLT2 inhibitor`, the `Mercury` disambiguation page,
   and a not-found term) before writing the parser and again after. See
   `docs/m41_reference_lookup.md`.
+- Added the M42 reference knowledge layer's second live-lookup source:
+  `ke rxnorm-lookup <term>` and `knowledge_engine/rxnorm_lookup.py` query
+  NLM's public RxNav REST API (`https://rxnav.nlm.nih.gov/REST/`) to
+  resolve a drug name to its own RxNorm concept -- RxCUI, canonical name,
+  term type (`"IN"` ingredient, `"BN"` brand name, etc.), and synonym --
+  plus its underlying ingredient concept(s), via a dedicated
+  host-allowlisted transport (`rxnorm_http.py`'s `UrllibRxNavTransport`,
+  since RxNav is a distinct NLM host from the literature-scoped
+  `ncbi_http.py`). Chosen as the second source (over MeSH/PubChem/
+  UniProt) because it needs no API key and closes a concrete gap M41's
+  Wikipedia lookup leaves open for this corpus: a generic drug name
+  (e.g. "semaglutide") and its brand name (e.g. "Ozempic") get different
+  top-level RxCUIs -- RxNorm's own model correctly keeps a brand product
+  and its ingredient distinct -- but resolve to the same `ingredients`
+  entry via RxNav's `related.json?tty=IN` relationship, which is what a
+  caller compares to recognize them as the same underlying drug;
+  Wikipedia's title-matching lookup has no equivalent. Codex review on
+  PR #179 caught that the first version of this milestone claimed that
+  normalization without actually following the ingredient relationship
+  (the top-level `rxcui` was returned unchanged for both names); fixed
+  before merge by adding the `related.json` call and `ingredients` field,
+  with a regression test asserting `semaglutide` and `Ozempic` resolve
+  to the same `ingredients` entry and a combination-drug brand
+  ("Glyxambi") resolves to more than one. Explicitly background context,
+  not evidence: never routed through `EvidenceRecord` promotion, never
+  merged into the evidence corpus's own search commands. RxNorm's
+  concept-search permalink is already keyed to a specific RxCUI, so
+  (unlike M41's Wikipedia `revision`/`permanent_url` fields) `source_url`
+  alone is a stable citation target here. Live-verified against real
+  terms (`semaglutide`, `Ozempic`, `empagliflozin`, `insulin`,
+  `Glyxambi`, and mechanism-class terms RxNorm correctly does not match,
+  like "SGLT2 inhibitor" and "GLP-1") before writing the parser and again
+  after. See `docs/m42_rxnorm_lookup.md`.
 
 ### Changed
 

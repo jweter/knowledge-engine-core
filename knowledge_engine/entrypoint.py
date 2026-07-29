@@ -89,6 +89,12 @@ from knowledge_engine.reference_lookup import (
     ReferenceLookupService,
 )
 from knowledge_engine.reference_lookup_http import UrllibWikipediaTransport
+from knowledge_engine.rxnorm_http import UrllibRxNavTransport
+from knowledge_engine.rxnorm_lookup import GetTransport as RxNormLookupGetTransport
+from knowledge_engine.rxnorm_lookup import (
+    RxNormLookupError,
+    RxNormLookupService,
+)
 from knowledge_engine.search import SearchService
 from knowledge_engine.search_fusion import fuse_rankings
 from knowledge_engine.unpaywall_http import UrllibUnpaywallTransport
@@ -200,6 +206,13 @@ ReferenceLookupTermArgument = Annotated[
     str, typer.Argument(help="A term or mechanism to look up (e.g. 'semaglutide').")
 ]
 ReferenceLookupOutputOption = Annotated[
+    Path | None,
+    typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
+]
+RxNormLookupTermArgument = Annotated[
+    str, typer.Argument(help="A drug name to look up (e.g. 'semaglutide', 'Ozempic').")
+]
+RxNormLookupOutputOption = Annotated[
     Path | None,
     typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
 ]
@@ -959,6 +972,69 @@ def reference_lookup(
     console.print()
     console.print(
         "[bold]This is background reference context from Wikipedia, not evidence -- "
+        "no scientific synthesis has been performed.[/bold]"
+    )
+
+
+@app.command("rxnorm-lookup")
+def rxnorm_lookup(
+    term: RxNormLookupTermArgument,
+    output: RxNormLookupOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Resolve a drug name to its RxNorm normalized concept via NLM's public RxNav API.
+
+    M42's second slice of the reference knowledge layer
+    (`docs/reference_knowledge_layer_design.md`), alongside M41's Wikipedia
+    lookup: background context for a drug name a paper's claim text uses
+    (e.g. "semaglutide", "Ozempic"), not primary-research evidence. Never
+    routed through `EvidenceRecord` promotion, and never merged with the
+    evidence corpus's own search commands (`ke search`/`ke answer`/
+    `ke vector-search`/`ke fused-search`) -- this is a separate, explicitly
+    non-evidentiary lookup. A term RxNorm does not recognize returns
+    `found: false` rather than a guess.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    console.print("[yellow]Network access:[/yellow] querying NLM's public RxNav API.")
+    transport = cast(RxNormLookupGetTransport, UrllibRxNavTransport())
+    service = RxNormLookupService(transport)
+    try:
+        result = service.lookup(term)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except RxNormLookupError as exc:
+        console.print(f"[red]RxNorm lookup failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    if output is not None:
+        _write_output(output, result.to_json())
+
+    if not result.found:
+        console.print(f"[yellow]No RxNorm concept found for:[/yellow] {escape(term)}")
+    else:
+        console.print(f"[bold]{escape(result.name or term)}[/bold]")
+        if result.term_type:
+            console.print(f"Term type: {escape(result.term_type)}")
+        if result.synonym:
+            console.print(f"Synonym: {escape(result.synonym)}")
+        if result.ingredients:
+            ingredient_list = ", ".join(
+                f"{ingredient.name} (RXCUI {ingredient.rxcui})" for ingredient in result.ingredients
+            )
+            console.print(f"Ingredient(s): {escape(ingredient_list)}")
+        console.print()
+        console.print(
+            f"RxCUI: {escape(result.rxcui or 'unknown')}  "
+            f"Source: {escape(result.source_url or 'unknown')}  "
+            f"License: {escape(result.license or 'unknown')}"
+        )
+
+    console.print()
+    console.print(
+        "[bold]This is background reference context from RxNorm, not evidence -- "
         "no scientific synthesis has been performed.[/bold]"
     )
 
