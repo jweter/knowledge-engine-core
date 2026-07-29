@@ -399,11 +399,22 @@ compresses it (roughly 3x on this corpus's page-level text), restoring
 headroom without giving up git-committed durability. Actually growing the
 corpus toward the owner's 1,000-paper cap remains ongoing operational
 work using this tooling plus the existing M14 pipeline, not itself
-scheduled as a numbered milestone. At 943 papers (~61MB compressed) the
-corpus is already close to that cap; the remaining headroom is small
-enough that further growth batches should land close to the ceiling
-rather than assume the multi-batch runway earlier "couple thousand"
-planning implied.
+scheduled as a numbered milestone. At 960 papers (~65MB compressed) the
+corpus is already close to that cap; the remaining headroom (40 papers)
+is small enough that further growth batches should land close to the
+ceiling rather than assume the multi-batch runway earlier "couple
+thousand" planning implied. The retstart=3250 batch (943 -> 960) also
+surfaced a real limitation worth noting for future batches: PubMed's
+`sort=pub_date` pagination is not stable across different calendar days
+-- newer papers indexed between batches shift what a given `retstart`
+offset points to, so 16 of that batch's 50 discovered candidates turned
+out to already be in the corpus under an earlier retstart's results.
+Caught by comparing new candidates' `source_id`s against `sources.csv`
+before merging, not by the automated discovery/adjudication pipeline
+itself, which only deduplicates PMIDs within a single run. A future
+milestone could make this a checked, deterministic step (e.g. cross-
+referencing the local corpus before merging) rather than relying on a
+manual check each batch, but that is not yet built.
 
 ### Supporting operator durability
 
