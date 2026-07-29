@@ -299,13 +299,31 @@ acceptance, release validation, and optional post-release quality audits.
   `-batch-generate` must stay network-free even at the corpus's real
   scale (M40: 13,588 draft items across 943 papers), so annotation is a
   reviewer-initiated command run against the specific paper(s) actually
-  under review, with identical terms cached within one run (bounding
-  network calls to the number of distinct terms, not items). Live-
-  verified: `intervention: "semaglutide"` and `intervention: "Ozempic"`
-  resolve to the same underlying RxNorm ingredient (RxCUI 1991302);
-  `population: "obesity"` and `outcome: "type 2 diabetes"` resolve to
-  their MeSH descriptors with full scope notes and synonym lists; a
-  nonsense term correctly returns `found: false`. Never touches
+  under review. Codex review on PR #184 caught that the first version
+  passed a PICO field's whole raw value to RxNorm's/MeSH's exact-match
+  lookups on the incorrect assumption that M28 stores an isolated term;
+  re-sampling the real corpus showed real field values are routinely
+  entire multi-line, citation-laden paragraphs, so the original version
+  returned `found: false` for nearly every real draft item. Fixed by
+  scanning a small, bounded set of single-word candidates (first 30
+  tokens, stopwords dropped, capped at 20 per field) from the raw text
+  against the unchanged exact-match lookups, declining (`found: false`)
+  when more than one distinct concept resolves among the candidates
+  tried -- the same ambiguity discipline M43/M44 established -- rather
+  than guessing which one is "the" term. Live-verified against the real
+  corpus after the fix: a comparator field naming both "semaglutide" and
+  "placebo" together correctly declines; a fisetin-supplementation
+  paper's `comparator`/`population` fields correctly resolve "fisetin"
+  (RxCUI 2667741) and "screening" (MeSH `D008403`) across every draft
+  item drawn from that paper. A second Codex finding on the same PR
+  caught that an empty result queue left a `--force`-targeted output file
+  untouched instead of clearing it; fixed to always overwrite the output
+  path, even when there is nothing to write. With identical candidate
+  terms cached within one run, network calls are bounded to the number of
+  distinct candidates actually tried, not items -- but measured honestly,
+  not fast: live-verified at roughly 30 distinct RxNorm and 30 distinct
+  MeSH terms for a single real paper's full draft-item set, on the order
+  of a minute or more of network calls. Never touches
   `research_question`/`evidence_direction`, and never changes `ke
   extraction-review-promote`'s existing refusal to promote a record
   missing either. See `docs/m45_extraction_review_annotate.md`.

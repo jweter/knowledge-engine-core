@@ -166,7 +166,35 @@ def test_annotate_reports_no_items_for_an_empty_input_file(
 
     assert result.exit_code == 0, result.output
     assert "No draft items found" in result.output
-    assert not output_path.exists()
+    assert output_path.read_text(encoding="utf-8") == ""
+
+
+def test_annotate_clears_a_stale_output_when_a_rerun_finds_no_items(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A prior run's annotated records must not linger and look current."""
+
+    monkeypatch.setattr(entrypoint, "RxNormLookupService", lambda transport: FakeRxNormService())
+    monkeypatch.setattr(entrypoint, "MeshLookupService", lambda transport: FakeMeshService())
+    input_path = tmp_path / "draft.jsonl"
+    input_path.write_text("", encoding="utf-8")
+    output_path = tmp_path / "annotated.jsonl"
+    output_path.write_text(json.dumps(_draft_item()) + "\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "extraction-review-annotate",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--force",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert output_path.read_text(encoding="utf-8") == ""
 
 
 def test_annotate_rejects_an_invalid_json_line(
@@ -226,4 +254,5 @@ def test_annotate_caches_terms_across_items_in_one_run(
 
     assert result.exit_code == 0, result.output
     assert rxnorm.calls.count("Semaglutide") == 1
-    assert mesh.calls.count("Adults with obesity") == 1
+    assert mesh.calls.count("obesity") == 1
+    assert mesh.calls.count("Adults") == 1

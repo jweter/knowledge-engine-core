@@ -1599,7 +1599,13 @@ def extraction_review_annotate(
     run it by hand against the paper(s) you are about to review, not
     automatically across the whole corpus -- generating the review queue
     itself must stay network-free even at the corpus's real scale (M40:
-    13,588 draft items across 943 papers).
+    13,588 draft items across 943 papers). Live-verified against real
+    papers: expect on the order of a minute or more of network calls for
+    one paper's full draft-item set, not a near-instant operation -- see
+    `knowledge_engine/extraction_review_annotate.py` for the measured
+    numbers. An input file with no draft items still overwrites an
+    existing `--output` (clearing any stale prior run's results) rather
+    than leaving it untouched.
     """
 
     if not input_path.exists():
@@ -1625,6 +1631,7 @@ def extraction_review_annotate(
         items.append(record)
 
     if not items:
+        _write_output(output, "")
         console.print("[yellow]No draft items found in input file.[/yellow]")
         return
 
