@@ -83,6 +83,12 @@ from knowledge_engine.pubmed_discovery import (
     NcbiDiscoveryError,
     PubmedPmcDiscoveryService,
 )
+from knowledge_engine.reference_lookup import GetTransport as ReferenceLookupGetTransport
+from knowledge_engine.reference_lookup import (
+    ReferenceLookupError,
+    ReferenceLookupService,
+)
+from knowledge_engine.reference_lookup_http import UrllibWikipediaTransport
 from knowledge_engine.search import SearchService
 from knowledge_engine.search_fusion import fuse_rankings
 from knowledge_engine.unpaywall_http import UrllibUnpaywallTransport
@@ -189,6 +195,13 @@ UnpaywallDoisFileOption = Annotated[
         dir_okay=False,
         readable=True,
     ),
+]
+ReferenceLookupTermArgument = Annotated[
+    str, typer.Argument(help="A term or mechanism to look up (e.g. 'semaglutide').")
+]
+ReferenceLookupOutputOption = Annotated[
+    Path | None,
+    typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
 ]
 ManualPdfPathOption = Annotated[
     Path,
@@ -885,6 +898,66 @@ def unpaywall_batch_lookup(
     )
     console.print(
         "[bold]Evidence only; no adjudication decision was made and no PDFs were downloaded.[/bold]"
+    )
+
+
+@app.command("reference-lookup")
+def reference_lookup(
+    term: ReferenceLookupTermArgument,
+    output: ReferenceLookupOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Look up a term's plain-language grounding via Wikipedia's public REST API.
+
+    M41's first slice of the reference knowledge layer
+    (`docs/reference_knowledge_layer_design.md`): background context for a
+    term or mechanism a paper's claim text names (e.g. "GLP-1 receptor
+    agonist", "SGLT2 inhibitor"), not primary-research evidence. Never
+    routed through `EvidenceRecord` promotion, and never merged with the
+    evidence corpus's own search commands (`ke search`/`ke answer`/
+    `ke vector-search`/`ke fused-search`) -- this is a separate, explicitly
+    non-evidentiary lookup. A term with no Wikipedia article returns
+    `found: false` rather than a guess.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    console.print("[yellow]Network access:[/yellow] querying Wikipedia's public REST API.")
+    transport = cast(ReferenceLookupGetTransport, UrllibWikipediaTransport())
+    service = ReferenceLookupService(transport)
+    try:
+        result = service.lookup(term)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except ReferenceLookupError as exc:
+        console.print(f"[red]Reference lookup failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    if output is not None:
+        _write_output(output, result.to_json())
+
+    if not result.found:
+        console.print(f"[yellow]No Wikipedia article found for:[/yellow] {escape(term)}")
+    else:
+        console.print(f"[bold]{escape(result.title or term)}[/bold]")
+        if result.description:
+            console.print(escape(result.description))
+        if result.page_type and result.page_type != "standard":
+            console.print(f"[yellow]Page type: {escape(result.page_type)}[/yellow]")
+        if result.extract:
+            console.print()
+            console.print(escape(result.extract))
+        console.print()
+        console.print(
+            f"Source: {escape(result.source_url or 'unknown')}  "
+            f"License: {escape(result.license or 'unknown')}"
+        )
+
+    console.print()
+    console.print(
+        "[bold]This is background reference context from Wikipedia, not evidence -- "
+        "no scientific synthesis has been performed.[/bold]"
     )
 
 

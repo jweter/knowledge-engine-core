@@ -177,6 +177,23 @@ acceptance, release validation, and optional post-release quality audits.
   ~180K-character paper took 30+ seconds -- fixed by bounding the check
   to a fixed trailing window instead of the whole growing prefix; the
   full corpus run dropped from over 20 minutes to 21 seconds.
+- **M41** built the reference knowledge layer's first slice --
+  `docs/reference_knowledge_layer_design.md`'s sketch named the gap this
+  closes: a paper's claim text names terms and mechanisms (e.g. "GLP-1
+  receptor agonism", "SGLT2 inhibitor") a domain expert already knows but
+  the extraction pipeline has no equivalent grounding for. A new
+  `ke reference-lookup <term>` command and
+  `knowledge_engine/reference_lookup.py` query Wikipedia's public REST
+  summary API live -- no stored corpus, no API key, content under CC
+  BY-SA (a license family `license_rules.py` already recognizes) --
+  and return the term's title, description, plain-language extract,
+  source URL, and license, or `found: false` if Wikipedia has no
+  article. Explicitly background context, not evidence: never routed
+  through `EvidenceRecord` promotion, and never merged into the evidence
+  corpus's own search commands. Live-verified against real terms
+  (`semaglutide`, `SGLT2 inhibitor`, a disambiguation page, a not-found
+  term) before and after building the parser. See
+  `docs/m41_reference_lookup.md`.
 
 ### M14: Controlled 500-paper rehearsal
 
@@ -514,10 +531,14 @@ Detailed milestone records include:
 - `docs/roadmap/long_term_vision.md` -- the multi-package ecosystem and final
   goal these phases build toward, including the future `knowledge-engine-ai`
   layer's role once Phase 2's Evidence Records exist
-- `docs/reference_knowledge_layer_design.md` -- design sketch (not started)
-  for a separate foundational-science reference corpus (open-license
-  chemistry/biology/microbiology/physics/pharmacology textbooks), giving
-  the extraction pipeline and future AI Interface Layer the background
-  context a primary-research paper always assumes but never restates.
-  Explicitly not evidence and not part of the paper corpus's 1,000-paper
-  cap. See `docs/roadmap/long_term_vision.md`'s matching section.
+- `docs/reference_knowledge_layer_design.md` -- design sketch for a
+  reference knowledge layer giving the extraction pipeline and future AI
+  Interface Layer the background context a primary-research paper always
+  assumes but never restates. **M41** (see below) built the sketch's
+  recommended live-lookup path's first slice, `ke reference-lookup`
+  against Wikipedia; the stored-textbook path (open-license
+  chemistry/biology/microbiology/physics/pharmacology textbooks) remains
+  unbuilt pending real licensing/storage decisions. Explicitly not
+  evidence and not part of the paper corpus's 1,000-paper cap. See
+  `docs/roadmap/long_term_vision.md`'s matching section and
+  `docs/m41_reference_lookup.md`.

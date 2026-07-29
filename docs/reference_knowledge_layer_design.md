@@ -1,12 +1,14 @@
 # Reference Knowledge Layer Design (Sketch)
 
-Status: This is a design sketch, written before any implementation --
-the same role `docs/phase3_design.md` played before M30. It exists to
-capture the idea, the architecture it implies, and the real open
-decisions, so a future milestone starts from a considered design instead
-of an ad hoc PDF dump. Nothing in this document is built yet, and nothing
-here should be read as an implicit go-ahead to start importing textbooks
-without the licensing and storage decisions below actually being made.
+Status: This was a design sketch, written before any implementation --
+the same role `docs/phase3_design.md` played before M30. **M41 has since
+built the live-lookup path's first slice** (a live lookup against
+Wikipedia's REST summary API, `ke reference-lookup` -- see
+`docs/m41_reference_lookup.md`), confirming the "third option" section
+below's recommendation that live lookup was the better starting point.
+The stored-textbook path remains unbuilt and still needs the licensing
+and storage decisions below actually made before any code assumes a
+title list -- nothing here authorizes starting that path.
 
 ## Motivation
 
@@ -176,6 +178,13 @@ independently viable path, and likely the better starting point: it
 sidesteps the storage and per-title licensing questions below entirely,
 and fits the live, connected direction this project is actually building
 toward.
+
+**Built in M41** (`ke reference-lookup`, `knowledge_engine/
+reference_lookup.py`), against Wikipedia specifically -- see
+`docs/m41_reference_lookup.md` for what it does, why Wikipedia was
+picked first over RxNorm/MeSH/PubChem/UniProt, and what remains
+deliberately unbuilt (caching, extraction-pipeline integration, and the
+other named sources).
 
 ## Open questions (owner decisions, not resolved here)
 

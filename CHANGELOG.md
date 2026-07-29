@@ -958,6 +958,33 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     trailing window (results unchanged; no abbreviation or two-word
     combination in the list comes close to that length). Combined, both
     fixes took the real-corpus run from over 20 minutes to 21 seconds.
+- Added the M41 reference knowledge layer's first slice:
+  `docs/reference_knowledge_layer_design.md` sketched three options
+  (stored open-license textbooks, live lookups against free APIs, or
+  both) for grounding a paper's claim text against background scientific
+  knowledge (mechanisms, lab techniques, chemistry terms) it assumes but
+  never restates -- something this project's extraction pipeline has had
+  no equivalent for. M41 builds the sketch's recommended live-lookup
+  path: a new `ke reference-lookup <term>` command and
+  `knowledge_engine/reference_lookup.py`
+  (`reference_lookup_http.py`'s `UrllibWikipediaTransport` mirrors
+  `unpaywall_http.py`'s host-allowlisted transport pattern) query
+  Wikipedia's public REST summary API live for a term's title,
+  description, plain-language extract, source URL, and license (always
+  `CC BY-SA` when found, a license family `license_rules.py` already
+  recognizes), or return `found: false` if Wikipedia has no article --
+  never a guess. Explicitly background context, not evidence: never
+  routed through `EvidenceRecord` promotion, and never merged into the
+  evidence corpus's own search commands (`ke search`/`ke answer`/
+  `ke vector-search`/`ke fused-search`). No API key required, unlike
+  Unpaywall's `KE_UNPAYWALL_EMAIL`. Every result records its own
+  `retrieved_at` timestamp alongside the page's `page_last_modified`, the
+  reproducibility hook a future consumer citing a lookup's result would
+  need, without this milestone needing to build caching speculatively
+  ahead of an actual consumer. Live-verified against real terms
+  (`semaglutide`, `SGLT2 inhibitor`, the `Mercury` disambiguation page,
+  and a not-found term) before writing the parser and again after. See
+  `docs/m41_reference_lookup.md`.
 
 ### Changed
 
