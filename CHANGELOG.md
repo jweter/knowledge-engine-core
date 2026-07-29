@@ -918,6 +918,46 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   943-paper corpus: papers matching both signals (e.g. the SELECT and
   STEP 5 semaglutide trials) ranked above single-signal matches as
   expected.
+- Added the M40 extraction-review batch generation: the real corpus has
+  exactly two `EvidenceRecord` rows, both hand-authored before any
+  automated extraction existed, because `ke extraction-review-generate`
+  (M19/M20) had only ever run against one paper at a time -- the
+  deterministic extraction pipeline, built and (M38/its follow-up)
+  measured at scale, had never actually been used to generate the real
+  corpus's draft-evidence-item review queue, the material a human
+  reviewer works from to promote real evidence. Factored the single-paper
+  command's pipeline invocation into
+  `knowledge_engine/extraction_review_batch.py`
+  (`run_extraction_review_for_paper`, shared by both commands so they
+  can't drift apart) plus `run_batch_extraction_review` for
+  orchestration, and added a new `ke extraction-review-batch-generate`
+  CLI command that writes one combined JSONL queue (every item carries
+  its own `source_span.paper_id`, so items stay traceable without
+  per-paper files). Still not validated evidence -- `ke
+  extraction-review-promote` keeps refusing any item missing a
+  human-supplied `research_question`/`evidence_direction`, unchanged. A
+  paper with no persisted pages, or whose extraction run cannot be
+  recorded, is skipped and reported rather than aborting the whole batch.
+  Run against the real 943-paper corpus: 13,588 draft evidence items
+  across 943 papers (679 with at least one, 264 with none, 0 skipped for
+  missing pages).
+- Fixed two performance bugs found by that first live run, both only
+  visible at real-corpus scale:
+  - The batch command initially reused `_record_extraction_run`, which
+    calls `_local_database().initialize()` internally -- reconstructing a
+    fresh SQLAlchemy engine and re-running schema migration/FTS setup on
+    every one of 943 calls instead of once. Rewrote the command to open a
+    single database session for the whole batch.
+  - `knowledge_engine/sentence_split.py`'s `_ends_with_abbreviation`
+    searched all of `text[:match.start()]` on every candidate sentence
+    boundary -- a prefix that grows with the boundary's position in the
+    document -- even though only the trailing word or two can ever match
+    an abbreviation. Quadratic in document length, latent since
+    M17/M28 shipped: a single real ~180K-character paper took 30+ seconds
+    in `extract_pico` alone. Bounded the search to a fixed 40-character
+    trailing window (results unchanged; no abbreviation or two-word
+    combination in the list comes close to that length). Combined, both
+    fixes took the real-corpus run from over 20 minutes to 21 seconds.
 
 ### Changed
 
@@ -1094,6 +1134,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `PaperRepository._build_paper`, used by both overrides, so this class of
   copy-paste divergence cannot recur. Backfilled the existing local
   database with `ke paper-pages-backfill`.
+- Fixed a latent bug in `Database`'s SQLite engine setup: without
+  SQLAlchemy's documented pysqlite-SAVEPOINT workaround (disabling
+  pysqlite's own transaction heuristics via `isolation_level=None` and
+  issuing explicit `BEGIN` statements), a `session.begin_nested()`
+  SAVEPOINT that completed successfully was not actually undone by a
+  *later*, unrelated `session.rollback()` on the same session -- found
+  by a Codex review on the M40 PR (#177) of `ke
+  extraction-review-batch-generate`'s per-paper SAVEPOINT isolation, and
+  confirmed with a minimal repro before and after the fix. Affects every
+  existing `session.begin_nested()` use in the codebase
+  (`import_runs/linked.py`, `ingestion.py`, `linked_ingestion.py`), not
+  just the new command; fixed once at the engine level in
+  `knowledge_engine/database.py`. Full test suite green after the change;
+  re-verified against the real 943-paper corpus with identical results.
 
 ## [0.2.0-alpha.1] - 2026-07-11
 

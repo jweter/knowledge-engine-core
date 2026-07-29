@@ -156,6 +156,27 @@ acceptance, release validation, and optional post-release quality audits.
   72.0%, study type classified 40.6% -> 43.7%, PICO all-four-fields 23.3%
   -> 26.2% -- every signal improved or held steady. See
   `docs/m38_extraction_scale_assessment.md`.
+- **M40** ran the deterministic extraction-review pipeline at scale for
+  the first time, producing the real corpus's actual draft-evidence-item
+  review queue -- the real corpus had exactly two `EvidenceRecord` rows,
+  both hand-authored before any automated extraction existed, because
+  `ke extraction-review-generate` (M19/M20) had only ever been run one
+  paper at a time. `knowledge_engine/extraction_review_batch.py`
+  (`run_extraction_review_for_paper` -- factored out of the single-paper
+  CLI command so both share one pipeline implementation --
+  `run_batch_extraction_review`) plus a new `ke
+  extraction-review-batch-generate` CLI command run the same pipeline
+  across every persisted paper into one combined JSONL queue (every item
+  carries its own `source_span.paper_id`, so items stay traceable without
+  per-paper files). Still not validated evidence: `ke
+  extraction-review-promote`'s human-review gate is unchanged. Run
+  against the real 943-paper corpus: 13,588 draft items across 943
+  papers (679 with at least one, 264 with none, 0 skipped for missing
+  pages). The first live run also found a latent quadratic-time bug in
+  `knowledge_engine/sentence_split.py`'s abbreviation check -- a single
+  ~180K-character paper took 30+ seconds -- fixed by bounding the check
+  to a fixed trailing window instead of the whole growing prefix; the
+  full corpus run dropped from over 20 minutes to 21 seconds.
 
 ### M14: Controlled 500-paper rehearsal
 
@@ -298,11 +319,21 @@ across the full 943-paper real corpus for the first time and finding two
 concrete, diagnosed recall gaps (structured-section heading matching,
 study-type's closed vocabulary), both since authorized and fixed (see M38's
 roadmap entry above and `docs/m38_extraction_scale_assessment.md`'s
-"Resolved follow-up" section for the fixes and the re-measured numbers). The
-other half remains open: the real corpus still has exactly two
-`EvidenceRecord` rows, both hand-authored before automated extraction
-existed -- M38 and its follow-up fixes only measured and improved coverage;
-neither promoted anything to `EvidenceRecord`.
+"Resolved follow-up" section for the fixes and the re-measured numbers). **M40**
+closed most of the other half: `ke extraction-review-batch-generate` ran
+the same deterministic pipeline `ke extraction-review-generate` runs for
+one paper across all 943, producing 13,588 draft evidence items (679
+papers with at least one, 264 with none) -- the actual review queue a
+human works from to promote real `EvidenceRecord`s, which had simply never
+been generated before. The real corpus still has exactly two
+`EvidenceRecord` rows -- M40 generated the review material, it did not
+promote anything; `ke extraction-review-promote` still refuses any item
+missing a human-supplied `research_question`/`evidence_direction`, and
+that promotion step remains entirely manual by design. M40's first live
+run against the real corpus also found and fixed a latent quadratic-time
+bug in `knowledge_engine/sentence_split.py` (a single ~180K-character
+paper took 30+ seconds; see CHANGELOG) -- exactly the kind of gap this
+project's "run it at real scale" discipline exists to catch.
 The project owner's initial target was "at least a
 couple thousand papers"; that was revised down to **1,000 papers as a
 hard cap**, explicitly for GitHub space reasons -- the committed

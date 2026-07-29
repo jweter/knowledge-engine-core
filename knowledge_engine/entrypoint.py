@@ -54,15 +54,12 @@ from knowledge_engine.extraction import (
     PICO_EXTRACTION_RULES_VERSION,
     SECTION_DETECTION_RULES_VERSION,
     STUDY_DESIGN_RULES_VERSION,
-    build_draft_evidence_items,
-    classify_claim_framing,
-    classify_study_type,
-    detect_claim_candidates,
-    detect_sections,
-    extract_limitations,
-    extract_pico,
 )
 from knowledge_engine.extraction.evidence_items import PaperMetadata
+from knowledge_engine.extraction_review_batch import (
+    run_batch_extraction_review,
+    run_extraction_review_for_paper,
+)
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.manual_pdf_preview import (
@@ -251,6 +248,13 @@ PaperIdOption = Annotated[
 ExtractionReviewOutputOption = Annotated[
     Path,
     typer.Option("--output", help="Path for the JSONL draft extraction review queue."),
+]
+ExtractionReviewBatchPaperIdsOption = Annotated[
+    list[int] | None,
+    typer.Option(
+        "--paper-id",
+        help="Restrict the batch to this paper ID (repeatable; default: every persisted paper).",
+    ),
 ]
 DryRunOption = Annotated[
     bool,
@@ -1106,25 +1110,9 @@ def extraction_review_generate(
         )
         raise typer.Exit(1)
 
-    sections = detect_sections(pages)
-    candidates = detect_claim_candidates(pages, sections)
-    framings = classify_claim_framing(candidates)
-    study_type = classify_study_type(pages, sections)
-    limitations = extract_limitations(pages, sections)
-    pico = extract_pico(pages, sections)
     paper_metadata = PaperMetadata(paper_id=paper.id, doi=paper.doi, title=paper.title)
-    items = build_draft_evidence_items(
-        paper_metadata,
-        framings,
-        study_type=study_type,
-        limitations=limitations,
-        study_design_rules_version=STUDY_DESIGN_RULES_VERSION,
-        population=pico.population,
-        intervention=pico.intervention,
-        comparator=pico.comparator,
-        outcome=pico.outcome,
-        pico_extraction_rules_version=pico.rules_version,
-    )
+    result = run_extraction_review_for_paper(paper_metadata, pages)
+    items = result.draft_items
 
     lines = [json.dumps(item.to_dict()) for item in items]
     _write_output(output, "\n".join(lines) + ("\n" if lines else ""))
@@ -1133,9 +1121,9 @@ def extraction_review_generate(
         _record_extraction_run(
             paper_id=paper.id,
             output_path=output,
-            page_count=len(pages),
-            section_count=len(sections),
-            candidate_count=len(candidates),
+            page_count=result.page_count,
+            section_count=result.section_count,
+            candidate_count=result.candidate_count,
             draft_item_count=len(items),
         )
     except Exception:
@@ -1150,18 +1138,19 @@ def extraction_review_generate(
     pico_detected = ", ".join(
         field
         for field, value in (
-            ("population", pico.population),
-            ("intervention", pico.intervention),
-            ("comparator", pico.comparator),
-            ("outcome", pico.outcome),
+            ("population", result.pico.population),
+            ("intervention", result.pico.intervention),
+            ("comparator", result.pico.comparator),
+            ("outcome", result.pico.outcome),
         )
         if value
     )
     console.print(
         f"[green]Wrote {len(items)} draft evidence item(s):[/green] {output} "
-        f"({len(pages)} page(s), {len(sections)} section(s), {len(candidates)} candidate(s), "
-        f"study_type: {study_type or 'not detected'}, "
-        f"limitations: {'detected' if limitations else 'not detected'}, "
+        f"({result.page_count} page(s), {result.section_count} section(s), "
+        f"{result.candidate_count} candidate(s), "
+        f"study_type: {result.study_type or 'not detected'}, "
+        f"limitations: {'detected' if result.limitations else 'not detected'}, "
         f"PICO fields detected: {pico_detected or 'none'})."
     )
     console.print(
@@ -1169,6 +1158,111 @@ def extraction_review_generate(
         "research_question and evidence_direction require human completion. "
         "study_type, limitations, and population/intervention/comparator/outcome are "
         "populated automatically when detected, never guessed.[/bold]"
+    )
+
+
+@app.command("extraction-review-batch-generate")
+def extraction_review_batch_generate(
+    output: ExtractionReviewOutputOption,
+    paper_id: ExtractionReviewBatchPaperIdsOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Run `ke extraction-review-generate`'s pipeline across many papers at once.
+
+    Writes one combined JSONL draft-evidence-item review queue -- every item
+    already carries its own `source_span.paper_id`, so a reviewer can trace
+    any item back to its paper without needing per-paper files. Exactly the
+    same pipeline as the single-paper command; this only removes the
+    one-paper-at-a-time friction of generating the queue a reviewer works
+    from. Still not validated evidence: `ke extraction-review-promote`
+    remains the only path from a draft item to a real `EvidenceRecord`, and
+    it still refuses any item missing a human-supplied
+    `research_question`/`evidence_direction`. A paper with no persisted
+    pages is skipped and counted, not a hard failure, so one incomplete
+    paper cannot abort the whole batch. An unknown `--paper-id` is rejected
+    outright, matching `ke embedding-index-build`'s existing dangling-ID
+    behavior -- an explicit request naming a paper that doesn't exist is
+    reported, never silently dropped from the batch.
+    """
+
+    _validate_output(output, force=force)
+
+    database = _local_database()
+    database.initialize()
+    lines: list[str] = []
+    recorded_paper_count = 0
+    unrecorded_paper_ids: list[int] = []
+    with database.session() as session:
+        repository = PaperRepository(session)
+        if paper_id:
+            papers = repository.get_many(paper_id)
+            missing_ids = sorted(set(paper_id) - {paper.id for paper in papers})
+            if missing_ids:
+                console.print(
+                    f"[red]Unknown paper ID(s):[/red] "
+                    f"{', '.join(str(missing_id) for missing_id in missing_ids)}"
+                )
+                raise typer.Exit(1)
+        else:
+            papers = repository.list_papers()
+        if not papers:
+            console.print("[yellow]No papers found to process.[/yellow]")
+            return
+        paper_pages = [
+            (
+                PaperMetadata(paper_id=paper.id, doi=paper.doi, title=paper.title),
+                [ParsedPage(page_number=page.page_number, text=page.text) for page in paper.pages],
+            )
+            for paper in sorted(papers, key=lambda paper: paper.id)
+        ]
+
+        summary = run_batch_extraction_review(paper_pages)
+
+        run_repository = ExtractionRunRepository(session)
+        for result in summary.results:
+            try:
+                with session.begin_nested():
+                    run_repository.create(
+                        paper_id=result.paper_id,
+                        output_path=str(output),
+                        page_count=result.page_count,
+                        section_count=result.section_count,
+                        candidate_count=result.candidate_count,
+                        draft_item_count=len(result.draft_items),
+                        section_detection_rules_version=SECTION_DETECTION_RULES_VERSION,
+                        claim_candidate_rules_version=CLAIM_CANDIDATE_RULES_VERSION,
+                        claim_framing_rules_version=CLAIM_FRAMING_RULES_VERSION,
+                        draft_evidence_item_rules_version=DRAFT_EVIDENCE_ITEM_RULES_VERSION,
+                        study_design_rules_version=STUDY_DESIGN_RULES_VERSION,
+                        pico_extraction_rules_version=PICO_EXTRACTION_RULES_VERSION,
+                    )
+            except Exception:
+                unrecorded_paper_ids.append(result.paper_id)
+                continue
+            recorded_paper_count += 1
+            lines.extend(json.dumps(item.to_dict()) for item in result.draft_items)
+
+        _write_output(output, "\n".join(lines) + ("\n" if lines else ""))
+
+    if unrecorded_paper_ids:
+        console.print(
+            f"[red]{len(unrecorded_paper_ids)} paper(s) could not have their extraction run "
+            "recorded and were excluded from the output:[/red] "
+            f"{', '.join(str(paper_id) for paper_id in unrecorded_paper_ids)}"
+        )
+
+    console.print(
+        f"[green]Wrote {len(lines)} draft evidence item(s) across {recorded_paper_count} "
+        f"paper(s):[/green] {output}"
+    )
+    console.print(
+        f"Papers skipped (no persisted pages): {summary.papers_with_zero_pages}; "
+        f"papers with zero draft items: {summary.papers_with_zero_candidates}."
+    )
+    console.print(
+        "[bold]Draft items are a review queue, not validated evidence -- "
+        "research_question and evidence_direction require human completion before "
+        "ke extraction-review-promote will accept any of them.[/bold]"
     )
 
 
