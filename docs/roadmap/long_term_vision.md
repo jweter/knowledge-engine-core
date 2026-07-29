@@ -14,6 +14,12 @@ Long term, the ecosystem may include:
 - `knowledge-engine-agents`: research agents
 - `knowledge-engine-graph`: citation and knowledge graph
 - `knowledge-engine-models`: trained and evaluated models
+- `knowledge-engine-reference` (sketched, not started): a foundational
+  reference layer -- open-license chemistry, biology, microbiology,
+  physics, biochemistry, pharmacology, and lab-technique textbooks --
+  giving the extraction pipeline and the future AI Interface Layer the
+  background knowledge a primary-research paper always assumes but never
+  restates. See `docs/reference_knowledge_layer_design.md`.
 
 ## The Finished Product Is Not an Offline PDF Archive
 
@@ -174,6 +180,35 @@ claim's supporting evidence has been revised -- has no path yet. Nothing
 in `core` currently tracks a claim or evidence record's revision history
 over time. This is a Phase 4 (Knowledge Graph)-era concern: it needs
 something to revise *against*, which requires the graph to exist first.
+
+## The Reference Knowledge Layer (Future, `knowledge-engine-reference`)
+
+A primary-research paper is written for a domain expert and never
+restates the chemistry, biochemistry, microbiology, physics,
+pharmacology, or lab-technique background that expert already has. This
+project's extraction pipeline, and the future AI Interface Layer above
+it, currently have no equivalent grounding to draw on -- they read a
+claim about "GLP-1 receptor agonism, assessed by ELISA" with no more
+context than the paper itself provides.
+
+The proposed fix is a separate reference layer -- either stored
+open-license textbooks, or live lookups against free APIs (NLM's
+RxNorm/MeSH/PubChem, Wikipedia/Wiktionary), or both -- explicitly
+**not** evidence and never routed through `EvidenceRecord` promotion:
+background context a future reasoning step consults, the same way a
+human expert's own training functions, not a citable finding. Live
+lookup is not a departure from this project's direction: "The Finished
+Product Is Not an Offline PDF Archive" above is explicit that Phase 0's
+offline-by-default posture describes `core`'s own engineering property
+for the primary evidence pipeline, not a claim about the finished,
+live, connected ecosystem -- a live-queried reference layer fits that
+end state naturally. See `docs/reference_knowledge_layer_design.md` for
+the design sketch: candidate open-license sources, the live-lookup
+option (likely the better starting point, since it needs no storage
+decision), why it needs its own manifest and index rather than reusing
+the paper corpus's, and the real open decisions (storage/hosting chief
+among them, if the stored-text path is chosen) still pending explicit
+owner sign-off. Nothing here is built yet.
 
 ## Tracking the Unknown
 

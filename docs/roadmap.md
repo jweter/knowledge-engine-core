@@ -483,3 +483,10 @@ Detailed milestone records include:
 - `docs/roadmap/long_term_vision.md` -- the multi-package ecosystem and final
   goal these phases build toward, including the future `knowledge-engine-ai`
   layer's role once Phase 2's Evidence Records exist
+- `docs/reference_knowledge_layer_design.md` -- design sketch (not started)
+  for a separate foundational-science reference corpus (open-license
+  chemistry/biology/microbiology/physics/pharmacology textbooks), giving
+  the extraction pipeline and future AI Interface Layer the background
+  context a primary-research paper always assumes but never restates.
+  Explicitly not evidence and not part of the paper corpus's 1,000-paper
+  cap. See `docs/roadmap/long_term_vision.md`'s matching section.
