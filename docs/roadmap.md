@@ -121,6 +121,30 @@ acceptance, release validation, and optional post-release quality audits.
   Unpaywall (M36) for OA/license evidence. The manifest-draft step refuses
   to produce a row unless license evidence already passed -- never
   guesses. See `docs/m37_manual_pdf_preview.md`.
+- **M38** closed the "Scaling beyond 500 papers for Phase 2 tuning" gap's
+  own named prerequisite: measured M16-M28's deterministic extraction
+  coverage in aggregate across the real corpus at scale for the first
+  time (943 papers), rather than only unit-tested fixtures and individual
+  by-hand `ke extraction-review-generate` runs.
+  `knowledge_engine/extraction_corpus_report.py` (core, tested) plus
+  `scripts/m38_extraction_corpus_report.py` (thin CLI wrapper) run the
+  same pipeline across every persisted paper and report coverage counts,
+  read-only -- no draft items, extraction runs, or `EvidenceRecord` rows
+  produced. Findings: section detection covers 99.7% of papers overall
+  but only 63% for `results`/`conclusion` specifically; claim-candidate
+  detection (scoped to those two section types) reaches 63.2% of papers,
+  with a diagnosed root cause split (56% missing the scoped sections
+  entirely -- often genuinely non-quantitative reviews; 44% a real recall
+  gap traced to a concrete example where an inline `"Results:"` label
+  never matches M16's deliberately conservative full-line-only heading
+  pattern); study-type classification covers 40.6%, an expected
+  consequence of an 8-design closed vocabulary against a more diverse
+  real corpus; PICO fields range 45-74% individually, 23.3% for all four
+  together. No rule was changed -- both diagnosed gaps interact with
+  corpus-inclusion-philosophy-adjacent tradeoffs reserved for explicit
+  owner decision, the same way `evaluate_scientific_scope`'s documented
+  weakness was flagged rather than unilaterally fixed. See
+  `docs/m38_extraction_scale_assessment.md`.
 
 ### M14: Controlled 500-paper rehearsal
 
@@ -256,15 +280,18 @@ happened, via M14's own pipeline).
 
 ### Scaling beyond 500 papers for Phase 2 tuning
 
-Phase 2's automated extraction (M16-M25) has been built and unit-tested
-against synthetic fixtures, but never run at scale against real papers --
-the real corpus currently has exactly two evidence records, both
-hand-authored before automated extraction existed. Tuning deterministic
-extraction rules (structured-section detection, claim-candidate signals,
-and the PICO/study-type/limitations extraction named in
-`docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed Fields
-section) needs a real corpus large enough to reveal patterns a 500-paper
-sample may not. The project owner's initial target was "at least a
+Phase 2's automated extraction (M16-M25) was built and unit-tested against
+synthetic fixtures; M38 (see above) closed the "never run at scale against
+real papers" half of this gap, measuring deterministic-extraction coverage
+across the full 943-paper real corpus for the first time and finding two
+concrete, diagnosed recall gaps (structured-section heading matching,
+study-type's closed vocabulary). The other half remains open: the real
+corpus still has exactly two `EvidenceRecord` rows, both hand-authored
+before automated extraction existed -- M38 measured coverage only and
+deliberately promoted nothing. Whether and how to act on M38's findings
+(relaxing section-heading matching, broadening the study-type vocabulary)
+is the project owner's call, per `docs/m38_extraction_scale_assessment.md`.
+The project owner's initial target was "at least a
 couple thousand papers"; that was revised down to **1,000 papers as a
 hard cap**, explicitly for GitHub space reasons -- the committed
 compressed `corpus_library` snapshot (see below) grows with the corpus,
