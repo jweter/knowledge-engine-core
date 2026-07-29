@@ -846,6 +846,34 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a full fresh reimport (943 imported, 0 failed, 0 skipped, an exact
   one-to-one match). Corpus corrected 951 -> 943; regenerated the
   compressed snapshot.
+- Added the M38 Phase 2 extraction scale-readiness assessment: closes
+  `docs/roadmap.md`'s "Scaling beyond 500 papers for Phase 2 tuning"
+  section's own named, never-executed prerequisite -- M16-M28's
+  deterministic extraction rules had been unit-tested against synthetic
+  fixtures and exercised by hand against individual real papers, but
+  detection coverage had never been measured in aggregate across the
+  real corpus at scale. `knowledge_engine/extraction_corpus_report.py`
+  (core aggregation logic, unit tested) plus
+  `scripts/m38_extraction_corpus_report.py` (thin CLI wrapper) run the
+  same deterministic pipeline `ke extraction-review-generate` runs for
+  one paper, across every persisted paper, and report coverage counts --
+  read-only, no draft items, extraction runs, or `EvidenceRecord` rows
+  produced. Run against the real 943-paper corpus: section detection
+  covers 99.7% of papers overall but only 63% for `results`/`conclusion`
+  specifically; claim-candidate detection (scoped to those two section
+  types) reaches 63.2%, with a diagnosed root-cause split (56% of misses
+  are papers genuinely missing those section types entirely, often
+  non-quantitative reviews; 44% a real recall gap traced to a concrete
+  example -- `PMC13366639.pdf` -- where an inline `"Results:"` label
+  never matches M16's deliberately conservative full-line-only heading
+  pattern); study-type classification covers 40.6%, an expected
+  consequence of an 8-design closed vocabulary against a more diverse
+  real corpus; PICO fields range 45-74% individually, 23.3% for all four
+  together. No extraction rule was changed -- both diagnosed gaps
+  interact with corpus-inclusion-philosophy-adjacent tradeoffs reserved
+  for explicit owner decision, the same way `evaluate_scientific_scope`'s
+  documented weakness was flagged rather than unilaterally fixed. See
+  `docs/m38_extraction_scale_assessment.md`.
 
 ### Changed
 
