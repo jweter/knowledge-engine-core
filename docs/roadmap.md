@@ -677,6 +677,16 @@ Detailed milestone records include:
   concept nodes, distinct from the paper-level evidence nodes that cite
   them -- the same distinction the Architecture sketch section above
   already drew before any Graph code existed.
+- **M46 (`docs/m46_graph_repository.md`)** builds the first Phase 4 code:
+  the `graph_concepts`/`graph_claims`/`graph_claim_concepts`/
+  `graph_claim_relationships` schema (version 8) exactly as designed,
+  the `GraphRepository` persistence layer, and `ke graph-build`, which
+  populates the graph from a validated `EvidenceRecord` file (reusing
+  M45's `annotate_draft_items` unchanged for PICO-to-concept resolution)
+  and an optional validated `RelationshipRecord` file. Live-verified
+  against the repo's real, if small, committed evidence corpus (2
+  records): 2 claims, 2 concepts, 4 claim-concept edges. `graph_citations`
+  remains deferred, unscoped work.
 
 ## Phase 5: Human Interface
 

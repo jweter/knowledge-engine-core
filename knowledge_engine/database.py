@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import Engine, create_engine, event, select, text
+from sqlalchemy import Engine, create_engine, event, func, select, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload, sessionmaker
@@ -18,6 +18,10 @@ from knowledge_engine.models import (
     Author,
     Base,
     ExtractionRun,
+    GraphClaim,
+    GraphClaimConcept,
+    GraphClaimRelationship,
+    GraphConcept,
     Keyword,
     Paper,
     PaperAuthor,
@@ -27,7 +31,7 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 7
+CURRENT_SCHEMA_VERSION = 8
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
@@ -64,6 +68,14 @@ _SCHEMA_V7_COLUMNS: dict[str, dict[str, str]] = {
 _TABLES_INTRODUCED_AT_VERSION: dict[int, frozenset[str]] = {
     4: frozenset({"paper_pages"}),
     5: frozenset({"extraction_runs"}),
+    8: frozenset(
+        {
+            "graph_concepts",
+            "graph_claims",
+            "graph_claim_concepts",
+            "graph_claim_relationships",
+        }
+    ),
 }
 
 _SCHEMA_V2_INDEXES: dict[str, tuple[str, str]] = {
@@ -620,6 +632,222 @@ class ExtractionRunRepository:
             .order_by(ExtractionRun.id)
         )
         return list(self.session.scalars(statement))
+
+
+class GraphRepository:
+    """Persistence operations for the Phase 4 knowledge graph.
+
+    See `docs/phase4_design.md`. `graph_citations` is deliberately absent --
+    citation-list extraction is unscoped and deferred, so no methods for it
+    exist here yet.
+    """
+
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def get_or_create_concept(
+        self,
+        *,
+        label: str,
+        source: str,
+        source_reference_id: str | None,
+        definition: str | None,
+        source_url: str | None,
+        license: str | None,
+        retrieved_at: str,
+    ) -> GraphConcept:
+        """Return an existing concept by identity, or create one.
+
+        Only concepts with a real `source_reference_id` (a resolved
+        reference-layer lookup) are deduplicated. Bare `source='pico'`
+        concepts have no lookup identity and are always inserted fresh --
+        see the design doc's "Concept-node duplication across sources" risk.
+        """
+
+        if source_reference_id is not None:
+            existing = self.session.scalar(
+                select(GraphConcept).where(
+                    GraphConcept.source == source,
+                    GraphConcept.source_reference_id == source_reference_id,
+                )
+            )
+            if existing:
+                return existing
+
+        concept = GraphConcept(
+            label=label,
+            source=source,
+            source_reference_id=source_reference_id,
+            definition=definition,
+            source_url=source_url,
+            license=license,
+            retrieved_at=retrieved_at,
+        )
+        self.session.add(concept)
+        self.session.flush()
+        return concept
+
+    def get_concept(self, concept_id: int) -> GraphConcept | None:
+        """Return one concept by primary key."""
+
+        return self.session.get(GraphConcept, concept_id)
+
+    def get_or_create_claim(self, evidence_record_id: str) -> GraphClaim:
+        """Return an existing claim node by `EvidenceRecord` ID, or create one."""
+
+        existing = self.session.scalar(
+            select(GraphClaim).where(GraphClaim.evidence_record_id == evidence_record_id)
+        )
+        if existing:
+            return existing
+
+        claim = GraphClaim(evidence_record_id=evidence_record_id, created_at=_utc_now_iso())
+        self.session.add(claim)
+        self.session.flush()
+        return claim
+
+    def get_claim(self, claim_id: int) -> GraphClaim | None:
+        """Return one claim by primary key."""
+
+        return self.session.get(GraphClaim, claim_id)
+
+    def link_claim_concept(
+        self, claim_id: int, concept_id: int, edge_role: str
+    ) -> GraphClaimConcept:
+        """Return an existing claim-concept edge, or create one.
+
+        Idempotent on `(claim_id, concept_id, edge_role)`.
+        """
+
+        existing = self.session.scalar(
+            select(GraphClaimConcept).where(
+                GraphClaimConcept.claim_id == claim_id,
+                GraphClaimConcept.concept_id == concept_id,
+                GraphClaimConcept.edge_role == edge_role,
+            )
+        )
+        if existing:
+            return existing
+
+        edge = GraphClaimConcept(
+            claim_id=claim_id,
+            concept_id=concept_id,
+            edge_role=edge_role,
+            created_at=_utc_now_iso(),
+        )
+        self.session.add(edge)
+        self.session.flush()
+        return edge
+
+    def get_or_create_relationship_edge(
+        self,
+        relationship_id: str,
+        *,
+        source_claim_id: int,
+        target_claim_id: int,
+        relationship_type: str,
+        rationale: str,
+    ) -> GraphClaimRelationship:
+        """Return an existing relationship edge by `RelationshipRecord` ID, or create one."""
+
+        existing = self.session.scalar(
+            select(GraphClaimRelationship).where(
+                GraphClaimRelationship.relationship_id == relationship_id
+            )
+        )
+        if existing:
+            return existing
+
+        edge = GraphClaimRelationship(
+            relationship_id=relationship_id,
+            source_claim_id=source_claim_id,
+            target_claim_id=target_claim_id,
+            relationship_type=relationship_type,
+            rationale=rationale,
+            created_at=_utc_now_iso(),
+        )
+        self.session.add(edge)
+        self.session.flush()
+        return edge
+
+    def concepts_for_claim(self, claim_id: int) -> list[GraphConcept]:
+        """Return every concept linked to one claim, via any edge role.
+
+        A claim may link to the same concept under more than one edge role
+        (the `graph_claim_concepts` unique constraint is per
+        `(claim_id, concept_id, edge_role)`, not per `(claim_id,
+        concept_id)`) -- `distinct()` collapses that to one node per claim,
+        matching the traversal's own "every concept" contract rather than
+        "every edge."
+        """
+
+        statement = (
+            select(GraphConcept)
+            .join(GraphClaimConcept, GraphClaimConcept.concept_id == GraphConcept.id)
+            .where(GraphClaimConcept.claim_id == claim_id)
+            .order_by(GraphConcept.id)
+            .distinct()
+        )
+        return list(self.session.scalars(statement))
+
+    def claims_for_concept(self, concept_id: int) -> list[GraphClaim]:
+        """Return every claim linked to one concept, via any edge role.
+
+        See `concepts_for_claim` -- the same multi-role duplication is
+        possible in this direction too.
+        """
+
+        statement = (
+            select(GraphClaim)
+            .join(GraphClaimConcept, GraphClaimConcept.claim_id == GraphClaim.id)
+            .where(GraphClaimConcept.concept_id == concept_id)
+            .order_by(GraphClaim.id)
+            .distinct()
+        )
+        return list(self.session.scalars(statement))
+
+    def relationships_for_claim(self, claim_id: int) -> list[GraphClaimRelationship]:
+        """Return every relationship edge touching one claim, as source or target."""
+
+        statement = (
+            select(GraphClaimRelationship)
+            .where(
+                (GraphClaimRelationship.source_claim_id == claim_id)
+                | (GraphClaimRelationship.target_claim_id == claim_id)
+            )
+            .order_by(GraphClaimRelationship.id)
+        )
+        return list(self.session.scalars(statement))
+
+    def population_counts(self) -> dict[str, Any]:
+        """Return the graph's total current row counts, e.g. for `ke graph-build`'s summary.
+
+        Reports the database's actual current state, not a per-run delta --
+        matching `docs/phase4_design.md`'s Testing Strategy promise to
+        report real graph population counts, mirroring
+        `scripts/m38_extraction_corpus_report.py`'s own corpus-state
+        reporting.
+        """
+
+        concepts_by_source: dict[str, int] = {
+            source: count
+            for source, count in self.session.execute(
+                select(GraphConcept.source, func.count()).group_by(GraphConcept.source)
+            )
+        }
+        return {
+            "concepts": sum(concepts_by_source.values()),
+            "concepts_by_source": concepts_by_source,
+            "claims": self.session.scalar(select(func.count()).select_from(GraphClaim)) or 0,
+            "claim_concept_edges": self.session.scalar(
+                select(func.count()).select_from(GraphClaimConcept)
+            )
+            or 0,
+            "relationship_edges": self.session.scalar(
+                select(func.count()).select_from(GraphClaimRelationship)
+            )
+            or 0,
+        }
 
 
 def database_exists(settings: Settings) -> bool:
