@@ -86,6 +86,8 @@ from knowledge_engine.pubmed_discovery import (
     NcbiDiscoveryError,
     PubmedPmcDiscoveryService,
 )
+from knowledge_engine.search import SearchService
+from knowledge_engine.search_fusion import fuse_rankings
 from knowledge_engine.unpaywall_http import UrllibUnpaywallTransport
 from knowledge_engine.unpaywall_lookup import GetTransport as UnpaywallGetTransport
 from knowledge_engine.unpaywall_lookup import (
@@ -332,6 +334,25 @@ EmbeddingGeneratePaperIdsOption = Annotated[
     list[int] | None,
     typer.Option(
         "--paper-id", help="Restrict generation to this paper ID (repeatable; default: all)."
+    ),
+]
+FusedSearchQueryTextArgument = Annotated[
+    str, typer.Argument(help="Free-text query used for both lexical and semantic retrieval.")
+]
+FusedSearchGeneratorOption = Annotated[
+    str,
+    typer.Option(
+        "--generator", help="Embedding generator for the semantic side: 'local' or 'openai'."
+    ),
+]
+FusedSearchCandidateLimitOption = Annotated[
+    int,
+    typer.Option(
+        "--candidate-limit",
+        help="How many results to pull from each of the lexical and semantic rankings "
+        "before fusing them.",
+        min=1,
+        max=200,
     ),
 ]
 
@@ -1579,5 +1600,106 @@ def vector_search(
     console.print()
     console.print(
         "[bold]This is vector similarity only, not lexical search and not scientific "
+        "synthesis.[/bold]"
+    )
+
+
+@app.command("fused-search")
+def fused_search(
+    query_text: FusedSearchQueryTextArgument,
+    index_path: ExistingEmbeddingIndexPathOption,
+    generator: FusedSearchGeneratorOption,
+    model: VectorSearchModelOption = None,
+    limit: VectorSearchLimitOption = 10,
+    candidate_limit: FusedSearchCandidateLimitOption = 25,
+) -> None:
+    """Combine lexical (`ke search`) and semantic (`ke vector-search`) retrieval.
+
+    Resolves `docs/phase3_design.md`'s last open Phase 3 design question:
+    the two retrieval signals have run as separate commands since M30/M32,
+    with no combined ranking. This runs both against the same free-text
+    query -- lexical via SQLite FTS5, semantic by embedding the query live
+    (via `--generator`, the same generators `ke vector-search --query-text`
+    uses) and searching the local FAISS index -- and fuses the two ranked
+    paper_id lists with Reciprocal Rank Fusion (see
+    `knowledge_engine.search_fusion`): a paper appearing in both rankings
+    outranks one appearing in only one. `--candidate-limit` controls how
+    many results are pulled from each individual ranking before fusing
+    (wider than `--limit`, the final result count, so fusion has enough
+    breadth to work with).
+    """
+
+    index_metadata = load_index_metadata(index_path)
+    if index_metadata is None:
+        console.print(
+            f"[red]Index at {index_path} has no recorded embedding_model "
+            "metadata.[/red] Refusing to search an index whose embedding model cannot "
+            "be verified."
+        )
+        raise typer.Exit(1)
+
+    embedding_generator = _build_embedding_generator(generator, model)
+    try:
+        vector: list[float] = list(embedding_generator.generate(query_text))
+    except (LocalEmbeddingError, OpenAiEmbeddingError) as exc:
+        console.print(f"[red]Failed to embed query text:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from None
+
+    if embedding_generator.model_id != index_metadata.embedding_model:
+        console.print(
+            f"[red]Query was embedded with '{escape(embedding_generator.model_id)}'; "
+            f"this index was built with '{escape(index_metadata.embedding_model)}'.[/red] "
+            "Refusing to compare vectors from different embedding models."
+        )
+        raise typer.Exit(1)
+
+    try:
+        index = FaissVectorIndex.load(index_path, dimension=len(vector))
+    except VectorSearchError as exc:
+        console.print(f"[red]{escape(str(exc))}[/red]")
+        raise typer.Exit(1) from None
+
+    semantic_paper_ids = [match.vector_id for match in index.search(vector, k=candidate_limit)]
+
+    database = _local_database()
+    database.initialize()
+    with database.session() as session:
+        lexical_paper_ids = [
+            result.paper_id
+            for result in SearchService(session).search(query_text, limit=candidate_limit)
+        ]
+        fused = fuse_rankings(lexical_paper_ids, semantic_paper_ids)[:limit]
+        repository = PaperRepository(session)
+        papers_by_id = {
+            paper.id: paper for paper in repository.get_many([result.paper_id for result in fused])
+        }
+
+    if not fused:
+        console.print("[yellow]No matches found in either lexical or semantic search.[/yellow]")
+        return
+
+    console.print(f"[bold]Fused search results for:[/bold] {escape(query_text)}")
+    console.print(
+        f"(lexical: SQLite FTS5; semantic: {index_path}, "
+        f"embedding_model: {index_metadata.embedding_model})"
+    )
+    for rank, result in enumerate(fused, start=1):
+        paper = papers_by_id.get(result.paper_id)
+        title = escape(paper.title) if paper else "Unknown paper (not in local database)"
+        matched_via = []
+        if result.lexical_rank is not None:
+            matched_via.append(f"lexical #{result.lexical_rank}")
+        if result.semantic_rank is not None:
+            matched_via.append(f"semantic #{result.semantic_rank}")
+        console.print()
+        console.print(f"[bold]{rank}. {title}[/bold]")
+        console.print(f"Paper ID: {result.paper_id}")
+        console.print(f"Fused score: {result.fused_score:.4f} (matched: {', '.join(matched_via)})")
+        if paper:
+            console.print(f"DOI: {escape(paper.doi or 'Unknown')}")
+
+    console.print()
+    console.print(
+        "[bold]This is combined lexical and semantic retrieval only, not scientific "
         "synthesis.[/bold]"
     )

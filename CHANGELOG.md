@@ -902,6 +902,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   PICO all-four-fields 23.3% -> 26.2% -- every signal improved or held
   steady. See `docs/m38_extraction_scale_assessment.md`'s "Resolved
   follow-up" section.
+- Added the M39 lexical+semantic search fusion (Phase 3): closes
+  `docs/phase3_design.md`'s last open design question, how `ke search`
+  (lexical, FTS5) and `ke vector-search` (semantic, FAISS) results combine
+  into one ranked list. `knowledge_engine/search_fusion.py` implements
+  Reciprocal Rank Fusion (RRF) -- a paper's fused score is
+  `sum(1 / (k + rank))` across every ranking it appears in, `k = 60` --
+  needing only each system's rank position, not their incomparable raw
+  scores (bm25 vs squared L2 distance), so a paper found by both signals
+  naturally outranks one found by only one with no cross-system weight to
+  tune. A new `ke fused-search <query-text>` command runs both retrieval
+  signals against the same free-text query and fuses them;
+  `ke search`/`ke answer`/`ke vector-search` are unchanged and remain
+  available separately. Live-smoke-tested against a subset of the real
+  943-paper corpus: papers matching both signals (e.g. the SELECT and
+  STEP 5 semaglutide trials) ranked above single-signal matches as
+  expected.
 
 ### Changed
 
