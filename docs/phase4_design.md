@@ -304,7 +304,14 @@ discipline continuous from design through implementation.
   in this design doc. The first Phase 4 milestone builds the schema
   below (fully populatable today); Stability Score and Tracking the
   Unknown get their own dedicated follow-up design once the graph itself
-  exists to prototype against.
+  exists to prototype against. **Resolved by M50** (`docs/stability_and_tracking_design.md`,
+  written once M46-M49 gave this a real graph to design against): a
+  revision event is a `supersedes` `RelationshipRecord`/
+  `graph_claim_relationships` edge (the fifth `relationship_type`, no
+  new table); an honest, non-inferred "gap" is a claim with zero
+  relationship edges of any type. The actual Stability sub-score formula
+  and a richer "weak evidence area" report both stay explicitly out of
+  `core`'s scope -- see that document's own Open Questions.
 - **Whether `evidence_record_id`/`relationship_id` should become real
   foreign keys eventually**, i.e. whether `EvidenceRecord`/
   `RelationshipRecord` should move from JSONL to a proper SQLAlchemy

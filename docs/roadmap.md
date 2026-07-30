@@ -749,6 +749,33 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   surfaces the one real pair sharing 2 concepts (`semaglutide`,
   `placebo`), and correctly reports 0 pairs when
   `--min-shared-concepts` is raised past that real count.
+- **M50 (`docs/stability_and_tracking_design.md`)** wrote the dedicated
+  follow-up design `docs/phase4_design.md`'s Open Questions deferred for
+  Stability Score and Tracking the Unknown, then built the one part of
+  it that needed no further owner decision: `supersedes`, a fifth
+  `RelationshipRecord`/`graph_claim_relationships` type -- a newer claim
+  explicitly revising an older one, reusing 100% of the existing
+  relationship machinery rather than a new table. An honest,
+  non-inferred "gap" is scoped as a claim with zero relationship edges
+  of any type; the actual Stability sub-score formula and a richer
+  "weak evidence area" report stay explicitly out of `core`'s scope, the
+  same boundary the Confidence Rating Design Guidance already draws.
+  Required a real schema migration (SQLite `CHECK` constraints cannot be
+  altered in place, so version 10 rebuilds `graph_claim_relationships`)
+  -- live-verified against a copy of the real corpus database, which
+  upgraded cleanly from its actual current schema version.
+- **M51 (`docs/m51_graph_unconfirmed_claims.md`)** built the first
+  concrete slice of `docs/founding_vision.md`'s Addendum, "Tracking the
+  Unknown": `ke graph-unconfirmed-claims` lists every claim no
+  relationship edge of any type touches yet, the honest, non-inferred
+  "gap" signal M50 already decided on. Purely a display layer over a new
+  `GraphRepository.unconfirmed_claims` outer join -- no research-question
+  grouping, no severity ranking, no cross-reference with `ke
+  graph-relationship-candidates`'s own output, all explicitly left for
+  later per M50's own Open Questions. Live-verified against the real
+  corpus: both real claims list as unconfirmed before any relationship
+  exists, correctly drops to zero once one real `supports` relationship
+  is built between them.
 
 ## Phase 5: Human Interface
 

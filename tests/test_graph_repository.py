@@ -253,6 +253,28 @@ def test_get_or_create_relationship_edge_is_idempotent(tmp_path: Path) -> None:
         assert first.id == second.id
 
 
+def test_get_or_create_relationship_edge_accepts_supersedes(tmp_path: Path) -> None:
+    """M50: `supersedes` is a fifth valid relationship_type -- a newer claim
+    explicitly revising an older one, the Stability Score revision-event
+    mechanism `docs/stability_and_tracking_design.md` designed."""
+
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        older_claim = repository.get_or_create_claim("ev-older")
+        newer_claim = repository.get_or_create_claim("ev-newer")
+
+        edge = repository.get_or_create_relationship_edge(
+            "rel-1",
+            source_claim_id=newer_claim.id,
+            target_claim_id=older_claim.id,
+            relationship_type="supersedes",
+            rationale="A later, larger trial revises the earlier estimate.",
+        )
+        assert edge.relationship_type == "supersedes"
+
+
 def test_get_or_create_relationship_edge_rejects_invalid_type(tmp_path: Path) -> None:
     database = build_database(tmp_path)
 
@@ -431,6 +453,48 @@ def test_citations_for_paper_returns_edges_in_both_directions(tmp_path: Path) ->
 
         counts = repository.population_counts()
         assert counts["citation_edges"] == 1
+
+
+def test_unconfirmed_claims_returns_only_claims_with_no_relationship_edge(
+    tmp_path: Path,
+) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        confirmed_source = repository.get_or_create_claim("ev-confirmed-source")
+        confirmed_target = repository.get_or_create_claim("ev-confirmed-target")
+        unconfirmed = repository.get_or_create_claim("ev-unconfirmed")
+        repository.get_or_create_relationship_edge(
+            "rel-1",
+            source_claim_id=confirmed_source.id,
+            target_claim_id=confirmed_target.id,
+            relationship_type="supports",
+            rationale="Both records report consistent weight-loss outcomes.",
+        )
+
+        results = repository.unconfirmed_claims()
+
+        assert [claim.evidence_record_id for claim in results] == ["ev-unconfirmed"]
+        assert unconfirmed.id in {claim.id for claim in results}
+
+
+def test_unconfirmed_claims_is_empty_when_every_claim_has_an_edge(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        source = repository.get_or_create_claim("ev-source")
+        target = repository.get_or_create_claim("ev-target")
+        repository.get_or_create_relationship_edge(
+            "rel-1",
+            source_claim_id=source.id,
+            target_claim_id=target.id,
+            relationship_type="supersedes",
+            rationale="A later trial revises the earlier estimate.",
+        )
+
+        assert repository.unconfirmed_claims() == []
 
 
 def test_relationship_candidates_surfaces_pairs_sharing_a_concept(tmp_path: Path) -> None:

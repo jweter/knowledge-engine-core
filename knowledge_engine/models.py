@@ -485,6 +485,12 @@ class GraphClaimRelationship(Base):
     reference. This table does not replace `RelationshipRecord`s or `ke
     relationship-validate` -- it is a projection of the same validated data,
     not a second source of truth.
+
+    `relationship_type` includes `supersedes` (M50) alongside the original
+    four types: a human-authored claim that a newer claim revises an older
+    one, the Stability Score revision-event mechanism
+    `docs/stability_and_tracking_design.md` designed -- deliberately reusing
+    this table rather than adding a new one. See that doc for why.
     """
 
     __tablename__ = "graph_claim_relationships"
@@ -505,7 +511,8 @@ class GraphClaimRelationship(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "relationship_type IN ('supports','contradicts','qualifies','contextualizes')",
+            "relationship_type IN "
+            "('supports','contradicts','qualifies','contextualizes','supersedes')",
             name="ck_graph_claim_relationships_type",
         ),
     )

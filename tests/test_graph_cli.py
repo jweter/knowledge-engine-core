@@ -175,6 +175,57 @@ def test_graph_build_cli_links_a_relationship_between_two_claims(
         assert [r.relationship_id for r in relationships] == ["rel-1"]
 
 
+def test_graph_build_cli_links_a_supersedes_relationship_between_two_claims(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """M50: `supersedes` builds and renders through the graph exactly like
+    the original four relationship types, and is excluded from
+    `graph-relationship-candidates` like any other existing edge."""
+
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record("ev-older"),
+        _evidence_record("ev-newer"),
+    )
+    relationships_path = _write_jsonl(
+        tmp_path / "relationships.jsonl",
+        {
+            "relationship_id": "rel-1",
+            "source_evidence_record_id": "ev-newer",
+            "target_evidence_record_id": "ev-older",
+            "relationship_type": "supersedes",
+            "rationale": "A later, larger trial revises the earlier estimate.",
+        },
+    )
+
+    build_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "graph-build",
+            "--evidence",
+            str(evidence_path),
+            "--relationships",
+            str(relationships_path),
+        ],
+    )
+    assert build_result.exit_code == 0, build_result.output
+    assert "1 relationship edge(s) created" in _unwrapped(build_result.output)
+
+    report_result = CliRunner().invoke(
+        entrypoint.app, ["graph-report", "--evidence-record-id", "ev-newer"]
+    )
+    assert report_result.exit_code == 0, report_result.output
+    assert "supersedes (source)" in _unwrapped(report_result.output)
+    assert "ev-older" in _unwrapped(report_result.output)
+
+    candidates_result = CliRunner().invoke(entrypoint.app, ["graph-relationship-candidates"])
+    assert candidates_result.exit_code == 0, candidates_result.output
+    assert "Candidate pairs found: 0" in _unwrapped(candidates_result.output)
+
+
 def test_graph_build_cli_skips_a_relationship_with_an_unknown_endpoint(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -564,6 +615,124 @@ def test_graph_relationship_candidates_rejects_a_symbolic_link_output(
     result = CliRunner().invoke(
         entrypoint.app,
         ["graph-relationship-candidates", "--output", str(output_path), "--force"],
+    )
+
+    assert result.exit_code != 0
+    assert target.read_text(encoding="utf-8") == "private"
+
+
+def test_graph_unconfirmed_claims_surfaces_a_claim_with_no_relationship_edge(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record("ev-confirmed-source"),
+        _evidence_record("ev-confirmed-target"),
+        _evidence_record("ev-unconfirmed"),
+    )
+    relationships_path = _write_jsonl(
+        tmp_path / "relationships.jsonl",
+        {
+            "relationship_id": "rel-1",
+            "source_evidence_record_id": "ev-confirmed-source",
+            "target_evidence_record_id": "ev-confirmed-target",
+            "relationship_type": "supports",
+            "rationale": "Both report the same direction.",
+        },
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "graph-build",
+            "--evidence",
+            str(evidence_path),
+            "--relationships",
+            str(relationships_path),
+        ],
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    result = CliRunner().invoke(entrypoint.app, ["graph-unconfirmed-claims"])
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Unconfirmed claims found: 1" in unwrapped
+    assert "ev-unconfirmed" in unwrapped
+    assert "ev-confirmed-source" not in unwrapped
+    assert "ev-confirmed-target" not in unwrapped
+
+
+def test_graph_unconfirmed_claims_is_empty_when_every_claim_has_an_edge(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record("ev-1"),
+        _evidence_record("ev-2"),
+    )
+    relationships_path = _write_jsonl(
+        tmp_path / "relationships.jsonl",
+        {
+            "relationship_id": "rel-1",
+            "source_evidence_record_id": "ev-1",
+            "target_evidence_record_id": "ev-2",
+            "relationship_type": "supersedes",
+            "rationale": "A later trial revises the earlier estimate.",
+        },
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "graph-build",
+            "--evidence",
+            str(evidence_path),
+            "--relationships",
+            str(relationships_path),
+        ],
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    result = CliRunner().invoke(entrypoint.app, ["graph-unconfirmed-claims"])
+
+    assert result.exit_code == 0, result.output
+    assert "Unconfirmed claims found: 0" in _unwrapped(result.output)
+
+
+def test_graph_unconfirmed_claims_writes_output_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    output_path = tmp_path / "unconfirmed.md"
+
+    result = CliRunner().invoke(
+        entrypoint.app, ["graph-unconfirmed-claims", "--output", str(output_path)]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Wrote unconfirmed claims report" in _unwrapped(result.output)
+    assert "Unconfirmed claims found: 0" in output_path.read_text(encoding="utf-8")
+
+
+def test_graph_unconfirmed_claims_rejects_a_symbolic_link_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    target = tmp_path / "target.md"
+    target.write_text("private", encoding="utf-8")
+    output_path = tmp_path / "unconfirmed.md"
+    output_path.symlink_to(target)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["graph-unconfirmed-claims", "--output", str(output_path), "--force"],
     )
 
     assert result.exit_code != 0

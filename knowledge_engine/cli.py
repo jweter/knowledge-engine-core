@@ -141,7 +141,13 @@ PromotionOutputOption = Annotated[
 ]
 ALLOWED_REVIEW_STATUSES = {"draft", "reviewed", "needs_revision", "rejected"}
 ALLOWED_EXTRACTION_STATUSES = {"draft_review_required", "draft_manual_prototype"}
-ALLOWED_RELATIONSHIP_TYPES = {"supports", "contradicts", "qualifies", "contextualizes"}
+ALLOWED_RELATIONSHIP_TYPES = {
+    "supports",
+    "contradicts",
+    "qualifies",
+    "contextualizes",
+    "supersedes",
+}
 EVIDENCE_SCHEMA_VERSION = "0.1"
 REQUIRED_EVIDENCE_FIELDS = {
     "schema_version",
@@ -506,9 +512,10 @@ def relationship_validate(
     """Validate human-authored evidence relationship records in a JSONL file.
 
     Never infers or detects a relationship -- validates only that a
-    reviewer-authored `supports`/`contradicts`/`qualifies`/`contextualizes`
-    link between two evidence records is well-formed. Deciding whether a
-    relationship actually holds remains a human judgment call.
+    reviewer-authored `supports`/`contradicts`/`qualifies`/`contextualizes`/
+    `supersedes` (M50: a newer claim revising an older one) link between two
+    evidence records is well-formed. Deciding whether a relationship
+    actually holds remains a human judgment call.
     """
 
     known_evidence_ids: set[str] | None = None

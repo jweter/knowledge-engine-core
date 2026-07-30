@@ -1786,10 +1786,11 @@ def graph_build(
     An optional `--relationships` JSONL file (already passed `ke
     relationship-validate`) adds one `graph_claim_relationships` row per
     record, projecting M24's typed `supports`/`contradicts`/`qualifies`/
-    `contextualizes` edges into the graph unchanged -- this command never
-    infers or computes a relationship. A relationship whose endpoint is
-    not among the records in `--evidence` is skipped with a clear message,
-    never silently dropped or a hard failure of the whole run.
+    `contextualizes`/`supersedes` (M50) edges into the graph unchanged --
+    this command never infers or computes a relationship. A relationship
+    whose endpoint is not among the records in `--evidence` is skipped
+    with a clear message, never silently dropped or a hard failure of the
+    whole run.
 
     Every method this command calls stays on the same side of the seam
     `docs/roadmap/long_term_vision.md` establishes: it stores and links
@@ -2321,10 +2322,11 @@ def graph_relationship_candidates(
     concepts they share, so a reviewer does not have to compose candidate
     pairs from scratch when authoring a `RelationshipRecord`. Never infers,
     detects, or suggests a `supports`/`contradicts`/`qualifies`/
-    `contextualizes` relationship or its rationale -- that judgment call
-    stays entirely with the human, exactly as `ke relationship-validate`
-    already requires. A pair already linked by a validated relationship
-    edge is excluded, since a human has already made that call for it.
+    `contextualizes`/`supersedes` relationship or its rationale -- that
+    judgment call stays entirely with the human, exactly as `ke
+    relationship-validate` already requires. A pair already linked by a
+    validated relationship edge (any type, `supersedes` included) is
+    excluded, since a human has already made that call for it.
     """
 
     if output is not None:
@@ -2340,6 +2342,100 @@ def graph_relationship_candidates(
     if output is not None:
         _write_output(output, report)
         console.print(f"[green]Wrote relationship candidates report:[/green] {output}")
+        return
+
+    console.print(report, markup=False)
+
+
+def _build_unconfirmed_claims_report(graph_repository: GraphRepository) -> str:
+    """Build a Markdown report of claims with zero relationship edges of any type.
+
+    M50's Tracking the Unknown decision
+    (`docs/stability_and_tracking_design.md`): the only "gap" this report
+    can honestly surface without guessing is a real, structural fact the
+    graph already stores -- a claim no `supports`/`contradicts`/
+    `qualifies`/`contextualizes`/`supersedes` edge touches yet. It means
+    exactly one thing, stated precisely in the report's own Scope section
+    below: no second claim has been reviewed and explicitly related to
+    this one yet, not that the underlying finding is weak, wrong, or
+    under-researched.
+    """
+
+    claims = graph_repository.unconfirmed_claims()
+
+    lines = [
+        "# Knowledge Engine Graph Unconfirmed Claims",
+        "",
+        f"Generated: {_utc_now_iso_for_report()}",
+        "",
+        f"Unconfirmed claims found: {len(claims)}",
+        "",
+    ]
+    if not claims:
+        lines.extend(
+            [
+                "Every claim in the graph has at least one relationship edge.",
+                "",
+            ]
+        )
+    for claim in claims:
+        lines.extend(
+            [
+                f"## {_graph_report_text(claim.evidence_record_id)}",
+                "",
+                f"- Graph claim ID: {claim.id}",
+                f"- Created: {_graph_report_text(claim.created_at)}",
+                "",
+            ]
+        )
+
+    lines.extend(
+        [
+            "## Scope",
+            "",
+            "A claim listed here has no `supports`/`contradicts`/`qualifies`/"
+            "`contextualizes`/`supersedes` edge yet -- meaning no second "
+            "claim has been reviewed and explicitly related to it, nothing "
+            "more. This is a fact about `core`'s own review coverage, not a "
+            "judgment about the underlying science; run `ke "
+            "graph-relationship-candidates` to see which of these claims "
+            "already share a PICO-resolved concept with another claim, a "
+            "candidate a human reviewer may want to look at first.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+@app.command("graph-unconfirmed-claims")
+def graph_unconfirmed_claims(
+    output: GraphReportOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Surface claims with zero relationship edges of any type.
+
+    M50's Tracking the Unknown first slice
+    (`docs/stability_and_tracking_design.md`): the only honest, non-inferred
+    "gap" `core` can report is a claim no relationship edge touches yet --
+    a real structural fact the graph already stores, not a guess about
+    weak or missing evidence in the underlying science. Purely a display
+    layer over `GraphRepository.unconfirmed_claims`; never infers, ranks,
+    or judges scientific importance.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    database = _local_database()
+    database.initialize()
+
+    with database.session() as session:
+        graph_repository = GraphRepository(session)
+        report = _build_unconfirmed_claims_report(graph_repository)
+
+    if output is not None:
+        _write_output(output, report)
+        console.print(f"[green]Wrote unconfirmed claims report:[/green] {output}")
         return
 
     console.print(report, markup=False)
