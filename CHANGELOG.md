@@ -1285,6 +1285,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   real local corpus: correctly surfaces the one real pair (sharing
   `semaglutide`/`placebo`) and correctly reports zero pairs once
   `--min-shared-concepts` is raised past that real count.
+- Added M50 (`docs/stability_and_tracking_design.md`): the dedicated
+  Stability Score / Tracking the Unknown design `docs/phase4_design.md`'s
+  Open Questions deferred until the graph existed to design against.
+  Adds `supersedes` as a fifth `relationship_type` (schema version 10,
+  a real SQLite table rebuild since `CHECK` constraints cannot be
+  altered in place) -- a newer claim explicitly revising an older one,
+  reusing `RelationshipRecord`/`graph_claim_relationships` rather than a
+  new table. Scopes an honest, non-inferred "gap" as a claim with zero
+  relationship edges of any type. The Stability sub-score formula and a
+  richer "weak evidence area" report stay explicitly out of `core`'s
+  scope. Live-verified against a copy of the real corpus database: the
+  version 10 migration upgraded cleanly from its actual current schema
+  version, and a real `supersedes` relationship built, rendered in `ke
+  graph-report`, and was correctly excluded from `ke
+  graph-relationship-candidates`.
 
 ### Changed
 

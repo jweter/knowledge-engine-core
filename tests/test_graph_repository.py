@@ -253,6 +253,28 @@ def test_get_or_create_relationship_edge_is_idempotent(tmp_path: Path) -> None:
         assert first.id == second.id
 
 
+def test_get_or_create_relationship_edge_accepts_supersedes(tmp_path: Path) -> None:
+    """M50: `supersedes` is a fifth valid relationship_type -- a newer claim
+    explicitly revising an older one, the Stability Score revision-event
+    mechanism `docs/stability_and_tracking_design.md` designed."""
+
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        older_claim = repository.get_or_create_claim("ev-older")
+        newer_claim = repository.get_or_create_claim("ev-newer")
+
+        edge = repository.get_or_create_relationship_edge(
+            "rel-1",
+            source_claim_id=newer_claim.id,
+            target_claim_id=older_claim.id,
+            relationship_type="supersedes",
+            rationale="A later, larger trial revises the earlier estimate.",
+        )
+        assert edge.relationship_type == "supersedes"
+
+
 def test_get_or_create_relationship_edge_rejects_invalid_type(tmp_path: Path) -> None:
     database = build_database(tmp_path)
 

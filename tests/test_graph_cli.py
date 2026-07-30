@@ -175,6 +175,57 @@ def test_graph_build_cli_links_a_relationship_between_two_claims(
         assert [r.relationship_id for r in relationships] == ["rel-1"]
 
 
+def test_graph_build_cli_links_a_supersedes_relationship_between_two_claims(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """M50: `supersedes` builds and renders through the graph exactly like
+    the original four relationship types, and is excluded from
+    `graph-relationship-candidates` like any other existing edge."""
+
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record("ev-older"),
+        _evidence_record("ev-newer"),
+    )
+    relationships_path = _write_jsonl(
+        tmp_path / "relationships.jsonl",
+        {
+            "relationship_id": "rel-1",
+            "source_evidence_record_id": "ev-newer",
+            "target_evidence_record_id": "ev-older",
+            "relationship_type": "supersedes",
+            "rationale": "A later, larger trial revises the earlier estimate.",
+        },
+    )
+
+    build_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "graph-build",
+            "--evidence",
+            str(evidence_path),
+            "--relationships",
+            str(relationships_path),
+        ],
+    )
+    assert build_result.exit_code == 0, build_result.output
+    assert "1 relationship edge(s) created" in _unwrapped(build_result.output)
+
+    report_result = CliRunner().invoke(
+        entrypoint.app, ["graph-report", "--evidence-record-id", "ev-newer"]
+    )
+    assert report_result.exit_code == 0, report_result.output
+    assert "supersedes (source)" in _unwrapped(report_result.output)
+    assert "ev-older" in _unwrapped(report_result.output)
+
+    candidates_result = CliRunner().invoke(entrypoint.app, ["graph-relationship-candidates"])
+    assert candidates_result.exit_code == 0, candidates_result.output
+    assert "Candidate pairs found: 0" in _unwrapped(candidates_result.output)
+
+
 def test_graph_build_cli_skips_a_relationship_with_an_unknown_endpoint(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

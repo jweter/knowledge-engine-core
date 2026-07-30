@@ -52,7 +52,7 @@ def test_fresh_database_initializes_at_current_schema_version(tmp_path: Path) ->
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
         foreign_keys_enabled = connection.execute(text("PRAGMA foreign_keys")).scalar_one()
 
-    assert version == CURRENT_SCHEMA_VERSION == 9
+    assert version == CURRENT_SCHEMA_VERSION == 10
     assert "review_status" in _column_names(database, "import_runs")
     assert foreign_keys_enabled == 1
     assert "run_mode" in _column_names(database, "import_runs")
@@ -169,7 +169,7 @@ def test_upgrading_older_database_adds_new_table_without_error(tmp_path: Path) -
     assert "paper_pages" in _table_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 9
+    assert version == CURRENT_SCHEMA_VERSION == 10
 
 
 def test_dropping_paper_pages_at_current_version_is_not_silently_repaired(
@@ -211,7 +211,7 @@ def test_upgrading_older_database_adds_extraction_runs_table_without_error(
     assert "extraction_runs" in _table_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 9
+    assert version == CURRENT_SCHEMA_VERSION == 10
 
 
 def test_dropping_extraction_runs_at_current_version_is_not_silently_repaired(
@@ -256,7 +256,7 @@ def test_upgrading_older_database_adds_study_design_rules_version_column(
     assert "study_design_rules_version" in _column_names(database, "extraction_runs")
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 9
+    assert version == CURRENT_SCHEMA_VERSION == 10
 
 
 def test_upgrading_older_database_adds_pico_extraction_rules_version_column(
@@ -282,7 +282,7 @@ def test_upgrading_older_database_adds_pico_extraction_rules_version_column(
     assert "pico_extraction_rules_version" in _column_names(database, "extraction_runs")
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 9
+    assert version == CURRENT_SCHEMA_VERSION == 10
 
 
 def test_upgrading_older_database_adds_graph_citations_table_without_error(
@@ -306,4 +306,100 @@ def test_upgrading_older_database_adds_graph_citations_table_without_error(
     assert "graph_citations" in _table_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 9
+    assert version == CURRENT_SCHEMA_VERSION == 10
+
+
+def test_upgrading_older_database_widens_relationship_type_constraint(
+    tmp_path: Path,
+) -> None:
+    """M50 adds `supersedes` as a fifth relationship_type (version 10).
+
+    SQLite CHECK constraints cannot be altered in place, so the version 10
+    migration rebuilds `graph_claim_relationships` entirely -- simulate a
+    pre-M50 database (the original four-value constraint, with an existing
+    row) and confirm the rebuild preserves that row, keeps every index, and
+    accepts `supersedes` afterward.
+    """
+
+    database = _database(tmp_path)
+    database.initialize()
+
+    with database.engine.begin() as connection:
+        connection.execute(text("DROP TABLE graph_claim_relationships"))
+        connection.execute(
+            text(
+                "CREATE TABLE graph_claim_relationships ("
+                "id INTEGER NOT NULL PRIMARY KEY, "
+                "relationship_id VARCHAR(128) NOT NULL UNIQUE, "
+                "source_claim_id INTEGER NOT NULL REFERENCES graph_claims(id), "
+                "target_claim_id INTEGER NOT NULL REFERENCES graph_claims(id), "
+                "relationship_type VARCHAR(16) NOT NULL, "
+                "rationale TEXT NOT NULL, "
+                "created_at VARCHAR(32) NOT NULL, "
+                "CHECK (relationship_type IN "
+                "('supports','contradicts','qualifies','contextualizes'))"
+                ")"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX ix_graph_claim_relationships_relationship_id "
+                "ON graph_claim_relationships (relationship_id)"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX ix_graph_claim_relationships_source_claim_id "
+                "ON graph_claim_relationships (source_claim_id)"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE INDEX ix_graph_claim_relationships_target_claim_id "
+                "ON graph_claim_relationships (target_claim_id)"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO graph_claims (id, evidence_record_id, created_at) VALUES "
+                "(1, 'ev-1', '2026-01-01T00:00:00Z'), (2, 'ev-2', '2026-01-01T00:00:00Z')"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO graph_claim_relationships "
+                "(id, relationship_id, source_claim_id, target_claim_id, "
+                "relationship_type, rationale, created_at) VALUES "
+                "(1, 'rel-1', 1, 2, 'supports', 'Pre-existing row.', '2026-01-01T00:00:00Z')"
+            )
+        )
+        connection.execute(
+            text(f"UPDATE schema_versions SET version = 9 WHERE version = {CURRENT_SCHEMA_VERSION}")
+        )
+
+    database.initialize()
+
+    with database.engine.begin() as connection:
+        rows = connection.execute(
+            text("SELECT relationship_id, relationship_type FROM graph_claim_relationships")
+        ).all()
+        assert [tuple(row) for row in rows] == [("rel-1", "supports")]
+
+        connection.execute(
+            text(
+                "INSERT INTO graph_claim_relationships "
+                "(id, relationship_id, source_claim_id, target_claim_id, "
+                "relationship_type, rationale, created_at) VALUES "
+                "(2, 'rel-2', 2, 1, 'supersedes', 'A later trial revises the earlier one.', "
+                "'2026-01-01T00:00:00Z')"
+            )
+        )
+
+    assert {
+        "ix_graph_claim_relationships_relationship_id",
+        "ix_graph_claim_relationships_source_claim_id",
+        "ix_graph_claim_relationships_target_claim_id",
+    } <= _index_names(database)
+    with database.engine.connect() as connection:
+        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+    assert version == CURRENT_SCHEMA_VERSION == 10

@@ -34,7 +34,7 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 9
+CURRENT_SCHEMA_VERSION = 10
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
@@ -199,6 +199,8 @@ def migrate_schema(engine: Engine) -> None:
             _migrate_schema_v6(connection)
         if existing_version < 7:
             _migrate_schema_v7(connection)
+        if existing_version < 10:
+            _migrate_schema_v10(connection)
 
         _verify_schema_complete(connection)
 
@@ -271,6 +273,65 @@ def _migrate_schema_v7(connection: Connection) -> None:
             connection.execute(
                 text(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {definition}')
             )
+
+
+def _migrate_schema_v10(connection: Connection) -> None:
+    """Widen `graph_claim_relationships.relationship_type` to add M50's `supersedes` type.
+
+    SQLite `CHECK` constraints cannot be altered in place, unlike the
+    additive `ALTER TABLE ... ADD COLUMN` migrations above. This rebuilds
+    the table instead: rename the existing table aside, drop the indexes
+    still attached to it (SQLite does not rename or drop a table's
+    indexes when the table itself is renamed, so they would otherwise
+    collide with the freshly created table's identically-named indexes),
+    create a fresh table from the current model (already carrying the
+    widened constraint), copy every row across unchanged, then drop the
+    old table. A no-op both on a fresh database (where
+    `Base.metadata.create_all` above already created the table with the
+    widened constraint from the start) and on a database already rebuilt
+    by an earlier run of this migration -- checked by inspecting the
+    table's own stored `CREATE TABLE` text for `'supersedes'`, since this
+    migration runs on every `initialize()` call while `existing_version <
+    10` (matching every additive migration above), not just once.
+    """
+
+    existing_sql = connection.execute(
+        text(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='graph_claim_relationships'"
+        )
+    ).scalar()
+    if existing_sql is None or "supersedes" in existing_sql:
+        return
+
+    old_table_name = "graph_claim_relationships_pre_v10"
+    connection.execute(
+        text(f'ALTER TABLE "graph_claim_relationships" RENAME TO "{old_table_name}"')
+    )
+
+    old_indexes = list(
+        connection.execute(
+            text(
+                "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name=:table_name "
+                "AND name NOT LIKE 'sqlite_autoindex_%'"
+            ),
+            {"table_name": old_table_name},
+        ).scalars()
+    )
+    for index_name in old_indexes:
+        connection.execute(text(f'DROP INDEX "{index_name}"'))
+
+    Base.metadata.tables["graph_claim_relationships"].create(connection)
+
+    connection.execute(
+        text(
+            "INSERT INTO graph_claim_relationships "
+            "(id, relationship_id, source_claim_id, target_claim_id, relationship_type, "
+            "rationale, created_at) "
+            "SELECT id, relationship_id, source_claim_id, target_claim_id, relationship_type, "
+            f'rationale, created_at FROM "{old_table_name}"'
+        )
+    )
+    connection.execute(text(f'DROP TABLE "{old_table_name}"'))
 
 
 def _current_schema_version(connection: Connection) -> int:

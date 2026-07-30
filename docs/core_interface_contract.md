@@ -211,12 +211,14 @@ target_evidence_record_id, relationship_type, rationale, provenance,
 created_for_milestone
 ```
 
-`relationship_type` is constrained to exactly four values
+`relationship_type` is constrained to five values
 (`ALLOWED_RELATIONSHIP_TYPES`): `supports`, `contradicts`, `qualifies`,
 `contextualizes` -- reusing `evidence_direction`'s own vocabulary rather
-than a separate one (M24). Validated with `ke relationship-validate`,
-which also checks referenced `evidence_record_id`s exist when an
-`--evidence` file is supplied.
+than a separate one (M24) -- plus `supersedes` (M50: a newer claim
+explicitly revising an older one, the Stability Score revision-event
+mechanism; see `docs/stability_and_tracking_design.md`). Validated with
+`ke relationship-validate`, which also checks referenced
+`evidence_record_id`s exist when an `--evidence` file is supplied.
 
 ### Draft evidence item (pre-validation)
 

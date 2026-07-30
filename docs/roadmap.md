@@ -749,6 +749,21 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   surfaces the one real pair sharing 2 concepts (`semaglutide`,
   `placebo`), and correctly reports 0 pairs when
   `--min-shared-concepts` is raised past that real count.
+- **M50 (`docs/stability_and_tracking_design.md`)** wrote the dedicated
+  follow-up design `docs/phase4_design.md`'s Open Questions deferred for
+  Stability Score and Tracking the Unknown, then built the one part of
+  it that needed no further owner decision: `supersedes`, a fifth
+  `RelationshipRecord`/`graph_claim_relationships` type -- a newer claim
+  explicitly revising an older one, reusing 100% of the existing
+  relationship machinery rather than a new table. An honest,
+  non-inferred "gap" is scoped as a claim with zero relationship edges
+  of any type; the actual Stability sub-score formula and a richer
+  "weak evidence area" report stay explicitly out of `core`'s scope, the
+  same boundary the Confidence Rating Design Guidance already draws.
+  Required a real schema migration (SQLite `CHECK` constraints cannot be
+  altered in place, so version 10 rebuilds `graph_claim_relationships`)
+  -- live-verified against a copy of the real corpus database, which
+  upgraded cleanly from its actual current schema version.
 
 ## Phase 5: Human Interface
 

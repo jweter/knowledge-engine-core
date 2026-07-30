@@ -1204,6 +1204,18 @@ def test_relationship_validate_fails_for_invalid_relationship_type(tmp_path: Pat
     assert "invalid relationship_type 'agrees_with'" in result.output
 
 
+def test_relationship_validate_accepts_supersedes_relationship_type(tmp_path: Path) -> None:
+    """M50: `supersedes` is a fifth valid relationship_type, alongside the
+    original four -- a newer claim explicitly revising an older one."""
+
+    records_path = write_relationship_records(tmp_path, [{"relationship_type": "supersedes"}])
+
+    result = CliRunner().invoke(app, ["relationship-validate", str(records_path)])
+
+    assert result.exit_code == 0
+    assert "Relationships validated: 1" in result.output
+
+
 def test_relationship_validate_fails_for_self_referential_link(tmp_path: Path) -> None:
     records_path = write_relationship_records(tmp_path, [{"target_evidence_record_id": "ev-1"}])
 

@@ -1786,10 +1786,11 @@ def graph_build(
     An optional `--relationships` JSONL file (already passed `ke
     relationship-validate`) adds one `graph_claim_relationships` row per
     record, projecting M24's typed `supports`/`contradicts`/`qualifies`/
-    `contextualizes` edges into the graph unchanged -- this command never
-    infers or computes a relationship. A relationship whose endpoint is
-    not among the records in `--evidence` is skipped with a clear message,
-    never silently dropped or a hard failure of the whole run.
+    `contextualizes`/`supersedes` (M50) edges into the graph unchanged --
+    this command never infers or computes a relationship. A relationship
+    whose endpoint is not among the records in `--evidence` is skipped
+    with a clear message, never silently dropped or a hard failure of the
+    whole run.
 
     Every method this command calls stays on the same side of the seam
     `docs/roadmap/long_term_vision.md` establishes: it stores and links
@@ -2321,10 +2322,11 @@ def graph_relationship_candidates(
     concepts they share, so a reviewer does not have to compose candidate
     pairs from scratch when authoring a `RelationshipRecord`. Never infers,
     detects, or suggests a `supports`/`contradicts`/`qualifies`/
-    `contextualizes` relationship or its rationale -- that judgment call
-    stays entirely with the human, exactly as `ke relationship-validate`
-    already requires. A pair already linked by a validated relationship
-    edge is excluded, since a human has already made that call for it.
+    `contextualizes`/`supersedes` relationship or its rationale -- that
+    judgment call stays entirely with the human, exactly as `ke
+    relationship-validate` already requires. A pair already linked by a
+    validated relationship edge (any type, `supersedes` included) is
+    excluded, since a human has already made that call for it.
     """
 
     if output is not None:
