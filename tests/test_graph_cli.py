@@ -409,3 +409,36 @@ def test_graph_report_rejects_an_existing_output_without_force(
 
     assert result.exit_code != 0
     assert output_path.read_text(encoding="utf-8") == "existing"
+
+
+def test_graph_report_rejects_a_symbolic_link_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    target = tmp_path / "target.md"
+    target.write_text("private", encoding="utf-8")
+    output_path = tmp_path / "report.md"
+    output_path.symlink_to(target)
+
+    result = CliRunner().invoke(
+        entrypoint.app, ["graph-report", "--output", str(output_path), "--force"]
+    )
+
+    assert result.exit_code != 0
+    assert target.read_text(encoding="utf-8") == "private"
+
+
+def test_graph_report_rejects_a_dangling_symbolic_link_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    target = tmp_path / "does-not-exist.md"
+    output_path = tmp_path / "report.md"
+    output_path.symlink_to(target)
+
+    result = CliRunner().invoke(entrypoint.app, ["graph-report", "--output", str(output_path)])
+
+    assert result.exit_code != 0
+    assert not target.exists()

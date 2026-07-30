@@ -2216,8 +2216,8 @@ def graph_report(
 
     if evidence_record_id is not None and paper_id is not None:
         raise typer.BadParameter("Use --evidence-record-id or --paper-id, not both.")
-    if output is not None and output.exists() and not force:
-        raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
+    if output is not None:
+        _validate_output(output, force=force)
 
     database = _local_database()
     database.initialize()
@@ -2234,8 +2234,7 @@ def graph_report(
             report = _build_graph_summary_report(graph_repository)
 
     if output is not None:
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(report, encoding="utf-8")
+        _write_output(output, report)
         console.print(f"[green]Wrote graph report:[/green] {output}")
         return
 
