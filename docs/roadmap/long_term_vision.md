@@ -275,4 +275,10 @@ ecosystem plan has not yet given a home to:
   silent omission.
 
 Both are explicitly deferred, not started, and not blocking any current
-`core` milestone.
+`core` milestone. **See `docs/ai_interface_layer_scoping.md`** for
+scoped-down first-slice ideas for both engines, recorded once Phase 4
+(the Knowledge Graph, M46-M51) gave Discovery Engine something real to
+identify gaps against -- that document is a record of ideas, not a
+design doc ready for implementation, and does not change either engine's
+status here: still deferred, still not started, still no repository
+created.
