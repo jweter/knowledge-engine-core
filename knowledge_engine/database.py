@@ -18,6 +18,7 @@ from knowledge_engine.models import (
     Author,
     Base,
     ExtractionRun,
+    GraphCitation,
     GraphClaim,
     GraphClaimConcept,
     GraphClaimRelationship,
@@ -31,7 +32,7 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 8
+CURRENT_SCHEMA_VERSION = 9
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
@@ -76,6 +77,7 @@ _TABLES_INTRODUCED_AT_VERSION: dict[int, frozenset[str]] = {
             "graph_claim_relationships",
         }
     ),
+    9: frozenset({"graph_citations"}),
 }
 
 _SCHEMA_V2_INDEXES: dict[str, tuple[str, str]] = {
@@ -819,6 +821,49 @@ class GraphRepository:
         )
         return list(self.session.scalars(statement))
 
+    def add_citation_edge(
+        self, *, citing_paper_id: int, cited_paper_id: int, raw_citation_text: str
+    ) -> GraphCitation:
+        """Return an existing citation edge, or create one.
+
+        Idempotent on `(citing_paper_id, cited_paper_id)`. Callers must
+        only invoke this once a reference-list DOI has actually been
+        matched to another *corpus* paper -- see
+        `knowledge_engine/citation_extraction.py`.
+        """
+
+        existing = self.session.scalar(
+            select(GraphCitation).where(
+                GraphCitation.citing_paper_id == citing_paper_id,
+                GraphCitation.cited_paper_id == cited_paper_id,
+            )
+        )
+        if existing:
+            return existing
+
+        edge = GraphCitation(
+            citing_paper_id=citing_paper_id,
+            cited_paper_id=cited_paper_id,
+            raw_citation_text=raw_citation_text,
+            created_at=_utc_now_iso(),
+        )
+        self.session.add(edge)
+        self.session.flush()
+        return edge
+
+    def citations_for_paper(self, paper_id: int) -> list[GraphCitation]:
+        """Return every citation edge touching one paper, as citer or cited."""
+
+        statement = (
+            select(GraphCitation)
+            .where(
+                (GraphCitation.citing_paper_id == paper_id)
+                | (GraphCitation.cited_paper_id == paper_id)
+            )
+            .order_by(GraphCitation.id)
+        )
+        return list(self.session.scalars(statement))
+
     def population_counts(self) -> dict[str, Any]:
         """Return the graph's total current row counts, e.g. for `ke graph-build`'s summary.
 
@@ -846,6 +891,8 @@ class GraphRepository:
             "relationship_edges": self.session.scalar(
                 select(func.count()).select_from(GraphClaimRelationship)
             )
+            or 0,
+            "citation_edges": self.session.scalar(select(func.count()).select_from(GraphCitation))
             or 0,
         }
 

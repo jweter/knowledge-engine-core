@@ -509,3 +509,35 @@ class GraphClaimRelationship(Base):
             name="ck_graph_claim_relationships_type",
         ),
     )
+
+
+class GraphCitation(Base):
+    """Phase 4 graph edge: one paper's reference list cites another *corpus* paper.
+
+    Real foreign keys on both sides (unlike `GraphClaim.evidence_record_id`)
+    since citing/cited are always genuine `papers` rows -- an edge is only
+    created when a reference-list DOI actually matches a paper already in
+    the corpus, never for an external DOI with no corresponding row. See
+    `knowledge_engine/citation_extraction.py`'s module docstring for the
+    real-corpus measurement (M47) that scoped this to DOI-substring
+    matching rather than a structured, multi-format entry parser: only 5
+    intra-corpus edges exist across the real 960-paper corpus, which does
+    not justify the larger build.
+    """
+
+    __tablename__ = "graph_citations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    citing_paper_id: Mapped[int] = mapped_column(
+        ForeignKey("papers.id"), nullable=False, index=True
+    )
+    cited_paper_id: Mapped[int] = mapped_column(ForeignKey("papers.id"), nullable=False, index=True)
+    raw_citation_text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "citing_paper_id != cited_paper_id", name="ck_graph_citations_no_self_citation"
+        ),
+        UniqueConstraint("citing_paper_id", "cited_paper_id", name="uq_graph_citations_edge"),
+    )

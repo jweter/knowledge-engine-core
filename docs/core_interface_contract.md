@@ -121,7 +121,7 @@ itself, but may need to trigger for a specific paper):**
   `ke extraction-review-annotate` requires `--output` (it always writes a
   file).
 
-**Phase 4 knowledge graph (M46, see "the seam" above):**
+**Phase 4 knowledge graph (M46-M47, see "the seam" above):**
 - `ke graph-build --evidence <records.jsonl> [--relationships <records.jsonl>] [--output <path.json>]`
   -- populates `graph_concepts`/`graph_claims`/`graph_claim_concepts`/
   `graph_claim_relationships` in the SQLite database from an already-
@@ -129,8 +129,14 @@ itself, but may need to trigger for a specific paper):**
   file), reusing M45's `annotate_draft_items` to resolve PICO fields into
   concept nodes. Writes to the database always; `--output` is an
   optional JSON summary of total graph row counts, not the graph data
-  itself. `graph_citations` does not exist yet -- see
-  `docs/m46_graph_repository.md`.
+  itself. See `docs/m46_graph_repository.md`.
+- `ke graph-citations-build [--output <path.json>]` -- populates
+  `graph_citations` from every persisted paper's own reference list,
+  matching cited DOIs against other papers already in this database. No
+  input file and no network access (unlike `ke graph-build`). Only
+  DOI-identity matches; no structured per-entry parsing -- see
+  `docs/m47_graph_citations.md` for the real-corpus measurement that
+  scoped this decision.
 
 **Do not assume `--output` (or any machine-readable output) exists on a
 command not listed above as having it.** `search`/`answer`/
@@ -301,12 +307,13 @@ decides when to re-invoke extraction for a given paper.
 
 ## What does not exist yet
 
-- No `graph_citations` table or citation-graph edges (M46 built the rest
-  of Phase 4's first schema slice -- concept/claim nodes and
-  claim-concept/claim-relationship edges -- see `ke graph-build` above
-  and `docs/m46_graph_repository.md`). Citation-list extraction from
-  paper text is unscoped, real-corpus-verification-requiring work, not
-  yet built.
+- No structured per-entry citation parsing (author/title/journal/year) --
+  `graph_citations` (M47, `ke graph-citations-build`) exists and is
+  populated, but only via DOI-identity matching against papers already in
+  the corpus, not full reference-entry extraction; see
+  `docs/m47_graph_citations.md` for the real-corpus measurement that
+  scoped this decision (three real citation styles found, but only 5
+  intra-corpus edges exist, which does not justify the larger build).
 - No Neo4j or other dedicated graph backend -- the graph lives in the
   same SQLite database as everything else, behind `GraphRepository`,
   mirroring Phase 3's FAISS-before-Qdrant sequencing.

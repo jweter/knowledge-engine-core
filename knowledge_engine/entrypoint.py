@@ -10,6 +10,7 @@ import typer
 from rich.markup import escape
 from rich.table import Table
 
+from knowledge_engine.citation_extraction import find_cited_dois
 from knowledge_engine.cli import app as app
 from knowledge_engine.cli import console
 from knowledge_engine.config import build_settings
@@ -1889,7 +1890,79 @@ def graph_build(
     console.print(
         f"Graph totals -- concepts: {counts['concepts']} {counts['concepts_by_source']}, "
         f"claims: {counts['claims']}, claim-concept edges: {counts['claim_concept_edges']}, "
-        f"relationship edges: {counts['relationship_edges']}."
+        f"relationship edges: {counts['relationship_edges']}, "
+        f"citation edges: {counts['citation_edges']}."
+    )
+
+    if output is not None:
+        _write_output(output, json.dumps(counts, indent=2) + "\n")
+
+
+@app.command("graph-citations-build")
+def graph_citations_build(
+    output: GraphBuildOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Populate `graph_citations` from every persisted paper's own reference list.
+
+    See `knowledge_engine/citation_extraction.py`'s module docstring for
+    the real-corpus measurement (M47) that scoped this to DOI-substring
+    matching against the *last* `References`/`Bibliography` heading match
+    in each paper's raw text, rather than a structured, multi-format
+    entry parser: only 5 intra-corpus citation edges exist across the
+    real 960-paper corpus, which does not justify the larger build.
+
+    An edge is only created when a reference-list DOI matches a paper
+    already persisted in this database (`graph_citations.cited_paper_id`
+    is a real foreign key into `papers`, per `docs/phase4_design.md`) --
+    an external DOI with no corresponding row is never stored. Operates
+    directly on every persisted paper's own text; unlike `ke graph-build`,
+    no input file and no network access are involved.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    database = _local_database()
+    database.initialize()
+
+    papers_scanned = 0
+
+    with database.session() as session:
+        papers = PaperRepository(session).list_papers()
+        doi_index: dict[str, int] = {
+            paper.doi.strip().rstrip(".").casefold(): paper.id for paper in papers if paper.doi
+        }
+
+        graph_repository = GraphRepository(session)
+        citation_edges_before = graph_repository.population_counts()["citation_edges"]
+
+        for paper in papers:
+            if paper.text is None:
+                continue
+            papers_scanned += 1
+            for candidate in find_cited_dois(paper.text.raw_text):
+                cited_paper_id = doi_index.get(candidate.doi)
+                if cited_paper_id is None or cited_paper_id == paper.id:
+                    continue
+                graph_repository.add_citation_edge(
+                    citing_paper_id=paper.id,
+                    cited_paper_id=cited_paper_id,
+                    raw_citation_text=candidate.raw_snippet,
+                )
+
+        counts = graph_repository.population_counts()
+        edges_created = counts["citation_edges"] - citation_edges_before
+
+    console.print(
+        f"[green]Citation build complete:[/green] {papers_scanned} paper(s) scanned, "
+        f"{edges_created} new citation edge(s) created."
+    )
+    console.print(
+        f"Graph totals -- concepts: {counts['concepts']} {counts['concepts_by_source']}, "
+        f"claims: {counts['claims']}, claim-concept edges: {counts['claim_concept_edges']}, "
+        f"relationship edges: {counts['relationship_edges']}, "
+        f"citation edges: {counts['citation_edges']}."
     )
 
     if output is not None:

@@ -687,6 +687,15 @@ Detailed milestone records include:
   against the repo's real, if small, committed evidence corpus (2
   records): 2 claims, 2 concepts, 4 claim-concept edges. `graph_citations`
   remains deferred, unscoped work.
+- **M47 (`docs/m47_graph_citations.md`)** did the citation-list
+  real-corpus verification pass the design doc called for, then built
+  `graph_citations` (schema version 9) and `ke graph-citations-build`.
+  Sampling real reference lists found at least three distinct citation
+  styles plus PDF-extraction noise -- too much for a naive parser -- but
+  also found the schema only needs DOI-identity matching against papers
+  already in the corpus, which needs no per-entry parsing at all. Run
+  against the real 960-paper local corpus: exactly 5 intra-corpus
+  citation edges, individually verified as genuine.
 
 ## Phase 5: Human Interface
 
