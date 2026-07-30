@@ -713,6 +713,18 @@ class GraphRepository:
 
         return self.session.get(GraphClaim, claim_id)
 
+    def find_claim_by_evidence_id(self, evidence_record_id: str) -> GraphClaim | None:
+        """Return one claim by its `EvidenceRecord` ID, read-only.
+
+        Unlike `get_or_create_claim`, never creates a row -- for read-facing
+        callers like `ke graph-report`, where an unrecognized ID must be
+        reported as "not found," not silently promoted into a new claim.
+        """
+
+        return self.session.scalar(
+            select(GraphClaim).where(GraphClaim.evidence_record_id == evidence_record_id)
+        )
+
     def link_claim_concept(
         self, claim_id: int, concept_id: int, edge_role: str
     ) -> GraphClaimConcept:
@@ -771,6 +783,22 @@ class GraphRepository:
         self.session.add(edge)
         self.session.flush()
         return edge
+
+    def concept_edges_for_claim(self, claim_id: int) -> list[tuple[str, GraphConcept]]:
+        """Return every (edge_role, concept) pair linked to one claim.
+
+        Unlike `concepts_for_claim`, preserves which PICO role produced each
+        edge -- e.g. for `ke graph-report`, which groups a claim's concepts
+        by role rather than listing them as one undifferentiated set.
+        """
+
+        statement = (
+            select(GraphClaimConcept.edge_role, GraphConcept)
+            .join(GraphConcept, GraphClaimConcept.concept_id == GraphConcept.id)
+            .where(GraphClaimConcept.claim_id == claim_id)
+            .order_by(GraphClaimConcept.edge_role, GraphConcept.id)
+        )
+        return [(edge_role, concept) for edge_role, concept in self.session.execute(statement)]
 
     def concepts_for_claim(self, claim_id: int) -> list[GraphConcept]:
         """Return every concept linked to one claim, via any edge role.
