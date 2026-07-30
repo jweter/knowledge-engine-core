@@ -12,6 +12,11 @@ should own; anything that requires judgment about what evidence means, not
 just locating and validating it, is out of scope here by design -- see the
 long-term vision doc for where that responsibility lives instead.
 
+One section, Reference Knowledge Layer, sits between Phase 2 and Phase 3
+but is not itself a numbered phase: it is cross-cutting background-context
+tooling `core` has already built (M41-M45), not a stage this roadmap
+completes and moves past.
+
 ## Phase 0: Local Source Vault
 
 - Import PDFs.
@@ -121,6 +126,299 @@ acceptance, release validation, and optional post-release quality audits.
   Unpaywall (M36) for OA/license evidence. The manifest-draft step refuses
   to produce a row unless license evidence already passed -- never
   guesses. See `docs/m37_manual_pdf_preview.md`.
+
+### M14: Controlled 500-paper rehearsal
+
+M14 is one controlled 500-paper rehearsal under the M13 entry, measurement, stop,
+reconciliation, resume, and artifact-hygiene conditions. Issue #21 is the
+authoritative rehearsal tracker; it completed with a `PROCEED` decision (see
+`docs/m14_500_paper_rehearsal_report.md`). Persistence failure classification in
+issue #22 must be complete before repeated large-run failure evidence is treated
+as diagnostic. The rehearsal must not introduce new architecture solely to
+collect one run's measurements.
+
+The M14 corpus scope is **Obesity and Metabolic-Disease Therapeutics**. The
+original GLP-1 weight-loss question remains the first named subtopic, but the
+rehearsal may include legally reusable treatment evidence for overweight, type 2
+diabetes, metabolic syndrome, metformin, SGLT2 inhibitors, dual incretin
+therapies, and other explicitly allowlisted interventions within this same
+Phase 1 domain. Scope expansion must never weaken license, provenance,
+identifier, duplicate, or full-text validation.
+
+M14 proceeds through explicit stages:
+
+1. bounded PubMed/PMC candidate discovery within the committed obesity and
+   metabolic-disease therapeutics scope;
+2. deterministic, evidence-preserving candidate adjudication for scientific scope,
+   identifier consistency, reusable-license basis, approved full-text location, and
+   duplicate risk;
+3. explicit `accepted`, `rejected`, or `held` decision records that remain separate
+   from raw discovery output; held records are automatically deferred and discovery
+   continues without waiting for manual resolution;
+4. bounded acquisition of accepted files with sanitized receipts;
+5. reconciliation to exactly 500 accepted rows and matching approved local PDFs;
+6. preflight validation, fresh import, linked resume, and sanitized evidence.
+
+Automated acceptance or rejection is permitted only when repository-defined rules
+produce complete, non-conflicting evidence. Every decision must record reason codes,
+provider provenance, the adjudication-rules version, and the evidence used. A record
+must be held rather than guessed when identity, licensing, scientific relevance,
+full-text eligibility, or duplicate status remains ambiguous. Discovery providers
+must remain separate evidence categories; metadata from PubMed, PMC, Crossref,
+OpenAlex, Europe PMC, or publishers must not be silently collapsed into one trust
+category. Held and rejected records never authorize acquisition and never require
+owner intervention before the working-version acceptance review.
+
+If one query or subtopic cannot supply enough accepted records, discovery may
+continue through measured query revisions inside the committed M14 domain. Each
+revision must preserve its query, offset, rules version, decision counts, and
+provider provenance. Unrelated scientific domains require a separate roadmap
+amendment rather than silent corpus mixing.
+
+### M34: Europe PMC, a second discovery source
+
+The project owner asked for more automated discovery sources and pipelines
+beyond M14's PubMed/PMC-only pipeline. M34 adds Europe PMC as the second one
+-- see `docs/m34_europepmc_discovery.md` for the full design, and
+`knowledge_engine/europepmc_discovery.py` /
+`knowledge_engine/europepmc_candidate_review.py` for the implementation.
+Deliberately scoped to what Europe PMC adds beyond PMC: for records already
+in PMC, Europe PMC's own "PDF" is just a rendered view of the exact same PMC
+content M14 already acquires via NCBI's official S3 bucket, so those
+candidates are still discovered (never silently dropped) but explicitly
+rejected as out of this pipeline's scope
+(`DUPLICATE_OF_PMC_PIPELINE_SCOPE`), rather than duplicating M14's own
+pipeline through a less-official endpoint. Scientific-scope and license
+rules are shared with M14's engine (`scientific_scope.py`,
+`license_rules.py`) so the same corpus-inclusion criteria apply regardless
+of which pipeline found a candidate.
+
+A follow-up change added the matching acquisition step -- see
+`docs/m34_europepmc_discovery.md`'s Acquisition section and its "Known
+live-verification gap" note. Growing the corpus via Europe PMC candidates
+specifically (as opposed to M14's own PubMed/PMC pipeline, which has
+continued growing the corpus toward the "Scaling beyond 500 papers for
+Phase 2 tuning" target below) remains a separate decision for the project
+owner to make explicitly, the same way M13/M14's own scale-up was.
+
+### M35: CORE, a third discovery source
+
+The project owner asked to keep adding automated discovery sources without
+pausing for permission at each step. M35 adds CORE
+(https://core.ac.uk) as the third one -- see `docs/m35_core_discovery.md`
+for the full design, and `knowledge_engine/core_discovery.py` /
+`knowledge_engine/core_candidate_review.py` for the implementation. CORE
+aggregates open-access content broadly (not just biomedical literature),
+using offset-based pagination and an optional API key
+(`KE_CORE_API_KEY`) that raises its otherwise low unauthenticated rate
+limit. Critically, CORE's API never returns a license field at all
+(verified empirically by enumerating every key in a real response), so
+`core_candidate_review.py`'s license rule is always
+`incomplete_missing_license` and no CORE candidate can ever auto-accept --
+every candidate that clears every other rule still lands in `held`,
+pending a human visiting the original source to confirm reuse terms. PMC/
+Europe PMC overlap detection is a known, deliberate limitation for this
+milestone (CORE never reports a PMCID); see `docs/m35_core_discovery.md`.
+Scientific-scope and license rules are shared with M14 and M34's engines
+so the same corpus-inclusion criteria apply regardless of which pipeline
+found a candidate.
+
+**Not yet wired into acquisition.** M35 only builds the discovery/
+adjudication capability for CORE specifically; using it to actually grow
+the corpus further is a separate decision for the project owner to make
+explicitly, the same way M13/M14's own scale-up was (see "Scaling beyond
+500 papers for Phase 2 tuning" below for the growth that has happened, via
+M14's own pipeline).
+
+### M36: Unpaywall, an evidence lookup tool rather than a fourth discovery pipeline
+
+The project owner asked to keep adding evidence sources, naming Unpaywall
+explicitly, without pausing for permission at each step. Unlike M14/M34/M35,
+M36 does not add a `--query` discovery pipeline: Unpaywall's `/v2/search`
+endpoint returned a consistent `HTTP 500` across multiple distinct queries
+and retries at build time (confirmed empirically, not assumed), and its
+working per-DOI endpoint carries no scientific-scope signal and no single
+canonical host to allowlist the way CORE and Europe PMC do. See
+`docs/m36_unpaywall_lookup.md` for the full design, and
+`knowledge_engine/unpaywall_lookup.py` for the implementation.
+
+Instead, M36 adds `ke unpaywall-doi-lookup` and `ke unpaywall-batch-lookup`:
+given one or more DOIs already surfaced by another pipeline (e.g. a `held`
+Europe PMC or CORE candidate), it queries Unpaywall's per-DOI endpoint and
+reports OA status, best OA location, license (normalized from Unpaywall's
+own `cc-by`-style tokens and evaluated via the shared `license_rules.py`),
+and every OA location on file. It makes **no** accept/reject/hold decision
+-- that stays the responsibility of whichever pipeline's held candidate
+this evidence is being used to re-examine. Requires `KE_UNPAYWALL_EMAIL`
+(Unpaywall's usage policy requires a contact email on every request; this
+project does not bake in a default for every installation).
+
+**Not wired into acquisition or corpus growth** -- Unpaywall is a lookup
+tool for evidence a human is already examining, not a discovery pipeline
+with its own accept/reject/hold decisions to acquire from (see "Scaling
+beyond 500 papers for Phase 2 tuning" below for the growth that has
+happened, via M14's own pipeline).
+
+### Scaling beyond 500 papers for Phase 2 tuning
+
+Phase 2's automated extraction (M16-M25) was built and unit-tested against
+synthetic fixtures; M38 (see Phase 2's "Completed Phase 2 milestones"
+below) closed the "never run at scale against real papers" half of this
+gap, measuring deterministic-extraction coverage across the full
+943-paper real corpus for the first time and finding two concrete,
+diagnosed recall gaps (structured-section heading matching, study-type's
+closed vocabulary), both since authorized and fixed (see M38's roadmap
+entry below and `docs/m38_extraction_scale_assessment.md`'s "Resolved
+follow-up" section for the fixes and the re-measured numbers). **M40**
+closed most of the other half: `ke extraction-review-batch-generate` ran
+the same deterministic pipeline `ke extraction-review-generate` runs for
+one paper across all 943, producing 13,588 draft evidence items (679
+papers with at least one, 264 with none) -- the actual review queue a
+human works from to promote real `EvidenceRecord`s, which had simply never
+been generated before. The real corpus still has exactly two
+`EvidenceRecord` rows -- M40 generated the review material, it did not
+promote anything; `ke extraction-review-promote` still refuses any item
+missing a human-supplied `research_question`/`evidence_direction`, and
+that promotion step remains entirely manual by design. M40's first live
+run against the real corpus also found and fixed a latent quadratic-time
+bug in `knowledge_engine/sentence_split.py` (a single ~180K-character
+paper took 30+ seconds; see CHANGELOG) -- exactly the kind of gap this
+project's "run it at real scale" discipline exists to catch.
+The project owner's initial target was "at least a
+couple thousand papers"; that was revised down to **1,000 papers as a
+hard cap**, explicitly for GitHub space reasons -- the committed
+compressed `corpus_library` snapshot (see below) grows with the corpus,
+and a smaller committed ceiling keeps it comfortably under GitHub's
+100MB single-file push limit with headroom to spare, rather than
+approaching it as the corpus scales toward a couple thousand. Following
+the M12->M13->M14 precedent, this needs its own scale-readiness
+assessment -- measured stop conditions and license/provenance validation
+re-checked at the new scale -- before a bounded discovery/acquisition
+run, not an unbounded scale-up.
+
+M27 (issue #133) addressed the other half of this gap: nothing downloaded
+survived past a session before, since this project's remote execution
+environment starts from a fresh clone every session and the working
+database is gitignored. `ke corpus-library-export`/`ke
+corpus-library-import` make the corpus's paper-intrinsic content (not raw
+PDFs -- those are archived to Google Drive instead, per the project
+owner's decision) a persisted, git-committable snapshot -- see
+`docs/m27_corpus_library.md`. Past ~605 papers the snapshot exceeds
+GitHub's 100MB single-file limit uncompressed; a `.gz` output path
+compresses it (roughly 3x on this corpus's page-level text), restoring
+headroom without giving up git-committed durability. Actually growing the
+corpus toward the owner's 1,000-paper cap remains ongoing operational
+work using this tooling plus the existing M14 pipeline, not itself
+scheduled as a numbered milestone. At 951 papers (~64MB compressed) the
+corpus is already close to that cap; the remaining headroom (49 papers)
+is small enough that further growth batches should land close to the
+ceiling rather than assume the multi-batch runway earlier "couple
+thousand" planning implied. The retstart=3250 batch (943 -> 951) also
+surfaced two real limitations worth naming for future batches. First,
+PubMed's `sort=pub_date` pagination is not stable across different
+calendar days -- newer papers indexed between batches shift what a
+given `retstart` offset points to, so 16 of that batch's 50 discovered
+candidates turned out to already be in the corpus under an earlier
+retstart's results; caught by comparing new candidates' `source_id`s
+against `sources.csv` before merging, not by the automated discovery/
+adjudication pipeline itself, which only deduplicates PMIDs within a
+single run. Second, and more serious -- caught by Codex review on the
+growth PR, not by that same manual check -- comparing only against
+`sources.csv`'s currently-*included* rows missed that a PMID can also
+be a previously-*rejected* record resurfacing under a new retstart
+offset: 6 of the batch's remaining 33 scope-passed candidates were
+exact PMID matches for papers `data/corpora/glp1_weight_loss/README.md`
+already documents as manually excluded from the `retstart=3000` batch
+(a bariatric weight-regain prediction model, a T2D/STEMI in-hospital-
+outcomes study, a diabetic-eye-disease progression study, a T2D
+sibling-pairs genetics study, a coronary ischaemia-reperfusion
+antiplatelet study, and a T2D policy-life-expectancy model), and a
+closer re-read of the same established exclusion patterns (in
+particular "diagnostic/measurement-only, no treatment evaluated" and
+"off-target primary disease, target disease only an incidental
+covariate") caught 3 more the initial scope pass missed. This project
+has now hit this exact failure mode -- a previously-rejected PMID
+resurfacing under a later batch's different retstart offset -- at both
+`retstart=3000` and `retstart=3250`; `sources.csv` only records what is
+currently included, not a durable ledger of what has already been
+reviewed and rejected. A future milestone could build that ledger (a
+persistent rejected-PMID registry checked automatically before merging)
+rather than relying on rediscovering the same README history by hand
+each batch, but that is not yet built.
+
+### Supporting operator durability
+
+The Google Drive backup subsystem is supporting operator infrastructure for
+protecting local SQLite backup bundles during the M14-era rehearsal work. It does
+not change corpus inclusion, discovery, approval, acquisition, parsing,
+deduplication, provenance, or import semantics. It should remain optional,
+operator-controlled, and independently documented. Any expansion beyond backup
+transport and recovery support requires a dedicated roadmap decision or ADR.
+
+Detailed milestone records include:
+
+- `docs/m6_phase1_corpus_ingestion_plan.md`
+- `docs/m7_manifest_validation_foundation.md`
+- `docs/m8_import_run_persistence.md`
+- `docs/m9_small_ingestion_pilot.md`
+- `docs/m10_duplicate_detection_resumability_plan.md`
+- `docs/m10_operational_contract.md`
+- `docs/m10_release_notes.md`
+- `docs/m12_100_paper_rehearsal.md`
+- `docs/m13_scale_readiness_decision.md`
+- `docs/m14_500_paper_rehearsal_report.md`
+- `docs/audit_remediation_register.md`
+
+## Phase 2: Evidence Records
+
+- Extract claims, methods, results, limitations, and evidence quality markers.
+- Keep every generated structure traceable to source text spans.
+- Add automated validation and optional post-working-version human audit workflows.
+- Use `docs/phase2_design.md` as the detailed design reference. Its first
+  concrete prerequisite, page/span-level extraction provenance, is implemented
+  (see `docs/technical_debt.md`). Extraction methodology was decided as
+  rule-based pattern matching combined with structured-section heuristics, no
+  new dependency; see the design doc's Extraction Methodology section.
+- Evidence Records deliberately stop short of automated,
+  research-question-relative judgment: assigning a `research_question`,
+  classifying `evidence_direction` against it, and any real confidence
+  *rating* (beyond the existing free-text `confidence_note` field) are left
+  for a human reviewer to supply. That is not a temporary gap -- it is the
+  deliberate seam where the future `knowledge-engine-ai` layer plugs in; see
+  `docs/roadmap/long_term_vision.md`'s AI Interface Layer section.
+- PICO fields (population, intervention, comparator, outcome),
+  `study_type`, and `limitations` are a different case: paper-intrinsic
+  facts, not judgment relative to a research question, so deterministic,
+  non-human-typed extraction was prioritized for them rather than an
+  indefinitely deferred human-review field -- see
+  `docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed Fields
+  section. `study_type`/`limitations` shipped in M26; full PICO
+  extraction shipped in M28, once the corpus described above under
+  Phase 1 was large enough to tune against and the project owner decided
+  605 papers was sufficient to stop growing it further.
+- `docs/reference_knowledge_layer_design.md`'s Addendum (items 1-4) names
+  four reference-layer integration points buildable here without waiting
+  on Phase 4/5: drug identity normalization for report-*display*
+  grouping only, never for deciding which records get pooled into a
+  question's confidence rating (on M42's `ingredients` field), a
+  coverage-gap disclosure flag for terms with no reference-layer match,
+  provenance-footer discipline for any reference text surfaced anywhere,
+  and a reviewer aid surfacing definitions inline around
+  `ke extraction-review-promote`. None of them touch the confidence
+  rating, including indirectly through the compounding step's
+  participant set -- see that section for the precise boundary, tightened
+  after Codex review on PR #180. **Items 2-4 shipped in M45**
+  (`ke extraction-review-annotate`, see `docs/m45_extraction_review_annotate.md`):
+  a new command attaches RxNorm/MeSH reference context directly onto
+  draft evidence items before a reviewer runs
+  `ke extraction-review-promote`.
+
+### Completed Phase 2 milestones
+
+M16-M28 built and unit-tested Phase 2's deterministic extraction pipeline
+against synthetic fixtures. M38 and M40 below are the two milestones that
+later ran that pipeline against the real corpus at scale for the first time.
+
 - **M38** closed the "Scaling beyond 500 papers for Phase 2 tuning" gap's
   own named prerequisite: measured M16-M28's deterministic extraction
   coverage in aggregate across the real corpus at scale for the first
@@ -177,6 +475,23 @@ acceptance, release validation, and optional post-release quality audits.
   ~180K-character paper took 30+ seconds -- fixed by bounding the check
   to a fixed trailing window instead of the whole growing prefix; the
   full corpus run dropped from over 20 minutes to 21 seconds.
+
+## Reference Knowledge Layer
+
+Not one of the numbered phases above -- a cross-cutting layer giving the
+extraction pipeline and future AI Interface Layer the background context
+(drug names, medical terminology, chemical structure) a primary-research
+paper always assumes but never restates. Corresponds to
+`knowledge-engine-reference` in the long-term ecosystem; see
+`docs/roadmap/long_term_vision.md` and
+`docs/reference_knowledge_layer_design.md`. M41-M44 built four
+independent live-lookup sources; M45 wired three of the design doc's
+Addendum items into Phase 2's review workflow, so it depends on Phase 2
+existing first. Always background context, never evidence -- none of it
+is routed through `EvidenceRecord` promotion or the confidence rating.
+
+### Completed Reference Knowledge Layer milestones
+
 - **M41** built the reference knowledge layer's first slice --
   `docs/reference_knowledge_layer_design.md`'s sketch named the gap this
   closes: a paper's claim text names terms and mechanisms (e.g. "GLP-1
@@ -327,291 +642,6 @@ acceptance, release validation, and optional post-release quality audits.
   `research_question`/`evidence_direction`, and never changes `ke
   extraction-review-promote`'s existing refusal to promote a record
   missing either. See `docs/m45_extraction_review_annotate.md`.
-
-### M14: Controlled 500-paper rehearsal
-
-M14 is one controlled 500-paper rehearsal under the M13 entry, measurement, stop,
-reconciliation, resume, and artifact-hygiene conditions. Issue #21 is the
-authoritative rehearsal tracker; it completed with a `PROCEED` decision (see
-`docs/m14_500_paper_rehearsal_report.md`). Persistence failure classification in
-issue #22 must be complete before repeated large-run failure evidence is treated
-as diagnostic. The rehearsal must not introduce new architecture solely to
-collect one run's measurements.
-
-The M14 corpus scope is **Obesity and Metabolic-Disease Therapeutics**. The
-original GLP-1 weight-loss question remains the first named subtopic, but the
-rehearsal may include legally reusable treatment evidence for overweight, type 2
-diabetes, metabolic syndrome, metformin, SGLT2 inhibitors, dual incretin
-therapies, and other explicitly allowlisted interventions within this same
-Phase 1 domain. Scope expansion must never weaken license, provenance,
-identifier, duplicate, or full-text validation.
-
-M14 proceeds through explicit stages:
-
-1. bounded PubMed/PMC candidate discovery within the committed obesity and
-   metabolic-disease therapeutics scope;
-2. deterministic, evidence-preserving candidate adjudication for scientific scope,
-   identifier consistency, reusable-license basis, approved full-text location, and
-   duplicate risk;
-3. explicit `accepted`, `rejected`, or `held` decision records that remain separate
-   from raw discovery output; held records are automatically deferred and discovery
-   continues without waiting for manual resolution;
-4. bounded acquisition of accepted files with sanitized receipts;
-5. reconciliation to exactly 500 accepted rows and matching approved local PDFs;
-6. preflight validation, fresh import, linked resume, and sanitized evidence.
-
-Automated acceptance or rejection is permitted only when repository-defined rules
-produce complete, non-conflicting evidence. Every decision must record reason codes,
-provider provenance, the adjudication-rules version, and the evidence used. A record
-must be held rather than guessed when identity, licensing, scientific relevance,
-full-text eligibility, or duplicate status remains ambiguous. Discovery providers
-must remain separate evidence categories; metadata from PubMed, PMC, Crossref,
-OpenAlex, Europe PMC, or publishers must not be silently collapsed into one trust
-category. Held and rejected records never authorize acquisition and never require
-owner intervention before the working-version acceptance review.
-
-If one query or subtopic cannot supply enough accepted records, discovery may
-continue through measured query revisions inside the committed M14 domain. Each
-revision must preserve its query, offset, rules version, decision counts, and
-provider provenance. Unrelated scientific domains require a separate roadmap
-amendment rather than silent corpus mixing.
-
-### M34: Europe PMC, a second discovery source
-
-The project owner asked for more automated discovery sources and pipelines
-beyond M14's PubMed/PMC-only pipeline. M34 adds Europe PMC as the second one
--- see `docs/m34_europepmc_discovery.md` for the full design, and
-`knowledge_engine/europepmc_discovery.py` /
-`knowledge_engine/europepmc_candidate_review.py` for the implementation.
-Deliberately scoped to what Europe PMC adds beyond PMC: for records already
-in PMC, Europe PMC's own "PDF" is just a rendered view of the exact same PMC
-content M14 already acquires via NCBI's official S3 bucket, so those
-candidates are still discovered (never silently dropped) but explicitly
-rejected as out of this pipeline's scope
-(`DUPLICATE_OF_PMC_PIPELINE_SCOPE`), rather than duplicating M14's own
-pipeline through a less-official endpoint. Scientific-scope and license
-rules are shared with M14's engine (`scientific_scope.py`,
-`license_rules.py`) so the same corpus-inclusion criteria apply regardless
-of which pipeline found a candidate.
-
-A follow-up change added the matching acquisition step -- see
-`docs/m34_europepmc_discovery.md`'s Acquisition section and its "Known
-live-verification gap" note. Growing the corpus via Europe PMC candidates
-specifically (as opposed to M14's own PubMed/PMC pipeline, which has
-continued growing the corpus toward the "Scaling beyond 500 papers for
-Phase 2 tuning" target below) remains a separate decision for the project
-owner to make explicitly, the same way M13/M14's own scale-up was.
-
-### M35: CORE, a third discovery source
-
-The project owner asked to keep adding automated discovery sources without
-pausing for permission at each step. M35 adds CORE
-(https://core.ac.uk) as the third one -- see `docs/m35_core_discovery.md`
-for the full design, and `knowledge_engine/core_discovery.py` /
-`knowledge_engine/core_candidate_review.py` for the implementation. CORE
-aggregates open-access content broadly (not just biomedical literature),
-using offset-based pagination and an optional API key
-(`KE_CORE_API_KEY`) that raises its otherwise low unauthenticated rate
-limit. Critically, CORE's API never returns a license field at all
-(verified empirically by enumerating every key in a real response), so
-`core_candidate_review.py`'s license rule is always
-`incomplete_missing_license` and no CORE candidate can ever auto-accept --
-every candidate that clears every other rule still lands in `held`,
-pending a human visiting the original source to confirm reuse terms. PMC/
-Europe PMC overlap detection is a known, deliberate limitation for this
-milestone (CORE never reports a PMCID); see `docs/m35_core_discovery.md`.
-Scientific-scope and license rules are shared with M14 and M34's engines
-so the same corpus-inclusion criteria apply regardless of which pipeline
-found a candidate.
-
-**Not yet wired into acquisition.** M35 only builds the discovery/
-adjudication capability for CORE specifically; using it to actually grow
-the corpus further is a separate decision for the project owner to make
-explicitly, the same way M13/M14's own scale-up was (see "Scaling beyond
-500 papers for Phase 2 tuning" below for the growth that has happened, via
-M14's own pipeline).
-
-### M36: Unpaywall, an evidence lookup tool rather than a fourth discovery pipeline
-
-The project owner asked to keep adding evidence sources, naming Unpaywall
-explicitly, without pausing for permission at each step. Unlike M14/M34/M35,
-M36 does not add a `--query` discovery pipeline: Unpaywall's `/v2/search`
-endpoint returned a consistent `HTTP 500` across multiple distinct queries
-and retries at build time (confirmed empirically, not assumed), and its
-working per-DOI endpoint carries no scientific-scope signal and no single
-canonical host to allowlist the way CORE and Europe PMC do. See
-`docs/m36_unpaywall_lookup.md` for the full design, and
-`knowledge_engine/unpaywall_lookup.py` for the implementation.
-
-Instead, M36 adds `ke unpaywall-doi-lookup` and `ke unpaywall-batch-lookup`:
-given one or more DOIs already surfaced by another pipeline (e.g. a `held`
-Europe PMC or CORE candidate), it queries Unpaywall's per-DOI endpoint and
-reports OA status, best OA location, license (normalized from Unpaywall's
-own `cc-by`-style tokens and evaluated via the shared `license_rules.py`),
-and every OA location on file. It makes **no** accept/reject/hold decision
--- that stays the responsibility of whichever pipeline's held candidate
-this evidence is being used to re-examine. Requires `KE_UNPAYWALL_EMAIL`
-(Unpaywall's usage policy requires a contact email on every request; this
-project does not bake in a default for every installation).
-
-**Not wired into acquisition or corpus growth** -- Unpaywall is a lookup
-tool for evidence a human is already examining, not a discovery pipeline
-with its own accept/reject/hold decisions to acquire from (see "Scaling
-beyond 500 papers for Phase 2 tuning" below for the growth that has
-happened, via M14's own pipeline).
-
-### Scaling beyond 500 papers for Phase 2 tuning
-
-Phase 2's automated extraction (M16-M25) was built and unit-tested against
-synthetic fixtures; M38 (see above) closed the "never run at scale against
-real papers" half of this gap, measuring deterministic-extraction coverage
-across the full 943-paper real corpus for the first time and finding two
-concrete, diagnosed recall gaps (structured-section heading matching,
-study-type's closed vocabulary), both since authorized and fixed (see M38's
-roadmap entry above and `docs/m38_extraction_scale_assessment.md`'s
-"Resolved follow-up" section for the fixes and the re-measured numbers). **M40**
-closed most of the other half: `ke extraction-review-batch-generate` ran
-the same deterministic pipeline `ke extraction-review-generate` runs for
-one paper across all 943, producing 13,588 draft evidence items (679
-papers with at least one, 264 with none) -- the actual review queue a
-human works from to promote real `EvidenceRecord`s, which had simply never
-been generated before. The real corpus still has exactly two
-`EvidenceRecord` rows -- M40 generated the review material, it did not
-promote anything; `ke extraction-review-promote` still refuses any item
-missing a human-supplied `research_question`/`evidence_direction`, and
-that promotion step remains entirely manual by design. M40's first live
-run against the real corpus also found and fixed a latent quadratic-time
-bug in `knowledge_engine/sentence_split.py` (a single ~180K-character
-paper took 30+ seconds; see CHANGELOG) -- exactly the kind of gap this
-project's "run it at real scale" discipline exists to catch.
-The project owner's initial target was "at least a
-couple thousand papers"; that was revised down to **1,000 papers as a
-hard cap**, explicitly for GitHub space reasons -- the committed
-compressed `corpus_library` snapshot (see below) grows with the corpus,
-and a smaller committed ceiling keeps it comfortably under GitHub's
-100MB single-file push limit with headroom to spare, rather than
-approaching it as the corpus scales toward a couple thousand. Following
-the M12->M13->M14 precedent, this needs its own scale-readiness
-assessment -- measured stop conditions and license/provenance validation
-re-checked at the new scale -- before a bounded discovery/acquisition
-run, not an unbounded scale-up.
-
-M27 (issue #133) addressed the other half of this gap: nothing downloaded
-survived past a session before, since this project's remote execution
-environment starts from a fresh clone every session and the working
-database is gitignored. `ke corpus-library-export`/`ke
-corpus-library-import` make the corpus's paper-intrinsic content (not raw
-PDFs -- those are archived to Google Drive instead, per the project
-owner's decision) a persisted, git-committable snapshot -- see
-`docs/m27_corpus_library.md`. Past ~605 papers the snapshot exceeds
-GitHub's 100MB single-file limit uncompressed; a `.gz` output path
-compresses it (roughly 3x on this corpus's page-level text), restoring
-headroom without giving up git-committed durability. Actually growing the
-corpus toward the owner's 1,000-paper cap remains ongoing operational
-work using this tooling plus the existing M14 pipeline, not itself
-scheduled as a numbered milestone. At 951 papers (~64MB compressed) the
-corpus is already close to that cap; the remaining headroom (49 papers)
-is small enough that further growth batches should land close to the
-ceiling rather than assume the multi-batch runway earlier "couple
-thousand" planning implied. The retstart=3250 batch (943 -> 951) also
-surfaced two real limitations worth naming for future batches. First,
-PubMed's `sort=pub_date` pagination is not stable across different
-calendar days -- newer papers indexed between batches shift what a
-given `retstart` offset points to, so 16 of that batch's 50 discovered
-candidates turned out to already be in the corpus under an earlier
-retstart's results; caught by comparing new candidates' `source_id`s
-against `sources.csv` before merging, not by the automated discovery/
-adjudication pipeline itself, which only deduplicates PMIDs within a
-single run. Second, and more serious -- caught by Codex review on the
-growth PR, not by that same manual check -- comparing only against
-`sources.csv`'s currently-*included* rows missed that a PMID can also
-be a previously-*rejected* record resurfacing under a new retstart
-offset: 6 of the batch's remaining 33 scope-passed candidates were
-exact PMID matches for papers `data/corpora/glp1_weight_loss/README.md`
-already documents as manually excluded from the `retstart=3000` batch
-(a bariatric weight-regain prediction model, a T2D/STEMI in-hospital-
-outcomes study, a diabetic-eye-disease progression study, a T2D
-sibling-pairs genetics study, a coronary ischaemia-reperfusion
-antiplatelet study, and a T2D policy-life-expectancy model), and a
-closer re-read of the same established exclusion patterns (in
-particular "diagnostic/measurement-only, no treatment evaluated" and
-"off-target primary disease, target disease only an incidental
-covariate") caught 3 more the initial scope pass missed. This project
-has now hit this exact failure mode -- a previously-rejected PMID
-resurfacing under a later batch's different retstart offset -- at both
-`retstart=3000` and `retstart=3250`; `sources.csv` only records what is
-currently included, not a durable ledger of what has already been
-reviewed and rejected. A future milestone could build that ledger (a
-persistent rejected-PMID registry checked automatically before merging)
-rather than relying on rediscovering the same README history by hand
-each batch, but that is not yet built.
-
-### Supporting operator durability
-
-The Google Drive backup subsystem is supporting operator infrastructure for
-protecting local SQLite backup bundles during the M14-era rehearsal work. It does
-not change corpus inclusion, discovery, approval, acquisition, parsing,
-deduplication, provenance, or import semantics. It should remain optional,
-operator-controlled, and independently documented. Any expansion beyond backup
-transport and recovery support requires a dedicated roadmap decision or ADR.
-
-Detailed milestone records include:
-
-- `docs/m6_phase1_corpus_ingestion_plan.md`
-- `docs/m7_manifest_validation_foundation.md`
-- `docs/m8_import_run_persistence.md`
-- `docs/m9_small_ingestion_pilot.md`
-- `docs/m10_duplicate_detection_resumability_plan.md`
-- `docs/m10_operational_contract.md`
-- `docs/m10_release_notes.md`
-- `docs/m12_100_paper_rehearsal.md`
-- `docs/m13_scale_readiness_decision.md`
-- `docs/m14_500_paper_rehearsal_report.md`
-- `docs/audit_remediation_register.md`
-
-## Phase 2: Evidence Records
-
-- Extract claims, methods, results, limitations, and evidence quality markers.
-- Keep every generated structure traceable to source text spans.
-- Add automated validation and optional post-working-version human audit workflows.
-- Use `docs/phase2_design.md` as the detailed design reference. Its first
-  concrete prerequisite, page/span-level extraction provenance, is implemented
-  (see `docs/technical_debt.md`). Extraction methodology was decided as
-  rule-based pattern matching combined with structured-section heuristics, no
-  new dependency; see the design doc's Extraction Methodology section.
-- Evidence Records deliberately stop short of automated,
-  research-question-relative judgment: assigning a `research_question`,
-  classifying `evidence_direction` against it, and any real confidence
-  *rating* (beyond the existing free-text `confidence_note` field) are left
-  for a human reviewer to supply. That is not a temporary gap -- it is the
-  deliberate seam where the future `knowledge-engine-ai` layer plugs in; see
-  `docs/roadmap/long_term_vision.md`'s AI Interface Layer section.
-- PICO fields (population, intervention, comparator, outcome),
-  `study_type`, and `limitations` are a different case: paper-intrinsic
-  facts, not judgment relative to a research question, so deterministic,
-  non-human-typed extraction was prioritized for them rather than an
-  indefinitely deferred human-review field -- see
-  `docs/roadmap/long_term_vision.md`'s Minimizing Human-Typed Fields
-  section. `study_type`/`limitations` shipped in M26; full PICO
-  extraction shipped in M28, once the corpus described above under
-  Phase 1 was large enough to tune against and the project owner decided
-  605 papers was sufficient to stop growing it further.
-- `docs/reference_knowledge_layer_design.md`'s Addendum (items 1-4) names
-  four reference-layer integration points buildable here without waiting
-  on Phase 4/5: drug identity normalization for report-*display*
-  grouping only, never for deciding which records get pooled into a
-  question's confidence rating (on M42's `ingredients` field), a
-  coverage-gap disclosure flag for terms with no reference-layer match,
-  provenance-footer discipline for any reference text surfaced anywhere,
-  and a reviewer aid surfacing definitions inline around
-  `ke extraction-review-promote`. None of them touch the confidence
-  rating, including indirectly through the compounding step's
-  participant set -- see that section for the precise boundary, tightened
-  after Codex review on PR #180. **Items 2-4 shipped in M45**
-  (`ke extraction-review-annotate`, see `docs/m45_extraction_review_annotate.md`):
-  a new command attaches RxNorm/MeSH reference context directly onto
-  draft evidence items before a reviewer runs
-  `ke extraction-review-promote`.
 
 ## Phase 3: Search Plus Semantics
 
@@ -772,7 +802,8 @@ Detailed milestone records include:
 - `docs/reference_knowledge_layer_design.md` -- design sketch for a
   reference knowledge layer giving the extraction pipeline and future AI
   Interface Layer the background context a primary-research paper always
-  assumes but never restates. **M41** (see below) built the sketch's
+  assumes but never restates. **M41** (see the "Reference Knowledge
+  Layer" section above) built the sketch's
   recommended live-lookup path's first slice, `ke reference-lookup`
   against Wikipedia; **M42** added a second slice, `ke rxnorm-lookup`
   against NLM's RxNorm API for structured drug-name normalization;
