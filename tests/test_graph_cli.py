@@ -442,3 +442,129 @@ def test_graph_report_rejects_a_dangling_symbolic_link_output(
 
     assert result.exit_code != 0
     assert not target.exists()
+
+
+def test_graph_relationship_candidates_surfaces_a_shared_concept_pair(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record("ev-1"),
+        _evidence_record("ev-2"),
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    result = CliRunner().invoke(entrypoint.app, ["graph-relationship-candidates"])
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Candidate pairs found: 1" in unwrapped
+    assert "ev-1 <-> ev-2" in unwrapped
+    assert "Shared concepts (2): Obesity, semaglutide" in unwrapped or (
+        "Shared concepts (2): semaglutide, Obesity" in unwrapped
+    )
+    assert "never infers, detects, or suggests a relationship" in unwrapped
+
+
+def test_graph_relationship_candidates_excludes_a_pair_with_an_existing_relationship(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record("ev-1"),
+        _evidence_record("ev-2"),
+    )
+    relationships_path = _write_jsonl(
+        tmp_path / "relationships.jsonl",
+        {
+            "relationship_id": "rel-1",
+            "source_evidence_record_id": "ev-1",
+            "target_evidence_record_id": "ev-2",
+            "relationship_type": "supports",
+            "rationale": "A reviewer already linked these two records.",
+        },
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "graph-build",
+            "--evidence",
+            str(evidence_path),
+            "--relationships",
+            str(relationships_path),
+        ],
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    result = CliRunner().invoke(entrypoint.app, ["graph-relationship-candidates"])
+
+    assert result.exit_code == 0, result.output
+    assert "Candidate pairs found: 0" in _unwrapped(result.output)
+
+
+def test_graph_relationship_candidates_respects_minimum_shared_concepts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record("ev-1"),
+        _evidence_record("ev-2"),
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    result = CliRunner().invoke(
+        entrypoint.app, ["graph-relationship-candidates", "--min-shared-concepts", "3"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Candidate pairs found: 0" in _unwrapped(result.output)
+
+
+def test_graph_relationship_candidates_writes_output_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    output_path = tmp_path / "candidates.md"
+
+    result = CliRunner().invoke(
+        entrypoint.app, ["graph-relationship-candidates", "--output", str(output_path)]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Wrote relationship candidates report" in _unwrapped(result.output)
+    assert "Candidate pairs found: 0" in output_path.read_text(encoding="utf-8")
+
+
+def test_graph_relationship_candidates_rejects_a_symbolic_link_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    target = tmp_path / "target.md"
+    target.write_text("private", encoding="utf-8")
+    output_path = tmp_path / "candidates.md"
+    output_path.symlink_to(target)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["graph-relationship-candidates", "--output", str(output_path), "--force"],
+    )
+
+    assert result.exit_code != 0
+    assert target.read_text(encoding="utf-8") == "private"

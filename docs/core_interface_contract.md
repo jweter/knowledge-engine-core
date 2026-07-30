@@ -107,11 +107,18 @@ most likely to actually call:
 - `ke relationship-report` -- read Relationship Records. Console output
   only.
 - `ke graph-report [--evidence-record-id <id> | --paper-id <id>] [--output <path.md>]`
-  -- read the Phase 4 knowledge graph (M46-M48). No filter: corpus-wide
+  -- read the Phase 4 knowledge graph (M46-M49). No filter: corpus-wide
   population counts. `--evidence-record-id`: one claim's concepts and
   relationship edges. `--paper-id`: one paper's citation edges. Supports
   `--output <path.md>` (Markdown, not JSON), matching
   `evidence-report`/`relationship-report`'s own precedent.
+- `ke graph-relationship-candidates [--min-shared-concepts <n>] [--output <path.md>]`
+  -- surfaces claim pairs sharing a PICO-resolved concept, for a human to
+  review before authoring a `RelationshipRecord`. Structural overlap
+  only: never infers, detects, or suggests a relationship type or
+  rationale, the same boundary `ke relationship-validate` already draws.
+  Supports `--output <path.md>` (Markdown, not JSON). See
+  `docs/m49_graph_relationship_candidates.md`.
 
 **Corpus-building (the pipeline a consumer generally does not re-run
 itself, but may need to trigger for a specific paper):**
@@ -127,7 +134,7 @@ itself, but may need to trigger for a specific paper):**
   `ke extraction-review-annotate` requires `--output` (it always writes a
   file).
 
-**Phase 4 knowledge graph (M46-M48, see "the seam" above):**
+**Phase 4 knowledge graph (M46-M49, see "the seam" above):**
 - `ke graph-build --evidence <records.jsonl> [--relationships <records.jsonl>] [--output <path.json>]`
   -- populates `graph_concepts`/`graph_claims`/`graph_claim_concepts`/
   `graph_claim_relationships` in the SQLite database from an already-
@@ -143,6 +150,8 @@ itself, but may need to trigger for a specific paper):**
   DOI-identity matches; no structured per-entry parsing -- see
   `docs/m47_graph_citations.md` for the real-corpus measurement that
   scoped this decision.
+- `ke graph-relationship-candidates` -- read-only, no input file and no
+  network access. See `docs/m49_graph_relationship_candidates.md`.
 
 **Do not assume `--output` (or any machine-readable output) exists on a
 command not listed above as having it.** `search`/`answer`/

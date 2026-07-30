@@ -431,3 +431,84 @@ def test_citations_for_paper_returns_edges_in_both_directions(tmp_path: Path) ->
 
         counts = repository.population_counts()
         assert counts["citation_edges"] == 1
+
+
+def test_relationship_candidates_surfaces_pairs_sharing_a_concept(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claim_a = repository.get_or_create_claim("ev-a")
+        claim_b = repository.get_or_create_claim("ev-b")
+        semaglutide = repository.get_or_create_concept(
+            label="Semaglutide",
+            source="rxnorm",
+            source_reference_id="123456",
+            definition="A GLP-1 receptor agonist.",
+            source_url="https://rxnav.nlm.nih.gov/123456",
+            license="public-domain",
+            retrieved_at="2026-07-30T00:00:00Z",
+        )
+        repository.link_claim_concept(claim_a.id, semaglutide.id, "intervention")
+        repository.link_claim_concept(claim_b.id, semaglutide.id, "intervention")
+
+        candidates = repository.relationship_candidates()
+
+        assert len(candidates) == 1
+        found_a, found_b, shared_concepts = candidates[0]
+        assert {found_a.id, found_b.id} == {claim_a.id, claim_b.id}
+        assert [concept.id for concept in shared_concepts] == [semaglutide.id]
+
+
+def test_relationship_candidates_excludes_pairs_with_an_existing_relationship_edge(
+    tmp_path: Path,
+) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claim_a = repository.get_or_create_claim("ev-a")
+        claim_b = repository.get_or_create_claim("ev-b")
+        concept = repository.get_or_create_concept(
+            label="Obesity",
+            source="mesh",
+            source_reference_id="D009765",
+            definition="A condition of excess body fat.",
+            source_url="https://meshb.nlm.nih.gov/D009765",
+            license="public-domain",
+            retrieved_at="2026-07-30T00:00:00Z",
+        )
+        repository.link_claim_concept(claim_a.id, concept.id, "population")
+        repository.link_claim_concept(claim_b.id, concept.id, "population")
+        repository.get_or_create_relationship_edge(
+            "rel-1",
+            source_claim_id=claim_a.id,
+            target_claim_id=claim_b.id,
+            relationship_type="contextualizes",
+            rationale="A reviewer already linked these two records.",
+        )
+
+        assert repository.relationship_candidates() == []
+
+
+def test_relationship_candidates_respects_minimum_shared_concepts(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claim_a = repository.get_or_create_claim("ev-a")
+        claim_b = repository.get_or_create_claim("ev-b")
+        population = repository.get_or_create_concept(
+            label="Obesity",
+            source="mesh",
+            source_reference_id="D009765",
+            definition="A condition of excess body fat.",
+            source_url="https://meshb.nlm.nih.gov/D009765",
+            license="public-domain",
+            retrieved_at="2026-07-30T00:00:00Z",
+        )
+        repository.link_claim_concept(claim_a.id, population.id, "population")
+        repository.link_claim_concept(claim_b.id, population.id, "population")
+
+        assert repository.relationship_candidates(minimum_shared_concepts=2) == []
+        assert len(repository.relationship_candidates(minimum_shared_concepts=1)) == 1

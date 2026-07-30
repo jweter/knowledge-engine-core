@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
+from itertools import combinations
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -891,6 +893,64 @@ class GraphRepository:
             .order_by(GraphCitation.id)
         )
         return list(self.session.scalars(statement))
+
+    def relationship_candidates(
+        self, *, minimum_shared_concepts: int = 1
+    ) -> list[tuple[GraphClaim, GraphClaim, list[GraphConcept]]]:
+        """Return claim pairs sharing at least `minimum_shared_concepts` concepts.
+
+        Structural overlap only -- shared concepts, never a relationship type
+        or rationale. Matches `relationship-validate`'s "never infers,
+        detects, or suggests a relationship" posture (see
+        `docs/phase4_design.md`'s Open Questions on automated
+        candidate-surfacing): this method only surfaces which claim pairs
+        share PICO-resolved concepts, leaving whether and how they relate
+        entirely to the human reviewer who authors a `RelationshipRecord`. A
+        pair already linked by a `graph_claim_relationships` edge, in either
+        direction, is excluded -- a human has already made that call for it.
+        """
+
+        concept_claim_pairs = self.session.execute(
+            select(GraphClaimConcept.concept_id, GraphClaimConcept.claim_id).distinct()
+        ).all()
+
+        claims_by_concept: dict[int, set[int]] = defaultdict(set)
+        for concept_id, claim_id in concept_claim_pairs:
+            claims_by_concept[concept_id].add(claim_id)
+
+        shared_concepts_by_pair: dict[tuple[int, int], set[int]] = defaultdict(set)
+        for concept_id, claim_ids in claims_by_concept.items():
+            for claim_a_id, claim_b_id in combinations(sorted(claim_ids), 2):
+                shared_concepts_by_pair[(claim_a_id, claim_b_id)].add(concept_id)
+
+        existing_edges = {
+            frozenset((source_claim_id, target_claim_id))
+            for source_claim_id, target_claim_id in self.session.execute(
+                select(
+                    GraphClaimRelationship.source_claim_id,
+                    GraphClaimRelationship.target_claim_id,
+                )
+            )
+        }
+
+        candidates: list[tuple[GraphClaim, GraphClaim, list[GraphConcept]]] = []
+        for (claim_a_id, claim_b_id), concept_ids in shared_concepts_by_pair.items():
+            if len(concept_ids) < minimum_shared_concepts:
+                continue
+            if frozenset((claim_a_id, claim_b_id)) in existing_edges:
+                continue
+            claim_a = self.session.get(GraphClaim, claim_a_id)
+            claim_b = self.session.get(GraphClaim, claim_b_id)
+            assert claim_a is not None and claim_b is not None
+            concepts = [
+                concept
+                for concept_id in sorted(concept_ids)
+                if (concept := self.session.get(GraphConcept, concept_id)) is not None
+            ]
+            candidates.append((claim_a, claim_b, concepts))
+
+        candidates.sort(key=lambda item: (-len(item[2]), item[0].id, item[1].id))
+        return candidates
 
     def population_counts(self) -> dict[str, Any]:
         """Return the graph's total current row counts, e.g. for `ke graph-build`'s summary.
