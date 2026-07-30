@@ -126,6 +126,28 @@ def test_get_or_create_claim_is_idempotent(tmp_path: Path) -> None:
         assert fetched.evidence_record_id == "ev-glp1-step5-body-weight-week104-001"
 
 
+def test_find_claim_by_evidence_id_is_read_only(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        repository.get_or_create_claim("ev-1")
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        found = repository.find_claim_by_evidence_id("ev-1")
+        assert found is not None
+        assert found.evidence_record_id == "ev-1"
+
+        missing = repository.find_claim_by_evidence_id("ev-does-not-exist")
+        assert missing is None
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        counts = repository.population_counts()
+        assert counts["claims"] == 1
+
+
 def test_link_claim_concept_is_idempotent_per_edge_role(tmp_path: Path) -> None:
     database = build_database(tmp_path)
 
@@ -148,6 +170,44 @@ def test_link_claim_concept_is_idempotent_per_edge_role(tmp_path: Path) -> None:
 
         other_role_edge = repository.link_claim_concept(claim.id, concept.id, "outcome")
         assert other_role_edge.id != first_edge.id
+
+
+def test_concept_edges_for_claim_preserves_edge_role(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claim = repository.get_or_create_claim("ev-1")
+        semaglutide = repository.get_or_create_concept(
+            label="Semaglutide",
+            source="rxnorm",
+            source_reference_id="123456",
+            definition=None,
+            source_url=None,
+            license=None,
+            retrieved_at="2026-07-29T00:00:00Z",
+        )
+        placebo = repository.get_or_create_concept(
+            label="Placebo",
+            source="rxnorm",
+            source_reference_id="999999",
+            definition=None,
+            source_url=None,
+            license=None,
+            retrieved_at="2026-07-29T00:00:00Z",
+        )
+        repository.link_claim_concept(claim.id, semaglutide.id, "intervention")
+        repository.link_claim_concept(claim.id, placebo.id, "comparator")
+
+        claim_id = claim.id
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        edges = repository.concept_edges_for_claim(claim_id)
+        assert [(role, concept.label) for role, concept in edges] == [
+            ("comparator", "Placebo"),
+            ("intervention", "Semaglutide"),
+        ]
 
 
 def test_link_claim_concept_rejects_invalid_edge_role(tmp_path: Path) -> None:

@@ -1256,6 +1256,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   graph-citations-build`. Live-verified against the real local
   960-paper corpus: exactly 5 intra-corpus citation edges, individually
   confirmed genuine.
+- Added M48 (`docs/m48_graph_report.md`): `ke graph-report`, closing the
+  read-side gap M46/M47 left open (the graph could be written to but not
+  read back via the CLI). Three modes: no filter reports corpus-wide
+  population counts; `--evidence-record-id` reports one claim's concepts
+  (grouped by PICO edge role) and relationship edges; `--paper-id`
+  reports one paper's citation edges as citer and cited. Added
+  `GraphRepository.find_claim_by_evidence_id` (read-only, unlike
+  `get_or_create_claim`) and `concept_edges_for_claim` (preserves edge
+  role). Markdown output is escaped through a local equivalent of
+  `cli.py`'s own Codex-hardened `_report_text`. Also backfilled a real,
+  pre-existing gap: `ke graph-build`/`ke graph-citations-build` had never
+  been exercised through a `CliRunner`-level test until this milestone
+  added `tests/test_graph_cli.py` for all three commands together.
+  Live-verified against the real local corpus: summary counts match
+  M46/M47's own measurements exactly, and both claim- and paper-mode
+  reports render real, correct detail.
 
 ### Changed
 

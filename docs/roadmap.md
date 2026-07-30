@@ -696,6 +696,16 @@ Detailed milestone records include:
   already in the corpus, which needs no per-entry parsing at all. Run
   against the real 960-paper local corpus: exactly 5 intra-corpus
   citation edges, individually verified as genuine.
+- **M48 (`docs/m48_graph_report.md`)** closed the read-side gap M46/M47
+  left open: `ke graph-build`/`ke graph-citations-build` could write to
+  the graph but nothing could read it back via the CLI. `ke graph-report`
+  adds a corpus-wide summary mode plus per-claim (concepts by PICO role,
+  relationship edges) and per-paper (citation edges, as citer and cited)
+  detail modes, purely a display layer over `GraphRepository`. Also
+  backfilled a real, pre-existing test gap: M46/M47's CLI commands had
+  never been exercised through a `CliRunner`-level test until this
+  milestone added `tests/test_graph_cli.py` for all three commands
+  together.
 
 ## Phase 5: Human Interface
 

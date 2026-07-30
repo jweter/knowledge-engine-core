@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, cast
 
@@ -77,7 +79,7 @@ from knowledge_engine.manual_pdf_preview import (
 from knowledge_engine.mesh_lookup import GetTransport as MeshLookupGetTransport
 from knowledge_engine.mesh_lookup import MeshLookupError, MeshLookupService
 from knowledge_engine.metadata_enrichment import MetadataProvider, MetadataQuery
-from knowledge_engine.models import ImportRun, Paper, PaperPage
+from knowledge_engine.models import GraphCitation, ImportRun, Paper, PaperPage
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
 from knowledge_engine.paper_pages_backfill import backfill_paper
 from knowledge_engine.parser import ParsedPage, PyMuPDFParser
@@ -347,6 +349,21 @@ GraphBuildRelationshipsOption = Annotated[
 GraphBuildOutputOption = Annotated[
     Path | None,
     typer.Option("--output", help="Optional path to save the population summary as JSON."),
+]
+GraphReportEvidenceRecordIdOption = Annotated[
+    str | None,
+    typer.Option(
+        "--evidence-record-id",
+        help="Report one claim's linked concepts and relationships, by EvidenceRecord ID.",
+    ),
+]
+GraphReportPaperIdOption = Annotated[
+    int | None,
+    typer.Option("--paper-id", help="Report one paper's citation edges, by database ID."),
+]
+GraphReportOutputOption = Annotated[
+    Path | None,
+    typer.Option("--output", help="Optional path for the generated Markdown report."),
 ]
 DryRunOption = Annotated[
     bool,
@@ -1967,6 +1984,262 @@ def graph_citations_build(
 
     if output is not None:
         _write_output(output, json.dumps(counts, indent=2) + "\n")
+
+
+_GRAPH_REPORT_MARKDOWN_SPECIAL_CHARS = re.compile(r"([\\`*_\[\]<~])")
+
+
+def _graph_report_text(value: object) -> str:
+    """Normalize a graph field for `ke graph-report`'s Markdown output.
+
+    Mirrors `knowledge_engine.cli`'s own `_report_text` (shared by
+    `evidence-report`/`relationship-report`, hardened against a real Codex
+    finding on the original `relationship-report` addition) exactly:
+    collapses embedded whitespace and escapes Markdown-structural
+    characters, so a concept label, citation snippet, or relationship
+    rationale can never forge a report heading or alter inline formatting.
+    A local equivalent, not an independent rediscovery of the same
+    escaping rule -- entrypoint.py does not import `cli.py`'s private
+    helpers (see `_read_jsonl_records`'s own precedent).
+    """
+
+    collapsed = " ".join(str(value).split())
+    return _GRAPH_REPORT_MARKDOWN_SPECIAL_CHARS.sub(r"\\\1", collapsed)
+
+
+def _build_graph_summary_report(graph_repository: GraphRepository) -> str:
+    """Build a Markdown report of the graph's current, actual population counts."""
+
+    counts = graph_repository.population_counts()
+    by_source = (
+        ", ".join(
+            f"{source}: {count}" for source, count in sorted(counts["concepts_by_source"].items())
+        )
+        or "none"
+    )
+    return "\n".join(
+        [
+            "# Knowledge Engine Graph Report",
+            "",
+            f"Generated: {_utc_now_iso_for_report()}",
+            "",
+            "## Corpus Totals",
+            "",
+            f"- Concepts: {counts['concepts']} ({by_source})",
+            f"- Claims: {counts['claims']}",
+            f"- Claim-concept edges: {counts['claim_concept_edges']}",
+            f"- Relationship edges: {counts['relationship_edges']}",
+            f"- Citation edges: {counts['citation_edges']}",
+            "",
+            "## Scope",
+            "",
+            "This report displays the graph's current, actual row counts only "
+            "-- nothing here is inferred or synthesized. Run with "
+            "`--evidence-record-id` or `--paper-id` for one claim's or "
+            "paper's own detail.",
+            "",
+        ]
+    )
+
+
+def _build_claim_graph_report(graph_repository: GraphRepository, evidence_record_id: str) -> str:
+    """Build a Markdown report of one claim's linked concepts and relationships."""
+
+    claim = graph_repository.find_claim_by_evidence_id(evidence_record_id)
+    if claim is None:
+        console.print(
+            f"[red]No graph claim found for evidence_record_id:[/red] {evidence_record_id}"
+        )
+        console.print("Run `ke graph-build --evidence <file>` first.")
+        raise typer.Exit(1)
+
+    lines = [
+        "# Knowledge Engine Graph Report",
+        "",
+        f"Generated: {_utc_now_iso_for_report()}",
+        "",
+        "## Claim",
+        "",
+        f"- Evidence record ID: {_graph_report_text(claim.evidence_record_id)}",
+        f"- Graph claim ID: {claim.id}",
+        f"- Created: {_graph_report_text(claim.created_at)}",
+        "",
+        "## Concepts",
+        "",
+    ]
+    concept_edges = graph_repository.concept_edges_for_claim(claim.id)
+    if not concept_edges:
+        lines.extend(["No concepts are linked to this claim.", ""])
+    for edge_role, concept in concept_edges:
+        lines.extend(
+            [
+                f"### {_graph_report_text(edge_role)}: {_graph_report_text(concept.label)}",
+                "",
+                f"- Source: {_graph_report_text(concept.source)}",
+                "- Source reference ID: "
+                f"{_graph_report_text(concept.source_reference_id or 'n/a')}",
+                f"- Definition: {_graph_report_text(concept.definition or 'n/a')}",
+                "",
+            ]
+        )
+
+    lines.extend(["## Relationships", ""])
+    relationships = graph_repository.relationships_for_claim(claim.id)
+    if not relationships:
+        lines.extend(["No relationship edges are linked to this claim.", ""])
+    for relationship in relationships:
+        direction = "source" if relationship.source_claim_id == claim.id else "target"
+        other_claim_id = (
+            relationship.target_claim_id if direction == "source" else relationship.source_claim_id
+        )
+        other_claim = graph_repository.get_claim(other_claim_id)
+        other_evidence_id = other_claim.evidence_record_id if other_claim else "unknown"
+        lines.extend(
+            [
+                f"### {_graph_report_text(relationship.relationship_type)} ({direction})",
+                "",
+                f"- Relationship ID: {_graph_report_text(relationship.relationship_id)}",
+                f"- Other evidence record ID: {_graph_report_text(other_evidence_id)}",
+                f"- Rationale: {_graph_report_text(relationship.rationale)}",
+                "",
+            ]
+        )
+
+    lines.extend(
+        [
+            "## Scope",
+            "",
+            "This report displays stored graph rows only -- nothing here is "
+            "inferred or synthesized.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _build_paper_citation_report(
+    graph_repository: GraphRepository, paper_repository: PaperRepository, paper_id: int
+) -> str:
+    """Build a Markdown report of one paper's citation edges, as citer and as cited."""
+
+    paper = paper_repository.get(paper_id)
+    if paper is None:
+        console.print(f"[red]No paper found with database ID:[/red] {paper_id}")
+        raise typer.Exit(1)
+
+    citations = graph_repository.citations_for_paper(paper_id)
+    cites = [edge for edge in citations if edge.citing_paper_id == paper_id]
+    cited_by = [edge for edge in citations if edge.cited_paper_id == paper_id]
+
+    lines = [
+        "# Knowledge Engine Graph Report",
+        "",
+        f"Generated: {_utc_now_iso_for_report()}",
+        "",
+        "## Paper",
+        "",
+        f"- Paper ID: {paper.id}",
+        f"- Title: {_graph_report_text(paper.title)}",
+        f"- DOI: {_graph_report_text(paper.doi or 'n/a')}",
+        "",
+        f"## Cites ({len(cites)})",
+        "",
+    ]
+    if not cites:
+        lines.extend(["This paper cites no other corpus paper in the graph yet.", ""])
+    for edge in cites:
+        cited_paper = paper_repository.get(edge.cited_paper_id)
+        lines.extend(_graph_report_citation_lines(edge, cited_paper))
+
+    lines.extend([f"## Cited By ({len(cited_by)})", ""])
+    if not cited_by:
+        lines.extend(["No other corpus paper cites this paper in the graph yet.", ""])
+    for edge in cited_by:
+        citing_paper = paper_repository.get(edge.citing_paper_id)
+        lines.extend(_graph_report_citation_lines(edge, citing_paper))
+
+    lines.extend(
+        [
+            "## Scope",
+            "",
+            "This report displays stored citation edges only, from "
+            "`ke graph-citations-build`'s DOI-identity matching -- nothing "
+            "here is inferred or synthesized.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _graph_report_citation_lines(edge: GraphCitation, other_paper: Paper | None) -> list[str]:
+    """Build Markdown lines for one citation edge and the paper on its other side."""
+
+    other_title = _graph_report_text(other_paper.title) if other_paper else "unknown"
+    other_doi = _graph_report_text(other_paper.doi or "n/a") if other_paper else "n/a"
+    other_id = other_paper.id if other_paper else "unknown"
+    return [
+        f"### {other_title}",
+        "",
+        f"- Paper ID: {other_id}",
+        f"- DOI: {other_doi}",
+        f"- Raw citation text: {_graph_report_text(edge.raw_citation_text)}",
+        "",
+    ]
+
+
+def _utc_now_iso_for_report() -> str:
+    """Return the current UTC time as an ISO string, for a report's own generated-at line."""
+
+    return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+@app.command("graph-report")
+def graph_report(
+    evidence_record_id: GraphReportEvidenceRecordIdOption = None,
+    paper_id: GraphReportPaperIdOption = None,
+    output: GraphReportOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Render a Markdown report of the Phase 4 knowledge graph.
+
+    Three modes:
+
+    - No filter: the graph's current corpus-wide population counts.
+    - `--evidence-record-id`: one claim's linked concepts (grouped by PICO
+      edge role) and relationship edges, as source or target.
+    - `--paper-id`: one paper's citation edges, as citer and as cited.
+
+    Purely a display layer over `GraphRepository`'s existing read methods
+    -- never writes to the graph, never infers or computes anything the
+    graph does not already store.
+    """
+
+    if evidence_record_id is not None and paper_id is not None:
+        raise typer.BadParameter("Use --evidence-record-id or --paper-id, not both.")
+    if output is not None and output.exists() and not force:
+        raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
+
+    database = _local_database()
+    database.initialize()
+
+    with database.session() as session:
+        graph_repository = GraphRepository(session)
+        if evidence_record_id is not None:
+            report = _build_claim_graph_report(graph_repository, evidence_record_id)
+        elif paper_id is not None:
+            report = _build_paper_citation_report(
+                graph_repository, PaperRepository(session), paper_id
+            )
+        else:
+            report = _build_graph_summary_report(graph_repository)
+
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(report, encoding="utf-8")
+        console.print(f"[green]Wrote graph report:[/green] {output}")
+        return
+
+    console.print(report, markup=False)
 
 
 @app.command("paper-pages-backfill")
