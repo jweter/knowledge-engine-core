@@ -706,6 +706,19 @@ Detailed milestone records include:
   never been exercised through a `CliRunner`-level test until this
   milestone added `tests/test_graph_cli.py` for all three commands
   together.
+- **M49 (`docs/m49_graph_relationship_candidates.md`)** built the
+  automated relationship candidate-surfacing `docs/phase4_design.md`'s
+  Open Questions deferred until `graph_claims`/`graph_claim_concepts`
+  existed: `ke graph-relationship-candidates` surfaces claim pairs
+  sharing a PICO-resolved concept, with a pair already linked by a
+  validated relationship edge excluded. Structural overlap only -- it
+  never infers, detects, or suggests a relationship type or rationale,
+  the same boundary `ke relationship-validate` already draws; that
+  judgment call stays entirely with the human reviewer. Live-verified
+  against the real corpus's 2 validated `EvidenceRecord`s: correctly
+  surfaces the one real pair sharing 2 concepts (`semaglutide`,
+  `placebo`), and correctly reports 0 pairs when
+  `--min-shared-concepts` is raised past that real count.
 
 ## Phase 5: Human Interface
 

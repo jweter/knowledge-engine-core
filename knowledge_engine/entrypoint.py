@@ -365,6 +365,14 @@ GraphReportOutputOption = Annotated[
     Path | None,
     typer.Option("--output", help="Optional path for the generated Markdown report."),
 ]
+GraphRelationshipCandidatesMinimumSharedConceptsOption = Annotated[
+    int,
+    typer.Option(
+        "--min-shared-concepts",
+        min=1,
+        help="Only surface claim pairs sharing at least this many concepts.",
+    ),
+]
 DryRunOption = Annotated[
     bool,
     typer.Option("--dry-run", help="Report what would happen without writing anything."),
@@ -2236,6 +2244,102 @@ def graph_report(
     if output is not None:
         _write_output(output, report)
         console.print(f"[green]Wrote graph report:[/green] {output}")
+        return
+
+    console.print(report, markup=False)
+
+
+def _build_relationship_candidates_report(
+    graph_repository: GraphRepository, minimum_shared_concepts: int
+) -> str:
+    """Build a Markdown report of claim pairs sharing PICO-resolved concepts.
+
+    Structural overlap only, exactly as `GraphRepository.relationship_candidates`
+    computes it -- lists which concepts two claims share, never a
+    relationship type or rationale. Deciding whether, and how, two claims
+    actually relate stays a human judgment call authored as a
+    `RelationshipRecord` and validated via `ke relationship-validate`, the
+    same posture `ke relationship-report` already documents.
+    """
+
+    candidates = graph_repository.relationship_candidates(
+        minimum_shared_concepts=minimum_shared_concepts
+    )
+
+    lines = [
+        "# Knowledge Engine Graph Relationship Candidates",
+        "",
+        f"Generated: {_utc_now_iso_for_report()}",
+        "",
+        f"Minimum shared concepts: {minimum_shared_concepts}",
+        f"Candidate pairs found: {len(candidates)}",
+        "",
+    ]
+    if not candidates:
+        lines.extend(
+            [
+                "No claim pairs share the minimum number of concepts yet.",
+                "",
+            ]
+        )
+    for claim_a, claim_b, shared_concepts in candidates:
+        concept_labels = ", ".join(_graph_report_text(concept.label) for concept in shared_concepts)
+        lines.extend(
+            [
+                f"## {_graph_report_text(claim_a.evidence_record_id)} <-> "
+                f"{_graph_report_text(claim_b.evidence_record_id)}",
+                "",
+                f"- Shared concepts ({len(shared_concepts)}): {concept_labels}",
+                "",
+            ]
+        )
+
+    lines.extend(
+        [
+            "## Scope",
+            "",
+            "This report surfaces structural overlap only -- which claims "
+            "share a PICO-resolved concept. It never infers, detects, or "
+            "suggests a relationship type or rationale; that remains a "
+            "human judgment call, authored as a `RelationshipRecord` and "
+            "checked with `ke relationship-validate`.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+@app.command("graph-relationship-candidates")
+def graph_relationship_candidates(
+    minimum_shared_concepts: GraphRelationshipCandidatesMinimumSharedConceptsOption = 1,
+    output: GraphReportOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Surface claim pairs sharing PICO-resolved concepts, for a human to review.
+
+    Structural overlap only: lists which claims share a concept and which
+    concepts they share, so a reviewer does not have to compose candidate
+    pairs from scratch when authoring a `RelationshipRecord`. Never infers,
+    detects, or suggests a `supports`/`contradicts`/`qualifies`/
+    `contextualizes` relationship or its rationale -- that judgment call
+    stays entirely with the human, exactly as `ke relationship-validate`
+    already requires. A pair already linked by a validated relationship
+    edge is excluded, since a human has already made that call for it.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    database = _local_database()
+    database.initialize()
+
+    with database.session() as session:
+        graph_repository = GraphRepository(session)
+        report = _build_relationship_candidates_report(graph_repository, minimum_shared_concepts)
+
+    if output is not None:
+        _write_output(output, report)
+        console.print(f"[green]Wrote relationship candidates report:[/green] {output}")
         return
 
     console.print(report, markup=False)

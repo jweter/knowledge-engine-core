@@ -1272,6 +1272,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Live-verified against the real local corpus: summary counts match
   M46/M47's own measurements exactly, and both claim- and paper-mode
   reports render real, correct detail.
+- Added M49 (`docs/m49_graph_relationship_candidates.md`): `ke
+  graph-relationship-candidates`, the automated relationship
+  candidate-surfacing `docs/phase4_design.md`'s Open Questions deferred
+  until `graph_claims`/`graph_claim_concepts` existed. Surfaces claim
+  pairs sharing a PICO-resolved concept (`--min-shared-concepts` to
+  raise the threshold), excluding pairs already linked by a validated
+  relationship edge. Structural overlap only -- never infers, detects,
+  or suggests a relationship type or rationale, the same boundary `ke
+  relationship-validate` already draws. Added
+  `GraphRepository.relationship_candidates`. Live-verified against the
+  real local corpus: correctly surfaces the one real pair (sharing
+  `semaglutide`/`placebo`) and correctly reports zero pairs once
+  `--min-shared-concepts` is raised past that real count.
 
 ### Changed
 
