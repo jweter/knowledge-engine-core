@@ -764,6 +764,18 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   altered in place, so version 10 rebuilds `graph_claim_relationships`)
   -- live-verified against a copy of the real corpus database, which
   upgraded cleanly from its actual current schema version.
+- **M51 (`docs/m51_graph_unconfirmed_claims.md`)** built the first
+  concrete slice of `docs/founding_vision.md`'s Addendum, "Tracking the
+  Unknown": `ke graph-unconfirmed-claims` lists every claim no
+  relationship edge of any type touches yet, the honest, non-inferred
+  "gap" signal M50 already decided on. Purely a display layer over a new
+  `GraphRepository.unconfirmed_claims` outer join -- no research-question
+  grouping, no severity ranking, no cross-reference with `ke
+  graph-relationship-candidates`'s own output, all explicitly left for
+  later per M50's own Open Questions. Live-verified against the real
+  corpus: both real claims list as unconfirmed before any relationship
+  exists, correctly drops to zero once one real `supports` relationship
+  is built between them.
 
 ## Phase 5: Human Interface
 

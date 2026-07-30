@@ -912,6 +912,30 @@ class GraphRepository:
         )
         return list(self.session.scalars(statement))
 
+    def unconfirmed_claims(self) -> list[GraphClaim]:
+        """Return every claim with zero relationship edges, as source or target.
+
+        M50's Tracking the Unknown decision (`docs/stability_and_tracking_design.md`):
+        the only "gap" `core` can honestly report without guessing is a real,
+        structural fact the graph already stores -- no `supports`/
+        `contradicts`/`qualifies`/`contextualizes`/`supersedes` edge touches
+        this claim yet, meaning no second claim has been reviewed and
+        explicitly related to it. Says nothing about the science itself, only
+        about `core`'s own review coverage so far.
+        """
+
+        statement = (
+            select(GraphClaim)
+            .outerjoin(
+                GraphClaimRelationship,
+                (GraphClaimRelationship.source_claim_id == GraphClaim.id)
+                | (GraphClaimRelationship.target_claim_id == GraphClaim.id),
+            )
+            .where(GraphClaimRelationship.id.is_(None))
+            .order_by(GraphClaim.id)
+        )
+        return list(self.session.scalars(statement))
+
     def add_citation_edge(
         self, *, citing_paper_id: int, cited_paper_id: int, raw_citation_text: str
     ) -> GraphCitation:

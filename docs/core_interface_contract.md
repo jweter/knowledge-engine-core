@@ -107,7 +107,7 @@ most likely to actually call:
 - `ke relationship-report` -- read Relationship Records. Console output
   only.
 - `ke graph-report [--evidence-record-id <id> | --paper-id <id>] [--output <path.md>]`
-  -- read the Phase 4 knowledge graph (M46-M49). No filter: corpus-wide
+  -- read the Phase 4 knowledge graph (M46-M51). No filter: corpus-wide
   population counts. `--evidence-record-id`: one claim's concepts and
   relationship edges. `--paper-id`: one paper's citation edges. Supports
   `--output <path.md>` (Markdown, not JSON), matching
@@ -119,6 +119,11 @@ most likely to actually call:
   rationale, the same boundary `ke relationship-validate` already draws.
   Supports `--output <path.md>` (Markdown, not JSON). See
   `docs/m49_graph_relationship_candidates.md`.
+- `ke graph-unconfirmed-claims [--output <path.md>]` -- lists claims with
+  zero relationship edges of any type, M50's Tracking the Unknown
+  decision (`docs/stability_and_tracking_design.md`). No filtering, no
+  `research_question` grouping. Supports `--output <path.md>` (Markdown,
+  not JSON). See `docs/m51_graph_unconfirmed_claims.md`.
 
 **Corpus-building (the pipeline a consumer generally does not re-run
 itself, but may need to trigger for a specific paper):**
@@ -134,7 +139,7 @@ itself, but may need to trigger for a specific paper):**
   `ke extraction-review-annotate` requires `--output` (it always writes a
   file).
 
-**Phase 4 knowledge graph (M46-M49, see "the seam" above):**
+**Phase 4 knowledge graph (M46-M51, see "the seam" above):**
 - `ke graph-build --evidence <records.jsonl> [--relationships <records.jsonl>] [--output <path.json>]`
   -- populates `graph_concepts`/`graph_claims`/`graph_claim_concepts`/
   `graph_claim_relationships` in the SQLite database from an already-

@@ -1300,6 +1300,17 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   version, and a real `supersedes` relationship built, rendered in `ke
   graph-report`, and was correctly excluded from `ke
   graph-relationship-candidates`.
+- Added M51 (`docs/m51_graph_unconfirmed_claims.md`): `ke
+  graph-unconfirmed-claims`, the first concrete slice of Tracking the
+  Unknown to ship -- lists every claim with zero relationship edges of
+  any type, the honest, non-inferred "gap" signal M50 already decided
+  on. Added `GraphRepository.unconfirmed_claims`. No `research_question`
+  grouping, severity ranking, or cross-reference with `ke
+  graph-relationship-candidates`'s own output -- all explicitly deferred
+  per M50's Open Questions. Live-verified against the real corpus: both
+  real claims list as unconfirmed before any relationship exists,
+  correctly drops to zero once one real `supports` relationship is
+  built between them.
 
 ### Changed
 
