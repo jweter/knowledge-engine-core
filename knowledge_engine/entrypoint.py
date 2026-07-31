@@ -574,7 +574,10 @@ def _load_paper_pages(paper_id: int) -> tuple[Paper, list[ParsedPage]] | None:
         paper = PaperRepository(session).get(paper_id)
         if paper is None:
             return None
-        pages = [ParsedPage(page_number=page.page_number, text=page.text) for page in paper.pages]
+        pages = [
+            ParsedPage(page_number=page.page_number, text=page.text, table_text=page.table_text)
+            for page in paper.pages
+        ]
         session.expunge(paper)
         return paper, pages
 
@@ -1615,7 +1618,12 @@ def extraction_review_batch_generate(
         paper_pages = [
             (
                 PaperMetadata(paper_id=paper.id, doi=paper.doi, title=paper.title),
-                [ParsedPage(page_number=page.page_number, text=page.text) for page in paper.pages],
+                [
+                    ParsedPage(
+                        page_number=page.page_number, text=page.text, table_text=page.table_text
+                    )
+                    for page in paper.pages
+                ],
             )
             for paper in sorted(papers, key=lambda paper: paper.id)
         ]

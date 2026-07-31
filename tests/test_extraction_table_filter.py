@@ -29,8 +29,7 @@ def test_is_table_derived_flags_a_long_sentence_with_high_table_word_overlap() -
         "59.3 59.3 0.001 Sex Female 1393 1777 0.006"
     )
     sentence = (
-        "Characteristic Value Semaglutide Dulaglutide SMD "
-        "Age years 59.3 59.3 0.001 Sex Female"
+        "Characteristic Value Semaglutide Dulaglutide SMD Age years 59.3 59.3 0.001 Sex Female"
     ) * 5  # pad past the length floor while keeping high word overlap
 
     assert is_table_derived(sentence, table_text) is True
@@ -60,9 +59,7 @@ def test_is_table_derived_overlap_ratio_boundary() -> None:
 
     table_text = "alpha beta gamma delta epsilon"
     # ~10% overlap: 1 table word ("alpha") in ~10 total words, repeated.
-    below_threshold = ("alpha unrelated words that pad out the length past four hundred " * 8)[
-        :420
-    ]
+    below_threshold = ("alpha unrelated words that pad out the length past four hundred " * 8)[:420]
     # ~34% overlap: 2 table words ("alpha", "beta") in 6 total words, repeated.
     above_threshold = ("alpha beta unrelated pad words here " * 12)[:420]
 
