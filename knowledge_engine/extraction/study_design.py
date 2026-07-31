@@ -88,9 +88,7 @@ _STUDY_TYPE_PATTERNS: dict[str, re.Pattern[str]] = {
     "retrospective_study": re.compile(r"(?i)\bretrospective (?:study|analysis|review)\b"),
     "case_control_study": re.compile(r"(?i)\bcase-control study\b"),
     "case_series": re.compile(r"(?i)\bcase series\b"),
-    "case_report": re.compile(
-        r"(?i)\bcase reports?\b|\bwe (?:report|describe|present) a case\b"
-    ),
+    "case_report": re.compile(r"(?i)\bcase reports?\b|\bwe (?:report|describe|present) a case\b"),
     "cross_sectional_study": re.compile(
         r"(?i)\bcross-sectional\b(?:\s+\w+){0,2}?\s+(?:study|survey|design)\b"
     ),
