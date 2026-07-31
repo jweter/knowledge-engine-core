@@ -712,3 +712,70 @@ This closes every item this design's Open Questions section had open.
   `REQUIRED_EVIDENCE_FIELDS`, fragmenting the evidence model the manual
   prototype already established and breaking the existing `ke evidence*`
   command family.
+
+## Known Gap: Table Content Leaking into Claim Candidates (flagged, not decided here)
+
+Found while hand-reviewing `ke extraction-review-batch-generate`'s output at
+scale for the evidence-promotion work in `data/corpora/glp1_weight_loss/
+evidence_records.jsonl`. `PyMuPDFParser` extracts each page as flat text via
+`page.get_text("text")` (`knowledge_engine/parser.py`), which discards all
+layout geometry -- there is no way to tell, from `ParsedPage.text` alone,
+that a run of characters came from a table's grid of cells rather than
+ordinary prose. `split_sentence_spans` (shared by M17's claim-candidate
+detection and M28's PICO extraction) only splits at a terminal `.!?`
+followed by whitespace and an uppercase letter; a multi-row table rendered
+as `"Header\n\nValue\n\nValue\n\n..."` routinely has no such punctuation
+pattern anywhere in it, so the entire table becomes one "sentence" by
+construction. Since a table this size easily contains a stray `%` or a
+number matching one of `detect_claim_candidates`'s signal patterns
+(`_SIGNAL_PATTERNS` in `knowledge_engine/extraction/claims.py`), the whole
+table gets flagged as a claim candidate and dumped verbatim into
+`claim_text`/`result_summary`. Measured against the real corpus: sampling
+draft items in the 700-1000 character band (well above the corpus median of
+191 characters) found roughly 80% were table dumps rather than legitimate
+long sentences, and there is no clean length threshold that separates the
+two classes -- legitimate long sentences (e.g. one citing several prior
+studies inline) and short table dumps are interleaved throughout the length
+distribution, not cleanly separated into a "normal" range and a "pathological
+tail." A length-based or blank-line-density-based heuristic patch was
+considered and rejected for this reason; see PR #196's description for the
+investigation.
+
+**A more promising, tested path**: PyMuPDF (as vendored in this repo,
+version 1.28.0) ships a built-in heuristic table detector,
+`fitz.Page.find_tables()`, that returns each detected table's bounding box
+and row/column count from the page's actual layout geometry, not just its
+text. Tested directly against three of the worst real table-dump examples
+found in this corpus (the three longest `claim_text` values in a full
+13,969-item `ke extraction-review-batch-generate` run):
+
+| Paper | Known bad table-dump page | `find_tables()` result |
+| --- | --- | --- |
+| PMC13310760.pdf ("Effect of bariatric surgery on matrix metalloproteinase activity...") | page 4 | 1 table found, 19 rows x 12 cols, bbox matching the table region |
+| PMC13262276.pdf ("Comparative Effectiveness and Safety of Once-Weekly Injectable Semaglutide...") | page 7 | 2 tables found, matching bboxes |
+| PMC12777878.pdf ("The ketogenic diet is not for everyone: contraindications...") | scanned all 38 pages | 0 tables found anywhere in the document |
+
+Two of three known-bad tables were caught cleanly by the built-in detector;
+the third (a borderless table with full-sentence prose inside each cell,
+rather than short grid-aligned values) was not -- PyMuPDF's own heuristic
+detector relies on visual grid/border cues that this particular layout
+doesn't have. PyMuPDF's own runtime warning ("Consider using the
+`pymupdf_layout` package for a greatly improved page layout analysis")
+suggests a real, but not yet evaluated, path to closing that remaining gap.
+
+**Why this is not fixed in this session**: a real fix needs, at minimum:
+`PyMuPDFParser.parse` calling `page.find_tables()` per page and either
+excluding detected table regions from `ParsedPage.text` or tagging them
+separately so `detect_claim_candidates`/`extract_pico` never scan them as
+prose; a new persisted field (or a separate table) to carry that per-page
+table-region data through `paper_pages`, since it doesn't exist in the
+schema today; and, critically, a full re-parse of all 960 already-ingested
+papers to backfill it -- `ParsedPage.text` for existing papers was captured
+before this fix would exist and cannot be retroactively corrected without
+re-running the parser against the original PDFs. That is a real, bounded,
+now-technically-validated piece of future work, not an open-ended research
+problem -- but it is a schema-and-reparse-sized change, not a rule-pattern
+tweak like the PICO/study-design/limitations fixes in this same session,
+and this project's own established practice (see M38's Decision section
+above) is to flag a real, well-diagnosed gap for explicit owner decision
+rather than unilaterally start a corpus-wide re-parse.
