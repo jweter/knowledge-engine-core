@@ -1374,6 +1374,29 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   all 960 already-ingested papers, matching this project's established
   practice of flagging a well-diagnosed, schema-sized gap for explicit
   owner decision rather than starting a corpus-wide re-parse unilaterally.
+- Added table-region detection to fix the `claim_text`/table-data-leakage
+  gap above, additively: `PyMuPDFParser` now calls `page.find_tables()`
+  per page and populates a new `ParsedPage.table_text`/`paper_pages.table_text`
+  (schema v11) field without ever altering `ParsedPage.text` or any offset
+  computed against it, preserving source-span traceability. A new
+  `knowledge_engine.extraction.table_filter.is_table_derived` helper (with
+  empirically-tuned length and word-overlap thresholds) excludes a
+  candidate sentence from `detect_claim_candidates`/`extract_pico`/
+  `extract_limitations` only when it is long and overlaps heavily with a
+  detected table's text; `pico.py`/`study_design.py` were refactored to
+  scan sections per-page (matching `claims.py`'s existing precedent) so
+  each candidate sentence can be checked against the right page's table
+  text. A new `ke paper-pages-table-text-backfill` command re-parses
+  already-ingested papers' original PDFs (reusing the M22
+  content-hash-verified backfill machinery) to populate `table_text`
+  without touching persisted `text`/offsets. Run against the real corpus:
+  951 / 960 papers backfilled (9 missing source files, 0 hash mismatches,
+  0 parse failures); 1,173 / 14,182 pages across 370 papers had a table
+  detected. Full-corpus `ke extraction-review-batch-generate` output went
+  from 13,969 to 13,668 draft items (301 table-derived candidates
+  excluded); the two largest known table-dump leaks (5,099 and 4,870
+  characters) are gone, while a borderless-table case `find_tables()`
+  cannot detect remains a documented, honest limitation.
 
 ### Fixed
 
@@ -1427,6 +1450,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   limitation. Re-measured against the real 960-paper corpus: study type
   classified 416 -> 449 papers (43.3% -> 46.8%); limitations detected
   117 -> 589 papers (12.2% -> 61.4%).
+- Fixed the table-region fix above silently having zero effect on
+  already-paged papers: three call sites that reconstruct an in-memory
+  `ParsedPage` from persisted `PaperPage` rows (`entrypoint.py`'s
+  single-paper and batch draft-generation code paths, and
+  `scripts/m38_extraction_corpus_report.py`) never copied the new
+  `table_text` column across, so `is_table_derived` always saw
+  `table_text=None` and never excluded anything, with no error raised.
+  Found only by live validation (a full-corpus backfill followed by
+  regenerating draft items showed byte-for-byte identical output to the
+  pre-fix baseline); not caught by any existing test, including the
+  real-database end-to-end test whose own docstring says it exists to
+  prove this exact `PaperPage` -> `ParsedPage` conversion, because that
+  test's fixture never populated `table_text`. Fixed at all three call
+  sites and covered by a new dedicated regression test, verified to fail
+  without the fix (via `git stash`) and pass with it.
 
 ### Changed
 
