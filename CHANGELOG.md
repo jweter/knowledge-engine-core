@@ -1372,6 +1372,31 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   bug as expected behavior (asserting identical `intervention` and
   `comparator` values); its fixture text now uses four genuinely distinct
   cue sentences.
+- Closed the two lowest-coverage Phase 2 extraction gaps
+  (`STUDY_DESIGN_RULES_VERSION` v2 -> v3), grounded in reading real corpus
+  samples before writing any pattern, the same standard
+  `docs/m38_extraction_scale_assessment.md`'s earlier fixes were held to --
+  see that doc's new "Resolved follow-up 2" section for full detail.
+  `classify_study_type` widened four patterns after sampling real "none"
+  papers: `randomized_controlled_trial`'s rigid fixed-order pattern now
+  tolerates arbitrary RCT-descriptor word ordering within a bounded
+  6-word window (e.g. "an open-label randomized and decentralized clinical
+  trial"), while still requiring singular "trial" so a paper discussing
+  multiple prior "randomized controlled trials" still does not match;
+  `cohort_study` now also matches "cohort analysis"; `cross_sectional_study`
+  now also matches "cross-sectional survey"/"cross-sectional design" (with
+  up to two intervening words); `case_report` now also matches the
+  canonical opening phrase "we report/describe/present a case", not just
+  the literal words "case report". `extract_limitations` now falls back to
+  scanning the Discussion section for explicit limitation-cue sentences
+  when no dedicated "Limitations" heading was detected (a real 200-paper
+  sample found 80.5% of "no limitations, has discussion" papers had at
+  least one such sentence -- the heading requirement, not an absence of
+  stated limitations, was the actual bottleneck), returning every
+  cue-matching sentence found rather than judging which one is "the real"
+  limitation. Re-measured against the real 960-paper corpus: study type
+  classified 416 -> 449 papers (43.3% -> 46.8%); limitations detected
+  117 -> 589 papers (12.2% -> 61.4%).
 
 ### Changed
 
