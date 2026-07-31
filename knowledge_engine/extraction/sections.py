@@ -136,6 +136,34 @@ def detect_sections(pages: Sequence[ParsedPage]) -> tuple[SectionSpan, ...]:
     return tuple(spans)
 
 
+def section_page_ranges(
+    section: SectionSpan, pages: Sequence[ParsedPage]
+) -> list[tuple[int, int, int]]:
+    """Return (page_number, local_start, local_end) for each page a section covers.
+
+    Shared by every extraction module that needs to scan a section's text on
+    a *per-page* basis rather than as one already-joined string -- `M17`'s
+    claim-candidate detection needs this to compute exact per-page source
+    offsets, and the table-derived-sentence filter
+    (`knowledge_engine.extraction.table_filter.is_table_derived`) needs it to
+    know which page's `ParsedPage.table_text` applies to a given candidate
+    sentence, since a joined multi-page section string loses that boundary.
+    """
+
+    ranges: list[tuple[int, int, int]] = []
+    for page in pages:
+        if page.page_number < section.start_page_number:
+            continue
+        if page.page_number > section.end_page_number:
+            continue
+        local_start = section.start_offset if page.page_number == section.start_page_number else 0
+        local_end = (
+            section.end_offset if page.page_number == section.end_page_number else len(page.text)
+        )
+        ranges.append((page.page_number, local_start, local_end))
+    return ranges
+
+
 def section_text(pages: Sequence[ParsedPage], section: SectionSpan) -> str:
     """Return one section's exact text, concatenated across the pages it spans.
 
@@ -147,15 +175,11 @@ def section_text(pages: Sequence[ParsedPage], section: SectionSpan) -> str:
     at the start; use `section_content` for the heading-stripped body.
     """
 
-    parts: list[str] = []
-    for page in pages:
-        if page.page_number < section.start_page_number:
-            continue
-        if page.page_number > section.end_page_number:
-            continue
-        start = section.start_offset if page.page_number == section.start_page_number else 0
-        end = section.end_offset if page.page_number == section.end_page_number else len(page.text)
-        parts.append(page.text[start:end])
+    pages_by_number = {page.page_number: page for page in pages}
+    parts = [
+        pages_by_number[page_number].text[start:end]
+        for page_number, start, end in section_page_ranges(section, pages)
+    ]
     return "\n\n".join(parts)
 
 

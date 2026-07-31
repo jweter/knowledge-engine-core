@@ -49,10 +49,24 @@ class ParsedPage(BaseModel):
     page's ``text`` is exactly its contribution to the joined ``raw_text``,
     so an offset computed against ``text`` is directly usable as a
     source-span citation without a global-to-page offset mapping.
+
+    ``table_text`` is a separate, best-effort signal: the concatenated,
+    normalized text PyMuPDF's `find_tables()` detected as belonging to a
+    table region on this page, or ``None`` when no table was detected.
+    Deliberately *not* subtracted from ``text`` -- doing so would shift
+    every offset computed against ``text`` and break the source-span
+    citation guarantee described above, which this project treats as a
+    core safety property (see `docs/phase2_design.md`'s Potential Risks).
+    Instead, `knowledge_engine.extraction.table_filter.is_table_derived`
+    uses `table_text` to decide, after a candidate sentence has already been
+    split out of ``text`` by offset, whether that sentence is very likely
+    table content rather than prose -- filtering the candidate, not the
+    source text or its offsets.
     """
 
     page_number: int
     text: str
+    table_text: str | None = None
 
 
 class ParsedPaper(BaseModel):
@@ -104,14 +118,21 @@ class PyMuPDFParser(DocumentParser):
                     msg = "The PDF is encrypted and requires a password."
                     raise MalformedDocumentError(msg)
                 page_texts = [page.get_text("text") for page in document]
+                page_table_texts = [self._extract_table_text(page) for page in document]
                 metadata = document.metadata or {}
                 page_count = document.page_count
         except fitz.FileDataError as exc:
             raise MalformedDocumentError("The PDF structure could not be parsed.") from exc
 
         pages = [
-            ParsedPage(page_number=index + 1, text=normalize_whitespace(page_text))
-            for index, page_text in enumerate(page_texts)
+            ParsedPage(
+                page_number=index + 1,
+                text=normalize_whitespace(page_text),
+                table_text=table_text,
+            )
+            for index, (page_text, table_text) in enumerate(
+                zip(page_texts, page_table_texts, strict=True)
+            )
         ]
         # Joining each page's own normalized text (skipping pages that normalize to
         # empty) is equivalent to normalizing the whole document at once: normalize_
@@ -187,6 +208,34 @@ class PyMuPDFParser(DocumentParser):
             return True
         final_word = candidate.rstrip(" .:;-").split()[-1].casefold()
         return final_word in {"a", "an", "and", "for", "in", "of", "on", "or", "the", "to", "with"}
+
+    def _extract_table_text(self, page: fitz.Page) -> str | None:
+        """Best-effort table-region text for one page, or `None` if none detected.
+
+        Uses PyMuPDF's built-in `find_tables()` heuristic detector (grid/border
+        cues), then re-extracts each detected table's own text via a bbox-scoped
+        `get_text(clip=...)` call, normalized the same way page text is. This is
+        a secondary, best-effort signal, not core parsing -- `find_tables()` is
+        a newer, less battle-tested PyMuPDF feature (it recommends the separate
+        `pymupdf_layout` package for better results), so any failure here must
+        degrade to `None` rather than fail the whole paper's parse. Concatenating
+        multiple detected tables' text is intentional: downstream consumers
+        (`knowledge_engine.extraction.table_filter.is_table_derived`) only need
+        the pooled vocabulary of "this page's table content," not which specific
+        table a word came from.
+        """
+
+        try:
+            tables = page.find_tables().tables
+        except Exception:
+            return None
+        if not tables:
+            return None
+        table_texts = [
+            normalize_whitespace(page.get_text("text", clip=table.bbox)) for table in tables
+        ]
+        combined = "\n\n".join(text for text in table_texts if text)
+        return combined or None
 
     def _extract_authors(self, metadata: dict[str, str]) -> list[str]:
         author_text = (metadata.get("author") or "").strip()

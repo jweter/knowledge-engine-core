@@ -32,11 +32,12 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from knowledge_engine.extraction.sections import SectionSpan, section_content
+from knowledge_engine.extraction.sections import SectionSpan, section_page_ranges
+from knowledge_engine.extraction.table_filter import is_table_derived
 from knowledge_engine.parser import ParsedPage
 from knowledge_engine.sentence_split import split_sentence_spans
 
-PICO_EXTRACTION_RULES_VERSION = "m28-pico-v3"
+PICO_EXTRACTION_RULES_VERSION = "m28-pico-v4"
 
 # A study-design phrase or heading is usually reused verbatim; PICO values are
 # not, so each field is scoped only to the section types most likely to state
@@ -73,6 +74,15 @@ PICO_EXTRACTION_RULES_VERSION = "m28-pico-v3"
 # This is still "the first cue-matching sentence, never a summary or
 # paraphrase" -- just scoped to sentences not already spoken for by an
 # earlier PICO field for the same paper.
+#
+# v4: scanning now proceeds per-page (via `section_page_ranges`, the same
+# helper M17's claim-candidate detection uses) instead of over each
+# section's already-joined multi-page text, so a candidate sentence can be
+# checked against its own page's `table_text` and excluded when it is very
+# likely table content -- see `knowledge_engine.extraction.table_filter`.
+# A side effect, matching the same accepted precedent M17 already
+# established: a sentence that spans across a page boundary is no longer
+# joined into one continuous sentence for matching purposes.
 _POPULATION_SECTION_TYPES = frozenset({"abstract", "methods", "results"})
 _INTERVENTION_SECTION_TYPES = frozenset({"abstract", "methods", "results"})
 _COMPARATOR_SECTION_TYPES = frozenset({"abstract", "methods", "results", "conclusion"})
@@ -162,20 +172,39 @@ def _first_matching_sentence(
 
     Sentences already claimed by an earlier PICO field (for the same paper)
     are skipped in favor of the next distinct cue-matching sentence, so two
-    fields never end up holding the exact same sentence. The returned
-    sentence is added to `claimed_sentences` before returning, so later
-    fields see it as claimed too.
+    fields never end up holding the exact same sentence. A sentence that is
+    very likely table content (`is_table_derived`) is skipped the same way.
+    The returned sentence is added to `claimed_sentences` before returning,
+    so later fields see it as claimed too.
     """
 
+    pages_by_number = {page.page_number: page for page in pages}
     for section in sections:
         if section.section_type not in section_types:
             continue
-        text = section_content(pages, section)
-        for start, end in split_sentence_spans(text):
-            sentence = text[start:end].strip()
-            if sentence in claimed_sentences:
-                continue
-            if pattern.search(sentence):
-                claimed_sentences.add(sentence)
-                return sentence
+        heading_stripped = False
+        for page_number, local_start, local_end in section_page_ranges(section, pages):
+            page = pages_by_number[page_number]
+            region = page.text[local_start:local_end]
+            if not heading_stripped:
+                # A section's heading_text is captured at exactly
+                # section.start_offset on section.start_page_number (see
+                # `detect_sections`), so it can only appear within this
+                # first page's own local region -- equivalent to how
+                # `section_content` strips it from the joined text, just
+                # computed per-page here so table filtering below can use
+                # each page's own `table_text`.
+                heading_index = region.find(section.heading_text)
+                if heading_index != -1:
+                    region = region[heading_index + len(section.heading_text) :]
+                heading_stripped = True
+            for start, end in split_sentence_spans(region):
+                sentence = region[start:end].strip()
+                if sentence in claimed_sentences:
+                    continue
+                if is_table_derived(sentence, page.table_text):
+                    continue
+                if pattern.search(sentence):
+                    claimed_sentences.add(sentence)
+                    return sentence
     return None

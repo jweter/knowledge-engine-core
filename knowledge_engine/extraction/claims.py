@@ -15,14 +15,23 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from knowledge_engine.extraction.sections import SectionSpan
+from knowledge_engine.extraction.sections import SectionSpan, section_page_ranges
+from knowledge_engine.extraction.table_filter import is_table_derived
 from knowledge_engine.parser import ParsedPage
 from knowledge_engine.sentence_split import split_sentence_spans
 
-CLAIM_CANDIDATE_RULES_VERSION = "m17-claim-candidate-v1"
+CLAIM_CANDIDATE_RULES_VERSION = "m17-claim-candidate-v2"
 
 _CANDIDATE_SECTION_TYPES = frozenset({"results", "conclusion"})
 
+# v2: a table with no real sentence-terminal punctuation becomes one giant
+# "sentence" (see `knowledge_engine.sentence_split`), and easily contains a
+# stray "%" or number that trips one of the patterns below, dumping the whole
+# table into `sentence_text`. `is_table_derived` now filters those out before
+# a candidate is ever considered -- see `knowledge_engine.extraction.
+# table_filter` and `docs/phase2_design.md`'s "Known Gap" section for the
+# investigation this closes. Signal detection itself is unchanged.
+#
 # Each pattern is a deterministic, auditable signal that a sentence reports a
 # quantitative or comparative finding rather than background/methods prose.
 # Order matters only for which signal name is reported when several match;
@@ -64,15 +73,18 @@ def detect_claim_candidates(
     never guessed into a low-confidence candidate.
     """
 
+    pages_by_number = {page.page_number: page for page in pages}
     candidates: list[ClaimCandidate] = []
     for section in sections:
         if section.section_type not in _CANDIDATE_SECTION_TYPES:
             continue
-        for page_number, local_start, local_end in _section_page_ranges(section, pages):
-            page_text = _page_text(pages, page_number)
-            region = page_text[local_start:local_end]
+        for page_number, local_start, local_end in section_page_ranges(section, pages):
+            page = pages_by_number[page_number]
+            region = page.text[local_start:local_end]
             for sentence_start, sentence_end in split_sentence_spans(region):
                 sentence = region[sentence_start:sentence_end]
+                if is_table_derived(sentence, page.table_text):
+                    continue
                 matched_signal = _first_matching_signal(sentence)
                 if matched_signal is None:
                     continue
@@ -88,32 +100,6 @@ def detect_claim_candidates(
                     )
                 )
     return tuple(candidates)
-
-
-def _section_page_ranges(
-    section: SectionSpan, pages: Sequence[ParsedPage]
-) -> list[tuple[int, int, int]]:
-    """Return (page_number, local_start, local_end) for each page a section covers."""
-
-    ranges: list[tuple[int, int, int]] = []
-    for page in pages:
-        if page.page_number < section.start_page_number:
-            continue
-        if page.page_number > section.end_page_number:
-            continue
-        local_start = section.start_offset if page.page_number == section.start_page_number else 0
-        local_end = (
-            section.end_offset if page.page_number == section.end_page_number else len(page.text)
-        )
-        ranges.append((page.page_number, local_start, local_end))
-    return ranges
-
-
-def _page_text(pages: Sequence[ParsedPage], page_number: int) -> str:
-    for page in pages:
-        if page.page_number == page_number:
-            return page.text
-    return ""
 
 
 def _first_matching_signal(sentence: str) -> str | None:

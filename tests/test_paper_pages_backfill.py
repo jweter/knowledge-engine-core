@@ -335,3 +335,125 @@ def test_backfill_cli_idempotent_on_rerun(tmp_path: Path, monkeypatch: pytest.Mo
     assert first.exit_code == 0, first.output
     assert second.exit_code == 0, second.output
     assert "No papers need backfilling." in second.output
+
+
+# --- `paper-pages-table-text-backfill` CLI: targets papers that already have pages ---
+
+
+def make_pdf_with_a_bordered_table(path: Path) -> None:
+    """Mirrors `tests/test_parser.py`'s construction of a real, bordered
+    2x2 grid table PyMuPDF's `find_tables()` heuristic can detect -- there
+    is no `fitz` convenience method for inserting a synthetic table."""
+
+    document = fitz.open()
+    page = document.new_page()
+    x0, y0, cell_w, cell_h = 72, 72, 100, 20
+    for row in range(3):
+        page.draw_line((x0, y0 + row * cell_h), (x0 + 2 * cell_w, y0 + row * cell_h))
+    for col in range(3):
+        page.draw_line((x0 + col * cell_w, y0), (x0 + col * cell_w, y0 + 2 * cell_h))
+    page.insert_text((x0 + 5, y0 + 15), "Outcome")
+    page.insert_text((x0 + cell_w + 5, y0 + 15), "Value")
+    page.insert_text((x0 + 5, y0 + 35), "Weight")
+    page.insert_text((x0 + cell_w + 5, y0 + 35), "12.4kg")
+    document.save(path)
+    document.close()
+
+
+def test_table_text_backfill_cli_populates_table_text_for_an_already_paged_paper(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pdf_path = tmp_path / "table.pdf"
+    make_pdf_with_a_bordered_table(pdf_path)
+    database = _build_database(tmp_path)
+    real_parse = PyMuPDFParser().parse(pdf_path)
+    # Persist without table_text, mirroring a paper imported before this field existed.
+    stale = real_parse.model_copy(
+        update={
+            "pages": [ParsedPage(page_number=p.page_number, text=p.text) for p in real_parse.pages]
+        }
+    )
+    with database.session() as session:
+        paper_id = PaperRepository(session).add_parsed_paper(stale).id
+    with database.session() as session:
+        paper = PaperRepository(session).get(paper_id)
+        assert paper is not None
+        assert paper.pages[0].table_text is None
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    result = CliRunner().invoke(app, ["paper-pages-table-text-backfill"])
+
+    assert result.exit_code == 0, result.output
+    assert "Backfilled: 1" in result.output
+
+    with database.session() as session:
+        paper = PaperRepository(session).get(paper_id)
+        assert paper is not None
+        assert paper.pages[0].table_text is not None
+        assert "Outcome" in paper.pages[0].table_text
+
+
+def test_table_text_backfill_cli_skips_a_paper_with_zero_pages(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    make_pdf(pdf_path)
+    database = _build_database(tmp_path)
+    _add_pre_m15_paper(database, pdf_path)  # zero pages -- out of scope for this command
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    result = CliRunner().invoke(app, ["paper-pages-table-text-backfill"])
+
+    assert result.exit_code == 0, result.output
+    assert "No papers with existing pages need backfilling." in result.output
+
+
+def test_table_text_backfill_cli_reports_missing_source_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    make_pdf(pdf_path)
+    database = _build_database(tmp_path)
+    real_parse = PyMuPDFParser().parse(pdf_path)
+    with database.session() as session:
+        paper_id = PaperRepository(session).add_parsed_paper(real_parse).id
+    pdf_path.unlink()
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    result = CliRunner().invoke(app, ["paper-pages-table-text-backfill"])
+
+    assert result.exit_code == 1
+    assert "missing source file: 1" in result.output
+
+    with database.session() as session:
+        paper = PaperRepository(session).get(paper_id)
+        assert paper is not None
+        assert paper.pages[0].table_text is None
+
+
+def test_table_text_backfill_cli_dry_run_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pdf_path = tmp_path / "table.pdf"
+    make_pdf_with_a_bordered_table(pdf_path)
+    database = _build_database(tmp_path)
+    real_parse = PyMuPDFParser().parse(pdf_path)
+    stale = real_parse.model_copy(
+        update={
+            "pages": [ParsedPage(page_number=p.page_number, text=p.text) for p in real_parse.pages]
+        }
+    )
+    with database.session() as session:
+        paper_id = PaperRepository(session).add_parsed_paper(stale).id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    result = CliRunner().invoke(app, ["paper-pages-table-text-backfill", "--dry-run"])
+
+    assert result.exit_code == 0, result.output
+    assert "Backfilled: 1" in result.output
+    assert "Dry run" in result.output
+
+    with database.session() as session:
+        paper = PaperRepository(session).get(paper_id)
+        assert paper is not None
+        assert paper.pages[0].table_text is None

@@ -93,6 +93,55 @@ def test_parser_preserves_page_boundaries_and_matches_document_level_join(
     assert parsed.raw_text == normalize_whitespace("\n\n".join(original_page_texts))
 
 
+def make_pdf_with_a_bordered_table(path: Path) -> None:
+    """A page with a real, bordered 2x2 grid table PyMuPDF's `find_tables()`
+    heuristic detector (grid/border cues) can actually recognize -- there is
+    no `fitz` convenience method for inserting a synthetic table, so this
+    draws the grid lines and cell text directly, the same construction
+    verified interactively against a real PDF before writing this test."""
+
+    document = fitz.open()
+    page = document.new_page()
+    x0, y0, cell_w, cell_h = 72, 72, 100, 20
+    for row in range(3):
+        page.draw_line((x0, y0 + row * cell_h), (x0 + 2 * cell_w, y0 + row * cell_h))
+    for col in range(3):
+        page.draw_line((x0 + col * cell_w, y0), (x0 + col * cell_w, y0 + 2 * cell_h))
+    page.insert_text((x0 + 5, y0 + 15), "Outcome")
+    page.insert_text((x0 + cell_w + 5, y0 + 15), "Value")
+    page.insert_text((x0 + 5, y0 + 35), "Weight")
+    page.insert_text((x0 + cell_w + 5, y0 + 35), "12.4kg")
+    page.insert_text((x0, y0 + 60), "This page also has ordinary prose below the table.")
+    document.save(path)
+    document.close()
+
+
+def test_parser_detects_a_bordered_table_and_populates_table_text(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "table.pdf"
+    make_pdf_with_a_bordered_table(pdf_path)
+
+    parsed = PyMuPDFParser().parse(pdf_path)
+
+    assert len(parsed.pages) == 1
+    table_text = parsed.pages[0].table_text
+    assert table_text is not None
+    assert "Outcome" in table_text
+    assert "12.4kg" in table_text
+    # The table's own text is a distinct signal, not a substitute for the
+    # page's full text -- ordinary prose on the same page must still be
+    # present in `text`, untouched, preserving every existing offset.
+    assert "ordinary prose" in parsed.pages[0].text.lower()
+
+
+def test_parser_table_text_is_none_without_a_detected_table(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    make_pdf(pdf_path)
+
+    parsed = PyMuPDFParser().parse(pdf_path)
+
+    assert parsed.pages[0].table_text is None
+
+
 def test_parser_classifies_encrypted_pdf_as_expected_failure(tmp_path: Path) -> None:
     pdf_path = tmp_path / "encrypted.pdf"
     make_encrypted_pdf(pdf_path)

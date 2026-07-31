@@ -15,11 +15,17 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 
-from knowledge_engine.extraction.sections import SectionSpan, section_content, section_text
+from knowledge_engine.extraction.sections import (
+    SectionSpan,
+    section_content,
+    section_page_ranges,
+    section_text,
+)
+from knowledge_engine.extraction.table_filter import is_table_derived
 from knowledge_engine.parser import ParsedPage
 from knowledge_engine.sentence_split import split_sentence_spans
 
-STUDY_DESIGN_RULES_VERSION = "m26-study-design-v3"
+STUDY_DESIGN_RULES_VERSION = "m26-study-design-v4"
 
 _STUDY_TYPE_SECTION_TYPES = ("abstract", "methods")
 
@@ -156,7 +162,10 @@ def extract_limitations(
 
     Returns `None` when neither an explicit heading nor any Discussion
     cue sentence is found -- absence is never guessed into a low-confidence
-    value.
+    value. A Discussion-fallback candidate that is very likely table content
+    (`is_table_derived`) is excluded, the same way M17's claim-candidate
+    detection and M28's PICO extraction exclude one -- see
+    `knowledge_engine.extraction.table_filter`.
     """
 
     section = next((s for s in sections if s.section_type == "limitations"), None)
@@ -164,13 +173,24 @@ def extract_limitations(
         content = section_content(pages, section)
         return [content] if content else None
 
+    pages_by_number = {page.page_number: page for page in pages}
     matches: list[str] = []
     for fallback_section in sections:
         if fallback_section.section_type not in _LIMITATIONS_FALLBACK_SECTION_TYPES:
             continue
-        text = section_content(pages, fallback_section)
-        for start, end in split_sentence_spans(text):
-            sentence = text[start:end].strip()
-            if _LIMITATIONS_CUE_PATTERN.search(sentence):
-                matches.append(sentence)
+        heading_stripped = False
+        for page_number, local_start, local_end in section_page_ranges(fallback_section, pages):
+            page = pages_by_number[page_number]
+            region = page.text[local_start:local_end]
+            if not heading_stripped:
+                heading_index = region.find(fallback_section.heading_text)
+                if heading_index != -1:
+                    region = region[heading_index + len(fallback_section.heading_text) :]
+                heading_stripped = True
+            for start, end in split_sentence_spans(region):
+                sentence = region[start:end].strip()
+                if is_table_derived(sentence, page.table_text):
+                    continue
+                if _LIMITATIONS_CUE_PATTERN.search(sentence):
+                    matches.append(sentence)
     return matches or None

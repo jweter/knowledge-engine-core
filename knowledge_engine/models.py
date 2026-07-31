@@ -335,6 +335,14 @@ class PaperPage(Base):
     cannot be recovered from the already-joined ``raw_text``/``body_text``
     alone. Extraction logic must treat an empty ``pages`` list as "no page
     provenance available" rather than assuming every paper has one.
+
+    ``table_text`` (schema v11) is a separate, best-effort signal: the
+    concatenated, normalized text PyMuPDF's ``find_tables()`` detected as
+    belonging to a table region on this page, or ``NULL`` when no table was
+    detected or this page predates the v11 backfill. See
+    ``knowledge_engine.parser.ParsedPage.table_text`` for why this is never
+    subtracted from ``text`` itself, and
+    ``knowledge_engine.extraction.table_filter`` for how it is used.
     """
 
     __tablename__ = "paper_pages"
@@ -342,6 +350,7 @@ class PaperPage(Base):
     paper_id: Mapped[int] = mapped_column(ForeignKey("papers.id"), primary_key=True)
     page_number: Mapped[int] = mapped_column(Integer, primary_key=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    table_text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     paper: Mapped[Paper] = relationship(back_populates="pages")
 
