@@ -1344,6 +1344,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   left in tension with two `supports`-direction semaglutide/HF records
   from the first batch rather than reconciled -- that judgment belongs
   to a human reviewer or a future synthesis layer, not to this record.
+- Added a third, 7-item evidence-promotion batch to
+  `data/corpora/glp1_weight_loss/evidence_records.jsonl` (28 total, up
+  from 21), diversifying subtopic coverage beyond the corpus's existing
+  GLP-1/SGLT2i/heart-failure-heavy records: SGLT2i versus sulfonylurea
+  biliary-disease risk; DPP-4i once-weekly versus once-daily dosing
+  preference; a digital weight-loss goal-difficulty pilot RCT; GLP-1RA
+  real-world adherence predictors; a digital-mental-health-intervention
+  systematic review for obesity; semaglutide for PMOS menstrual/ovulatory
+  function; and SGLT2i effects on left ventricular global longitudinal
+  strain. Two candidate papers were deliberately excluded: a narrative
+  review too hedged to ground a concrete `result_summary`, and a
+  population-epidemiology paper with no actual intervention/comparator
+  to fit the corpus's PICO frame.
 
 ### Fixed
 
