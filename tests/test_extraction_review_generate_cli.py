@@ -113,9 +113,16 @@ def test_extraction_review_generate_populates_pico_fields(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     output = tmp_path / "review.jsonl"
+    # Each sentence below is written to trip exactly one PICO cue pattern, so
+    # this test demonstrates four genuinely distinct extracted sentences --
+    # not a "semaglutide or placebo" style sentence that would satisfy both
+    # the intervention and comparator cues at once (see
+    # test_extract_pico_does_not_duplicate_a_sentence_matching_two_fields in
+    # tests/test_extraction_pico.py for that dedup behavior specifically).
     text = (
         "Methods\n\nWe enrolled 253 adults with obesity. Participants were randomized "
-        "to semaglutide or placebo. The primary outcome was change in body weight.\n\n"
+        "to semaglutide or usual care. Weight loss was compared with usual care "
+        "throughout the study. The primary outcome was change in body weight.\n\n"
         "Results\n\nThe primary endpoint was body weight change. "
         "Body weight decreased by 12.4% relative to baseline."
     )
@@ -138,8 +145,8 @@ def test_extraction_review_generate_populates_pico_fields(
     assert len(lines) == 1
     record = json.loads(lines[0])
     assert record["population"] == "We enrolled 253 adults with obesity."
-    assert record["intervention"] == "Participants were randomized to semaglutide or placebo."
-    assert record["comparator"] == "Participants were randomized to semaglutide or placebo."
+    assert record["intervention"] == "Participants were randomized to semaglutide or usual care."
+    assert record["comparator"] == "Weight loss was compared with usual care throughout the study."
     assert record["outcome"] == "The primary outcome was change in body weight."
     assert record["extraction_context"]["pico_extraction_rules_version"]
 

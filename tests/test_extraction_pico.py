@@ -21,7 +21,7 @@ def _section(
 
 
 def test_pico_extraction_rules_version_is_stable() -> None:
-    assert PICO_EXTRACTION_RULES_VERSION == "m28-pico-v2"
+    assert PICO_EXTRACTION_RULES_VERSION == "m28-pico-v3"
 
 
 def test_extract_pico_detects_population_from_cohort_size_clause() -> None:
@@ -152,4 +152,46 @@ def test_extract_pico_strips_heading_from_matched_sentence() -> None:
     fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
 
     assert fields.population == "We enrolled 253 adults with obesity."
+
+
+def test_extract_pico_does_not_duplicate_a_sentence_matching_two_fields() -> None:
+    """A dense trial sentence can satisfy both the population and intervention
+    cue at once ("304 participants ... randomly assigned to ..."). Population
+    is extracted first and claims that sentence; intervention must not also
+    return it verbatim -- with no other intervention-cue sentence available,
+    it is honestly None rather than a duplicate."""
+
+    text = (
+        "Methods\n\n"
+        "304 participants were randomly assigned to semaglutide 2.4 mg or "
+        "placebo. Body weight was measured at baseline and week 68."
+    )
+    sections = [_section("methods", text, "Methods")]
+
+    fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
+
+    assert fields.population == (
+        "304 participants were randomly assigned to semaglutide 2.4 mg or placebo."
+    )
+    assert fields.intervention is None
+
+
+def test_extract_pico_scans_past_a_claimed_sentence_for_a_distinct_match() -> None:
+    """When a second, distinct intervention-cue sentence exists, it is used
+    instead of the sentence population already claimed."""
+
+    text = (
+        "Methods\n\n"
+        "304 participants were randomly assigned to semaglutide 2.4 mg or "
+        "placebo. All participants also received standard lifestyle counselling."
+    )
+    sections = [_section("methods", text, "Methods")]
+
+    fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
+
+    assert fields.population == (
+        "304 participants were randomly assigned to semaglutide 2.4 mg or placebo."
+    )
+    assert fields.intervention == "All participants also received standard lifestyle counselling."
+    assert fields.population != fields.intervention
     assert "Methods" not in fields.population

@@ -1345,6 +1345,34 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from the first batch rather than reconciled -- that judgment belongs
   to a human reviewer or a future synthesis layer, not to this record.
 
+### Fixed
+
+- Fixed a cross-field duplication bug in `knowledge_engine.extraction.pico`
+  (`PICO_EXTRACTION_RULES_VERSION` v2 -> v3), found while hand-reviewing
+  draft evidence items for the evidence-promotion batches above. Each of
+  `population`/`intervention`/`comparator`/`outcome` used to scan
+  independently for its own first cue-matching sentence; a dense clinical-
+  trial sentence often satisfies more than one cue at once ("304
+  participants were randomly assigned to semaglutide 2.4 mg or placebo"
+  matches both the population cue and the intervention cue), so the same
+  sentence ended up duplicated verbatim across two or more fields.
+  Re-measured against the real corpus's 13,969-item draft-item pool: 327-781
+  duplicate pairs per field-pair before the fix (11-14% of items with both
+  fields populated), zero after. Extraction now proceeds in a fixed
+  population -> intervention -> comparator -> outcome order and each later
+  field skips sentences an earlier field already claimed, continuing to
+  scan for the next distinct match -- still "the first cue-matching
+  sentence, never a summary or paraphrase," just scoped to sentences not
+  already spoken for. Coverage cost is small and honest: all-four-fields-
+  populated draft items dropped from 36.7% to 35.8% of the same pool (128
+  items out of 13,969), since some previously-duplicated fields now
+  correctly resolve to `None` rather than a spurious duplicate. A
+  pre-existing CLI integration test
+  (`test_extraction_review_generate_populates_pico_fields`) had encoded the
+  bug as expected behavior (asserting identical `intervention` and
+  `comparator` values); its fixture text now uses four genuinely distinct
+  cue sentences.
+
 ### Changed
 
 - Added an addendum to `docs/reference_knowledge_layer_design.md`
