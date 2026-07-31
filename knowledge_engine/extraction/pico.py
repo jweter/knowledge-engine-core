@@ -36,7 +36,7 @@ from knowledge_engine.extraction.sections import SectionSpan, section_content
 from knowledge_engine.parser import ParsedPage
 from knowledge_engine.sentence_split import split_sentence_spans
 
-PICO_EXTRACTION_RULES_VERSION = "m28-pico-v2"
+PICO_EXTRACTION_RULES_VERSION = "m28-pico-v3"
 
 # A study-design phrase or heading is usually reused verbatim; PICO values are
 # not, so each field is scoped only to the section types most likely to state
@@ -57,6 +57,22 @@ PICO_EXTRACTION_RULES_VERSION = "m28-pico-v2"
 # abstract blob are now correctly labeled `results`/`conclusion`, section
 # types those two fields never scanned. Widening scoping to match restores
 # that reachability without loosening the cue patterns themselves.
+#
+# v3 (post-M40 batch-review finding): a single dense clinical-trial sentence
+# routinely satisfies more than one field's cue pattern at once -- "304
+# participants were randomly assigned to semaglutide 2.4 mg or placebo"
+# matches both the population pattern (a cohort-size clause) and the
+# intervention pattern ("assigned to"). Because each field used to scan
+# independently for its own first match, this produced the same sentence
+# duplicated verbatim across two or more fields on a real, measured 11-14%
+# of draft items that had both fields populated -- clearly wrong to a human
+# reviewer even though each individual match was itself correct. Extraction
+# now proceeds in a fixed population -> intervention -> comparator -> outcome
+# order and each field skips any sentence an earlier field already claimed,
+# continuing to scan for the next distinct cue-matching sentence instead.
+# This is still "the first cue-matching sentence, never a summary or
+# paraphrase" -- just scoped to sentences not already spoken for by an
+# earlier PICO field for the same paper.
 _POPULATION_SECTION_TYPES = frozenset({"abstract", "methods", "results"})
 _INTERVENTION_SECTION_TYPES = frozenset({"abstract", "methods", "results"})
 _COMPARATOR_SECTION_TYPES = frozenset({"abstract", "methods", "results", "conclusion"})
@@ -104,20 +120,33 @@ def extract_pico(pages: Sequence[ParsedPage], sections: Sequence[SectionSpan]) -
 
     Returns a `PicoFields` with every field independently `None` when no
     scoped section or no cue match was found -- absence is never guessed
-    into a low-confidence value.
+    into a low-confidence value. Fields are extracted in a fixed
+    population -> intervention -> comparator -> outcome order and each later
+    field skips any sentence an earlier field already claimed, so a single
+    sentence that happens to satisfy two cue patterns at once is never
+    duplicated verbatim across two fields.
     """
 
+    claimed_sentences: set[str] = set()
+
+    population = _first_matching_sentence(
+        pages, sections, _POPULATION_SECTION_TYPES, _POPULATION_PATTERN, claimed_sentences
+    )
+    intervention = _first_matching_sentence(
+        pages, sections, _INTERVENTION_SECTION_TYPES, _INTERVENTION_PATTERN, claimed_sentences
+    )
+    comparator = _first_matching_sentence(
+        pages, sections, _COMPARATOR_SECTION_TYPES, _COMPARATOR_PATTERN, claimed_sentences
+    )
+    outcome = _first_matching_sentence(
+        pages, sections, _OUTCOME_SECTION_TYPES, _OUTCOME_PATTERN, claimed_sentences
+    )
+
     return PicoFields(
-        population=_first_matching_sentence(
-            pages, sections, _POPULATION_SECTION_TYPES, _POPULATION_PATTERN
-        ),
-        intervention=_first_matching_sentence(
-            pages, sections, _INTERVENTION_SECTION_TYPES, _INTERVENTION_PATTERN
-        ),
-        comparator=_first_matching_sentence(
-            pages, sections, _COMPARATOR_SECTION_TYPES, _COMPARATOR_PATTERN
-        ),
-        outcome=_first_matching_sentence(pages, sections, _OUTCOME_SECTION_TYPES, _OUTCOME_PATTERN),
+        population=population,
+        intervention=intervention,
+        comparator=comparator,
+        outcome=outcome,
         rules_version=PICO_EXTRACTION_RULES_VERSION,
     )
 
@@ -127,15 +156,26 @@ def _first_matching_sentence(
     sections: Sequence[SectionSpan],
     section_types: frozenset[str],
     pattern: re.Pattern[str],
+    claimed_sentences: set[str],
 ) -> str | None:
-    """Return the first cue-matching sentence across scoped sections, in document order."""
+    """Return the first cue-matching, not-yet-claimed sentence across scoped sections.
+
+    Sentences already claimed by an earlier PICO field (for the same paper)
+    are skipped in favor of the next distinct cue-matching sentence, so two
+    fields never end up holding the exact same sentence. The returned
+    sentence is added to `claimed_sentences` before returning, so later
+    fields see it as claimed too.
+    """
 
     for section in sections:
         if section.section_type not in section_types:
             continue
         text = section_content(pages, section)
         for start, end in split_sentence_spans(text):
-            sentence = text[start:end]
+            sentence = text[start:end].strip()
+            if sentence in claimed_sentences:
+                continue
             if pattern.search(sentence):
-                return sentence.strip()
+                claimed_sentences.add(sentence)
+                return sentence
     return None
