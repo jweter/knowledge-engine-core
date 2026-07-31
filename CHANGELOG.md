@@ -1328,6 +1328,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and claim_text length correlating with raw data-table leakage rather
   than substance) -- this batch was built from paper abstracts
   directly instead, not from the automated draft-item pool.
+- Added a second, 4-item evidence-promotion batch to
+  `data/corpora/glp1_weight_loss/evidence_records.jsonl` (21 total, up
+  from 17), deliberately searched for null/mixed/negative findings to
+  correct the first batch's all-`supports` skew: a UK population-level
+  study finding no evidence of complication-risk change despite rising
+  SGLT2-inhibitor use; a network meta-analysis finding no significant
+  difference in atrial-fibrillation recurrence risk among SGLT2i,
+  GLP-1RA, and DPP-4i; an RCT secondary analysis finding liraglutide
+  alone did not improve physical fitness (only exercise did); and a
+  systematic review finding GLP-1 receptor agonists did not
+  significantly reduce the primary composite CV-death/HF-hospitalization
+  outcome across the heart-failure spectrum, with dedicated HF trials
+  showing directional harm. The heart-failure record is deliberately
+  left in tension with two `supports`-direction semaglutide/HF records
+  from the first batch rather than reconciled -- that judgment belongs
+  to a human reviewer or a future synthesis layer, not to this record.
 
 ### Changed
 
