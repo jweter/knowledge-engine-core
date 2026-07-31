@@ -1357,6 +1357,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   review too hedged to ground a concrete `result_summary`, and a
   population-epidemiology paper with no actual intervention/comparator
   to fit the corpus's PICO frame.
+- Added a "Known Gap" section to `docs/phase2_design.md` documenting the
+  `claim_text`/table-data-leakage problem found while building the
+  evidence-promotion batches above: `PyMuPDFParser` discards page layout
+  geometry, so a multi-row table with no real sentence-terminal punctuation
+  becomes one giant "sentence" that trips a claim-candidate signal pattern
+  and gets dumped verbatim into `claim_text`. A length- or blank-line-
+  density-based patch was investigated and rejected (real long sentences
+  and short table dumps are interleaved throughout the length distribution,
+  not cleanly separable). `fitz.Page.find_tables()` was tested directly
+  against the three worst real table-dump examples in the corpus and caught
+  2 of 3 by page and bounding box; the third (a borderless table) was
+  missed, matching PyMuPDF's own suggestion to evaluate the `pymupdf_layout`
+  package for better detection. Flagged, not fixed here: a real fix needs a
+  schema change to persist per-page table regions and a full re-parse of
+  all 960 already-ingested papers, matching this project's established
+  practice of flagging a well-diagnosed, schema-sized gap for explicit
+  owner decision rather than starting a corpus-wide re-parse unilaterally.
 
 ### Fixed
 
