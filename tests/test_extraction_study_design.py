@@ -22,7 +22,7 @@ def _section(
 
 
 def test_study_design_rules_version_is_stable() -> None:
-    assert STUDY_DESIGN_RULES_VERSION == "m26-study-design-v2"
+    assert STUDY_DESIGN_RULES_VERSION == "m26-study-design-v3"
 
 
 def test_classify_study_type_detects_randomized_controlled_trial() -> None:
@@ -173,6 +173,147 @@ def test_extract_limitations_returns_none_without_a_limitations_section() -> Non
 def test_extract_limitations_returns_none_for_empty_content() -> None:
     text = "Limitations"
     sections = [_section("limitations", text, "Limitations")]
+
+    assert extract_limitations([ParsedPage(page_number=1, text=text)], sections) is None
+
+
+def test_classify_study_type_detects_rct_with_interleaved_descriptor_words() -> None:
+    """v3: real corpus phrasing (paper 918) interleaves descriptor words in an
+    order the original fixed-sequence pattern couldn't match."""
+
+    text = "This is an open-label randomized and decentralized clinical trial."
+    sections = [_section("abstract", text, "Abstract")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == (
+        "randomized_controlled_trial"
+    )
+
+
+def test_classify_study_type_rct_pattern_does_not_match_plural_trials() -> None:
+    """The widened RCT pattern still requires singular "trial", preserving the
+    existing protection against a review abstract that merely discusses
+    multiple prior randomized controlled trials in passing."""
+
+    text = "Several randomized controlled trials have examined this question."
+    sections = [_section("abstract", text, "Abstract")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) is None
+
+
+def test_classify_study_type_detects_cohort_analysis_phrasing() -> None:
+    """v3: real corpus phrasing (paper 465) says "cohort analysis", not
+    "cohort study"."""
+
+    text = "This was a single-center cohort analysis of prospectively collected data."
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == "cohort_study"
+
+
+def test_classify_study_type_detects_cross_sectional_survey_phrasing() -> None:
+    """v3: real corpus phrasing (paper 591) says "cross-sectional online
+    survey", not "cross-sectional study"."""
+
+    text = "A cross-sectional online survey was conducted among adults with obesity."
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == (
+        "cross_sectional_study"
+    )
+
+
+def test_classify_study_type_detects_we_report_a_case_phrasing() -> None:
+    """v3: real corpus phrasing (papers 67/629) opens with "We report a case"
+    rather than the literal words "case report"."""
+
+    text = "We report a case of a patient with a rare adverse event."
+    sections = [_section("abstract", text, "Abstract")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == "case_report"
+
+
+def test_classify_study_type_cohort_study_still_wins_over_case_report_phrasing() -> None:
+    """Ordering is unchanged: cohort_study is still checked before
+    case_report, so a cohort study that incidentally uses "we report a case"
+    phrasing elsewhere in its own abstract is not misclassified."""
+
+    text = (
+        "We conducted a prospective cohort study of adults with obesity. "
+        "We report a case of one participant with a severe adverse event."
+    )
+    sections = [_section("abstract", text, "Abstract")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == "cohort_study"
+
+
+def test_extract_limitations_falls_back_to_discussion_cue_sentences() -> None:
+    """No "Limitations" heading exists, but Discussion states one explicitly."""
+
+    text = (
+        "Discussion\n\nOur findings support the hypothesis. "
+        "Several limitations of this study should be acknowledged. "
+        "The sample size was small."
+    )
+    sections = [_section("discussion", text, "Discussion")]
+
+    result = extract_limitations([ParsedPage(page_number=1, text=text)], sections)
+
+    assert result == ["Several limitations of this study should be acknowledged."]
+
+
+def test_extract_limitations_fallback_returns_every_cue_sentence_in_order() -> None:
+    text = (
+        "Discussion\n\nSeveral limitations of this study should be acknowledged. "
+        "The sample was drawn from a single center. "
+        "Another limitation is the lack of a placebo arm."
+    )
+    sections = [_section("discussion", text, "Discussion")]
+
+    result = extract_limitations([ParsedPage(page_number=1, text=text)], sections)
+
+    assert result == [
+        "Several limitations of this study should be acknowledged.",
+        "Another limitation is the lack of a placebo arm.",
+    ]
+
+
+def test_extract_limitations_prefers_explicit_heading_over_discussion_fallback() -> None:
+    """An explicit "Limitations" section, when present, is used as-is and the
+    Discussion fallback never runs -- unchanged from pre-v3 behavior."""
+
+    limitations_text = "Limitations\n\nThe sample size was small."
+    discussion_text = "Discussion\n\nSeveral limitations of this study should be acknowledged."
+    combined = limitations_text + "\n\n" + discussion_text
+    sections = [
+        SectionSpan(
+            section_type="limitations",
+            start_page_number=1,
+            start_offset=0,
+            end_page_number=1,
+            end_offset=len(limitations_text),
+            heading_text="Limitations",
+            rules_version="test",
+        ),
+        SectionSpan(
+            section_type="discussion",
+            start_page_number=1,
+            start_offset=len(limitations_text) + 2,
+            end_page_number=1,
+            end_offset=len(combined),
+            heading_text="Discussion",
+            rules_version="test",
+        ),
+    ]
+    pages = [ParsedPage(page_number=1, text=combined)]
+
+    result = extract_limitations(pages, sections)
+
+    assert result == ["The sample size was small."]
+
+
+def test_extract_limitations_returns_none_when_discussion_has_no_cue_sentence() -> None:
+    text = "Discussion\n\nOur findings are consistent with prior work."
+    sections = [_section("discussion", text, "Discussion")]
 
     assert extract_limitations([ParsedPage(page_number=1, text=text)], sections) is None
 

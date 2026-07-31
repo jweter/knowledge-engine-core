@@ -173,3 +173,72 @@ offset the section-detection fix's side effect. New study-type breakdown:
 No rule change here promotes anything to `EvidenceRecord` or re-runs `ke
 extraction-review-*`; this remains a read-only measurement pass, now against
 an updated ruleset.
+
+## Resolved follow-up 2: study-type phrasing gaps and limitations' heading bottleneck
+
+`docs/roadmap.md`'s Phase 2 extraction-coverage gaps -- study-type
+classification and limitations detection, the two lowest-coverage signals
+remaining after the section-detection/PICO fixes above -- were revisited
+once the corpus had grown to 960 papers. Two more rule changes were made,
+each grounded in reading a real sample of the papers still producing `None`
+before writing any pattern, the same standard this document's own earlier
+fixes were held to:
+
+- **`STUDY_DESIGN_RULES_VERSION` v2 -> v3**: widened four patterns after
+  sampling real "none" papers with an Abstract or Methods section --
+  `randomized_controlled_trial`'s fixed-order optional-group pattern missed
+  real descriptor-word orderings (e.g. "an open-label randomized and
+  decentralized clinical trial"), replaced with a bounded "randomized ...
+  trial" window (up to 6 intervening words) that still requires singular
+  "trial" so a review discussing multiple prior "randomized controlled
+  trials" (plural) still does not match; `cohort_study` now also matches
+  "cohort analysis"; `cross_sectional_study` now also matches
+  "cross-sectional survey"/"cross-sectional design" (with up to two
+  intervening words, e.g. "cross-sectional online survey"); `case_report`
+  now also matches the canonical case-report opening phrase itself ("we
+  report/describe/present a case"), not just the literal words "case
+  report". No pattern's precedence ordering changed.
+- **`STUDY_DESIGN_RULES_VERSION` v2 -> v3 (same version bump, second
+  change)**: `extract_limitations` still prefers an explicit "Limitations"
+  heading unchanged, but now falls back to scanning the Discussion section
+  for sentences that explicitly name a limitation when no such heading
+  exists. A real 200-paper sample of "no limitations, has discussion"
+  papers found 161 (80.5%) had at least one such cue sentence -- the
+  heading requirement, not an absence of stated limitations, was the real
+  coverage bottleneck. Returns every cue-matching sentence found, in
+  document order, including meta-announcement sentences ("Several
+  limitations of this study should be acknowledged.") alongside substantive
+  ones -- this module still never judges which sentence is "the real"
+  limitation, matching the discipline every other extraction rule here
+  already holds. A sentence that uses the word to explicitly deny something
+  is a limitation (e.g. "should not be viewed as a limitation") is still
+  returned; this is an accepted, honest false-positive class of a word-cue
+  match, not something resolved with sentence-level negation detection.
+
+### Evidence after this fix (960 papers, up from 943 at the last measurement)
+
+| Signal | Before (v2) | After (v3) |
+| --- | --- | --- |
+| Study type classified | 416 / 960 (43.3%) | 449 / 960 (46.8%) |
+| Limitations detected | 117 / 960 (12.2%) | 589 / 960 (61.4%) |
+
+New study-type breakdown: `meta_analysis` 96, `cohort_study` 92,
+`cross_sectional_study` 65, `randomized_controlled_trial` 61,
+`retrospective_study` 20, `case_report` 19, `narrative_review` 18,
+`observational_study` 17, `systematic_review` 39, `pilot_study` 13,
+`case_series` 5, `cross_over_trial` 3, `case_control_study` 1, `none` 511
+(53.2%, down from 56.7%). Some individual counts moved between categories
+rather than only increasing (e.g. `observational_study` 19 -> 17,
+`pilot_study` 15 -> 13) -- expected under a first-match-wins classifier: a
+paper that used to fall through to a later, less-specific pattern because no
+earlier pattern matched can now match one of the four widened, earlier
+patterns instead, which is a more specific and still-correct
+reclassification, not a coverage loss (`none` still dropped overall).
+
+PICO coverage is unchanged by this fix (502 / 590 / 726 / 554 / 245,
+`PICO_EXTRACTION_RULES_VERSION` v3 already fixed the cross-field-duplication
+bug this same session, see `CHANGELOG.md`).
+
+No rule change here promotes anything to `EvidenceRecord` or re-runs `ke
+extraction-review-*`; this remains a read-only measurement pass, now against
+an updated ruleset.
