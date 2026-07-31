@@ -1311,6 +1311,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   real claims list as unconfirmed before any relationship exists,
   correctly drops to zero once one real `supports` relationship is
   built between them.
+- Added 15 new manually reviewed `EvidenceRecord`s to
+  `data/corpora/glp1_weight_loss/evidence_records.jsonl` (17 total, up
+  from 2), promoted via `ke extraction-review-promote`. Broadens the
+  corpus's evidence base beyond the original narrow GLP-1/weight-loss
+  question to `scientific_question.md`'s full frame -- tirzepatide,
+  metformin/imeglimin, and SGLT2 inhibitors, including several
+  head-to-head drug-class comparisons. `research_question` and
+  `evidence_direction` were drafted from each paper's real abstract
+  text and explicitly confirmed by a human reviewer before promotion,
+  preserving the seam in `docs/core_interface_contract.md`: `core`
+  never infers these fields itself. Also surfaced a real data-quality
+  finding: `ke extraction-review-batch-generate`'s automated PICO
+  extraction is unreliable at this broader corpus scale (e.g.
+  `intervention` duplicating `population` verbatim on multiple papers,
+  and claim_text length correlating with raw data-table leakage rather
+  than substance) -- this batch was built from paper abstracts
+  directly instead, not from the automated draft-item pool.
 
 ### Changed
 
