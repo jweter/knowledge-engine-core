@@ -713,7 +713,7 @@ This closes every item this design's Open Questions section had open.
   prototype already established and breaking the existing `ke evidence*`
   command family.
 
-## Known Gap: Table Content Leaking into Claim Candidates (flagged, not decided here)
+## Known Gap: Table Content Leaking into Claim Candidates (Resolved)
 
 Found while hand-reviewing `ke extraction-review-batch-generate`'s output at
 scale for the evidence-promotion work in `data/corpora/glp1_weight_loss/
@@ -763,7 +763,7 @@ doesn't have. PyMuPDF's own runtime warning ("Consider using the
 `pymupdf_layout` package for a greatly improved page layout analysis")
 suggests a real, but not yet evaluated, path to closing that remaining gap.
 
-**Why this is not fixed in this session**: a real fix needs, at minimum:
+**Why this was not fixed in that session**: a real fix needed, at minimum:
 `PyMuPDFParser.parse` calling `page.find_tables()` per page and either
 excluding detected table regions from `ParsedPage.text` or tagging them
 separately so `detect_claim_candidates`/`extract_pico` never scan them as
@@ -772,10 +772,79 @@ table-region data through `paper_pages`, since it doesn't exist in the
 schema today; and, critically, a full re-parse of all 960 already-ingested
 papers to backfill it -- `ParsedPage.text` for existing papers was captured
 before this fix would exist and cannot be retroactively corrected without
-re-running the parser against the original PDFs. That is a real, bounded,
+re-running the parser against the original PDFs. That was a real, bounded,
 now-technically-validated piece of future work, not an open-ended research
-problem -- but it is a schema-and-reparse-sized change, not a rule-pattern
-tweak like the PICO/study-design/limitations fixes in this same session,
+problem -- but it was a schema-and-reparse-sized change, not a rule-pattern
+tweak like the PICO/study-design/limitations fixes in that same session,
 and this project's own established practice (see M38's Decision section
-above) is to flag a real, well-diagnosed gap for explicit owner decision
-rather than unilaterally start a corpus-wide re-parse.
+above) was to flag a real, well-diagnosed gap for explicit owner decision
+rather than unilaterally start a corpus-wide re-parse. The owner
+subsequently approved the fix.
+
+### Resolved follow-up: table-region detection, filtering, and corpus backfill
+
+The fix is additive by construction, to protect the source-span
+traceability guarantee this project treats as a core safety property (see
+Potential Risks below): `ParsedPage.text` and every offset computed against
+it are never altered. Table regions are only ever used to *filter* an
+already-split candidate sentence, never to change what text or offsets
+exist.
+
+- **`ParsedPage.table_text: str | None`** (new field): `PyMuPDFParser`
+  calls `page.find_tables()` per page and, when it finds one or more
+  tables, extracts each table's text via `page.get_text("text",
+  clip=table.bbox)` and joins them. `None` when no table is detected.
+  Never subtracted from `text`.
+- **`knowledge_engine/extraction/table_filter.py`** (new module,
+  `is_table_derived`): a candidate sentence is excluded as table-derived
+  only if it is at least 400 characters long (well above the corpus's
+  191-character median) *and* at least 30% of its words also appear in
+  that page's `table_text`. Both thresholds were tuned empirically, not
+  guessed: sampling ~8,500 sentences across 25 random papers found 30
+  candidates crossing this bar, and hand-checking every one confirmed all
+  30 were genuine table dumps and none were false positives; a further
+  306 long-but-unflagged sentences were sampled and confirmed all
+  legitimate prose.
+  `claims.py`/`pico.py`/`study_design.py` all call this before treating a
+  candidate sentence as a signal match.
+- **Schema v11**: `paper_pages.table_text TEXT`, nullable, additive
+  migration. A new `ke paper-pages-table-text-backfill` command re-parses
+  each already-ingested paper's original PDF (reusing the existing,
+  content-hash-verified `paper_pages_backfill` machinery from M22, which
+  refuses to apply a fresh parse whose `content_hash` doesn't match the
+  persisted one) and repopulates `paper_pages.table_text` without
+  touching `text` or any offsets.
+- **Real-corpus backfill result**: 951 / 960 papers backfilled (9 skipped
+  for a missing source PDF file, 0 hash mismatches, 0 parse failures).
+  1,173 / 14,182 pages (370 / 951 papers) had at least one table detected
+  by `find_tables()`.
+- **Pipeline impact, full-corpus `ke extraction-review-batch-generate`**:
+  13,969 draft items before the filter was wired up to 13,668 after --
+  301 table-derived candidates excluded. The three longest `claim_text`
+  values before the fix were 5,494 / 5,099 / 4,870 characters; after,
+  5,494 / 4,569 / 4,378 -- the 5,099 and 4,870-character table dumps (from
+  two papers where `find_tables()` successfully located the table) are
+  gone. The 5,494-character item persists unchanged: it comes from
+  `PMC12777878.pdf`'s borderless table (full-sentence prose inside each
+  cell, no visible grid lines), the one case `find_tables()`'s
+  border/grid-cue heuristic was already known not to catch, documented
+  above and left as a known, honest limitation rather than silently
+  "fixed" by a heuristic that would risk excluding real prose elsewhere.
+- **A field-dropping bug found only by live validation**: the first
+  implementation attempt shipped a parser/schema/filter that worked
+  correctly in isolation, but three call sites that reconstruct an
+  in-memory `ParsedPage` from persisted `PaperPage` rows (`entrypoint.py`'s
+  single-paper and batch draft-generation paths, and
+  `scripts/m38_extraction_corpus_report.py`) never copied the new
+  `table_text` column across -- silently disabling the filter for every
+  already-paged paper, i.e. the entire corpus, with no error and no test
+  failure. Found by comparing before/after draft-item output and seeing
+  zero change despite a successful backfill; confirmed root cause by
+  direct DB query and a direct `is_table_derived` call (both showed the
+  filter logic itself was sound); fixed at all three call sites and
+  covered by a dedicated regression test
+  (`test_extraction_review_generate_excludes_table_derived_candidate_via_real_database`
+  in `tests/test_extraction_review_generate_cli.py`) that was verified to
+  fail without the fix (via `git stash`) and pass with it. This is the
+  same class of copy-paste divergence `section_text()`'s docstring already
+  warns about by name.

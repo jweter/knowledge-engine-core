@@ -384,3 +384,59 @@ def test_extraction_review_generate_end_to_end_against_real_database(
     assert run.draft_evidence_item_rules_version
     assert run.study_design_rules_version
     assert run.pico_extraction_rules_version
+
+
+def test_extraction_review_generate_excludes_table_derived_candidate_via_real_database(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression test: `PaperPage.table_text` must survive the
+    `PaperPage` -> `ParsedPage` conversion this CLI command performs when
+    loading a paper from the database, not just when a `ParsedPage` is
+    already in memory from a fresh parse. Found via a live corpus
+    validation run: `_load_paper_pages` silently dropped `table_text`,
+    so `is_table_derived` always saw `None` and never excluded anything,
+    even though the filter itself worked correctly in isolation."""
+
+    database = Database(
+        Settings(
+            project_root=tmp_path,
+            data_dir=tmp_path / "data",
+            database_url=f"sqlite:///{tmp_path / 'knowledge.sqlite3'}",
+        )
+    )
+    database.initialize()
+    table_text = "Outcome Value Placebo Semaglutide 12.4% 15.2% 95% CI p-value 0.001 " * 6
+    table_dump = table_text.strip()
+    real_sentence = "Body weight decreased by 12.4% relative to baseline."
+    page_text = f"Results\n\n{table_dump}. {real_sentence}"
+    parsed = ParsedPaper(
+        source_path=tmp_path / "table.pdf",
+        content_hash="c" * 64,
+        title="A Trial With a Results Table",
+        authors=["Ada Scientist"],
+        abstract="A trial evaluating semaglutide.",
+        doi="10.1234/table-trial",
+        page_count=1,
+        word_count=30,
+        raw_text=page_text,
+        body_text=page_text,
+        pages=[ParsedPage(page_number=1, text=page_text, table_text=table_text)],
+    )
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(parsed)
+        paper_id = paper.id
+        assert paper.pages[0].table_text == table_text
+
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    output = tmp_path / "review.jsonl"
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["extraction-review-generate", "--paper-id", str(paper_id), "--output", str(output)],
+    )
+
+    assert result.exit_code == 0, result.output
+    lines = output.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["claim_text"] == real_sentence

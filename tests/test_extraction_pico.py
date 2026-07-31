@@ -21,7 +21,7 @@ def _section(
 
 
 def test_pico_extraction_rules_version_is_stable() -> None:
-    assert PICO_EXTRACTION_RULES_VERSION == "m28-pico-v3"
+    assert PICO_EXTRACTION_RULES_VERSION == "m28-pico-v4"
 
 
 def test_extract_pico_detects_population_from_cohort_size_clause() -> None:
@@ -141,6 +141,24 @@ def test_extract_pico_returns_all_none_without_scoped_sections() -> None:
     assert fields.intervention is None
     assert fields.comparator is None
     assert fields.outcome is None
+
+
+def test_extract_pico_excludes_a_table_derived_candidate() -> None:
+    """A long, punctuation-free table dump containing an intervention cue
+    word ("received") is excluded when it overlaps heavily with the page's
+    own detected `table_text`; extraction falls through to the next,
+    genuinely distinct intervention-cue sentence instead."""
+
+    table_text = "Group Dose Received n Placebo 0mg 51 Semaglutide 2.4mg 51 Week Visit " * 6
+    table_dump = table_text.strip()
+    real_sentence = "Participants received semaglutide once weekly for 68 weeks."
+    text = f"Methods\n\n{table_dump}. {real_sentence}"
+    sections = [_section("methods", text, "Methods")]
+    pages = [ParsedPage(page_number=1, text=text, table_text=table_text)]
+
+    fields = extract_pico(pages, sections)
+
+    assert fields.intervention == real_sentence
 
 
 def test_extract_pico_strips_heading_from_matched_sentence() -> None:

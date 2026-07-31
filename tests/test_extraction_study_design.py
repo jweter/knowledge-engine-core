@@ -22,7 +22,7 @@ def _section(
 
 
 def test_study_design_rules_version_is_stable() -> None:
-    assert STUDY_DESIGN_RULES_VERSION == "m26-study-design-v3"
+    assert STUDY_DESIGN_RULES_VERSION == "m26-study-design-v4"
 
 
 def test_classify_study_type_detects_randomized_controlled_trial() -> None:
@@ -259,6 +259,23 @@ def test_extract_limitations_falls_back_to_discussion_cue_sentences() -> None:
     result = extract_limitations([ParsedPage(page_number=1, text=text)], sections)
 
     assert result == ["Several limitations of this study should be acknowledged."]
+
+
+def test_extract_limitations_fallback_excludes_a_table_derived_candidate() -> None:
+    """A long, punctuation-free table dump containing the word "limitation"
+    (e.g. a table column header like "Limitation category") is excluded when
+    it overlaps heavily with the page's own detected `table_text`."""
+
+    table_text = "Limitation category Sample size Follow-up Bias risk Confounding " * 8
+    table_dump = table_text.strip()
+    real_sentence = "Several limitations of this study should be acknowledged."
+    text = f"Discussion\n\n{table_dump}. {real_sentence}"
+    sections = [_section("discussion", text, "Discussion")]
+    pages = [ParsedPage(page_number=1, text=text, table_text=table_text)]
+
+    result = extract_limitations(pages, sections)
+
+    assert result == [real_sentence]
 
 
 def test_extract_limitations_fallback_returns_every_cue_sentence_in_order() -> None:

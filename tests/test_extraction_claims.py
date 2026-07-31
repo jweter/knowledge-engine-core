@@ -154,6 +154,30 @@ def test_integrates_with_real_detect_sections_output() -> None:
     assert "12.4%" in candidates[0].sentence_text
 
 
+def test_table_derived_candidate_is_excluded() -> None:
+    """A long, punctuation-free run of table-cell text (no real
+    sentence-terminal punctuation, so it becomes one giant "sentence")
+    containing a stray "%" would otherwise trip the percentage signal --
+    excluded when it overlaps heavily with the page's own detected
+    `table_text`."""
+
+    table_text = "Outcome Value Placebo Semaglutide 12.4% 15.2% 95% CI p-value 0.001 " * 6
+    table_dump_sentence = table_text.strip()  # the "sentence" the giant table becomes
+    prose_sentence = "Body weight decreased by 12.4% from baseline."
+    # A real table dump has no internal sentence-terminal punctuation, so it
+    # only splits from what follows because *something* eventually provides
+    # a ".<space><Uppercase>" boundary -- here, the end of the table dump
+    # itself, mirroring how a real page's next real sentence provides one.
+    text = f"Results\n\n{table_dump_sentence}. {prose_sentence}"
+    pages = [ParsedPage(page_number=1, text=text, table_text=table_text)]
+    sections = [_results_section(text)]
+
+    candidates = detect_claim_candidates(pages, sections)
+
+    assert len(candidates) == 1
+    assert candidates[0].sentence_text == prose_sentence
+
+
 def test_section_spanning_page_boundary_is_fully_scanned() -> None:
     pages = [
         ParsedPage(page_number=1, text="Results\n\nParticipants tolerated treatment well."),

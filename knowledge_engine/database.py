@@ -34,7 +34,7 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 10
+CURRENT_SCHEMA_VERSION = 11
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
@@ -65,6 +65,12 @@ _SCHEMA_V6_COLUMNS: dict[str, dict[str, str]] = {
 _SCHEMA_V7_COLUMNS: dict[str, dict[str, str]] = {
     "extraction_runs": {
         "pico_extraction_rules_version": "VARCHAR(64) NOT NULL DEFAULT 'pre-m28'",
+    },
+}
+
+_SCHEMA_V11_COLUMNS: dict[str, dict[str, str]] = {
+    "paper_pages": {
+        "table_text": "TEXT",
     },
 }
 
@@ -201,6 +207,8 @@ def migrate_schema(engine: Engine) -> None:
             _migrate_schema_v7(connection)
         if existing_version < 10:
             _migrate_schema_v10(connection)
+        if existing_version < 11:
+            _migrate_schema_v11(connection)
 
         _verify_schema_complete(connection)
 
@@ -332,6 +340,28 @@ def _migrate_schema_v10(connection: Connection) -> None:
         )
     )
     connection.execute(text(f'DROP TABLE "{old_table_name}"'))
+
+
+def _migrate_schema_v11(connection: Connection) -> None:
+    """Add `paper_pages.table_text` for table-derived-sentence filtering.
+
+    Additive and nullable, same shape as the v6/v7 migrations above -- a
+    paper's existing pages simply have `table_text = NULL` until a separate
+    backfill re-parses their original local PDF (mirroring the M22
+    `paper_pages` backfill's own "re-parse, verify content hash, then
+    persist" pattern), which is the only way to compute this signal for
+    already-persisted pages since it depends on layout geometry `text`
+    alone does not retain.
+    """
+
+    for table_name, columns in _SCHEMA_V11_COLUMNS.items():
+        existing_columns = _table_columns(connection, table_name)
+        for column_name, definition in columns.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(
+                text(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {definition}')
+            )
 
 
 def _current_schema_version(connection: Connection) -> int:
@@ -490,7 +520,8 @@ class PaperRepository:
         )
         paper.text = PaperText(raw_text=parsed.raw_text, body_text=parsed.body_text)
         paper.pages = [
-            PaperPage(page_number=page.page_number, text=page.text) for page in parsed.pages
+            PaperPage(page_number=page.page_number, text=page.text, table_text=page.table_text)
+            for page in parsed.pages
         ]
         self.session.add(paper)
 

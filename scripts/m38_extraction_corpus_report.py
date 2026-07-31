@@ -36,7 +36,12 @@ def main() -> int:
         paper_pages = [
             (
                 paper.id,
-                [ParsedPage(page_number=page.page_number, text=page.text) for page in paper.pages],
+                [
+                    ParsedPage(
+                        page_number=page.page_number, text=page.text, table_text=page.table_text
+                    )
+                    for page in paper.pages
+                ],
             )
             for paper in papers
         ]

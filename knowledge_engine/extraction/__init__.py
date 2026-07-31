@@ -28,12 +28,17 @@ from knowledge_engine.extraction.sections import (
     SectionSpan,
     detect_sections,
     section_content,
+    section_page_ranges,
     section_text,
 )
 from knowledge_engine.extraction.study_design import (
     STUDY_DESIGN_RULES_VERSION,
     classify_study_type,
     extract_limitations,
+)
+from knowledge_engine.extraction.table_filter import (
+    TABLE_FILTER_RULES_VERSION,
+    is_table_derived,
 )
 
 __all__ = [
@@ -44,6 +49,7 @@ __all__ = [
     "SECTION_DETECTION_RULES_VERSION",
     "SECTION_TYPES",
     "STUDY_DESIGN_RULES_VERSION",
+    "TABLE_FILTER_RULES_VERSION",
     "ClaimCandidate",
     "ClaimFraming",
     "DraftEvidenceItem",
@@ -58,6 +64,8 @@ __all__ = [
     "detect_sections",
     "extract_limitations",
     "extract_pico",
+    "is_table_derived",
     "section_content",
+    "section_page_ranges",
     "section_text",
 ]

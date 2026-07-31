@@ -574,7 +574,10 @@ def _load_paper_pages(paper_id: int) -> tuple[Paper, list[ParsedPage]] | None:
         paper = PaperRepository(session).get(paper_id)
         if paper is None:
             return None
-        pages = [ParsedPage(page_number=page.page_number, text=page.text) for page in paper.pages]
+        pages = [
+            ParsedPage(page_number=page.page_number, text=page.text, table_text=page.table_text)
+            for page in paper.pages
+        ]
         session.expunge(paper)
         return paper, pages
 
@@ -1615,7 +1618,12 @@ def extraction_review_batch_generate(
         paper_pages = [
             (
                 PaperMetadata(paper_id=paper.id, doi=paper.doi, title=paper.title),
-                [ParsedPage(page_number=page.page_number, text=page.text) for page in paper.pages],
+                [
+                    ParsedPage(
+                        page_number=page.page_number, text=page.text, table_text=page.table_text
+                    )
+                    for page in paper.pages
+                ],
             )
             for paper in sorted(papers, key=lambda paper: paper.id)
         ]
@@ -2471,7 +2479,73 @@ def paper_pages_backfill(dry_run: DryRunOption = False) -> None:
             if outcome.status == "backfilled" and parsed is not None:
                 if not dry_run:
                     paper.pages = [
-                        PaperPage(page_number=page.page_number, text=page.text)
+                        PaperPage(
+                            page_number=page.page_number,
+                            text=page.text,
+                            table_text=page.table_text,
+                        )
+                        for page in parsed.pages
+                    ]
+                console.print(f"[green]Backfilled paper {paper.id}:[/green] {escape(paper.title)}")
+            else:
+                console.print(
+                    f"[yellow]Skipped paper {paper.id} ({outcome.status}):[/yellow] "
+                    f"{escape(outcome.detail or '')}"
+                )
+
+    prefix = "[bold]Dry run --[/bold] no changes were written. " if dry_run else ""
+    console.print(
+        f"{prefix}Backfilled: {counts.get('backfilled', 0)}, "
+        f"missing source file: {counts.get('missing_source_file', 0)}, "
+        f"hash mismatch: {counts.get('hash_mismatch', 0)}, "
+        f"parse failed: {counts.get('parse_failed', 0)}."
+    )
+    if counts.get("backfilled", 0) < len(papers):
+        raise typer.Exit(1)
+
+
+@app.command("paper-pages-table-text-backfill")
+def paper_pages_table_text_backfill(dry_run: DryRunOption = False) -> None:
+    """Backfill `paper_pages.table_text` for papers imported before this field existed.
+
+    Unlike `paper-pages-backfill` (which only targets papers with zero
+    `paper_pages` rows at all), this targets every paper that already has
+    pages, since `table_text` cannot be recovered from already-persisted
+    page text alone -- it depends on PDF layout geometry only a fresh parse
+    of the original file can recompute. Reuses the exact same safety gate:
+    only papers whose original local PDF is still present, and whose
+    freshly re-parsed content hash matches the persisted one, are
+    backfilled. A missing or changed source file is reported, never
+    silently skipped. Already-idempotent: a paper whose pages already carry
+    `table_text` is re-parsed and rewritten with the same values (parsing is
+    deterministic), so running this command twice is safe.
+    """
+
+    database = _local_database()
+    database.initialize()
+    parser = PyMuPDFParser()
+
+    counts: dict[str, int] = {}
+    with database.session() as session:
+        repository = PaperRepository(session)
+        papers = [paper for paper in repository.list_papers() if paper.pages]
+
+        if not papers:
+            console.print("[green]No papers with existing pages need backfilling.[/green]")
+            return
+
+        for paper in papers:
+            outcome, parsed = backfill_paper(paper, parser)
+            counts[outcome.status] = counts.get(outcome.status, 0) + 1
+
+            if outcome.status == "backfilled" and parsed is not None:
+                if not dry_run:
+                    paper.pages = [
+                        PaperPage(
+                            page_number=page.page_number,
+                            text=page.text,
+                            table_text=page.table_text,
+                        )
                         for page in parsed.pages
                     ]
                 console.print(f"[green]Backfilled paper {paper.id}:[/green] {escape(paper.title)}")
