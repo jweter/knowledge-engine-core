@@ -7,6 +7,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Removed
+
+- Removed `auto-9f4eaa1682215164`, a duplicate evidence record: the same
+  paper (DOI `10.1007/s40618-026-02883-7`) as `ev-tirzepatide-surmount1-whtr-001`,
+  extracted twice -- once by hand (clean, human-reviewed) and once by
+  M52's automated pass (garbled, misaligned PICO fields, still
+  `extraction_status: draft_review_required`, `research_question` a
+  broken templated non-question). Kept the manual record, which has
+  every field the automated one was missing or had wrong. Removed its
+  now-orphaned `graph_claims`/`graph_claim_concepts` rows from the
+  local graph too -- it had no relationship edges to clean up.
+
 ### Added
 
 - **M56**: authored the real GLP-1 corpus's first `RelationshipRecord`s --
