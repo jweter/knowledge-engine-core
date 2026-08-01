@@ -2041,14 +2041,29 @@ def graph_build(
     See `docs/phase4_design.md`. Reads an `--evidence` JSONL file (already
     passed `ke evidence-validate`) and creates one `graph_claims` row per
     record. Reuses M45's `annotate_draft_items` unchanged to resolve each
-    record's `population`/`intervention`/`comparator`/`outcome` PICO field
-    against RxNorm/MeSH -- the same live-network reference-layer lookup
-    `extraction-review-annotate` already runs, so the same "expect on the
-    order of a minute or more of network calls, not a near-instant
-    operation" cost applies here too. A field that has no confident
-    reference-layer match (`found: false`) contributes no concept node --
-    unlike `extraction-review-annotate`'s output, this command does not
-    keep the miss on record, since nothing else here reads it back.
+    *new* record's `population`/`intervention`/`comparator`/`outcome` PICO
+    field against RxNorm/MeSH -- the same live-network reference-layer
+    lookup `extraction-review-annotate` already runs, so the same "expect
+    on the order of a minute or more of network calls, not a near-instant
+    operation" cost applies here too, for whatever fraction of `--evidence`
+    is new. A field that has no confident reference-layer match
+    (`found: false`) contributes no concept node -- unlike
+    `extraction-review-annotate`'s output, this command does not keep the
+    miss on record, since nothing else here reads it back.
+
+    **M54: incremental by design.** An `evidence_record_id` that already
+    has a `graph_claims` row is skipped entirely -- no re-annotation, no
+    re-lookup -- since that row only ever exists inside a prior,
+    fully-committed `graph-build` run, meaning its concept links were
+    already resolved too. Re-running this command against a growing
+    `--evidence` file costs network calls only for the records added since
+    the last run, not the whole file every time; the console output
+    reports exactly how many were skipped versus newly looked up. This
+    was a real, measured bottleneck at real corpus scale (42 minutes for
+    156 records, all re-looked-up on every run) before M54, and matters
+    for a continuously-growing evidence base -- see `docs/roadmap.md`'s
+    Long-Term Vision section on the live, connected end state this project
+    is building toward.
 
     An optional `--relationships` JSONL file (already passed `ke
     relationship-validate`) adds one `graph_claim_relationships` row per
@@ -2076,22 +2091,6 @@ def graph_build(
 
     relationship_records = _read_jsonl_records(relationships) if relationships is not None else []
 
-    console.print(
-        "[yellow]Network access:[/yellow] querying NLM's public RxNav and E-utilities APIs "
-        "to resolve PICO fields into reference-layer concepts."
-    )
-    rxnorm_transport = cast(RxNormLookupGetTransport, UrllibRxNavTransport())
-    mesh_transport = cast(MeshLookupGetTransport, UrllibNcbiTransport())
-    rxnorm_service = RxNormLookupService(rxnorm_transport)
-    mesh_service = MeshLookupService(mesh_transport)
-    try:
-        annotated, _summary = annotate_draft_items(
-            evidence_records, rxnorm_service=rxnorm_service, mesh_service=mesh_service
-        )
-    except (RxNormLookupError, MeshLookupError) as exc:
-        console.print(f"[red]Reference-layer annotation failed:[/red] {escape(str(exc))}")
-        raise typer.Exit(1) from exc
-
     database = _local_database()
     database.initialize()
 
@@ -2101,7 +2100,53 @@ def graph_build(
 
     with database.session() as session:
         repository = GraphRepository(session)
-        claims_by_evidence_id: dict[str, int] = {}
+
+        # M54: a claim row only ever exists inside a fully-committed
+        # graph-build transaction (this whole command is one transaction;
+        # see Database.session()'s commit-at-exit/rollback-on-exception
+        # behavior), so its existence here is a reliable signal its concept
+        # links were already resolved too. Skipping annotation for these
+        # avoids re-doing every prior run's RxNorm/MeSH network calls on
+        # every subsequent run -- the real bottleneck this command had at
+        # real corpus scale (42 minutes for 156 records, all re-looked-up
+        # every time).
+        record_ids = (record.get("evidence_record_id") for record in evidence_records)
+        candidate_ids = [
+            evidence_record_id
+            for evidence_record_id in record_ids
+            if isinstance(evidence_record_id, str) and evidence_record_id.strip()
+        ]
+        existing_claim_ids = repository.find_claim_ids_by_evidence_ids(candidate_ids)
+        claims_by_evidence_id: dict[str, int] = dict(existing_claim_ids)
+        records_to_annotate = [
+            record
+            for record in evidence_records
+            if str(record.get("evidence_record_id")) not in existing_claim_ids
+        ]
+
+        if records_to_annotate:
+            console.print(
+                "[yellow]Network access:[/yellow] querying NLM's public RxNav and "
+                f"E-utilities APIs to resolve PICO fields for {len(records_to_annotate)} "
+                f"new record(s) ({len(existing_claim_ids)} already in the graph, skipped)."
+            )
+            rxnorm_transport = cast(RxNormLookupGetTransport, UrllibRxNavTransport())
+            mesh_transport = cast(MeshLookupGetTransport, UrllibNcbiTransport())
+            rxnorm_service = RxNormLookupService(rxnorm_transport)
+            mesh_service = MeshLookupService(mesh_transport)
+            try:
+                annotated, _summary = annotate_draft_items(
+                    records_to_annotate, rxnorm_service=rxnorm_service, mesh_service=mesh_service
+                )
+            except (RxNormLookupError, MeshLookupError) as exc:
+                console.print(f"[red]Reference-layer annotation failed:[/red] {escape(str(exc))}")
+                raise typer.Exit(1) from exc
+        else:
+            annotated = []
+            console.print(
+                f"[green]All {len(existing_claim_ids)} evidence record(s) already in the "
+                "graph -- no new network lookups needed.[/green]"
+            )
 
         for item in annotated:
             evidence_record_id = item.get("evidence_record_id")

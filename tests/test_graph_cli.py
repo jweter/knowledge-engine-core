@@ -131,6 +131,98 @@ def test_graph_build_cli_populates_claims_and_concepts(
         assert {c.label for c in concepts} == {"semaglutide", "Obesity"}
 
 
+def test_graph_build_cli_skips_network_lookups_for_already_graphed_claims(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """M54: re-running graph-build against an unchanged evidence file must do zero new lookups."""
+
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    rxnorm_calls: list[str] = []
+    mesh_calls: list[str] = []
+    real_rxnorm = FakeRxNormService()
+    real_mesh = FakeMeshService()
+
+    class TrackingRxNormService:
+        def lookup(self, term: str) -> RxNormLookupResult:
+            rxnorm_calls.append(term)
+            return real_rxnorm.lookup(term)
+
+    class TrackingMeshService:
+        def lookup(self, term: str) -> MeshLookupResult:
+            mesh_calls.append(term)
+            return real_mesh.lookup(term)
+
+    monkeypatch.setattr(
+        entrypoint, "RxNormLookupService", lambda transport: TrackingRxNormService()
+    )
+    monkeypatch.setattr(entrypoint, "MeshLookupService", lambda transport: TrackingMeshService())
+
+    evidence_path = _write_jsonl(tmp_path / "evidence.jsonl", _evidence_record("ev-1"))
+
+    first = CliRunner().invoke(entrypoint.app, ["graph-build", "--evidence", str(evidence_path)])
+    assert first.exit_code == 0, first.output
+    assert rxnorm_calls and mesh_calls
+
+    rxnorm_calls.clear()
+    mesh_calls.clear()
+
+    second = CliRunner().invoke(entrypoint.app, ["graph-build", "--evidence", str(evidence_path)])
+
+    assert second.exit_code == 0, second.output
+    assert rxnorm_calls == []
+    assert mesh_calls == []
+    unwrapped = _unwrapped(second.output)
+    assert "1 claim(s) processed" in unwrapped
+    assert "already in the graph -- no new network lookups needed" in unwrapped
+
+
+def test_graph_build_cli_only_looks_up_the_new_record_in_a_mixed_batch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    rxnorm_calls: list[str] = []
+    real_rxnorm = FakeRxNormService()
+    real_mesh = FakeMeshService()
+
+    class TrackingRxNormService:
+        def lookup(self, term: str) -> RxNormLookupResult:
+            rxnorm_calls.append(term)
+            return real_rxnorm.lookup(term)
+
+    class PassthroughMeshService:
+        def lookup(self, term: str) -> MeshLookupResult:
+            return real_mesh.lookup(term)
+
+    monkeypatch.setattr(
+        entrypoint, "RxNormLookupService", lambda transport: TrackingRxNormService()
+    )
+    monkeypatch.setattr(entrypoint, "MeshLookupService", lambda transport: PassthroughMeshService())
+
+    evidence_path = _write_jsonl(tmp_path / "evidence.jsonl", _evidence_record("ev-1"))
+    CliRunner().invoke(entrypoint.app, ["graph-build", "--evidence", str(evidence_path)])
+    rxnorm_calls.clear()
+
+    grown_evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record("ev-1"),
+        _evidence_record("ev-2", intervention="Tirzepatide"),
+    )
+
+    result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(grown_evidence_path)]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert rxnorm_calls == ["Tirzepatide"]
+    unwrapped = _unwrapped(result.output)
+    assert "2 claim(s) processed" in unwrapped
+    assert "1 new record(s) (1 already in the graph, skipped)" in unwrapped
+
+
 def test_graph_build_cli_links_a_relationship_between_two_claims(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
