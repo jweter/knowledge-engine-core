@@ -823,7 +823,8 @@ def test_evidence_report_rejects_an_unknown_format(
     )
 
     assert result.exit_code != 0
-    assert "--format must be 'markdown' or 'json'" in result.output
+    unwrapped = " ".join(result.output.split())
+    assert "--format must be 'markdown' or 'json'" in unwrapped
 
 
 def test_evidence_report_marks_paper_without_evidence(
