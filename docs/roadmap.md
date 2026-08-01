@@ -375,7 +375,16 @@ a bounded worksheet for the same human/AI scope screen this project has
 always required before `ke pmc-oa-acquire`. Live-verified against the
 real PubMed/PMC APIs: pagination correctly resumed across cycles, and a
 real PMID added to the ledger was correctly excluded on a repeat run of
-the same page.
+the same page. **M56** authored the real corpus's first
+`RelationshipRecord`s: 3 `supports` edges (STEP 5 trial, Gao et al.'s
+meta-analysis, and the SELECT trial, all reporting the same direction
+for semaglutide versus placebo on body weight), filtered from `ke
+graph-relationship-candidates`'s 308 structural candidate pairs down to
+the 3 with 2+ shared PICO-resolved concepts and reviewed against each
+record's full text before authoring a rationale. The graph's
+`relationship_edges` count moves from 0 to 3 -- the first real, non-zero
+number the "Unconfirmed Claims"/Tracking-the-Unknown report and
+`knowledge-engine-web`'s corresponding pages have ever shown.
 
 ### Supporting operator durability
 
