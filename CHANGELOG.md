@@ -1559,6 +1559,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   adding a real accepted candidate's PMID to a real ledger and
   re-running the same page correctly excluded it
   (`already_in_rejected_ledger: 1`, `ready_for_scope_review: []`).
+- Added `docs/ai_layer_architecture.md`, a refinement of
+  `docs/ai_interface_layer_scoping.md`'s Decision Engine framing after
+  further owner-side design discussion: one Research Copilot
+  orchestrating Retrieval/Evidence/Analytical/Discovery intelligences
+  rather than separate bots per capability, a three-way Evidence
+  Quality/Consensus/Claim Confidence split (never collapsed into one
+  number), Evidence Coverage and confidence-of-confidence as new
+  displayed quantities, domain-specific confidence profiles (only
+  Clinical Medicine is concretely groundable today), and a
+  deterministic-first Statistics Auditor design. Docs only -- no code,
+  no new repository, per the project owner's standing explicit
+  direction that `knowledge-engine-ai` stays unopened until there is a
+  validated confidence-rating formula and/or substantially more
+  evidence to design it against.
 
 ### Fixed
 

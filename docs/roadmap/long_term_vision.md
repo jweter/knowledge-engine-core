@@ -281,4 +281,9 @@ scoped-down first-slice ideas for both engines, recorded once Phase 4
 identify gaps against -- that document is a record of ideas, not a
 design doc ready for implementation, and does not change either engine's
 status here: still deferred, still not started, still no repository
-created.
+created. **See `docs/ai_layer_architecture.md`** for a later refinement
+of the Decision Engine framing above -- one Research Copilot
+orchestrating Retrieval/Evidence/Analytical/Discovery intelligences
+rather than separate bots, plus a three-way Evidence Quality/Consensus/
+Claim Confidence split and domain-specific confidence profiles. Same
+status: no code, no repository yet.
