@@ -5,13 +5,13 @@ This document is the original Phase 1 design sketch. The implementation-ready
 M6 ingestion architecture refines it with a smaller pilot-first sequence,
 explicit manifest validation, import-run identity, duplicate outcomes, metadata
 precedence, and legal/provenance gating. See
-`docs/m6_phase1_corpus_ingestion_plan.md`. M7 implements the first piece of
+`docs/history/milestones/m6_phase1_corpus_ingestion_plan.md`. M7 implements the first piece of
 that plan: validation-only corpus manifests through
 `ke corpus-validate <corpus.json> [--check-files]`. See
-`docs/m7_manifest_validation_foundation.md`. M8 adds import-run and import-item
+`docs/history/milestones/m7_manifest_validation_foundation.md`. M8 adds import-run and import-item
 persistence for validation attempts through `ke corpus-run-create` and
 `ke corpus-run-show` without importing papers. See
-`docs/m8_import_run_persistence.md`.
+`docs/history/milestones/m8_import_run_persistence.md`.
 
 ## Mission
 

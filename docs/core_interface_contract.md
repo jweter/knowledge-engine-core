@@ -157,16 +157,16 @@ most likely to actually call:
   only: never infers, detects, or suggests a relationship type or
   rationale, the same boundary `ke relationship-validate` already draws.
   Supports `--output <path.md>` (Markdown, not JSON). See
-  `docs/m49_graph_relationship_candidates.md`.
+  `docs/history/milestones/m49_graph_relationship_candidates.md`.
 - `ke graph-unconfirmed-claims [--output <path.md>]` -- lists claims with
   zero relationship edges of any type, M50's Tracking the Unknown
   decision (`docs/stability_and_tracking_design.md`). No filtering, no
   `research_question` grouping. Supports `--output <path.md>` (Markdown,
-  not JSON). See `docs/m51_graph_unconfirmed_claims.md`.
+  not JSON). See `docs/history/milestones/m51_graph_unconfirmed_claims.md`.
 
 **Corpus-building (the pipeline a consumer generally does not re-run
 itself, but may need to trigger for a specific paper):**
-- `ke discovery-cycle-run` (M55, `docs/m55_discovery_cycle.md`): one
+- `ke discovery-cycle-run` (M55, `docs/history/milestones/m55_discovery_cycle.md`): one
   schedulable cycle of discovery + deterministic adjudication + M53
   ledger cross-check, stopping before acquisition (writes a JSON
   worksheet, not an evidence artifact -- see the design doc for why).
@@ -191,16 +191,16 @@ itself, but may need to trigger for a specific paper):**
   file), reusing M45's `annotate_draft_items` to resolve PICO fields into
   concept nodes. Writes to the database always; `--output` is an
   optional JSON summary of total graph row counts, not the graph data
-  itself. See `docs/m46_graph_repository.md`.
+  itself. See `docs/history/milestones/m46_graph_repository.md`.
 - `ke graph-citations-build [--output <path.json>]` -- populates
   `graph_citations` from every persisted paper's own reference list,
   matching cited DOIs against other papers already in this database. No
   input file and no network access (unlike `ke graph-build`). Only
   DOI-identity matches; no structured per-entry parsing -- see
-  `docs/m47_graph_citations.md` for the real-corpus measurement that
+  `docs/history/milestones/m47_graph_citations.md` for the real-corpus measurement that
   scoped this decision.
 - `ke graph-relationship-candidates` -- read-only, no input file and no
-  network access. See `docs/m49_graph_relationship_candidates.md`.
+  network access. See `docs/history/milestones/m49_graph_relationship_candidates.md`.
 
 **Do not assume `--output` (or any machine-readable output) exists on a
 command not listed above as having it.** `search`/`answer`/
@@ -322,7 +322,7 @@ Added to a draft evidence item by `ke extraction-review-annotate`. An
 object with keys `intervention`/`comparator`/`population`/`outcome`,
 each either `null` (nothing to look up) or one of the RxNorm/MeSH shapes
 above plus a `source` key (`"rxnorm"` or `"mesh"`). See
-`docs/m45_extraction_review_annotate.md` for what "found" actually means
+`docs/history/milestones/m45_extraction_review_annotate.md` for what "found" actually means
 here (a single matched candidate word, not the whole raw field) and its
 real cost profile (roughly a minute or more of network calls per real
 paper).
@@ -381,7 +381,7 @@ decides when to re-invoke extraction for a given paper.
   `graph_citations` (M47, `ke graph-citations-build`) exists and is
   populated, but only via DOI-identity matching against papers already in
   the corpus, not full reference-entry extraction; see
-  `docs/m47_graph_citations.md` for the real-corpus measurement that
+  `docs/history/milestones/m47_graph_citations.md` for the real-corpus measurement that
   scoped this decision (three real citation styles found, but only 5
   intra-corpus edges exist, which does not justify the larger build).
 - No Neo4j or other dedicated graph backend -- the graph lives in the

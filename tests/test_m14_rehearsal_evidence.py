@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = ROOT / "docs" / "m14_rehearsal_evidence.schema.json"
-EXAMPLE_PATH = ROOT / "docs" / "m14_rehearsal_evidence.example.json"
+SCHEMA_PATH = ROOT / "docs" / "history" / "milestones" / "m14_rehearsal_evidence.schema.json"
+EXAMPLE_PATH = ROOT / "docs" / "history" / "milestones" / "m14_rehearsal_evidence.example.json"
 
 
 def _assert_required_keys(instance: dict[str, Any], schema: dict[str, Any]) -> None:

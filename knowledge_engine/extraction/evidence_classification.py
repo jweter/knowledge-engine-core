@@ -2,7 +2,7 @@
 
 M18's `direction.py` deliberately stopped short of `evidence_direction`
 because that field is defined *relative to* a `research_question`
-(`docs/vs7_manual_evidence_record.md`), and a bare claim candidate has no
+(`docs/history/vertical_slice/vs7_manual_evidence_record.md`), and a bare claim candidate has no
 research question attached. Every evidence-promotion batch before this one
 worked around that by having a human (in practice, the AI assistant driving
 this repository, with the project owner's explicit review) read each

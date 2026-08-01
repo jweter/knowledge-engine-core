@@ -10,7 +10,7 @@ and populated directly. `research_question` has no source anywhere in this
 codebase -- it is inherently supplied by whoever compiles a corpus around a
 question, not derivable from a paper's own text. M18 already established
 that `evidence_direction` is defined relative to a `research_question`
-(`docs/vs7_manual_evidence_record.md`), so it cannot be honestly populated
+(`docs/history/vertical_slice/vs7_manual_evidence_record.md`), so it cannot be honestly populated
 without one either. Those two fields, `uncertainty_notes`, `confidence_note`, and `provenance`
 require real judgment or external input and are left explicitly `None`.
 `study_type`, `limitations`, and PICO's population/intervention/comparator/

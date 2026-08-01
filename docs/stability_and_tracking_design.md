@@ -63,7 +63,7 @@ concretely), never a heuristic guess about what evidence "should" exist.
   the only piece missing a revision-shaped option.
 - **The graph has no join from a claim back to its `research_question`
   text.** `graph_claims` stores only `evidence_record_id` (see
-  `docs/m48_graph_report.md`'s "what is deliberately not built yet" on
+  `docs/history/milestones/m48_graph_report.md`'s "what is deliberately not built yet" on
   why `evidence_record_id` is not a real foreign key). Any report
   grouping claims by research question needs the same `--evidence
   <file>` join `ke relationship-report` already requires, not a new
