@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -823,7 +824,7 @@ def test_evidence_report_rejects_an_unknown_format(
     )
 
     assert result.exit_code != 0
-    plain = result.output
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
     for box_char in "│╭╮╰╯─":
         plain = plain.replace(box_char, " ")
     unwrapped = " ".join(plain.split())
