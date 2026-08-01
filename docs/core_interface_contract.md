@@ -75,6 +75,37 @@ record's `research_question` remains a mechanical PICO restatement, a
 different and narrower thing than what a human reviewer or the future AI
 Interface Layer would supply.
 
+**Revised in M58** for the confidence-rating boundary specifically: the
+project owner explicitly requested a real, live confidence-scoring
+feature (`docs/evidence_intelligence_design.md`), and
+`knowledge_engine/evidence_intelligence.py` now computes Evidence
+Quality, Evidence Consensus, and Claim Confidence directly in `core`,
+not in a separate `knowledge-engine-ai` package. This is a *location*
+change, not a loosening of the seam's actual substance:
+
+- The computation is fully deterministic (study-design tier lookup,
+  relationship-edge counting, a quality x consensus product) -- no LLM,
+  no statistical model, no judgment call a person did not already make
+  when authoring the underlying `EvidenceRecord`/`RelationshipRecord`.
+  Every number traces back to an already-stored, already-human-reviewed
+  field; nothing is invented or inferred beyond what `docs/evidence_intelligence_design.md`
+  specifies.
+- `core` still never sets or infers `research_question`, `evidence_direction`,
+  or a `RelationshipRecord` -- M58 only reads those, never writes them.
+- `docs/ai_layer_architecture.md`'s own build sequence places "Evidence
+  Intelligence" (Stage 3) under Phase 5 (Human Interface), "alongside
+  `knowledge-engine-web`, not as a new numbered phase" -- this document's
+  original "future `knowledge-engine-ai` layer's job" language predates
+  that refinement, and no `knowledge-engine-ai` code exists to host the
+  computation regardless, per the project owner's standing "no new
+  repository yet" direction.
+- What remains the future AI layer's job, unchanged: synthesizing or
+  narrating what a confidence number *means* for a person's actual
+  question, cross-domain profiles beyond Clinical Medicine, the
+  Statistics Auditor, and Discovery Intelligence -- see
+  `docs/evidence_intelligence_design.md`'s own "Explicitly out of scope"
+  section.
+
 ## Configuration
 
 `core` reads settings via `knowledge_engine.config.Settings`
