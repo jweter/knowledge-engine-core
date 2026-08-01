@@ -137,7 +137,12 @@ most likely to actually call:
   above. Same FAISS-only, console-only caveats apply.
 - `ke evidence <records.jsonl>` / `ke evidence-report` -- read/report on
   persisted manual Evidence Records. `evidence-report` supports
-  `--output <path.md>` (Markdown, not JSON).
+  `--output <path>` and `--format markdown` (default) or `--format json`
+  -- the JSON form is a structured, machine-readable sibling for a
+  consumer (e.g. a future `knowledge-engine-ai` layer) that needs to
+  parse retrieval + matched-evidence results programmatically instead of
+  scraping Markdown or Rich console text; see
+  `docs/ai_layer_architecture.md`.
 - `ke relationship-report` -- read Relationship Records. Console output
   only.
 - `ke graph-report [--evidence-record-id <id> | --paper-id <id>] [--output <path.md>]`

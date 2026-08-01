@@ -104,6 +104,10 @@ OutputMarkdownOption = Annotated[
     Path | None,
     typer.Option("--output", help="Optional path for the generated Markdown report."),
 ]
+ReportFormatOption = Annotated[
+    str,
+    typer.Option("--format", help="Report output format: 'markdown' (default) or 'json'."),
+]
 ForceOutputOption = Annotated[
     bool,
     typer.Option("--force", help="Overwrite an existing output file."),
@@ -423,8 +427,21 @@ def evidence_report(
     output: OutputMarkdownOption = None,
     force: ForceOutputOption = False,
     limit: SearchLimitOption = 5,
+    report_format: ReportFormatOption = "markdown",
 ) -> None:
-    """Generate a Markdown retrieval and manual evidence report."""
+    """Generate a retrieval and manual evidence report, as Markdown or JSON.
+
+    `--format json` is the structured, machine-readable sibling of the
+    default Markdown report -- the same retrieval results and matched
+    evidence records, as a JSON object instead of prose -- for a
+    consumer that needs to parse results programmatically (e.g. a
+    future `knowledge-engine-ai` layer) rather than scrape Rich console
+    text or Markdown, per `core_interface_contract.md`'s documented `ke
+    <command>` interface boundary.
+    """
+
+    if report_format not in ("markdown", "json"):
+        raise typer.BadParameter("--format must be 'markdown' or 'json'.")
 
     if output and output.exists() and not force:
         raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
@@ -442,15 +459,33 @@ def evidence_report(
     if not results:
         raise typer.BadParameter("No relevant papers found in the indexed corpus.")
 
-    report = _build_evidence_report(
-        question=question,
-        results=results,
-        metadata_overlay=metadata_overlay,
-        evidence_by_doi=evidence_by_doi,
-        evidence_summary=evidence_summary,
-        sources_path=sources,
-        evidence_path=evidence,
-    )
+    if report_format == "json":
+        report = (
+            json.dumps(
+                _build_evidence_report_json(
+                    question=question,
+                    results=results,
+                    metadata_overlay=metadata_overlay,
+                    evidence_by_doi=evidence_by_doi,
+                    evidence_summary=evidence_summary,
+                    sources_path=sources,
+                    evidence_path=evidence,
+                ),
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n"
+        )
+    else:
+        report = _build_evidence_report(
+            question=question,
+            results=results,
+            metadata_overlay=metadata_overlay,
+            evidence_by_doi=evidence_by_doi,
+            evidence_summary=evidence_summary,
+            sources_path=sources,
+            evidence_path=evidence,
+        )
 
     if output:
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -1415,6 +1450,96 @@ def _build_evidence_report(
         ]
     )
     return "\n".join(lines)
+
+
+def _build_evidence_report_json(
+    *,
+    question: str,
+    results: list[SearchResult],
+    metadata_overlay: dict[str, CorpusSourceMetadata],
+    evidence_by_doi: dict[str, list[dict[str, Any]]],
+    evidence_summary: EvidenceStatusSummary,
+    sources_path: Path,
+    evidence_path: Path,
+) -> dict[str, Any]:
+    """Build a structured JSON report from retrieval results and manual evidence.
+
+    Same retrieval and evidence-matching logic as `_build_evidence_report`'s
+    Markdown output, as a JSON object instead of prose -- evidence record
+    fields are included raw (unescaped), since a JSON consumer parses
+    structure rather than reading rendered text.
+    """
+
+    papers: list[dict[str, Any]] = []
+    for rank, result in enumerate(results, start=1):
+        curated = _find_curated_metadata(result, metadata_overlay)
+        records = _find_evidence_records(result, evidence_by_doi)
+        papers.append(
+            {
+                "rank": rank,
+                "paper_id": result.paper_id,
+                "title": _display_title(result, curated),
+                "authors": _report_authors(curated),
+                "year": _display_year(result, curated),
+                "journal": _report_journal(curated),
+                "doi": _report_doi(result, curated),
+                "source_url": _report_source_url(curated),
+                "license_type": _report_license(curated),
+                "metadata_source": _report_metadata_source(curated),
+                "retrieval_score": result.score,
+                "retrieval_snippet": _best_snippet(result),
+                "why_matched": _why_matched(result),
+                "citation": _citation(result, curated),
+                "evidence_records": [_evidence_record_json(record) for record in records],
+            }
+        )
+
+    return {
+        "schema_version": 1,
+        "question": question,
+        "sources_path": str(sources_path),
+        "evidence_path": str(evidence_path),
+        "evidence_summary": {
+            "total": evidence_summary.total,
+            "draft": evidence_summary.draft,
+            "reviewed": evidence_summary.reviewed,
+            "needs_revision": evidence_summary.needs_revision,
+            "rejected": evidence_summary.rejected,
+            "unspecified": evidence_summary.unspecified,
+            "readiness_note": evidence_summary.readiness_note,
+        },
+        "papers": papers,
+        "disclaimer": (
+            "This report is retrieval plus recorded evidence only. Extraction "
+            "method is shown per evidence record. No scientific synthesis has "
+            "been performed."
+        ),
+    }
+
+
+def _evidence_record_json(record: dict[str, Any]) -> dict[str, Any]:
+    """Return one evidence record's fields for JSON report output, unescaped."""
+
+    return {
+        "evidence_record_id": record.get("evidence_record_id"),
+        "extraction_method": record.get("extraction_method"),
+        "extraction_status": record.get("extraction_status"),
+        "review_status": _review_status(record),
+        "review_checklist": record.get("review_checklist"),
+        "review_notes": _review_notes(record),
+        "evidence_direction": record.get("evidence_direction"),
+        "research_question": record.get("research_question"),
+        "claim_text": record.get("claim_text"),
+        "population": record.get("population"),
+        "intervention": record.get("intervention"),
+        "comparator": record.get("comparator"),
+        "outcome": record.get("outcome"),
+        "result_summary": record.get("result_summary"),
+        "limitations": record.get("limitations"),
+        "uncertainty_notes": record.get("uncertainty_notes"),
+        "confidence_note": record.get("confidence_note"),
+        "source_span": record.get("source_span"),
+    }
 
 
 def _build_relationship_report(

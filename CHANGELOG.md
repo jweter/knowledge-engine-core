@@ -1573,6 +1573,17 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   direction that `knowledge-engine-ai` stays unopened until there is a
   validated confidence-rating formula and/or substantially more
   evidence to design it against.
+- Added `--format json` to `ke evidence-report`, alongside the existing
+  Markdown default. Same retrieval-plus-evidence content and matching
+  logic, as a structured JSON object instead of prose, so a consumer
+  (e.g. a future `knowledge-engine-ai` layer, per
+  `docs/ai_layer_architecture.md`'s Retrieval Intelligence) can parse
+  results programmatically through the documented `ke <command>`
+  interface instead of scraping Markdown or Rich console text -- see
+  `docs/core_interface_contract.md`. Live-verified against the real
+  corpus: `ke evidence-report "does semaglutide reduce lean mass" --format
+  json` returns ranked, source-linked papers with matched evidence
+  records.
 
 ### Fixed
 
