@@ -1512,6 +1512,28 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   are not backfilled -- reconstructing them by fuzzy title matching
   would risk exactly the kind of silent misidentification this ledger
   exists to prevent; a known, accepted gap, not a defect.
+- Added M54, making `ke graph-build` incremental. It previously called
+  `annotate_draft_items` (RxNorm/MeSH network lookups) on the *entire*
+  `--evidence` file every run, re-looking-up every already-persisted
+  claim's PICO fields on every subsequent run -- a real, measured
+  bottleneck at real corpus scale (42 minutes for 156 records) that
+  would only get worse as the evidence base grows, and would not
+  survive a continuously-scheduled discovery/extraction pipeline. New
+  `GraphRepository.find_claim_ids_by_evidence_ids` (bulk, read-only)
+  lets `graph-build` determine, before doing any network work, which
+  `evidence_record_id`s already have a `graph_claims` row -- safe to
+  skip entirely, since a claim row only ever exists inside a prior
+  fully-committed `graph-build` transaction (one atomic transaction;
+  see `Database.session()`'s commit-at-exit/rollback-on-exception
+  behavior), meaning its concept links were already resolved too.
+  Live-verified against a copy of the real, now-156-record corpus
+  database: re-running `graph-build` with an unchanged evidence file
+  dropped from 42 minutes to 2.5 seconds, with identical final totals
+  (156 claims, 78 concepts, 156 claim-concept edges, 5 citation edges).
+  Also verified against the real production database directly (same
+  result, no changes). New tests prove zero network calls on a
+  re-run against an unchanged evidence file, and exactly one lookup
+  for the one new record in a mixed already-graphed/new-record batch.
 
 ### Fixed
 

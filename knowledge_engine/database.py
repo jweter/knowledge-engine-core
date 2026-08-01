@@ -819,6 +819,31 @@ class GraphRepository:
             select(GraphClaim).where(GraphClaim.evidence_record_id == evidence_record_id)
         )
 
+    def find_claim_ids_by_evidence_ids(self, evidence_record_ids: Sequence[str]) -> dict[str, int]:
+        """Return `{evidence_record_id: claim_id}` for every ID that already has a claim.
+
+        Read-only bulk variant of `find_claim_by_evidence_id` -- one query
+        instead of N, for a caller deciding what work to skip for
+        already-persisted claims *before* doing anything expensive (e.g.
+        `ke graph-build`'s per-record RxNorm/MeSH network lookups). A claim
+        row is only ever created inside a fully-committed `graph-build`
+        transaction, so its existence here is a reliable signal that its
+        concept links were already resolved too -- see M54's design note
+        in `ke graph-build`'s own docstring.
+        """
+
+        ids = [
+            evidence_record_id for evidence_record_id in evidence_record_ids if evidence_record_id
+        ]
+        if not ids:
+            return {}
+        rows = self.session.execute(
+            select(GraphClaim.evidence_record_id, GraphClaim.id).where(
+                GraphClaim.evidence_record_id.in_(ids)
+            )
+        ).all()
+        return {evidence_record_id: claim_id for evidence_record_id, claim_id in rows}
+
     def link_claim_concept(
         self, claim_id: int, concept_id: int, edge_role: str
     ) -> GraphClaimConcept:
