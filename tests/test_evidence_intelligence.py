@@ -146,6 +146,7 @@ def test_claim_confidence_multiplies_rather_than_averages() -> None:
         relationship_edge_count=10,
         supports_count=10,
         contradicts_count=0,
+        agreement_total=10,
         score=100,
         reliability="high",
     )
@@ -204,3 +205,24 @@ def test_render_synthesis_full_consensus_shows_all_four_numbers() -> None:
     assert f"Evidence Consensus: {consensus.score}/100" in joined
     assert f"Claim Confidence: {confidence.score}/100" in joined
     assert "Evidence coverage: 3 of 155" in joined
+
+
+def test_render_synthesis_agreement_denominator_excludes_non_agreement_edges() -> None:
+    quality = compute_evidence_quality(_manual_record())
+    consensus = compute_evidence_consensus(["supports", "supports", "contextualizes"])
+    confidence = compute_claim_confidence([quality, quality], consensus)
+    coverage = compute_evidence_coverage(total_records=155, records_in_relationship=3)
+
+    lines = render_synthesis(
+        consensus=consensus, quality=quality, confidence=confidence, coverage=coverage
+    )
+    joined = "\n".join(lines)
+
+    # 4 eligible edges is wrong here -- only 2 (both supports) actually
+    # participate in the agreement ratio; the third is a contextualizes
+    # edge, which contributes to the reliability tier but not to "X of Y
+    # agree". A regression test for a real bug caught via a live web
+    # smoke test: this line originally read "(2 of 3 agree)" using
+    # relationship_edge_count instead of supports_count + contradicts_count.
+    assert "(2 of 2 agree)" in joined
+    assert "(2 of 3 agree)" not in joined

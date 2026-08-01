@@ -113,6 +113,7 @@ class EvidenceConsensus:
     relationship_edge_count: int
     supports_count: int
     contradicts_count: int
+    agreement_total: int
     score: int | None
     reliability: str
 
@@ -152,6 +153,7 @@ def compute_evidence_consensus(relationship_types: list[str]) -> EvidenceConsens
         relationship_edge_count=edge_count,
         supports_count=supports,
         contradicts_count=contradicts,
+        agreement_total=agreement_total,
         score=score,
         reliability=reliability,
     )
@@ -251,7 +253,7 @@ def render_synthesis(
     else:
         lines.append(
             f"Evidence Consensus: {consensus.score}/100 "
-            f"({consensus.supports_count} of {consensus.relationship_edge_count} agree)."
+            f"({consensus.supports_count} of {consensus.agreement_total} agree)."
         )
         lines.append(
             f"Claim Confidence: {confidence.score}/100, reliability: {confidence.reliability} "
