@@ -1486,6 +1486,32 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Real graph totals: 156 claims, 78 concepts (50 MeSH, 28 RxNorm), 156
   claim-concept edges, 5 citation edges (unchanged, since citations
   don't depend on evidence), 0 relationship edges.
+- Added M53, a durable rejected-PMID ledger, closing a real gap
+  `docs/roadmap.md` has documented since the `retstart=3250` batch: a
+  previously-rejected PMID resurfacing under a later discovery batch's
+  different `retstart` offset, because `sources.csv` only records what
+  is currently included, not what has already been reviewed and
+  rejected. New `knowledge_engine.rejected_candidates` module: a
+  per-corpus CSV keyed by `pmid`, one row per rejection with a fixed
+  `reason_category` vocabulary matching this project's established
+  exclusion patterns (off-target primary disease, diagnostic/
+  measurement-only, no intervention named, policy/prediction-model-only,
+  type-1-diabetes-specific, mechanism-only primary research, duplicate,
+  other). Two new CLI commands: `ke rejected-candidates-add` appends a
+  batch of already-decided rejections (never re-deciding one itself,
+  the same validate-only posture as `ke evidence-validate`), never
+  overwriting an existing pmid's row -- the first recorded reason wins;
+  `ke rejected-candidates-check` splits a fresh discovery batch into
+  net-new versus already-rejected before any review time is spent,
+  reading either a raw discovery JSON's `"candidates"` list or an
+  adjudication worksheet's `"items"` list. A real prerequisite for
+  unattended, continuously-scheduled discovery: manually re-reading
+  README history to catch a resurfacing PMID does not survive a
+  pipeline nobody is watching in real time. Historical exclusions
+  predating this ledger were never recorded with an exact PMID, so they
+  are not backfilled -- reconstructing them by fuzzy title matching
+  would risk exactly the kind of silent misidentification this ledger
+  exists to prevent; a known, accepted gap, not a defect.
 
 ### Fixed
 
