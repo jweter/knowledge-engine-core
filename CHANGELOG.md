@@ -1479,7 +1479,13 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   file, not just new records): one eligible record per paper, 123
   records across 123 distinct papers, appended to
   `data/corpora/glp1_weight_loss/evidence_records.jsonl` (156 total, up
-  from 33).
+  from 33). Re-ran `ke graph-build` against the grown evidence base
+  (validated on a copy first; ~42 minutes for 156 records' worth of
+  RxNorm/MeSH lookups, confirming M52's own bottleneck-consciousness
+  extends to this command too -- a real follow-up item, not fixed here).
+  Real graph totals: 156 claims, 78 concepts (50 MeSH, 28 RxNorm), 156
+  claim-concept edges, 5 citation edges (unchanged, since citations
+  don't depend on evidence), 0 relationship edges.
 
 ### Fixed
 
