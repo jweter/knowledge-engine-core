@@ -858,6 +858,15 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   Claim Confidence split, and domain-specific confidence profiles. Both
   are records of ideas, not implementation-ready designs; no code, no
   repository yet, per the project owner's explicit direction.
+- **M57** (see `docs/evidence_intelligence_design.md`) is the
+  implementation-ready formula both documents above named as their own
+  trigger condition: a deterministic, no-LLM Evidence Quality/Consensus/
+  Claim Confidence computation grounded in the real 155-record GLP-1
+  corpus, scoped to exactly Stage 3 of `ai_layer_architecture.md`'s
+  5-stage build sequence and exactly the Clinical Medicine profile.
+  Design only in this milestone -- the computation itself
+  (`compute_evidence_intelligence`, `ke evidence-intelligence`) is the
+  next milestone once this design is confirmed.
 
 ## Release Milestones
 

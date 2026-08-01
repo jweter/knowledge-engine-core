@@ -7,6 +7,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **M57**: `docs/evidence_intelligence_design.md`, a deterministic,
+  no-LLM confidence-scoring design -- Evidence Quality, Evidence
+  Consensus, and Claim Confidence as three separate, never-collapsed
+  numbers, plus corpus-relative Evidence Coverage and a
+  reliability-labeled confidence-of-confidence. Scoped to exactly Stage
+  3 of `ai_layer_architecture.md`'s 5-stage build sequence and exactly
+  the Clinical Medicine profile, grounded in the real 155-record GLP-1
+  corpus's actual fields (no `sample_size` field exists yet; `study_type`
+  is free text with 18% missing; only 3 of 155 records currently
+  participate in a relationship edge). Design only -- no computation
+  code yet.
+
 ### Removed
 
 - Removed `auto-9f4eaa1682215164`, a duplicate evidence record: the same
