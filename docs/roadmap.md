@@ -361,7 +361,21 @@ prose descriptions in `README.md`), so they are not backfilled --
 reconstructing them by fuzzy title matching would risk exactly the kind
 of silent misidentification this ledger exists to prevent; the ledger
 starts capturing rejections from this point forward, a known, accepted
-gap, not a defect.
+gap, not a defect. **M55** (`docs/m55_discovery_cycle.md`) built the
+schedulable orchestration this prerequisite unblocked: `ke
+discovery-cycle-run` chains one page of `pubmed-candidate-discover`,
+M14's existing deterministic adjudication, and an M53 ledger check into
+a single command with its own persisted pagination state, ready to be
+invoked by cron/systemd/any scheduler. It deliberately stops before
+acquisition -- deterministic scope adjudication alone has a measured,
+real residual false-accept rate (see this section's own `retstart=3000`/
+`retstart=3250` history above), a materially different, harder-to-
+reverse risk than M52's evidence-direction nuance, so each cycle writes
+a bounded worksheet for the same human/AI scope screen this project has
+always required before `ke pmc-oa-acquire`. Live-verified against the
+real PubMed/PMC APIs: pagination correctly resumed across cycles, and a
+real PMID added to the ledger was correctly excluded on a repeat run of
+the same page.
 
 ### Supporting operator durability
 

@@ -161,6 +161,10 @@ most likely to actually call:
 
 **Corpus-building (the pipeline a consumer generally does not re-run
 itself, but may need to trigger for a specific paper):**
+- `ke discovery-cycle-run` (M55, `docs/m55_discovery_cycle.md`): one
+  schedulable cycle of discovery + deterministic adjudication + M53
+  ledger cross-check, stopping before acquisition (writes a JSON
+  worksheet, not an evidence artifact -- see the design doc for why).
 - `ke corpus-import`, `ke extraction-review-generate`/`-batch-generate`,
   `ke extraction-review-annotate` (M45), `ke extraction-review-autoclassify`
   (M52, see "The seam" above), `ke extraction-review-promote`.

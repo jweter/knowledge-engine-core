@@ -1534,6 +1534,31 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   result, no changes). New tests prove zero network calls on a
   re-run against an unchanged evidence file, and exactly one lookup
   for the one new record in a mixed already-graphed/new-record batch.
+- Added M55, `ke discovery-cycle-run`, the first schedulable slice of
+  continuous discovery -- see `docs/m55_discovery_cycle.md`. Chains one
+  page of `pubmed-candidate-discover`, M14's existing deterministic
+  scope/identity/license/full-text adjudication (unchanged), and an M53
+  rejected-PMID ledger cross-check into a single command with its own
+  persisted pagination state (`knowledge_engine.discovery_cycle`), ready
+  for cron/systemd/any external scheduler -- concrete crontab and
+  systemd timer examples are in the design doc, deliberately documented
+  rather than installed, since the actual deployment host is an
+  operator decision. Deliberately stops before acquisition: this
+  project's own growth-batch history shows deterministic scope
+  adjudication alone has a real, measured residual false-accept rate
+  (roughly a fifth of "accepted" candidates in several real batches
+  still needed a human/AI title screen to catch off-topic papers), a
+  materially harder-to-reverse risk than M52's evidence-direction
+  nuance -- an admitted-then-extracted wrong paper contaminates the
+  corpus in a way this project has already paid to correct twice via
+  full reimports. Each cycle instead writes a bounded
+  `ready_for_scope_review` worksheet of net-new, deterministically
+  accepted candidates for that same final human/AI screen before `ke
+  pmc-oa-acquire` runs. Live-verified against the real PubMed/PMC APIs:
+  pagination correctly resumed across cycles (retstart 0 -> 5 -> 10);
+  adding a real accepted candidate's PMID to a real ledger and
+  re-running the same page correctly excluded it
+  (`already_in_rejected_ledger: 1`, `ready_for_scope_review: []`).
 
 ### Fixed
 

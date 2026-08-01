@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, cast
@@ -12,6 +13,7 @@ import typer
 from rich.markup import escape
 from rich.table import Table
 
+from knowledge_engine.candidate_review import CandidateReviewError, prepare_candidate_review
 from knowledge_engine.citation_extraction import find_cited_dois
 from knowledge_engine.cli import app as app
 from knowledge_engine.cli import console
@@ -36,6 +38,14 @@ from knowledge_engine.database import (
     ExtractionRunRepository,
     GraphRepository,
     PaperRepository,
+)
+from knowledge_engine.discovery_cycle import (
+    DISCOVERY_CYCLE_RULES_VERSION,
+    DiscoveryCycleError,
+    advance_discovery_cycle_state,
+    candidate_review_item_to_dict,
+    load_discovery_cycle_state,
+    save_discovery_cycle_state,
 )
 from knowledge_engine.europepmc_acquisition import (
     AcquisitionTransport as EuropePmcAcquisitionTransport,
@@ -179,6 +189,16 @@ CandidateLimitOption = Annotated[
 CandidateRetstartOption = Annotated[
     int,
     typer.Option("--retstart", min=0, help="Zero-based PubMed page offset."),
+]
+DiscoveryCycleStateOption = Annotated[
+    Path,
+    typer.Option(
+        "--state", help="Discovery-cycle pagination state JSON file (created on first run)."
+    ),
+]
+DiscoveryCycleOutputOption = Annotated[
+    Path,
+    typer.Option("--output", help="Path for this cycle's ready-for-review worksheet JSON."),
 ]
 RejectedLedgerOption = Annotated[
     Path,
@@ -840,6 +860,114 @@ def pubmed_candidate_discover(
     console.print(
         "[bold]Candidates require human inclusion and license review; "
         "no PDFs were downloaded.[/bold]"
+    )
+
+
+@app.command("discovery-cycle-run")
+def discovery_cycle_run(
+    query: PubmedQueryOption,
+    state: DiscoveryCycleStateOption,
+    ledger: RejectedLedgerOption,
+    output: DiscoveryCycleOutputOption,
+    limit: CandidateLimitOption = 25,
+    force: ForceOutputOption = False,
+) -> None:
+    """Run one cycle of automated discovery: discover, adjudicate, ledger-check (M55).
+
+    Intended to be invoked on a schedule (cron, a systemd timer, or
+    anything else that runs a command periodically) for continuous
+    discovery -- see `docs/roadmap/long_term_vision.md`'s live,
+    connected end state. Each run:
+
+    1. Discovers the next page of PubMed/PMC OA candidates at
+       `--state`'s persisted `retstart` offset (0 on a first run).
+    2. Deterministically adjudicates each candidate with M14's existing
+       scope/identity/license/full-text rules
+       (`ke pubmed-candidate-discover`'s adjudication worksheet logic,
+       reused unchanged).
+    3. Cross-checks every deterministically "accepted" candidate
+       against the M53 rejected-PMID ledger, dropping any this project
+       has already reviewed and rejected.
+    4. Advances `--state`'s `retstart` offset by `--limit` for the next
+       cycle.
+
+    Deliberately stops here, before acquisition -- see this module's
+    own docstring (`knowledge_engine.discovery_cycle`) for why
+    deterministic adjudication alone is not sufficient to admit a paper
+    unattended. Writes a bounded "ready for review" worksheet of
+    net-new accepted candidates to `--output`, for a human or agent to
+    give the same final scope screen this project has always required
+    before running `ke pmc-oa-acquire`.
+    """
+
+    _validate_output(output, force=force)
+    try:
+        cycle_state = load_discovery_cycle_state(state, query=query, limit=limit)
+    except DiscoveryCycleError as exc:
+        console.print(f"[red]Discovery-cycle state error:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    console.print(
+        "[yellow]Network access:[/yellow] querying official PubMed and PMC services over HTTPS."
+    )
+    try:
+        discovery_result = _pubmed_discovery_service().discover(
+            query, limit=limit, retstart=cycle_state.next_retstart
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except NcbiDiscoveryError as exc:
+        console.print(f"[red]NCBI discovery failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        discovery_path = Path(tmpdir) / "discovery.json"
+        discovery_path.write_text(discovery_result.to_json(), encoding="utf-8")
+        try:
+            worksheet = prepare_candidate_review(discovery_path)
+        except CandidateReviewError as exc:
+            console.print(f"[red]Candidate adjudication failed:[/red] {escape(str(exc))}")
+            raise typer.Exit(1) from exc
+
+    accepted_items = [item for item in worksheet.items if item.decision == "accepted"]
+    held_count = sum(1 for item in worksheet.items if item.decision == "held")
+    rejected_by_adjudication_count = sum(
+        1 for item in worksheet.items if item.decision == "rejected"
+    )
+
+    rejected_ledger = load_rejected_ledger(ledger)
+    accepted_dicts = [candidate_review_item_to_dict(item) for item in accepted_items]
+    net_new, already_in_ledger = check_candidates_against_ledger(accepted_dicts, rejected_ledger)
+
+    new_state = advance_discovery_cycle_state(cycle_state)
+    save_discovery_cycle_state(state, new_state)
+
+    payload = {
+        "rules_version": DISCOVERY_CYCLE_RULES_VERSION,
+        "query": query,
+        "retstart_used": cycle_state.next_retstart,
+        "next_retstart": new_state.next_retstart,
+        "cycle_number": new_state.cycles_run,
+        "candidates_discovered": len(worksheet.items),
+        "deterministically_accepted": len(accepted_items),
+        "held_for_manual_review": held_count,
+        "rejected_by_adjudication": rejected_by_adjudication_count,
+        "already_in_rejected_ledger": len(already_in_ledger),
+        "ready_for_scope_review": net_new,
+    }
+    _write_output(output, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+    console.print(
+        f"[green]Discovery cycle {new_state.cycles_run} complete[/green] "
+        f"(retstart {cycle_state.next_retstart} -> next {new_state.next_retstart}): "
+        f"{len(worksheet.items)} candidate(s) discovered, {len(accepted_items)} "
+        f"deterministically accepted, {len(already_in_ledger)} already in the rejected "
+        f"ledger, {len(net_new)} ready for scope review."
+    )
+    console.print(
+        "[bold]Not evidence, not acquired -- ready_for_scope_review still needs the same "
+        "human/AI title-and-abstract scope screen this project has always required before "
+        "running ke pmc-oa-acquire.[/bold]"
     )
 
 
