@@ -10,6 +10,12 @@ from knowledge_engine.extraction.direction import (
     ClaimFraming,
     classify_claim_framing,
 )
+from knowledge_engine.extraction.evidence_classification import (
+    EVIDENCE_CLASSIFICATION_RULES_VERSION,
+    build_automated_evidence_record,
+    classify_evidence_direction,
+    generate_research_question,
+)
 from knowledge_engine.extraction.evidence_items import (
     DRAFT_EVIDENCE_ITEM_RULES_VERSION,
     DraftEvidenceItem,
@@ -45,6 +51,7 @@ __all__ = [
     "CLAIM_CANDIDATE_RULES_VERSION",
     "CLAIM_FRAMING_RULES_VERSION",
     "DRAFT_EVIDENCE_ITEM_RULES_VERSION",
+    "EVIDENCE_CLASSIFICATION_RULES_VERSION",
     "PICO_EXTRACTION_RULES_VERSION",
     "SECTION_DETECTION_RULES_VERSION",
     "SECTION_TYPES",
@@ -56,14 +63,17 @@ __all__ = [
     "PaperMetadata",
     "PicoFields",
     "SectionSpan",
+    "build_automated_evidence_record",
     "build_draft_evidence_item",
     "build_draft_evidence_items",
     "classify_claim_framing",
+    "classify_evidence_direction",
     "classify_study_type",
     "detect_claim_candidates",
     "detect_sections",
     "extract_limitations",
     "extract_pico",
+    "generate_research_question",
     "is_table_derived",
     "section_content",
     "section_page_ranges",

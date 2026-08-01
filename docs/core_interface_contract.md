@@ -20,13 +20,11 @@ that is called out rather than hidden.
 ## The seam: what `core` decides, what it deliberately does not
 
 `core` locates, validates, and persists evidence. It never decides what
-that evidence means for a person's actual question. Concretely, `core`
+that evidence means for a person's *actual* question. Concretely, `core`
 never sets or infers:
 
-- `research_question` (Evidence Record field) -- inherently supplied by
-  whoever is asking a question, not derivable from a paper's own text.
-- `evidence_direction` (Evidence Record field) -- defined *relative to* a
-  `research_question`, so it cannot be honestly populated without one.
+- A person's own real `research_question` -- inherently supplied by
+  whoever is asking it, not derivable from a paper's own text.
 - Any confidence *rating* beyond the existing free-text `confidence_note`
   field -- see `docs/roadmap/long_term_vision.md`'s Confidence Rating
   Design Guidance. `core`'s job is to make the per-record quality signals
@@ -36,10 +34,46 @@ never sets or infers:
 
 Any consumer of `core` must supply these itself (today: a human reviewer,
 via `ke extraction-review-promote`; in the future: the AI Interface
-Layer). This is the one boundary every milestone in this repository has
-held to without exception -- see `docs/reference_knowledge_layer_design.md`'s
-Addendum for the same boundary redrawn for reference-layer content
-specifically.
+Layer). This boundary has held without exception since M19 -- see
+`docs/reference_knowledge_layer_design.md`'s Addendum for the same
+boundary redrawn for reference-layer content specifically.
+
+**Revised in M52** for the Evidence Record's own `research_question`/
+`evidence_direction` fields specifically: the project owner judged the
+mandatory human-confirmation step for these two fields a bottleneck
+disproportionate to its real accuracy benefit (every batch built by
+hand through M52 read the source paper directly and classified
+correctly) and explicitly authorized removing it. `ke
+extraction-review-autoclassify` now provides a second, fully automated
+path to a valid Evidence Record, alongside the still-available
+human-authored path:
+
+- `research_question` is generated deterministically by templating a
+  draft item's own already-extracted PICO fields (M28's
+  population/intervention/comparator/outcome) into a fixed sentence
+  pattern -- not a person's actual research question, just a mechanical
+  restatement of the paper's own PICO decomposition. A draft item is
+  skipped, never guessed, when any PICO field is missing or
+  implausibly long (`knowledge_engine.extraction.evidence_classification`).
+- `evidence_direction` is classified deterministically, extending M18's
+  self-referential framing cue patterns (`knowledge_engine.extraction.direction`)
+  with additional null-result phrasing cues, and -- unlike M18 --
+  defaulting to `supports` when no contrast/hedge/null cue fires. M18's
+  own docstring warned that such a default would "silently assume a
+  research question no one supplied"; that concern does not apply here,
+  because the research question this module generates is itself
+  mechanically derived from the same claim's own PICO fields, not an
+  externally supplied one.
+- Every automated record is honestly labeled, never hidden as if a human
+  reviewed it: `extraction_method` names the automated ruleset version
+  (`m52-evidence-classification-v1`, never `manual_human_review`), and
+  `review_notes` states plainly that no human read or confirmed it.
+
+This does not narrow the confidence-rating boundary above, and it does
+not change what a "person's actual question" is -- an automated
+record's `research_question` remains a mechanical PICO restatement, a
+different and narrower thing than what a human reviewer or the future AI
+Interface Layer would supply.
 
 ## Configuration
 
@@ -128,7 +162,8 @@ most likely to actually call:
 **Corpus-building (the pipeline a consumer generally does not re-run
 itself, but may need to trigger for a specific paper):**
 - `ke corpus-import`, `ke extraction-review-generate`/`-batch-generate`,
-  `ke extraction-review-annotate` (M45), `ke extraction-review-promote`.
+  `ke extraction-review-annotate` (M45), `ke extraction-review-autoclassify`
+  (M52, see "The seam" above), `ke extraction-review-promote`.
   These write JSONL to `--output` by design (they are pipeline steps
   producing an artifact for the next step to consume).
 
@@ -203,7 +238,11 @@ A record only becomes real evidence via `ke extraction-review-promote`,
 which validates with `_validate_evidence_record` (the same validator `ke
 evidence-validate` runs) and refuses any record missing
 `research_question`/`evidence_direction` -- see "the seam" above. There
-is no way to bypass this validation from the CLI.
+is no way to bypass this validation from the CLI. Note that `promote`
+itself has never checked *who or what* filled those two fields, only
+that they are present and well-formed -- it accepts a record from `ke
+extraction-review-autoclassify` (M52's automated path) exactly as
+readily as one a human reviewer typed by hand.
 
 ### Relationship Record
 
