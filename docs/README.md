@@ -46,6 +46,10 @@ original prototype narrative, one-off status reports) live in
 - **`ai_interface_layer_scoping.md`** / **`ai_layer_architecture.md`**
   -- scoping and architecture notes for the future `knowledge-engine-ai`
   judgment layer. Records of ideas, not implementation-ready designs.
+- **`evidence_intelligence_design.md`** -- the deterministic,
+  no-LLM confidence-scoring formula (Evidence Quality / Evidence
+  Consensus / Claim Confidence) both documents above named as their own
+  trigger condition. Implementation-ready, unlike its two predecessors.
 - **`founding_vision.md`** -- the project's original founding proposal,
   preserved verbatim.
 - **`future_ideas.md`** -- promising ideas parked outside the current
