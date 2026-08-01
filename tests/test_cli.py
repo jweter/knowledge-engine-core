@@ -751,6 +751,81 @@ def test_evidence_report_writes_markdown_output(
     assert "Review status: draft" in report
 
 
+def test_evidence_report_writes_structured_json_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"source_doi": "10.1038/s41591-022-02026-4"}],
+    )
+    output_path = tmp_path / "reports" / "report.json"
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+            "--output",
+            str(output_path),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Wrote evidence report" in result.output
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["question"] == "Do GLP-1 receptor agonists reduce body weight?"
+    assert payload["evidence_summary"]["total"] == 1
+    assert payload["evidence_summary"]["readiness_note"] == "draft only; secondary review needed."
+    assert len(payload["papers"]) == 1
+    paper = payload["papers"][0]
+    assert paper["title"] == "Curated STEP 5 Trial"
+    assert paper["metadata_source"] == "corpus sources.csv"
+    assert len(paper["evidence_records"]) == 1
+    record = paper["evidence_records"][0]
+    assert record["evidence_record_id"] == "ev-1"
+    assert record["review_status"] == "draft"
+    assert record["claim_text"] == "Semaglutide provided evidence of greater weight reduction."
+    assert record["result_summary"] == "Greater body-weight reduction with semaglutide."
+
+
+def test_evidence_report_rejects_an_unknown_format(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"source_doi": "10.1038/s41591-022-02026-4"}],
+    )
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+            "--format",
+            "xml",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "--format must be 'markdown' or 'json'" in result.output
+
+
 def test_evidence_report_marks_paper_without_evidence(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
