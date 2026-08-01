@@ -823,7 +823,10 @@ def test_evidence_report_rejects_an_unknown_format(
     )
 
     assert result.exit_code != 0
-    unwrapped = " ".join(result.output.split())
+    plain = result.output
+    for box_char in "│╭╮╰╯─":
+        plain = plain.replace(box_char, " ")
+    unwrapped = " ".join(plain.split())
     assert "--format must be 'markdown' or 'json'" in unwrapped
 
 
