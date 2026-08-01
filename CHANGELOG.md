@@ -1434,6 +1434,58 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   authors rate certainty of evidence low to moderate (qualifies). Each
   record was built by reading the paper's real stored text directly
   (not the automated draft-item pool), following batch 3's practice.
+- Added M52, automated `research_question`/`evidence_direction`
+  classification, removing the mandatory human-confirmation step
+  batches 1-4 above required. The project owner judged that step a
+  bottleneck disproportionate to its accuracy benefit (every hand-built
+  batch classified correctly) and authorized automating it -- see
+  `docs/core_interface_contract.md`'s "The seam" section for the full,
+  honest accounting of what changed. New
+  `knowledge_engine.extraction.evidence_classification` module:
+  `generate_research_question` templates a draft item's own
+  already-extracted PICO fields (M28) into a fixed sentence pattern,
+  declining (never guessing) when a field is missing or implausibly
+  long; `classify_evidence_direction` extends M18's self-referential
+  framing cue patterns (`knowledge_engine.extraction.direction`) with
+  null-result phrasing cues, defaulting to `supports` when no cue
+  fires -- safe here specifically because the research question is
+  mechanically derived from the same claim, unlike M18's original
+  context. New `ke extraction-review-autoclassify` CLI command feeds
+  directly into the existing, unmodified `ke extraction-review-promote`
+  (which never actually verified who filled a record's fields, only
+  that they were present and well-formed). Every automated record is
+  honestly labeled: `extraction_method` names the ruleset version, never
+  `manual_human_review`, and `review_notes` states plainly that no human
+  read or confirmed it.
+  Run against the real corpus: of 13,668 draft items, 2,870 (21%) were
+  eligible (had all four PICO fields, each under the 300-character
+  template-safety cap, plus `claim_text`/`result_summary`); direction
+  distribution skewed heavily toward `supports` (2,782), reflecting
+  that most result-bearing sentences carry no explicit contrast/hedge/
+  null-result cue even when the underlying finding is more nuanced. A
+  25-item hand-reviewed spot check found the `qualifies` (null-result)
+  classification reliable (8/8 correct) and the `contextualizes`/
+  `contradicts` cue reuse from M18 defensible but imperfect (some
+  within-study "in contrast to" comparisons get the same label M18
+  reserved for contrasting *external* prior work). The more consequential,
+  honestly-reported finding: roughly a quarter of the sampled `supports`
+  records were baseline-characteristic or methods-description sentences
+  that M17's pre-existing claim-candidate detection flags as a "claim"
+  but that do not represent a genuine intervention-effect direction --
+  a known M17 limitation this module does not fix, and one this
+  automated default-to-`supports` policy makes more visible rather than
+  less. Applied a first bounded batch (not all 2,870 at once, since `ke
+  graph-build`'s network-lookup cost scales with the whole evidence
+  file, not just new records): one eligible record per paper, 123
+  records across 123 distinct papers, appended to
+  `data/corpora/glp1_weight_loss/evidence_records.jsonl` (156 total, up
+  from 33). Re-ran `ke graph-build` against the grown evidence base
+  (validated on a copy first; ~42 minutes for 156 records' worth of
+  RxNorm/MeSH lookups, confirming M52's own bottleneck-consciousness
+  extends to this command too -- a real follow-up item, not fixed here).
+  Real graph totals: 156 claims, 78 concepts (50 MeSH, 28 RxNorm), 156
+  claim-concept edges, 5 citation edges (unchanged, since citations
+  don't depend on evidence), 0 relationship edges.
 
 ### Fixed
 

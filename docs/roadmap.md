@@ -379,13 +379,28 @@ Detailed milestone records include:
   (see `docs/technical_debt.md`). Extraction methodology was decided as
   rule-based pattern matching combined with structured-section heuristics, no
   new dependency; see the design doc's Extraction Methodology section.
-- Evidence Records deliberately stop short of automated,
+- Evidence Records originally stopped short of automated,
   research-question-relative judgment: assigning a `research_question`,
   classifying `evidence_direction` against it, and any real confidence
-  *rating* (beyond the existing free-text `confidence_note` field) are left
-  for a human reviewer to supply. That is not a temporary gap -- it is the
-  deliberate seam where the future `knowledge-engine-ai` layer plugs in; see
-  `docs/roadmap/long_term_vision.md`'s AI Interface Layer section.
+  *rating* (beyond the existing free-text `confidence_note` field) were
+  left for a human reviewer to supply, as the deliberate seam where the
+  future `knowledge-engine-ai` layer plugs in; see
+  `docs/roadmap/long_term_vision.md`'s AI Interface Layer section. **M52**
+  revisited the `research_question`/`evidence_direction` half of that
+  seam specifically: after four evidence-promotion batches all built by
+  hand-reading the source paper and classifying correctly, the project
+  owner judged the mandatory human-confirmation step a bottleneck
+  disproportionate to its accuracy benefit and authorized automating it.
+  `ke extraction-review-autoclassify` now templates `research_question`
+  deterministically from a draft item's own already-extracted PICO
+  fields, and classifies `evidence_direction` deterministically by
+  extending M18's framing-cue patterns with null-result phrasing, safe
+  to default to `supports` in the absence of a cue *because* the
+  research question is now mechanically derived from the same claim's
+  own fields, not an externally supplied one. The confidence-*rating*
+  half of the seam is unchanged and remains entirely out of `core`'s
+  scope -- see `docs/core_interface_contract.md`'s "The seam" section
+  for the full, honest accounting of what changed and what did not.
 - PICO fields (population, intervention, comparator, outcome),
   `study_type`, and `limitations` are a different case: paper-intrinsic
   facts, not judgment relative to a research question, so deterministic,

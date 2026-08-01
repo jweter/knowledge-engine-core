@@ -59,9 +59,11 @@ from knowledge_engine.extraction import (
     CLAIM_CANDIDATE_RULES_VERSION,
     CLAIM_FRAMING_RULES_VERSION,
     DRAFT_EVIDENCE_ITEM_RULES_VERSION,
+    EVIDENCE_CLASSIFICATION_RULES_VERSION,
     PICO_EXTRACTION_RULES_VERSION,
     SECTION_DETECTION_RULES_VERSION,
     STUDY_DESIGN_RULES_VERSION,
+    build_automated_evidence_record,
 )
 from knowledge_engine.extraction.evidence_items import PaperMetadata
 from knowledge_engine.extraction_review_annotate import annotate_draft_items
@@ -1767,6 +1769,90 @@ def extraction_review_annotate(
         "[bold]reference_context is background context, not evidence -- "
         "research_question and evidence_direction still require human completion "
         "before ke extraction-review-promote will accept any item.[/bold]"
+    )
+
+
+@app.command("extraction-review-autoclassify")
+def extraction_review_autoclassify(
+    input_path: ExtractionReviewAnnotateInputOption,
+    output: ExtractionReviewAnnotateOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Automatically fill research_question/evidence_direction for a draft queue.
+
+    M52. Reads `ke extraction-review-generate`/`-batch-generate`'s JSONL
+    output (network-free; run `ke extraction-review-annotate` first if you
+    want `reference_context` carried through, though this command does not
+    read it) and writes one record per *eligible* draft item, ready for `ke
+    extraction-review-promote`.
+
+    See `knowledge_engine.extraction.evidence_classification` for the
+    ruleset: `research_question` is a deterministic template over the
+    item's own already-extracted population/intervention/comparator/
+    outcome fields (M28), and `evidence_direction` is a deterministic
+    cue-pattern classification of `claim_text`, defaulting to `supports`
+    when no contrast/hedge/null-result cue is present. A draft item missing
+    a PICO field, `claim_text`, or `result_summary`, or with an unusually
+    long PICO field, is skipped (not guessed) -- see the module's own
+    docstring for why.
+
+    Every record this command writes is honestly labeled: `extraction_method`
+    names this ruleset's version, never `manual_human_review`, and
+    `review_notes` states plainly that no human read or confirmed it. This
+    is `core`'s own automated classification path, not the future
+    `knowledge-engine-ai` layer's -- see `docs/core_interface_contract.md`'s
+    "The seam" section for the real, deliberate decision behind removing
+    the human-confirmation step this command used to require.
+    """
+
+    if not input_path.exists():
+        console.print(f"[red]Input file does not exist:[/red] {input_path}")
+        raise typer.Exit(1)
+    _validate_output(output, force=force)
+
+    items: list[dict[str, Any]] = []
+    for line_number, line in enumerate(
+        input_path.read_text(encoding="utf-8").splitlines(), start=1
+    ):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            record = json.loads(stripped)
+        except json.JSONDecodeError as exc:
+            console.print(f"[red]Line {line_number}: invalid JSON.[/red]")
+            raise typer.Exit(1) from exc
+        if not isinstance(record, dict):
+            console.print(f"[red]Line {line_number}: record must be a JSON object.[/red]")
+            raise typer.Exit(1)
+        items.append(record)
+
+    if not items:
+        _write_output(output, "")
+        console.print("[yellow]No draft items found in input file.[/yellow]")
+        return
+
+    classified: list[dict[str, Any]] = []
+    for item in items:
+        record = build_automated_evidence_record(item)
+        if record is not None:
+            classified.append(record)
+
+    lines = "\n".join(json.dumps(record) for record in classified) + "\n" if classified else ""
+    _write_output(output, lines)
+
+    console.print(
+        f"[green]Automatically classified {len(classified)} / {len(items)} draft item(s) "
+        f"({EVIDENCE_CLASSIFICATION_RULES_VERSION}):[/green] {output}"
+    )
+    console.print(
+        f"Skipped {len(items) - len(classified)} item(s) ineligible for automated "
+        "classification (a missing/overlong PICO field, or missing claim_text/"
+        "result_summary)."
+    )
+    console.print(
+        "[bold]Automated classification, no human review -- run ke "
+        "extraction-review-promote against this file's output next.[/bold]"
     )
 
 

@@ -20,6 +20,17 @@ is how it frames itself relative to prior work the sentence itself
 references. That is this module's actual, narrower scope: `contextualizes`,
 `contradicts`, `qualifies`, or `unclassified` when no such cue is present --
 never a fourth label standing in for "supports".
+
+M52 (`knowledge_engine.extraction.evidence_classification`) later did
+implement `evidence_direction`, once the project owner authorized an
+automated `research_question` (a deterministic template over a draft
+item's own PICO fields, not a person's actual question -- see that
+module's docstring). It extends this module's cue vocabulary with
+additional null-result phrasing and, unlike this module, safely defaults
+to `supports` when no cue fires, since the research question it classifies
+against is mechanically derived from the same claim, not an externally
+supplied one this module never sees. This module's own narrower scope and
+default-avoidance reasoning above are unchanged.
 """
 
 from __future__ import annotations
