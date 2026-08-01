@@ -108,6 +108,15 @@ from knowledge_engine.reference_lookup import (
     ReferenceLookupService,
 )
 from knowledge_engine.reference_lookup_http import UrllibWikipediaTransport
+from knowledge_engine.rejected_candidates import (
+    REJECTED_LEDGER_RULES_VERSION,
+    RejectedCandidatesError,
+    append_rejected_candidates,
+    check_candidates_against_ledger,
+    extract_candidates,
+    load_rejected_ledger,
+    parse_rejected_candidate,
+)
 from knowledge_engine.rxnorm_http import UrllibRxNavTransport
 from knowledge_engine.rxnorm_lookup import GetTransport as RxNormLookupGetTransport
 from knowledge_engine.rxnorm_lookup import (
@@ -170,6 +179,35 @@ CandidateLimitOption = Annotated[
 CandidateRetstartOption = Annotated[
     int,
     typer.Option("--retstart", min=0, help="Zero-based PubMed page offset."),
+]
+RejectedLedgerOption = Annotated[
+    Path,
+    typer.Option("--ledger", help="Rejected-PMID ledger CSV file (created if it doesn't exist)."),
+]
+RejectedCandidatesInputOption = Annotated[
+    Path,
+    typer.Option(
+        "--input",
+        help="JSONL file of rejection records (pmid, title, reason_category, batch_label, "
+        "optional doi/rejected_date/notes).",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+RejectedCandidatesCandidatesOption = Annotated[
+    Path,
+    typer.Option(
+        "--candidates",
+        help="Discovery JSON or adjudication worksheet JSON to check against the ledger.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+RejectedCandidatesCheckOutputOption = Annotated[
+    Path | None,
+    typer.Option("--output", help="Optional path for the generated Markdown report."),
 ]
 EuropePmcQueryOption = Annotated[
     str,
@@ -950,6 +988,141 @@ def core_candidate_review_prepare(
     console.print(
         f"[green]Prepared {worksheet.candidate_count} pending candidate reviews:[/green] {output}. "
         "No candidates were approved or promoted."
+    )
+
+
+@app.command("rejected-candidates-add")
+def rejected_candidates_add(
+    input_path: RejectedCandidatesInputOption,
+    ledger: RejectedLedgerOption,
+) -> None:
+    """Append durable rejection records to the rejected-PMID ledger (M53).
+
+    Reads a JSONL file of already-decided rejections (a human or agent
+    reviewer's own judgment, not inferred here) -- each line an object
+    with `pmid`, `title`, `reason_category` (one of
+    `knowledge_engine.rejected_candidates.REJECTED_REASON_CATEGORIES`),
+    and `batch_label`; `doi`/`rejected_date`/`notes` are optional.
+    `rejected_date` defaults to today (UTC) when omitted.
+
+    Never overwrites an existing `pmid`'s row: the first recorded
+    rejection reason for a given PMID wins, and a duplicate is reported
+    as skipped, not silently merged. This closes the exact gap
+    `docs/roadmap.md` documents -- `sources.csv` records only what a
+    corpus currently includes, not a durable record of what has already
+    been reviewed and rejected -- see `ke rejected-candidates-check` for
+    the other half: checking a fresh discovery batch against this ledger
+    before spending any review time on an already-decided PMID.
+    """
+
+    lines = input_path.read_text(encoding="utf-8").splitlines()
+    records = []
+    for line_number, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            payload = json.loads(stripped)
+        except json.JSONDecodeError as exc:
+            console.print(f"[red]Line {line_number}: invalid JSON.[/red]")
+            raise typer.Exit(1) from exc
+        if not isinstance(payload, dict):
+            console.print(f"[red]Line {line_number}: record must be a JSON object.[/red]")
+            raise typer.Exit(1)
+        try:
+            records.append(parse_rejected_candidate(payload))
+        except RejectedCandidatesError as exc:
+            console.print(f"[red]Line {line_number}:[/red] {escape(str(exc))}")
+            raise typer.Exit(1) from exc
+
+    if not records:
+        console.print("[yellow]No rejection records found in input file.[/yellow]")
+        return
+
+    appended, skipped = append_rejected_candidates(ledger, records)
+    console.print(
+        f"[green]Appended {len(appended)} rejection record(s) "
+        f"({REJECTED_LEDGER_RULES_VERSION}):[/green] {ledger}"
+    )
+    if skipped:
+        console.print(
+            f"[yellow]Skipped {len(skipped)} pmid(s) already in the ledger:[/yellow] "
+            f"{', '.join(skipped)}"
+        )
+
+
+@app.command("rejected-candidates-check")
+def rejected_candidates_check(
+    candidates: RejectedCandidatesCandidatesOption,
+    ledger: RejectedLedgerOption,
+    output: RejectedCandidatesCheckOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Split a discovery batch into net-new versus already-rejected PMIDs (M53).
+
+    Reads a discovery JSON (`ke pubmed-candidate-discover` and siblings'
+    `"candidates"` list) or an adjudication worksheet's `"items"` list,
+    and reports which PMIDs the ledger already has a rejection record
+    for -- so a reviewer never spends time re-deciding a PMID this
+    project has already reviewed and rejected under a different
+    `retstart` offset, the exact real failure mode `docs/roadmap.md`
+    documents happening twice. Purely a display layer: never writes to
+    the ledger, never re-decides a rejection.
+    """
+
+    if output and output.exists() and not force:
+        raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
+
+    try:
+        payload = json.loads(candidates.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        console.print("[red]Candidates file is not valid JSON.[/red]")
+        raise typer.Exit(1) from exc
+    if not isinstance(payload, dict):
+        console.print("[red]Candidates file must be a JSON object.[/red]")
+        raise typer.Exit(1)
+
+    candidate_items = extract_candidates(payload)
+    if not candidate_items:
+        console.print(
+            "[yellow]No candidates found (expected a top-level "
+            '"candidates" or "items" list).[/yellow]'
+        )
+        return
+
+    rejected_ledger = load_rejected_ledger(ledger)
+    net_new, already_rejected = check_candidates_against_ledger(candidate_items, rejected_ledger)
+
+    lines = [
+        "# Rejected-Candidates Check",
+        "",
+        f"Ledger: `{ledger}` ({len(rejected_ledger)} recorded rejection(s))",
+        f"Candidates checked: {len(candidate_items)}",
+        f"Net-new: {len(net_new)}",
+        f"Already rejected: {len(already_rejected)}",
+        "",
+    ]
+    if already_rejected:
+        lines.append("## Already rejected -- drop before review")
+        lines.append("")
+        for record in already_rejected:
+            lines.append(
+                f"- PMID {record.pmid} ({record.reason_category}, "
+                f"rejected in {record.batch_label} on {record.rejected_date}): "
+                f"{record.title}"
+            )
+        lines.append("")
+
+    report = "\n".join(lines) + "\n"
+    if output is not None:
+        _write_output(output, report)
+        console.print(f"[green]Wrote rejected-candidates check:[/green] {output}")
+    else:
+        console.print(report, markup=False)
+
+    console.print(
+        f"[bold]{len(already_rejected)} of {len(candidate_items)} candidate(s) already "
+        "rejected -- drop them before spending review time on this batch.[/bold]"
     )
 
 

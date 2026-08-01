@@ -341,10 +341,27 @@ has now hit this exact failure mode -- a previously-rejected PMID
 resurfacing under a later batch's different retstart offset -- at both
 `retstart=3000` and `retstart=3250`; `sources.csv` only records what is
 currently included, not a durable ledger of what has already been
-reviewed and rejected. A future milestone could build that ledger (a
-persistent rejected-PMID registry checked automatically before merging)
-rather than relying on rediscovering the same README history by hand
-each batch, but that is not yet built.
+reviewed and rejected. **M53** built that ledger:
+`knowledge_engine.rejected_candidates` (a per-corpus CSV keyed by
+`pmid`, one row per rejection with a fixed `reason_category` vocabulary
+matching the exclusion patterns established above) plus two CLI
+commands -- `ke rejected-candidates-add` appends a batch of
+already-decided rejections (never re-deciding one itself, the same
+validate-only posture as `ke evidence-validate`), never overwriting an
+existing pmid's row; `ke rejected-candidates-check` splits a fresh
+discovery batch into net-new versus already-rejected before any review
+time is spent, reading either a raw discovery JSON's `"candidates"` list
+or an adjudication worksheet's `"items"` list. This is a real
+prerequisite for unattended, continuously-scheduled discovery (see the
+Long-Term Vision doc's live, connected end state) -- rediscovering the
+same README history by hand does not survive a discovery pipeline
+nobody is reading output from in real time. Historical exclusions
+predating this ledger were never recorded with an exact PMID (only
+prose descriptions in `README.md`), so they are not backfilled --
+reconstructing them by fuzzy title matching would risk exactly the kind
+of silent misidentification this ledger exists to prevent; the ledger
+starts capturing rejections from this point forward, a known, accepted
+gap, not a defect.
 
 ### Supporting operator durability
 
