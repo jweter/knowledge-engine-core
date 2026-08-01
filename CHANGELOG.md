@@ -7,6 +7,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **M56**: authored the real GLP-1 corpus's first `RelationshipRecord`s --
+  3 `supports` edges linking the STEP 5 trial, Gao et al.'s meta-analysis,
+  and the SELECT trial, all independently reporting the same direction
+  (semaglutide reduces body weight versus placebo). Filtered from
+  `ke graph-relationship-candidates`'s 308 structural candidate pairs down
+  to the 3 with 2+ shared PICO-resolved concepts, each reviewed against
+  the full evidence-record text before authoring a rationale -- never
+  auto-accepted. `data/corpora/glp1_weight_loss/relationship_records.jsonl`
+  (new), validated with `ke relationship-validate`, graph rebuilt with
+  `ke graph-build --relationships`. The real corpus's `graph_claim_relationships`
+  count moves from 0 to 3.
+
 ### Changed
 
 - Reorganized `docs/`: moved 50+ milestone build logs and the original
