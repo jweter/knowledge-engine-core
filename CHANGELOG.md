@@ -1405,13 +1405,35 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `graph_claim_relationships`/`graph_citations` tables at zero rows.
   Validated against a copy first (`graph-build` makes live RxNorm/MeSH
   calls to resolve PICO fields into concepts), then ran both commands
-  against the real database: 28 claims from the full validated evidence
-  base, 12 concepts (6 MeSH, 6 RxNorm), 28 claim-concept edges, 5
-  intra-corpus citation edges (`graph-citations-build` scans every
-  persisted paper's own reference list regardless of evidence linkage,
-  so this is already full-960-paper-corpus scale, matching M47's
-  original measurement exactly). 0 relationship edges, since no
-  validated `RelationshipRecord` file exists yet in this repo.
+  against the real database, then re-ran `graph-build` after growing the
+  evidence base (see the batch-4 entry below) so the merged state
+  reflects the current evidence base rather than an immediately-stale
+  snapshot -- `get_or_create_claim` makes this safe to re-run, verified
+  idempotent on a copy first (re-running against all 33 records produced
+  33 claims, not 61). Final real totals: 33 claims, 13 concepts (7 MeSH,
+  6 RxNorm), 32 claim-concept edges, 5 intra-corpus citation edges
+  (`graph-citations-build` scans every persisted paper's own reference
+  list regardless of evidence linkage, so this is already
+  full-960-paper-corpus scale, matching M47's original measurement
+  exactly). 0 relationship edges, since no validated `RelationshipRecord`
+  file exists yet in this repo.
+- Added a fourth evidence-promotion batch to
+  `data/corpora/glp1_weight_loss/evidence_records.jsonl` (33 total, up
+  from 28): the SELECT cardiovascular-outcomes trial's large-scale,
+  4-year semaglutide weight-loss result (supports); a GLP-1RA-based-
+  therapy-versus-lifestyle waist-circumference meta-analysis whose own
+  subgroup comparison was not statistically significant despite each
+  arm being independently significant (qualifies); a postbiotic
+  (pasteurized Akkermansia muciniphila) RCT whose primary, pre-
+  registered whole-body-insulin-sensitivity endpoint was null in the
+  intention-to-treat population despite positive exploratory subgroup
+  signals, including increased endogenous GLP-1 excursion (contradicts);
+  a real-world, manufacturer-co-authored tirzepatide patient-motivation
+  and access-barrier survey (contextualizes); and a migrant-women
+  diabetes-prevention lifestyle-intervention systematic review whose own
+  authors rate certainty of evidence low to moderate (qualifies). Each
+  record was built by reading the paper's real stored text directly
+  (not the automated draft-item pool), following batch 3's practice.
 
 ### Fixed
 
