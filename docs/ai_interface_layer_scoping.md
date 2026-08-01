@@ -16,6 +16,16 @@ real data before designing" discipline every `core` and
 the ideas are not lost in conversation, the same reason `long_term_vision.md`
 itself exists.
 
+**Superseded in part by `docs/ai_layer_architecture.md`**, recorded
+after further owner-side design discussion: it resolves this document's
+"Bot count" open question below (one Research Copilot orchestrating
+four internal intelligences, not two or three separate bots) and
+substantially extends the Decision Engine section (three-way confidence
+split, domain-specific profiles, the Statistics Auditor, Evidence
+Coverage). Discovery Engine and Education Engine's sections below are
+unchanged and still current. The "no new repository yet" direction
+below still holds.
+
 ## The seam applies to all three engines, without exception
 
 `core_interface_contract.md`'s "the seam" is not just a `core` boundary
@@ -163,9 +173,14 @@ expertise tracking across sessions.
 
 ## Open questions carried forward (owner decisions, not resolved here)
 
-- **Bot count.** Two (chat + analyst, with topic-explanation folded
+- **Bot count.** ~~Two (chat + analyst, with topic-explanation folded
   into chat) or three (chat, analyst, tutor) distinct roles -- not
-  decided.
+  decided.~~ **Resolved by `docs/ai_layer_architecture.md`:** one
+  Research Copilot, externally always a single assistant, internally
+  delegating to four intelligences (Retrieval, Evidence, Analytical,
+  Discovery). Topic-explanation stays folded into the Copilot rather
+  than becoming a distinct Education bot, as this document's Education
+  Engine section already anticipated as the likely outcome.
 - **Where Discovery Engine's per-paper appraisal work actually lives.**
   Partly a `core`-side Phase 2 extraction enhancement (stated facts)
   plus AI-layer judgment (adequacy against a standard), or entirely

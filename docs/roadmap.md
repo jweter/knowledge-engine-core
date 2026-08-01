@@ -842,6 +842,13 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   "assumed background" appendix. Same non-negotiable boundary as
   everywhere else in that addendum: none of them feed the confidence
   rating.
+- `docs/ai_interface_layer_scoping.md` and `docs/ai_layer_architecture.md`
+  record scoping ideas for `knowledge-engine-ai`'s Decision, Discovery,
+  and Education Engines -- the latter's refined "one Research Copilot,
+  four intelligences" framing, a three-way Evidence Quality/Consensus/
+  Claim Confidence split, and domain-specific confidence profiles. Both
+  are records of ideas, not implementation-ready designs; no code, no
+  repository yet, per the project owner's explicit direction.
 
 ## Release Milestones
 
