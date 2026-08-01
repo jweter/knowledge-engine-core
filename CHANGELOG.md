@@ -1397,6 +1397,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   excluded); the two largest known table-dump leaks (5,099 and 4,870
   characters) are gone, while a borderless-table case `find_tables()`
   cannot detect remains a documented, honest limitation.
+- Populated the real Phase 4 knowledge graph for the first time: `ke
+  graph-build`/`ke graph-citations-build` existed since M46/M47 but had
+  only ever been exercised against copies of the corpus during
+  development, leaving `data/knowledge_engine.sqlite3`'s own
+  `graph_claims`/`graph_concepts`/`graph_claim_concepts`/
+  `graph_claim_relationships`/`graph_citations` tables at zero rows.
+  Validated against a copy first (`graph-build` makes live RxNorm/MeSH
+  calls to resolve PICO fields into concepts), then ran both commands
+  against the real database: 28 claims from the full validated evidence
+  base, 12 concepts (6 MeSH, 6 RxNorm), 28 claim-concept edges, 5
+  intra-corpus citation edges (`graph-citations-build` scans every
+  persisted paper's own reference list regardless of evidence linkage,
+  so this is already full-960-paper-corpus scale, matching M47's
+  original measurement exactly). 0 relationship edges, since no
+  validated `RelationshipRecord` file exists yet in this repo.
 
 ### Fixed
 
