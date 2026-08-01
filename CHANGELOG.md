@@ -1587,6 +1587,17 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Fixed `ke evidence-report --format json` producing invalid JSON when
+  printed to the console (no `--output`): Rich's `Console.print` word-wraps
+  text at terminal width, inserting literal newlines inside JSON string
+  values on any field long enough to wrap (e.g. the report's own
+  `disclaimer` field) -- silently breaking `json.loads` for any machine
+  consumer, discovered while building `knowledge-engine-ai`'s first
+  Retrieval Intelligence slice against it. `--output <path>` was never
+  affected (it writes the file directly, bypassing Rich). The console path
+  now writes JSON output raw via `sys.stdout.write`, never through Rich.
+  Added a regression test asserting `json.loads` succeeds on the
+  console-printed (not just file-written) output.
 - Fixed a cross-field duplication bug in `knowledge_engine.extraction.pico`
   (`PICO_EXTRACTION_RULES_VERSION` v2 -> v3), found while hand-reviewing
   draft evidence items for the evidence-promotion batches above. Each of

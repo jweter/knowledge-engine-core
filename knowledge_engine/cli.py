@@ -6,6 +6,7 @@ import csv
 import hashlib
 import json
 import re
+import sys
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass
@@ -491,6 +492,16 @@ def evidence_report(
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(report, encoding="utf-8")
         console.print(f"[green]Wrote evidence report:[/green] {output}")
+        return
+
+    if report_format == "json":
+        # Rich's Console word-wraps printed text at terminal width, which
+        # would insert literal newlines inside JSON string values and
+        # corrupt the output for any machine consumer -- write raw,
+        # unwrapped bytes instead. Markdown tolerates soft-wrapping fine
+        # (rendered Markdown ignores incidental line breaks within a
+        # paragraph), so only the JSON path needs this.
+        sys.stdout.write(report)
         return
 
     console.print(report, markup=False)

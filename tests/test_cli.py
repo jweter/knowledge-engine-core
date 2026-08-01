@@ -798,6 +798,48 @@ def test_evidence_report_writes_structured_json_output(
     assert record["result_summary"] == "Greater body-weight reduction with semaglutide."
 
 
+def test_evidence_report_json_printed_to_console_is_valid_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression test: printing JSON via Rich's Console word-wraps long
+
+    lines, inserting literal newlines inside string values and corrupting
+    the JSON for any machine consumer -- this only reproduces without
+    `--output`, since the file-writing path never goes through Rich.
+    """
+
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"source_doi": "10.1038/s41591-022-02026-4"}],
+    )
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Do GLP-1 receptor agonists reduce body weight?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["question"] == "Do GLP-1 receptor agonists reduce body weight?"
+    assert (
+        payload["disclaimer"] == "This report is retrieval plus recorded evidence only. Extraction "
+        "method is shown per evidence record. No scientific synthesis has "
+        "been performed."
+    )
+
+
 def test_evidence_report_rejects_an_unknown_format(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
