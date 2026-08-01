@@ -163,6 +163,15 @@ most likely to actually call:
   decision (`docs/stability_and_tracking_design.md`). No filtering, no
   `research_question` grouping. Supports `--output <path.md>` (Markdown,
   not JSON). See `docs/history/milestones/m51_graph_unconfirmed_claims.md`.
+- `ke evidence-intelligence --evidence <records.jsonl> --evidence-record-id <id> [--output <path.md>]`
+  (M58) -- computes deterministic Evidence Quality, Evidence Consensus,
+  and Claim Confidence for one claim, plus corpus-relative Evidence
+  Coverage and a templated (non-LLM) synthesis. Reads the `--evidence`
+  file for the record's own fields and the already-built graph for its
+  relationship edges; never infers a relationship, never calls an LLM.
+  The three confidence numbers always render as three separate fields,
+  never one collapsed score. Supports `--output <path.md>` (Markdown,
+  not JSON). See `docs/evidence_intelligence_design.md`.
 
 **Corpus-building (the pipeline a consumer generally does not re-run
 itself, but may need to trigger for a specific paper):**

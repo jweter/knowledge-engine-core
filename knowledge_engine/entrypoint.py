@@ -65,6 +65,13 @@ from knowledge_engine.europepmc_discovery import (
 )
 from knowledge_engine.europepmc_discovery import GetTransport as EuropePmcGetTransport
 from knowledge_engine.europepmc_http import UrllibEuropePmcTransport
+from knowledge_engine.evidence_intelligence import (
+    compute_claim_confidence,
+    compute_evidence_consensus,
+    compute_evidence_coverage,
+    compute_evidence_quality,
+    render_synthesis,
+)
 from knowledge_engine.extraction import (
     CLAIM_CANDIDATE_RULES_VERSION,
     CLAIM_FRAMING_RULES_VERSION,
@@ -431,6 +438,23 @@ GraphRelationshipCandidatesMinimumSharedConceptsOption = Annotated[
         "--min-shared-concepts",
         min=1,
         help="Only surface claim pairs sharing at least this many concepts.",
+    ),
+]
+EvidenceIntelligenceEvidenceOption = Annotated[
+    Path,
+    typer.Option(
+        "--evidence",
+        help="Validated EvidenceRecord JSONL file (already passed `ke evidence-validate`).",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+EvidenceIntelligenceEvidenceRecordIdOption = Annotated[
+    str,
+    typer.Option(
+        "--evidence-record-id",
+        help="Compute Evidence Intelligence for this claim, by EvidenceRecord ID.",
     ),
 ]
 DryRunOption = Annotated[
@@ -2876,6 +2900,183 @@ def graph_unconfirmed_claims(
     if output is not None:
         _write_output(output, report)
         console.print(f"[green]Wrote unconfirmed claims report:[/green] {output}")
+        return
+
+    console.print(report, markup=False)
+
+
+def _build_evidence_intelligence_report(
+    graph_repository: GraphRepository,
+    evidence_records_by_id: dict[str, dict[str, Any]],
+    evidence_record_id: str,
+) -> str:
+    """Build a Markdown Evidence Intelligence report for one claim.
+
+    See `docs/evidence_intelligence_design.md`. Computes Evidence Quality,
+    Evidence Consensus, Claim Confidence, and Evidence Coverage
+    deterministically from already-stored `EvidenceRecord`/
+    `RelationshipRecord` fields -- no LLM, nothing invented. The three
+    confidence numbers are always rendered as three separate fields, never
+    collapsed into one, per that document's explicit requirement.
+    """
+
+    record = evidence_records_by_id.get(evidence_record_id)
+    if record is None:
+        console.print(
+            f"[red]No evidence record found for evidence_record_id:[/red] {evidence_record_id}"
+        )
+        raise typer.Exit(1)
+
+    claim = graph_repository.find_claim_by_evidence_id(evidence_record_id)
+    if claim is None:
+        console.print(
+            f"[red]No graph claim found for evidence_record_id:[/red] {evidence_record_id}"
+        )
+        console.print("Run `ke graph-build --evidence <file>` first.")
+        raise typer.Exit(1)
+
+    relationships = graph_repository.relationships_for_claim(claim.id)
+    relationship_types = [relationship.relationship_type for relationship in relationships]
+
+    quality = compute_evidence_quality(record)
+    consensus = compute_evidence_consensus(relationship_types)
+
+    participating_qualities = [quality]
+    seen_other_claim_ids: set[int] = set()
+    for relationship in relationships:
+        if relationship.relationship_type not in ("supports", "contradicts"):
+            continue
+        other_claim_id = (
+            relationship.target_claim_id
+            if relationship.source_claim_id == claim.id
+            else relationship.source_claim_id
+        )
+        if other_claim_id in seen_other_claim_ids or other_claim_id == claim.id:
+            continue
+        seen_other_claim_ids.add(other_claim_id)
+        other_claim = graph_repository.get_claim(other_claim_id)
+        other_record = (
+            evidence_records_by_id.get(other_claim.evidence_record_id) if other_claim else None
+        )
+        if other_record is not None:
+            participating_qualities.append(compute_evidence_quality(other_record))
+
+    confidence = compute_claim_confidence(participating_qualities, consensus)
+
+    total_records = len(evidence_records_by_id)
+    graph_counts = graph_repository.population_counts()
+    records_in_relationship = graph_counts["claims"] - len(graph_repository.unconfirmed_claims())
+    coverage = compute_evidence_coverage(
+        total_records=total_records, records_in_relationship=records_in_relationship
+    )
+
+    lines = [
+        "# Knowledge Engine Evidence Intelligence Report",
+        "",
+        f"Generated: {_utc_now_iso_for_report()}",
+        "",
+        "## Claim",
+        "",
+        f"- Evidence record ID: {_graph_report_text(evidence_record_id)}",
+        f"- Graph claim ID: {claim.id}",
+        "",
+        "## Evidence Quality",
+        "",
+        f"- Score: {quality.score}/100",
+        f"- Study design tier: {_graph_report_text(quality.study_design_tier)}",
+        f"- Manually reviewed: {'yes' if quality.manually_reviewed else 'no'}",
+        "",
+        "## Evidence Consensus",
+        "",
+        f"- Relationship edges: {consensus.relationship_edge_count} "
+        f"({consensus.supports_count} supports, {consensus.contradicts_count} contradicts)",
+        (
+            f"- Score: {consensus.score}/100"
+            if consensus.score is not None
+            else "- Score: not yet assessable"
+        ),
+        f"- Reliability: {consensus.reliability}",
+        "",
+        "## Claim Confidence",
+        "",
+        (
+            f"- Score: {confidence.score}/100"
+            if confidence.score is not None
+            else "- Score: not yet assessable"
+        ),
+        f"- Reliability: {confidence.reliability}",
+        "",
+        "## Evidence Coverage",
+        "",
+        f"- {coverage.records_in_relationship} of {coverage.total_records} corpus records "
+        f"({coverage.percentage}%) participate in a confirmed relationship.",
+        "",
+        "## Synthesis",
+        "",
+        *[
+            _graph_report_text(line)
+            for line in render_synthesis(
+                consensus=consensus, quality=quality, confidence=confidence, coverage=coverage
+            )
+        ],
+        "",
+        "## Scope",
+        "",
+        "Every number above is computed deterministically from already-stored "
+        "`EvidenceRecord`/`RelationshipRecord` fields -- no LLM, nothing "
+        "invented or inferred beyond what is already stored. See "
+        "`docs/evidence_intelligence_design.md`. Evidence Quality, Evidence "
+        "Consensus, and Claim Confidence are three separate numbers and "
+        "must never be read as one collapsed score.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+@app.command("evidence-intelligence")
+def evidence_intelligence(
+    evidence: EvidenceIntelligenceEvidenceOption,
+    evidence_record_id: EvidenceIntelligenceEvidenceRecordIdOption,
+    output: GraphReportOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Compute deterministic Evidence Quality, Consensus, and Claim Confidence for one claim.
+
+    See `docs/evidence_intelligence_design.md`. Reads an `--evidence` JSONL
+    file (already passed `ke evidence-validate`) for the record's own
+    fields (`study_type`, `extraction_method`, `review_checklist`,
+    `limitations`, `uncertainty_notes`) and the graph (already populated by
+    `ke graph-build`) for its relationship edges. No LLM is used and no
+    number is invented -- a claim with fewer than 2 eligible relationship
+    edges (`supports`/`contradicts`/`qualifies`/`contextualizes`) honestly
+    shows Evidence Consensus and Claim Confidence as "not yet assessable"
+    rather than a guessed score. Scoped to exactly the
+    `clinical_medicine_v1` profile.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    evidence_records = _read_jsonl_records(evidence)
+    evidence_records_by_id = {
+        str(record["evidence_record_id"]): record
+        for record in evidence_records
+        if isinstance(record.get("evidence_record_id"), str)
+        and record["evidence_record_id"].strip()
+    }
+
+    database = _local_database()
+    database.initialize()
+
+    with database.session() as session:
+        graph_repository = GraphRepository(session)
+        report = _build_evidence_intelligence_report(
+            graph_repository, evidence_records_by_id, evidence_record_id
+        )
+
+    if output is not None:
+        _write_output(output, report)
+        console.print(f"[green]Wrote evidence intelligence report:[/green] {output}")
         return
 
     console.print(report, markup=False)

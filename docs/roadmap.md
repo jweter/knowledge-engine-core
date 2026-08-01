@@ -864,9 +864,20 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   Claim Confidence computation grounded in the real 155-record GLP-1
   corpus, scoped to exactly Stage 3 of `ai_layer_architecture.md`'s
   5-stage build sequence and exactly the Clinical Medicine profile.
-  Design only in this milestone -- the computation itself
-  (`compute_evidence_intelligence`, `ke evidence-intelligence`) is the
-  next milestone once this design is confirmed.
+  Design only in this milestone.
+- **M58** implements M57's design: `knowledge_engine/evidence_intelligence.py`
+  (`compute_evidence_quality`, `compute_evidence_consensus`,
+  `compute_claim_confidence`, `compute_evidence_coverage`,
+  `render_synthesis` -- pure functions, no LLM, no new schema) and `ke
+  evidence-intelligence --evidence <records.jsonl> --evidence-record-id
+  <id>`, live-verified against the real corpus (e.g. the STEP 5 trial
+  claim, which has two `supports` edges from M56, scores Evidence
+  Quality 94/100, Evidence Consensus 100/100, Claim Confidence 96/100;
+  an unconnected claim honestly shows "not yet assessable" rather than a
+  guessed number). Web rendering of these scores on the existing
+  claim/evidence detail pages, and authoring more `RelationshipRecord`s
+  so more of the corpus leaves the "not yet assessable" state, are
+  tracked as parallel follow-on work, not part of this milestone.
 
 ## Release Milestones
 
