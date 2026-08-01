@@ -384,7 +384,23 @@ the 3 with 2+ shared PICO-resolved concepts and reviewed against each
 record's full text before authoring a rationale. The graph's
 `relationship_edges` count moves from 0 to 3 -- the first real, non-zero
 number the "Unconfirmed Claims"/Tracking-the-Unknown report and
-`knowledge-engine-web`'s corresponding pages have ever shown.
+`knowledge-engine-web`'s corresponding pages have ever shown. **M59**
+grew this to 7 edges: with the 2+-shared-concept candidate pool
+exhausted by M56 (`ke graph-relationship-candidates --min-shared-concepts
+2` returns zero pairs), reviewed the remaining single-concept
+(`semaglutide`) candidates' full PICO/`result_summary` text by hand and
+authored 4 more records -- 3 `supports` (an observational
+obesity/cardiometabolic cohort, a heart-failure-with-reduced-ejection-
+fraction cohort with a real control arm, and a PMOS cohort, all reporting
+the same body-weight-reduction direction in populations STEP 5/Gao/SELECT
+did not test) and 1 `contextualizes` (a head-to-head tirzepatide-vs-
+semaglutide comparison, which compares against an active drug rather
+than placebo and so cannot directly confirm or refute the existing
+`supports` cluster, but adds real magnitude context). `unconfirmed_claims`
+drops from 152 to 148. Every candidate considered but not used (drug-name
+overlap only, on a genuinely different outcome -- e.g. BNP, menstrual
+function as a *primary* endpoint) was left alone rather than forced into
+a relationship it would misrepresent.
 
 ### Supporting operator durability
 
