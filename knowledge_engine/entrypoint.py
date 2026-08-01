@@ -1729,7 +1729,7 @@ def europepmc_oa_acquire(
 
     Mirrors `pmc-oa-acquire`'s approval-gated, all-or-nothing acquisition
     contract for M34's Europe PMC pipeline (see
-    `docs/m34_europepmc_discovery.md`). Only fetches from `europepmc.org`
+    `docs/history/milestones/m34_europepmc_discovery.md`). Only fetches from `europepmc.org`
     (Europe PMC's own hosted full-text repository) -- never a third-party OA
     mirror -- and only for candidates `europepmc-candidate-review-prepare`
     marked `accepted`.

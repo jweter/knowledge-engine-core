@@ -44,8 +44,8 @@ PDF Archive" section.
 - Use `docs/phase1_design.md` as the detailed design reference.
 
 The current GLP-1 vertical slice is a retrieval and manual evidence-display
-prototype. See `docs/vertical_slice.md` and
-`docs/glp1_vertical_slice_demo_checklist.md`. Those files record historical
+prototype. See `docs/history/vertical_slice/vertical_slice.md` and
+`docs/history/vertical_slice/glp1_vertical_slice_demo_checklist.md`. Those files record historical
 prototype work and do not impose a current manual-review prerequisite.
 
 ### Working-version review policy
@@ -80,7 +80,7 @@ acceptance, release validation, and optional post-release quality audits.
   and completed the controlled 500-paper rehearsal (issue #21) with a `PROCEED`
   decision: a fresh import and a linked resume against the same manifest
   snapshot both reconciled exactly, with zero failures, zero issues, and a fully
-  idempotent resume. See `docs/m14_500_paper_rehearsal_report.md`.
+  idempotent resume. See `docs/history/milestones/m14_500_paper_rehearsal_report.md`.
 - **M34** added Europe PMC as a second automated discovery source, alongside
   M14's PubMed/PMC pipeline -- `ke europepmc-candidate-discover` and
   `ke europepmc-candidate-review-prepare`, with their own adjudication engine
@@ -94,14 +94,14 @@ acceptance, release validation, and optional post-release quality audits.
   allowlists, returns HTTP 403 from this project's sandboxed execution
   environment for every candidate tried -- documented as a known
   live-verification gap, not silently assumed working. See
-  `docs/m34_europepmc_discovery.md`.
+  `docs/history/milestones/m34_europepmc_discovery.md`.
 - **M35** added CORE as a third automated discovery source -- `ke
   core-candidate-discover` and `ke core-candidate-review-prepare`, with
   their own adjudication engine (`core_candidate_review.py`,
   `CORE_ADJUDICATION_RULES_VERSION`). CORE's API never returns a license
   field (verified empirically), so every CORE candidate's license rule is
   `incomplete_missing_license` and no CORE candidate can ever auto-accept --
-  a deliberate, honest consequence documented in `docs/m35_core_discovery.md`,
+  a deliberate, honest consequence documented in `docs/history/milestones/m35_core_discovery.md`,
   not a bug. Scoped to discovery and adjudication only -- **not** wired into
   acquisition. (M14's own PubMed/PMC pipeline, separately, has continued
   growing the corpus toward the "Scaling beyond 500 papers for Phase 2
@@ -116,7 +116,7 @@ acceptance, release validation, and optional post-release quality audits.
   scientific-scope signal and no single canonical host to allowlist. Makes
   no accept/reject/hold decision -- pure evidence for a human reviewing a
   DOI already surfaced by another pipeline. See
-  `docs/m36_unpaywall_lookup.md`.
+  `docs/history/milestones/m36_unpaywall_lookup.md`.
 - **M37** added `ke manual-pdf-preview`/`ke manual-pdf-manifest-draft`,
   closing the "no door is closed" manual-PDF-upload path's real gap: not
   that manual PDFs couldn't be imported (they always could), but that
@@ -125,14 +125,14 @@ acceptance, release validation, and optional post-release quality audits.
   page-count locally; a found DOI can optionally be checked against
   Unpaywall (M36) for OA/license evidence. The manifest-draft step refuses
   to produce a row unless license evidence already passed -- never
-  guesses. See `docs/m37_manual_pdf_preview.md`.
+  guesses. See `docs/history/milestones/m37_manual_pdf_preview.md`.
 
 ### M14: Controlled 500-paper rehearsal
 
 M14 is one controlled 500-paper rehearsal under the M13 entry, measurement, stop,
 reconciliation, resume, and artifact-hygiene conditions. Issue #21 is the
 authoritative rehearsal tracker; it completed with a `PROCEED` decision (see
-`docs/m14_500_paper_rehearsal_report.md`). Persistence failure classification in
+`docs/history/milestones/m14_500_paper_rehearsal_report.md`). Persistence failure classification in
 issue #22 must be complete before repeated large-run failure evidence is treated
 as diagnostic. The rehearsal must not introduce new architecture solely to
 collect one run's measurements.
@@ -179,7 +179,7 @@ amendment rather than silent corpus mixing.
 
 The project owner asked for more automated discovery sources and pipelines
 beyond M14's PubMed/PMC-only pipeline. M34 adds Europe PMC as the second one
--- see `docs/m34_europepmc_discovery.md` for the full design, and
+-- see `docs/history/milestones/m34_europepmc_discovery.md` for the full design, and
 `knowledge_engine/europepmc_discovery.py` /
 `knowledge_engine/europepmc_candidate_review.py` for the implementation.
 Deliberately scoped to what Europe PMC adds beyond PMC: for records already
@@ -194,7 +194,7 @@ rules are shared with M14's engine (`scientific_scope.py`,
 of which pipeline found a candidate.
 
 A follow-up change added the matching acquisition step -- see
-`docs/m34_europepmc_discovery.md`'s Acquisition section and its "Known
+`docs/history/milestones/m34_europepmc_discovery.md`'s Acquisition section and its "Known
 live-verification gap" note. Growing the corpus via Europe PMC candidates
 specifically (as opposed to M14's own PubMed/PMC pipeline, which has
 continued growing the corpus toward the "Scaling beyond 500 papers for
@@ -205,7 +205,7 @@ owner to make explicitly, the same way M13/M14's own scale-up was.
 
 The project owner asked to keep adding automated discovery sources without
 pausing for permission at each step. M35 adds CORE
-(https://core.ac.uk) as the third one -- see `docs/m35_core_discovery.md`
+(https://core.ac.uk) as the third one -- see `docs/history/milestones/m35_core_discovery.md`
 for the full design, and `knowledge_engine/core_discovery.py` /
 `knowledge_engine/core_candidate_review.py` for the implementation. CORE
 aggregates open-access content broadly (not just biomedical literature),
@@ -218,7 +218,7 @@ limit. Critically, CORE's API never returns a license field at all
 every candidate that clears every other rule still lands in `held`,
 pending a human visiting the original source to confirm reuse terms. PMC/
 Europe PMC overlap detection is a known, deliberate limitation for this
-milestone (CORE never reports a PMCID); see `docs/m35_core_discovery.md`.
+milestone (CORE never reports a PMCID); see `docs/history/milestones/m35_core_discovery.md`.
 Scientific-scope and license rules are shared with M14 and M34's engines
 so the same corpus-inclusion criteria apply regardless of which pipeline
 found a candidate.
@@ -239,7 +239,7 @@ endpoint returned a consistent `HTTP 500` across multiple distinct queries
 and retries at build time (confirmed empirically, not assumed), and its
 working per-DOI endpoint carries no scientific-scope signal and no single
 canonical host to allowlist the way CORE and Europe PMC do. See
-`docs/m36_unpaywall_lookup.md` for the full design, and
+`docs/history/milestones/m36_unpaywall_lookup.md` for the full design, and
 `knowledge_engine/unpaywall_lookup.py` for the implementation.
 
 Instead, M36 adds `ke unpaywall-doi-lookup` and `ke unpaywall-batch-lookup`:
@@ -268,7 +268,7 @@ gap, measuring deterministic-extraction coverage across the full
 943-paper real corpus for the first time and finding two concrete,
 diagnosed recall gaps (structured-section heading matching, study-type's
 closed vocabulary), both since authorized and fixed (see M38's roadmap
-entry below and `docs/m38_extraction_scale_assessment.md`'s "Resolved
+entry below and `docs/history/milestones/m38_extraction_scale_assessment.md`'s "Resolved
 follow-up" section for the fixes and the re-measured numbers). **M40**
 closed most of the other half: `ke extraction-review-batch-generate` ran
 the same deterministic pipeline `ke extraction-review-generate` runs for
@@ -303,7 +303,7 @@ database is gitignored. `ke corpus-library-export`/`ke
 corpus-library-import` make the corpus's paper-intrinsic content (not raw
 PDFs -- those are archived to Google Drive instead, per the project
 owner's decision) a persisted, git-committable snapshot -- see
-`docs/m27_corpus_library.md`. Past ~605 papers the snapshot exceeds
+`docs/history/milestones/m27_corpus_library.md`. Past ~605 papers the snapshot exceeds
 GitHub's 100MB single-file limit uncompressed; a `.gz` output path
 compresses it (roughly 3x on this corpus's page-level text), restoring
 headroom without giving up git-committed durability. Actually growing the
@@ -361,7 +361,7 @@ prose descriptions in `README.md`), so they are not backfilled --
 reconstructing them by fuzzy title matching would risk exactly the kind
 of silent misidentification this ledger exists to prevent; the ledger
 starts capturing rejections from this point forward, a known, accepted
-gap, not a defect. **M55** (`docs/m55_discovery_cycle.md`) built the
+gap, not a defect. **M55** (`docs/history/milestones/m55_discovery_cycle.md`) built the
 schedulable orchestration this prerequisite unblocked: `ke
 discovery-cycle-run` chains one page of `pubmed-candidate-discover`,
 M14's existing deterministic adjudication, and an M53 ledger check into
@@ -388,17 +388,17 @@ transport and recovery support requires a dedicated roadmap decision or ADR.
 
 Detailed milestone records include:
 
-- `docs/m6_phase1_corpus_ingestion_plan.md`
-- `docs/m7_manifest_validation_foundation.md`
-- `docs/m8_import_run_persistence.md`
-- `docs/m9_small_ingestion_pilot.md`
-- `docs/m10_duplicate_detection_resumability_plan.md`
-- `docs/m10_operational_contract.md`
-- `docs/m10_release_notes.md`
-- `docs/m12_100_paper_rehearsal.md`
-- `docs/m13_scale_readiness_decision.md`
-- `docs/m14_500_paper_rehearsal_report.md`
-- `docs/audit_remediation_register.md`
+- `docs/history/milestones/m6_phase1_corpus_ingestion_plan.md`
+- `docs/history/milestones/m7_manifest_validation_foundation.md`
+- `docs/history/milestones/m8_import_run_persistence.md`
+- `docs/history/milestones/m9_small_ingestion_pilot.md`
+- `docs/history/milestones/m10_duplicate_detection_resumability_plan.md`
+- `docs/history/milestones/m10_operational_contract.md`
+- `docs/history/milestones/m10_release_notes.md`
+- `docs/history/milestones/m12_100_paper_rehearsal.md`
+- `docs/history/milestones/m13_scale_readiness_decision.md`
+- `docs/history/milestones/m14_500_paper_rehearsal_report.md`
+- `docs/history/audit_remediation_register.md`
 
 ## Phase 2: Evidence Records
 
@@ -454,7 +454,7 @@ Detailed milestone records include:
   rating, including indirectly through the compounding step's
   participant set -- see that section for the precise boundary, tightened
   after Codex review on PR #180. **Items 2-4 shipped in M45**
-  (`ke extraction-review-annotate`, see `docs/m45_extraction_review_annotate.md`):
+  (`ke extraction-review-annotate`, see `docs/history/milestones/m45_extraction_review_annotate.md`):
   a new command attaches RxNorm/MeSH reference context directly onto
   draft evidence items before a reviewer runs
   `ke extraction-review-promote`.
@@ -499,7 +499,7 @@ later ran that pipeline against the real corpus at scale for the first time.
   conclusion-section detection 64.4% -> 75.6%, claim candidates 63.2% ->
   72.0%, study type classified 40.6% -> 43.7%, PICO all-four-fields 23.3%
   -> 26.2% -- every signal improved or held steady. See
-  `docs/m38_extraction_scale_assessment.md`.
+  `docs/history/milestones/m38_extraction_scale_assessment.md`.
 - **M40** ran the deterministic extraction-review pipeline at scale for
   the first time, producing the real corpus's actual draft-evidence-item
   review queue -- the real corpus had exactly two `EvidenceRecord` rows,
@@ -554,7 +554,7 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   corpus's own search commands. Live-verified against real terms
   (`semaglutide`, `SGLT2 inhibitor`, a disambiguation page, a not-found
   term) before and after building the parser. See
-  `docs/m41_reference_lookup.md`.
+  `docs/history/milestones/m41_reference_lookup.md`.
 - **M42** added a second live-lookup reference source, NLM's RxNorm API,
   alongside M41's Wikipedia lookup. A new `ke rxnorm-lookup <term>`
   command and `knowledge_engine/rxnorm_lookup.py` resolve a drug name to
@@ -577,7 +577,7 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   then share one `ingredients` entry, and that a combination-drug brand
   ("Glyxambi") resolves to more than one. Explicitly background context,
   not evidence, with the same non-`EvidenceRecord` boundary M41 drew.
-  See `docs/m42_rxnorm_lookup.md`.
+  See `docs/history/milestones/m42_rxnorm_lookup.md`.
 - **M43** added a third live-lookup reference source, NLM's MeSH
   database, alongside M41's Wikipedia lookup and M42's RxNorm lookup. A
   new `ke mesh-lookup <term>` command and `knowledge_engine/
@@ -602,7 +602,7 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   agonist" (singular), since MeSH only records the plural entry term.
   Explicitly background context, not evidence, with the same
   non-`EvidenceRecord` boundary M41/M42 drew. See
-  `docs/m43_mesh_lookup.md`.
+  `docs/history/milestones/m43_mesh_lookup.md`.
 - **M44** added a fourth live-lookup reference source, NLM/NCBI's
   PubChem PUG REST API, alongside M41's Wikipedia lookup, M42's RxNorm
   lookup, and M43's MeSH lookup. A new `ke pubchem-lookup <term>`
@@ -640,7 +640,7 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   ChEBI, not NCBI); fixed to state that provenance is mixed and reuse
   terms should be verified source-by-source. Explicitly background
   context, not evidence, with the same non-`EvidenceRecord` boundary
-  M41/M42/M43 drew. See `docs/m44_pubchem_lookup.md`.
+  M41/M42/M43 drew. See `docs/history/milestones/m44_pubchem_lookup.md`.
 - **M45** wired three of `docs/reference_knowledge_layer_design.md`'s
   Addendum items (2-4) into the Phase 2 review workflow: a new `ke
   extraction-review-annotate` command reads the draft evidence items `ke
@@ -687,7 +687,7 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   of a minute or more of network calls. Never touches
   `research_question`/`evidence_direction`, and never changes `ke
   extraction-review-promote`'s existing refusal to promote a record
-  missing either. See `docs/m45_extraction_review_annotate.md`.
+  missing either. See `docs/history/milestones/m45_extraction_review_annotate.md`.
 
 ## Phase 3: Search Plus Semantics
 
@@ -753,7 +753,7 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   concept nodes, distinct from the paper-level evidence nodes that cite
   them -- the same distinction the Architecture sketch section above
   already drew before any Graph code existed.
-- **M46 (`docs/m46_graph_repository.md`)** builds the first Phase 4 code:
+- **M46 (`docs/history/milestones/m46_graph_repository.md`)** builds the first Phase 4 code:
   the `graph_concepts`/`graph_claims`/`graph_claim_concepts`/
   `graph_claim_relationships` schema (version 8) exactly as designed,
   the `GraphRepository` persistence layer, and `ke graph-build`, which
@@ -763,7 +763,7 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   against the repo's real, if small, committed evidence corpus (2
   records): 2 claims, 2 concepts, 4 claim-concept edges. `graph_citations`
   remains deferred, unscoped work.
-- **M47 (`docs/m47_graph_citations.md`)** did the citation-list
+- **M47 (`docs/history/milestones/m47_graph_citations.md`)** did the citation-list
   real-corpus verification pass the design doc called for, then built
   `graph_citations` (schema version 9) and `ke graph-citations-build`.
   Sampling real reference lists found at least three distinct citation
@@ -772,7 +772,7 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   already in the corpus, which needs no per-entry parsing at all. Run
   against the real 960-paper local corpus: exactly 5 intra-corpus
   citation edges, individually verified as genuine.
-- **M48 (`docs/m48_graph_report.md`)** closed the read-side gap M46/M47
+- **M48 (`docs/history/milestones/m48_graph_report.md`)** closed the read-side gap M46/M47
   left open: `ke graph-build`/`ke graph-citations-build` could write to
   the graph but nothing could read it back via the CLI. `ke graph-report`
   adds a corpus-wide summary mode plus per-claim (concepts by PICO role,
@@ -782,7 +782,7 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   never been exercised through a `CliRunner`-level test until this
   milestone added `tests/test_graph_cli.py` for all three commands
   together.
-- **M49 (`docs/m49_graph_relationship_candidates.md`)** built the
+- **M49 (`docs/history/milestones/m49_graph_relationship_candidates.md`)** built the
   automated relationship candidate-surfacing `docs/phase4_design.md`'s
   Open Questions deferred until `graph_claims`/`graph_claim_concepts`
   existed: `ke graph-relationship-candidates` surfaces claim pairs
@@ -810,7 +810,7 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   altered in place, so version 10 rebuilds `graph_claim_relationships`)
   -- live-verified against a copy of the real corpus database, which
   upgraded cleanly from its actual current schema version.
-- **M51 (`docs/m51_graph_unconfirmed_claims.md`)** built the first
+- **M51 (`docs/history/milestones/m51_graph_unconfirmed_claims.md`)** built the first
   concrete slice of `docs/founding_vision.md`'s Addendum, "Tracking the
   Unknown": `ke graph-unconfirmed-claims` lists every claim no
   relationship edge of any type touches yet, the honest, non-inferred
@@ -911,9 +911,9 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   textbooks) remains unbuilt pending real licensing/storage decisions.
   Explicitly not evidence and not part of the paper corpus's
   1,000-paper cap. See `docs/roadmap/long_term_vision.md`'s matching
-  section, `docs/m41_reference_lookup.md`, `docs/m42_rxnorm_lookup.md`,
-  `docs/m43_mesh_lookup.md`, `docs/m44_pubchem_lookup.md`, and
-  `docs/m45_extraction_review_annotate.md`. The design doc's "Addendum:
+  section, `docs/history/milestones/m41_reference_lookup.md`, `docs/history/milestones/m42_rxnorm_lookup.md`,
+  `docs/history/milestones/m43_mesh_lookup.md`, `docs/history/milestones/m44_pubchem_lookup.md`, and
+  `docs/history/milestones/m45_extraction_review_annotate.md`. The design doc's "Addendum:
   where this plugs into the final report" section records ten concrete
   ways reference-layer content can shape the future AI Interface Layer's
   report (grouping, gap disclosure, provenance labeling, glossary/appendix

@@ -2,7 +2,7 @@
 
 Status:
 This is the Phase 3 design sketch, written before any Phase 3 implementation
-milestone -- the same role `docs/m6_phase1_corpus_ingestion_plan.md` played
+milestone -- the same role `docs/history/milestones/m6_phase1_corpus_ingestion_plan.md` played
 for Phase 1 and `docs/phase2_design.md` played for Phase 2. It turns
 `docs/roadmap/phase3.md`'s three-bullet goal statement into an
 implementation-ready architecture and, most importantly, surfaced the one
@@ -340,4 +340,4 @@ Following the same pattern M14/Phase 2 established:
   at nothing. An operator must re-run `ke embedding-index-build` for
   papers after importing a corpus-library snapshot; the FAISS index file
   itself was never part of the snapshot's portable content to begin with
-  (only paper-intrinsic content is -- see `docs/m27_corpus_library.md`).
+  (only paper-intrinsic content is -- see `docs/history/milestones/m27_corpus_library.md`).

@@ -4,17 +4,17 @@ Status: This was a design sketch, written before any implementation --
 the same role `docs/phase3_design.md` played before M30. **M41, M42,
 M43, and M44 have since built the live-lookup path's first four
 slices** (a live lookup against Wikipedia's REST summary API, `ke
-reference-lookup` -- see `docs/m41_reference_lookup.md`; a live lookup
+reference-lookup` -- see `docs/history/milestones/m41_reference_lookup.md`; a live lookup
 against NLM's RxNorm API for drug-name normalization, `ke
-rxnorm-lookup` -- see `docs/m42_rxnorm_lookup.md`; a live lookup
+rxnorm-lookup` -- see `docs/history/milestones/m42_rxnorm_lookup.md`; a live lookup
 against NLM's MeSH database for medical-concept terminology, `ke
-mesh-lookup` -- see `docs/m43_mesh_lookup.md`; and a live lookup
+mesh-lookup` -- see `docs/history/milestones/m43_mesh_lookup.md`; and a live lookup
 against NLM/NCBI's PubChem PUG REST API for chemical-compound structure
-data, `ke pubchem-lookup` -- see `docs/m44_pubchem_lookup.md`),
+data, `ke pubchem-lookup` -- see `docs/history/milestones/m44_pubchem_lookup.md`),
 confirming the "third option" section below's recommendation that live
 lookup was the better starting point. **M45 then built three of the
 Addendum's buildable-now integration points** (`ke
-extraction-review-annotate`, see `docs/m45_extraction_review_annotate.md`
+extraction-review-annotate`, see `docs/history/milestones/m45_extraction_review_annotate.md`
 and the Addendum section below), attaching RxNorm/MeSH context directly
 onto draft evidence items. The stored-textbook path remains unbuilt and
 still needs the licensing and storage decisions below actually made
@@ -192,22 +192,22 @@ toward.
 
 **Built in M41** (`ke reference-lookup`, `knowledge_engine/
 reference_lookup.py`), against Wikipedia specifically -- see
-`docs/m41_reference_lookup.md` for what it does, why Wikipedia was
+`docs/history/milestones/m41_reference_lookup.md` for what it does, why Wikipedia was
 picked first over RxNorm/MeSH/PubChem/UniProt, and what remains
 deliberately unbuilt (caching, extraction-pipeline integration, and the
 other named sources). **Extended in M42** (`ke rxnorm-lookup`,
 `knowledge_engine/rxnorm_lookup.py`) with a second source, NLM's RxNorm
 API, for structured drug-name normalization Wikipedia's title-matching
-lookup doesn't provide -- see `docs/m42_rxnorm_lookup.md`. **Extended
+lookup doesn't provide -- see `docs/history/milestones/m42_rxnorm_lookup.md`. **Extended
 again in M43** (`ke mesh-lookup`, `knowledge_engine/mesh_lookup.py`)
 with a third source, NLM's MeSH database, for medical-concept
 terminology (diseases, procedures) beyond drug names -- see
-`docs/m43_mesh_lookup.md`. **Extended again in M44** (`ke
+`docs/history/milestones/m43_mesh_lookup.md`. **Extended again in M44** (`ke
 pubchem-lookup`, `knowledge_engine/pubchem_lookup.py`) with a fourth
 and, per this section's original list, last named source, NLM/NCBI's
 PubChem PUG REST API, for chemical-compound structure data (molecular
 formula, weight, SMILES) none of the first three sources cover -- see
-`docs/m44_pubchem_lookup.md`. UniProt remains unbuilt.
+`docs/history/milestones/m44_pubchem_lookup.md`. UniProt remains unbuilt.
 
 ## Addendum: where this plugs into the final report (and where it never does)
 
@@ -281,7 +281,7 @@ all ten; this ordering is the build sequence, not a cut list.
    `research_question`/`evidence_direction`, the same background a
    domain expert would already have. Upstream of any report; speeds a
    judgment call that stays human, exactly as designed. **Built in M45**
-   (`ke extraction-review-annotate`, see `docs/m45_extraction_review_annotate.md`):
+   (`ke extraction-review-annotate`, see `docs/history/milestones/m45_extraction_review_annotate.md`):
    a new command attaches RxNorm (`intervention`/`comparator`) and MeSH
    (`population`/`outcome`) reference context directly onto the draft
    evidence items `ke extraction-review-generate`/

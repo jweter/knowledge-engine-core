@@ -152,7 +152,7 @@ architecture and milestone-by-milestone status.
 - **M14:** completed the controlled 500-paper rehearsal with a `PROCEED` decision. A
   fresh import and a linked resume against the same manifest snapshot both
   reconciled exactly, with zero failures, zero issues, and a fully idempotent
-  resume. See [docs/m14_500_paper_rehearsal_report.md](docs/m14_500_paper_rehearsal_report.md).
+  resume. See [docs/history/milestones/m14_500_paper_rehearsal_report.md](docs/history/milestones/m14_500_paper_rehearsal_report.md).
 - **M15:** implemented Phase 2's foundation prerequisite, page/span-level
   extraction provenance, plus evidence-record validator and renderer fixes.
 - **M16:** implemented deterministic structured-section detection, the first
@@ -200,7 +200,7 @@ architecture and milestone-by-milestone status.
   output/input path compresses/decompresses the snapshot -- past ~605
   papers it exceeds GitHub's 100MB file limit uncompressed, and this
   corpus's page-level text compresses roughly 3x, restoring real headroom.
-  See [docs/m27_corpus_library.md](docs/m27_corpus_library.md).
+  See [docs/history/milestones/m27_corpus_library.md](docs/history/milestones/m27_corpus_library.md).
 - **M28:** implemented deterministic PICO extraction (population,
   intervention, comparator, outcome), the second and final slice of
   non-human-typed PICO-adjacent extraction after M26. Each field is the
@@ -252,7 +252,7 @@ architecture and milestone-by-milestone status.
   with M14's engine (`scientific_scope.py`, `license_rules.py`, extracted
   with zero behavior change). Scoped to discovery and adjudication only --
   not wired into acquisition, and does not resume corpus growth (frozen at
-  605 papers). See [docs/m34_europepmc_discovery.md](docs/m34_europepmc_discovery.md).
+  605 papers). See [docs/history/milestones/m34_europepmc_discovery.md](docs/history/milestones/m34_europepmc_discovery.md).
 - **M35 (Phase 1):** added CORE as a third automated discovery source
   (`ke core-candidate-discover`, `ke core-candidate-review-prepare`), with
   its own adjudication engine. CORE's API never returns a license field
@@ -261,7 +261,7 @@ architecture and milestone-by-milestone status.
   PMC/Europe PMC overlap detection is a known, deliberate limitation (CORE
   never reports a PMCID). Scoped to discovery and adjudication only -- not
   wired into acquisition, and does not resume corpus growth (frozen at 605
-  papers). See [docs/m35_core_discovery.md](docs/m35_core_discovery.md).
+  papers). See [docs/history/milestones/m35_core_discovery.md](docs/history/milestones/m35_core_discovery.md).
 - **M36 (Phase 1):** added Unpaywall as a fourth evidence source, but as a
   per-DOI OA-location/license *lookup tool* (`ke unpaywall-doi-lookup`,
   `ke unpaywall-batch-lookup`) rather than a fifth discovery pipeline --
@@ -269,7 +269,7 @@ architecture and milestone-by-milestone status.
   query tried at build time. Makes no accept/reject/hold decision; intended
   to enrich a DOI already surfaced (and possibly `held`) by another
   pipeline. Requires `KE_UNPAYWALL_EMAIL`. See
-  [docs/m36_unpaywall_lookup.md](docs/m36_unpaywall_lookup.md).
+  [docs/history/milestones/m36_unpaywall_lookup.md](docs/history/milestones/m36_unpaywall_lookup.md).
 - **M37 (Phase 1):** added `ke manual-pdf-preview`/`ke
   manual-pdf-manifest-draft`, so adding a manually-supplied PDF no longer
   means hand-typing a `sources.csv` row -- `PyMuPDFParser` (the same
@@ -277,7 +277,7 @@ architecture and milestone-by-milestone status.
   locally, and an optional `--doi-lookup` checks Unpaywall (M36) for
   OA/license evidence. Refuses to draft a manifest row unless license
   evidence already passed. See
-  [docs/m37_manual_pdf_preview.md](docs/m37_manual_pdf_preview.md).
+  [docs/history/milestones/m37_manual_pdf_preview.md](docs/history/milestones/m37_manual_pdf_preview.md).
 
 Phase 1 ingestion is complete through M14, plus M34/M35's second and third
 discovery sources, M36's evidence lookup tool, and M37's manual-PDF
@@ -383,7 +383,7 @@ poetry run ke corpus-import data/corpora/glp1_weight_loss/corpus.json
 downloads no documents.
 
 The GLP-1 vertical-slice demo checklist is in
-[docs/glp1_vertical_slice_demo_checklist.md](docs/glp1_vertical_slice_demo_checklist.md).
+[docs/history/vertical_slice/glp1_vertical_slice_demo_checklist.md](docs/history/vertical_slice/glp1_vertical_slice_demo_checklist.md).
 The demo performs retrieval and manual evidence display only; it does not perform
 scientific synthesis.
 
@@ -477,7 +477,7 @@ or high-confidence duplicate evidence is evaluated before paper persistence.
 The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now includes
 completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
 scale-readiness, and the controlled 500-paper rehearsal
-([`PROCEED`](docs/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
+([`PROCEED`](docs/history/milestones/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
 [docs/phase2_design.md](docs/phase2_design.md)) is in progress through M29:
 deterministic, rule-based structured-section detection, claim-candidate
 detection, claim framing-cue classification, and draft extraction

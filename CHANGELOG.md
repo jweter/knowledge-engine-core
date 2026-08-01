@@ -7,6 +7,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Reorganized `docs/`: moved 50+ milestone build logs and the original
+  VS3-VS17 vertical-slice prototype narrative into `docs/history/`,
+  leaving `docs/` root as living reference (architecture, design, and
+  policy docs only). Added `docs/README.md` and `docs/history/README.md`
+  as navigation indexes. See `docs/README.md` for the current map.
+
 ### Added
 
 - Added the `ke corpus-import` CLI command for persisted, local-only corpus imports.

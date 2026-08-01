@@ -137,14 +137,14 @@ aortic stenosis, a GLP-1 receptor agonist scoping review on rotator cuff
 disease) remain included under this policy, since they still name a
 therapeutic agent, even when the target disease itself is absent from
 the title. See `CHANGELOG.md` for the full per-batch
-history and `docs/m14_candidate_review_worksheet.md` for the v6-v9
+history and `docs/history/milestones/m14_candidate_review_worksheet.md` for the v6-v9
 ruleset history. Accepted records proceed
 automatically; rejected and held records remain auditable but do not block
 the batch or require owner review. The corpus continues to grow in small
 batches toward a 1,000-paper cap (revised down from an earlier "at least
 a couple thousand" target, explicitly for GitHub space reasons -- see
 `docs/roadmap.md`'s "Scaling beyond 500 papers for Phase 2 tuning"
-section) and `docs/m27_corpus_library.md` for how the resulting parsed
+section) and `docs/history/milestones/m27_corpus_library.md` for how the resulting parsed
 content is persisted across sessions once imported.
 
 The `retstart=2250` batch (250 candidates, 97 deterministically accepted,

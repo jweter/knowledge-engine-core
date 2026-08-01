@@ -5,7 +5,7 @@ relative to *other work or expectations referenced in its own text* -- not
 relative to a research question. This module deliberately does not implement
 the evidence-record schema's `evidence_direction` field.
 
-`docs/vs7_manual_evidence_record.md`'s worked example establishes that
+`docs/history/vertical_slice/vs7_manual_evidence_record.md`'s worked example establishes that
 `evidence_direction` (supports/contradicts/qualifies/contextualizes) is
 defined relative to a specific `research_question`: "This record does not
 say that the Knowledge Engine has proven the research question. It says

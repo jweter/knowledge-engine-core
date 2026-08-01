@@ -218,14 +218,14 @@ NLM's RxNorm API live for structured drug-name normalization; `ke
 mesh-lookup`, querying NLM's MeSH database live for medical-concept
 terminology; and `ke pubchem-lookup`, querying NLM/NCBI's PubChem PUG
 REST API live for chemical-compound structure data -- all background
-context only, never evidence -- see `docs/m41_reference_lookup.md`,
-`docs/m42_rxnorm_lookup.md`, `docs/m43_mesh_lookup.md`, and
-`docs/m44_pubchem_lookup.md`. **M45** wired three of the Addendum's
+context only, never evidence -- see `docs/history/milestones/m41_reference_lookup.md`,
+`docs/history/milestones/m42_rxnorm_lookup.md`, `docs/history/milestones/m43_mesh_lookup.md`, and
+`docs/history/milestones/m44_pubchem_lookup.md`. **M45** wired three of the Addendum's
 buildable-now integration points into the Phase 2 review workflow: `ke
 extraction-review-annotate` attaches RxNorm/MeSH reference context onto
 draft evidence items before a reviewer runs `ke
 extraction-review-promote` -- see
-`docs/m45_extraction_review_annotate.md`. The stored-textbook path
+`docs/history/milestones/m45_extraction_review_annotate.md`. The stored-textbook path
 remains unbuilt. `docs/reference_knowledge_layer_design.md`'s Addendum
 names ten concrete ways this layer's content could shape the AI
 Interface Layer's eventual report (grouping, gap disclosure, provenance

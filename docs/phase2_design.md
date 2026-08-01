@@ -3,11 +3,11 @@
 Status:
 This is the Phase 2 design sketch, written before any Phase 2 implementation
 milestone. It plays the same role for Phase 2 that
-`docs/m6_phase1_corpus_ingestion_plan.md` played for Phase 1: it turns the
+`docs/history/milestones/m6_phase1_corpus_ingestion_plan.md` played for Phase 1: it turns the
 four-bullet goal statement in `docs/roadmap/phase2.md` into an
 implementation-ready architecture, sequencing, and open-question list. See
 `docs/roadmap.md` for how this fits the overall roadmap and
-`docs/vertical_slice.md` for the historical manual evidence-record prototype
+`docs/history/vertical_slice/vertical_slice.md` for the historical manual evidence-record prototype
 this phase supersedes with automated extraction.
 
 M15 (issue #89, PR #90, merged) implemented this design's foundation
@@ -24,7 +24,7 @@ merged) implemented deterministic claim framing-cue classification
 (`knowledge_engine.extraction.classify_claim_framing`) — the third piece of
 the Extraction Layer. M18 deliberately does not implement the schema's
 `evidence_direction` field: that field is defined relative to a
-`research_question` (see `docs/vs7_manual_evidence_record.md`'s worked
+`research_question` (see `docs/history/vertical_slice/vs7_manual_evidence_record.md`'s worked
 example), which a claim candidate does not have. M18 instead classifies only
 how a candidate's sentence frames itself relative to prior work the text
 itself references (`contextualizes`/`contradicts`/`qualifies`), leaving most
@@ -360,7 +360,7 @@ Parser (extended with page/span provenance)
 ```
 
 The Reasoning Layer (synthesis, consensus, confidence scoring, human-readable
-answers) described in `docs/vertical_slice.md` remains explicitly out of
+answers) described in `docs/history/vertical_slice/vertical_slice.md` remains explicitly out of
 scope for Phase 2, exactly as it was for the manual prototype.
 
 ## Extraction Model
