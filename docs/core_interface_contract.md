@@ -207,15 +207,20 @@ most likely to actually call:
   decision (`docs/stability_and_tracking_design.md`). No filtering, no
   `research_question` grouping. Supports `--output <path.md>` (Markdown,
   not JSON). See `docs/history/milestones/m51_graph_unconfirmed_claims.md`.
-- `ke evidence-intelligence --evidence <records.jsonl> --evidence-record-id <id> [--output <path.md>]`
-  (M58) -- computes deterministic Evidence Quality, Evidence Consensus,
-  and Claim Confidence for one claim, plus corpus-relative Evidence
-  Coverage and a templated (non-LLM) synthesis. Reads the `--evidence`
-  file for the record's own fields and the already-built graph for its
-  relationship edges; never infers a relationship, never calls an LLM.
-  The three confidence numbers always render as three separate fields,
-  never one collapsed score. Supports `--output <path.md>` (Markdown,
-  not JSON). See `docs/evidence_intelligence_design.md`.
+- `ke evidence-intelligence --evidence <records.jsonl> --evidence-record-id <id> [--output <path>] [--format markdown|json]`
+  (M58, `--format json` added M63) -- computes deterministic Evidence
+  Quality, Evidence Consensus, and Claim Confidence for one claim, plus
+  corpus-relative Evidence Coverage and a templated (non-LLM) synthesis.
+  Reads the `--evidence` file for the record's own fields and the
+  already-built graph for its relationship edges; never infers a
+  relationship, never calls an LLM. The three confidence numbers always
+  render as three separate fields, never one collapsed score. `--format
+  json` is the structured, machine-readable sibling of the default
+  Markdown report -- the same numbers as a JSON object (`schema_version:
+  1`) instead of prose, for a consumer that needs to parse results
+  programmatically (e.g. `knowledge-engine-ai`) rather than scrape text,
+  the same reasoning `ke evidence-report --format json` was added for.
+  See `docs/evidence_intelligence_design.md`.
 - `ke evidence-review-queue --evidence <records.jsonl> [--limit <n>] [--output <path.md>]`
   (M62) -- prioritizes automated (`m52-evidence-classification-v1`)
   evidence records for manual review by real structural signal only: a

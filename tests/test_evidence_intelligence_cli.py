@@ -198,3 +198,113 @@ def test_evidence_intelligence_writes_output_file(
     assert result.exit_code == 0, result.output
     assert output_path.exists()
     assert "Evidence Quality" in output_path.read_text(encoding="utf-8")
+
+
+def test_evidence_intelligence_json_format_matches_markdown_numbers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claim = repository.get_or_create_claim("ev-1")
+        other_a = repository.get_or_create_claim("ev-2")
+        other_b = repository.get_or_create_claim("ev-3")
+        repository.get_or_create_relationship_edge(
+            "rel-1",
+            source_claim_id=other_a.id,
+            target_claim_id=claim.id,
+            relationship_type="supports",
+            rationale="Same direction, independent trial.",
+        )
+        repository.get_or_create_relationship_edge(
+            "rel-2",
+            source_claim_id=other_b.id,
+            target_claim_id=claim.id,
+            relationship_type="supports",
+            rationale="Same direction, pooled meta-analysis.",
+        )
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    evidence_path = _write_evidence_jsonl(
+        tmp_path,
+        [_manual_record("ev-1"), _manual_record("ev-2"), _manual_record("ev-3")],
+    )
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "evidence-intelligence",
+            "--evidence",
+            str(evidence_path),
+            "--evidence-record-id",
+            "ev-1",
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["schema_version"] == 1
+    assert payload["evidence_record_id"] == "ev-1"
+    assert payload["evidence_consensus"]["score"] == 100
+    assert payload["evidence_consensus"]["relationship_edge_count"] == 2
+    assert payload["evidence_consensus"]["agreement_total"] == 2
+    assert payload["claim_confidence"]["score"] is not None
+    assert isinstance(payload["synthesis"], list) and payload["synthesis"]
+
+
+def test_evidence_intelligence_json_format_writes_valid_json_output_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    with database.session() as session:
+        GraphRepository(session).get_or_create_claim("ev-1")
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    evidence_path = _write_evidence_jsonl(tmp_path, [_manual_record("ev-1")])
+    output_path = tmp_path / "report.json"
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "evidence-intelligence",
+            "--evidence",
+            str(evidence_path),
+            "--evidence-record-id",
+            "ev-1",
+            "--format",
+            "json",
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["evidence_record_id"] == "ev-1"
+    assert payload["evidence_consensus"]["reliability"] == "insufficient"
+
+
+def test_evidence_intelligence_rejects_an_invalid_format(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    evidence_path = _write_evidence_jsonl(tmp_path, [_manual_record("ev-1")])
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "evidence-intelligence",
+            "--evidence",
+            str(evidence_path),
+            "--evidence-record-id",
+            "ev-1",
+            "--format",
+            "xml",
+        ],
+    )
+
+    assert result.exit_code != 0
