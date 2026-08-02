@@ -501,6 +501,20 @@ DryRunOption = Annotated[
     bool,
     typer.Option("--dry-run", help="Report what would happen without writing anything."),
 ]
+EvidenceReviewQueueEvidenceOption = Annotated[
+    Path,
+    typer.Option(
+        "--evidence",
+        help="Validated EvidenceRecord JSONL file (already passed `ke evidence-validate`).",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+EvidenceReviewQueueLimitOption = Annotated[
+    int,
+    typer.Option("--limit", min=1, help="Maximum records to include in the queue."),
+]
 CorpusLibraryOutputOption = Annotated[
     Path,
     typer.Option("--output", help="Path for the new corpus-library snapshot file."),
@@ -3387,6 +3401,181 @@ def evidence_intelligence(
         return
 
     console.print(report, markup=False)
+
+
+_MANUAL_EXTRACTION_METHODS = frozenset({"manual_human_review", "manual"})
+
+
+def _evidence_review_tier(
+    evidence_record_id: str,
+    evidence_id_to_claim_id: dict[str, int],
+    claim_ids_with_edges: set[int],
+    claim_ids_in_candidates: set[int],
+) -> tuple[int, str]:
+    """Return (tier, reason) for one automated evidence record -- lower tier reviews first."""
+
+    claim_id = evidence_id_to_claim_id.get(evidence_record_id)
+    if claim_id is None:
+        return 3, "not yet in the graph"
+    if claim_id in claim_ids_with_edges:
+        return 1, "already touches a relationship edge"
+    if claim_id in claim_ids_in_candidates:
+        return 2, "appears in a relationship candidate pair"
+    return 3, "no relationship signal yet"
+
+
+def _build_evidence_review_queue(
+    graph_repository: GraphRepository, evidence_records: list[dict[str, Any]], *, limit: int
+) -> str:
+    """Build a Markdown report prioritizing automated evidence records for manual review.
+
+    M62: "automated" means `extraction_method` is not `manual_human_review`/
+    `manual` -- M52's automated classification pass, still pending human
+    confirmation. Priority is real, structural signal only: tier 1
+    (already touches a relationship edge -- reviewing it directly firms
+    up a number already shown in reports/pages), tier 2 (appears in a
+    relationship candidate pair -- structurally likely to matter soon),
+    tier 3 (everything else, including records not yet graph-built).
+    Never a quality judgment about the record's own content; that is
+    what the review itself is for.
+    """
+
+    automated_records = [
+        record
+        for record in evidence_records
+        if isinstance(record.get("evidence_record_id"), str)
+        and record.get("extraction_method") not in _MANUAL_EXTRACTION_METHODS
+    ]
+
+    evidence_id_to_claim_id: dict[str, int] = {}
+    claim_ids_with_edges: set[int] = set()
+    for record in automated_records:
+        evidence_record_id = str(record["evidence_record_id"])
+        claim = graph_repository.find_claim_by_evidence_id(evidence_record_id)
+        if claim is None:
+            continue
+        evidence_id_to_claim_id[evidence_record_id] = claim.id
+        if graph_repository.relationships_for_claim(claim.id):
+            claim_ids_with_edges.add(claim.id)
+
+    claim_ids_in_candidates: set[int] = set()
+    for claim_a, claim_b, _shared in graph_repository.relationship_candidates(
+        minimum_shared_concepts=1
+    ):
+        claim_ids_in_candidates.add(claim_a.id)
+        claim_ids_in_candidates.add(claim_b.id)
+
+    ranked = sorted(
+        automated_records,
+        key=lambda record: (
+            _evidence_review_tier(
+                str(record["evidence_record_id"]),
+                evidence_id_to_claim_id,
+                claim_ids_with_edges,
+                claim_ids_in_candidates,
+            )[0],
+            str(record["evidence_record_id"]),
+        ),
+    )
+    batch = ranked[:limit]
+
+    lines = [
+        "# Knowledge Engine Evidence Review Queue",
+        "",
+        f"Generated: {_utc_now_iso_for_report()}",
+        "",
+        f"Automated (unreviewed) records total: {len(automated_records)}",
+        f"This queue: {len(batch)} of {len(automated_records)}",
+        "",
+        "Prioritizes automated (M52) evidence records for manual review by "
+        "real structural signal only -- whether a record already touches a "
+        "relationship edge or a relationship candidate pair, both real "
+        "facts the graph already stores. Never a quality judgment about "
+        "the record's own content; that is what the review itself is for.",
+        "",
+    ]
+
+    for index, record in enumerate(batch, start=1):
+        evidence_record_id = str(record["evidence_record_id"])
+        tier_rank, tier_reason = _evidence_review_tier(
+            evidence_record_id,
+            evidence_id_to_claim_id,
+            claim_ids_with_edges,
+            claim_ids_in_candidates,
+        )
+        source_title = record.get("source_title") or "(untitled)"
+        doi = record.get("source_doi")
+        study_type = record.get("study_type") or "unspecified type"
+        lines.extend(
+            [
+                f"## {index}. {_graph_report_text(evidence_record_id)} -- "
+                f"{_graph_report_text(source_title)}",
+                "",
+                f"- Priority: tier {tier_rank} ({tier_reason})",
+                f"- Study type: {_graph_report_text(study_type)}",
+                f"- Extraction method: "
+                f"{_graph_report_text(record.get('extraction_method') or 'unknown')}",
+            ]
+        )
+        if doi:
+            lines.append(f"- DOI: {_graph_report_text(doi)}")
+        lines.append("")
+
+    if not batch:
+        lines.extend(["No automated records found.", ""])
+
+    lines.extend(
+        [
+            "## Scope",
+            "",
+            "This queue surfaces stored field content and real graph "
+            "structure only -- nothing here is inferred or synthesized, "
+            "and no record's underlying accuracy is judged. Reviewing a "
+            "record means reading its source and confirming its fields, "
+            "the same as `ke extraction-review-promote` already requires.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+@app.command("evidence-review-queue")
+def evidence_review_queue(
+    evidence: EvidenceReviewQueueEvidenceOption,
+    limit: EvidenceReviewQueueLimitOption = 20,
+    output: GraphReportOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Prioritize automated (M52) evidence records for manual review.
+
+    M62: of the corpus's automated (`m52-evidence-classification-v1`)
+    records, prioritizes which to review first by real structural signal
+    -- a record already touching a relationship edge (reviewing it
+    directly firms up a number already shown in reports/pages) ranks
+    above one merely appearing in a relationship candidate pair, which
+    ranks above everything else. Never a judgment about a record's own
+    content or accuracy; that is exactly what the review itself is for.
+    Reads `--evidence` and the already-built graph; writes nothing.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    evidence_records = _read_jsonl_records(evidence)
+
+    database = _local_database()
+    database.initialize()
+
+    with database.session() as session:
+        graph_repository = GraphRepository(session)
+        queue = _build_evidence_review_queue(graph_repository, evidence_records, limit=limit)
+
+    if output is not None:
+        _write_output(output, queue)
+        console.print(f"[green]Wrote evidence review queue:[/green] {output}")
+        return
+
+    console.print(queue, markup=False)
 
 
 @app.command("paper-pages-backfill")

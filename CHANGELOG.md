@@ -66,6 +66,13 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (SELECT trial vs. an observational cardiometabolic cohort, both
   body-weight outcomes, similarity 0.75) ahead of the raw ordering's
   weaker first pick.
+- **M62**: `ke evidence-review-queue --evidence <records.jsonl> [--limit <n>]`
+  -- prioritizes the corpus's 122 still-automated (M52) evidence records
+  for manual review by real structural signal: a record already
+  touching a relationship edge ranks above one merely appearing in a
+  relationship candidate pair, which ranks above everything else. Never
+  a judgment about a record's own content or accuracy -- purely about
+  where review effort already has visible impact.
 
 ### Removed
 
