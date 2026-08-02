@@ -35,6 +35,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   assessable" rather than a guessed score. Evidence Quality, Evidence
   Consensus, and Claim Confidence always render as three separate
   fields, never one collapsed number.
+- **M59**: authored 4 more real `RelationshipRecord`s (3 `supports`, 1
+  `contextualizes`), growing the graph from 3 to 7 relationship edges.
+  With M56's 2+-shared-concept candidate pool exhausted (`ke
+  graph-relationship-candidates --min-shared-concepts 2` now returns
+  zero pairs), reviewed the remaining single-concept candidates' full
+  PICO/`result_summary` text by hand: an observational obesity/
+  cardiometabolic cohort, a heart-failure-with-reduced-ejection-fraction
+  cohort with a real control arm, and a PMOS cohort each report the same
+  body-weight-reduction direction as the existing STEP 5/Gao/SELECT
+  cluster in populations that cluster did not test (`supports`); a
+  head-to-head tirzepatide-vs-semaglutide comparison cannot directly
+  confirm or refute a placebo-controlled finding, so it is linked as
+  `contextualizes` instead. `unconfirmed_claims` drops from 152 to 148.
 
 ### Removed
 
