@@ -9,6 +9,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **M64**: authored 4 more real `RelationshipRecord`s (2 `supports`, 2
+  `contextualizes`), growing the graph from 7 to 11 relationship edges.
+  Generated via `ke relationship-review-worksheet --rank-by-similarity
+  --limit 15` and reviewed each pair's full PICO/`result_summary` text by
+  hand: a real-world obesity/cardiometabolic cohort and Gao et al.'s
+  meta-analysis each report the same body-weight-reduction direction as
+  the existing STEP 5/SELECT cluster in populations that cluster did not
+  test (`supports`); a head-to-head tirzepatide-vs-semaglutide comparison
+  cannot directly confirm or refute a placebo-controlled finding, so it
+  links to both SELECT and the SURMOUNT-1 waist-to-height-ratio analysis
+  as `contextualizes` instead. While reviewing the worksheet, found and
+  removed a second duplicate evidence record (see Removed below).
 - **M57**: `docs/evidence_intelligence_design.md`, a deterministic,
   no-LLM confidence-scoring design -- Evidence Quality, Evidence
   Consensus, and Claim Confidence as three separate, never-collapsed
@@ -84,6 +96,17 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- Removed `auto-55fae17f118de202`, a duplicate evidence record: the same
+  paper (DOI `10.1177/14791641261467888`) as
+  `ev-tirzepatide-vs-dpp4-heart-failure-001`, extracted twice -- once by
+  hand (clean, human-reviewed) and once by M52's automated pass (garbled,
+  misaligned PICO fields, still `extraction_status: draft_review_required`,
+  `research_question` a broken templated non-question). Same pattern as
+  the SURMOUNT-1 duplicate found in M56/M59's review; found this one
+  while reviewing M64's `relationship-review-worksheet` output. Kept the
+  manual record. Removed its now-orphaned `graph_claims`/
+  `graph_claim_concepts` rows from the local graph too -- it had no
+  relationship edges to clean up.
 - Removed `auto-9f4eaa1682215164`, a duplicate evidence record: the same
   paper (DOI `10.1007/s40618-026-02883-7`) as `ev-tirzepatide-surmount1-whtr-001`,
   extracted twice -- once by hand (clean, human-reviewed) and once by
