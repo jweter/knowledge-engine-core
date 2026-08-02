@@ -189,6 +189,19 @@ most likely to actually call:
   rationale, the same boundary `ke relationship-validate` already draws.
   Supports `--output <path.md>` (Markdown, not JSON). See
   `docs/history/milestones/m49_graph_relationship_candidates.md`.
+- `ke relationship-review-worksheet --evidence <records.jsonl> [--min-shared-concepts <n>] [--limit <n>] [--offset <n>] [--rank-by-similarity] [--output <path.md>]`
+  (M60, `--rank-by-similarity` added M61) -- assembles a batch of `ke
+  graph-relationship-candidates`'s exact candidate pairs into one
+  worksheet with both claims' full PICO fields side by side, plus a
+  fill-in-the-blank `RelationshipRecord` JSON template per pair. Adds no
+  candidate-selection logic of its own; never infers, scores, or
+  suggests a relationship. `--limit` (default 10) and `--offset` page
+  through a large candidate list across review sessions.
+  `--rank-by-similarity` re-sorts candidates by cosine similarity of
+  each pair's `outcome`/`result_summary` text, using a local, offline
+  `sentence-transformers` model (M31's `SentenceTransformerEmbeddingGenerator`,
+  no network access, no API key) -- ranking only, never a relationship
+  judgment. Supports `--output <path.md>` (Markdown, not JSON).
 - `ke graph-unconfirmed-claims [--output <path.md>]` -- lists claims with
   zero relationship edges of any type, M50's Tracking the Unknown
   decision (`docs/stability_and_tracking_design.md`). No filtering, no

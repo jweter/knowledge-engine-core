@@ -829,3 +829,261 @@ def test_graph_unconfirmed_claims_rejects_a_symbolic_link_output(
 
     assert result.exit_code != 0
     assert target.read_text(encoding="utf-8") == "private"
+
+
+def test_relationship_review_worksheet_shows_full_fields_for_a_candidate_pair(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record(
+            "ev-1",
+            source_title="Trial One",
+            source_doi="10.1000/one",
+            study_type="randomized_controlled_trial",
+            outcome="Body weight change.",
+            result_summary="Semaglutide reduced body weight versus placebo.",
+        ),
+        _evidence_record(
+            "ev-2",
+            source_title="Trial Two",
+            outcome="Body weight change.",
+            result_summary="A second trial reporting the same direction.",
+        ),
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["relationship-review-worksheet", "--evidence", str(evidence_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Candidate pairs total: 1" in unwrapped
+    assert "Trial One" in unwrapped
+    assert "Trial Two" in unwrapped
+    assert "10.1000/one" in unwrapped
+    assert "Semaglutide reduced body weight versus placebo." in unwrapped
+    assert '"source_evidence_record_id": "ev-1"' in unwrapped
+    assert '"target_evidence_record_id": "ev-2"' in unwrapped
+    assert "never infers, scores, or suggests a relationship" in unwrapped
+
+
+def test_relationship_review_worksheet_respects_limit_and_offset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record("ev-1"),
+        _evidence_record("ev-2"),
+        _evidence_record("ev-3"),
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "relationship-review-worksheet",
+            "--evidence",
+            str(evidence_path),
+            "--limit",
+            "1",
+            "--offset",
+            "1",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Candidate pairs total: 3" in unwrapped
+    assert "pairs 2-2 of 3" in unwrapped
+    assert unwrapped.count("## Pair") == 1
+
+
+def test_relationship_review_worksheet_notes_a_claim_missing_from_evidence_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    build_evidence_path = _write_jsonl(
+        tmp_path / "build_evidence.jsonl",
+        _evidence_record("ev-1"),
+        _evidence_record("ev-2"),
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(build_evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    # A --evidence file that no longer contains one of the two claims --
+    # e.g. it was trimmed after graph-build already ran against it.
+    trimmed_evidence_path = _write_jsonl(
+        tmp_path / "trimmed_evidence.jsonl", _evidence_record("ev-1")
+    )
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["relationship-review-worksheet", "--evidence", str(trimmed_evidence_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Not found in `--evidence` file" in _unwrapped(result.output)
+
+
+def test_relationship_review_worksheet_writes_output_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl", _evidence_record("ev-1"), _evidence_record("ev-2")
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+    output_path = tmp_path / "worksheet.md"
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "relationship-review-worksheet",
+            "--evidence",
+            str(evidence_path),
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Wrote relationship review worksheet" in _unwrapped(result.output)
+    assert "Candidate pairs total: 1" in output_path.read_text(encoding="utf-8")
+
+
+def test_relationship_review_worksheet_rejects_a_symbolic_link_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    evidence_path = _write_jsonl(tmp_path / "evidence.jsonl", _evidence_record("ev-1"))
+    target = tmp_path / "target.md"
+    target.write_text("private", encoding="utf-8")
+    output_path = tmp_path / "worksheet.md"
+    output_path.symlink_to(target)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "relationship-review-worksheet",
+            "--evidence",
+            str(evidence_path),
+            "--output",
+            str(output_path),
+            "--force",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert target.read_text(encoding="utf-8") == "private"
+
+
+class _FakeSimilarityGenerator:
+    """Deterministic fake -- avoids downloading a real sentence-transformers model in tests."""
+
+    def __init__(self, vectors_by_text: dict[str, tuple[float, ...]]) -> None:
+        self._vectors_by_text = vectors_by_text
+
+    def generate(self, text: str) -> tuple[float, ...]:
+        return self._vectors_by_text[text]
+
+
+def test_relationship_review_worksheet_rank_by_similarity_reorders_candidates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record("ev-1", outcome="Body weight.", result_summary="Down 10%."),
+        _evidence_record("ev-2", outcome="Body weight.", result_summary="Down 9%."),
+        _evidence_record("ev-3", outcome="Unrelated.", result_summary="Nothing alike."),
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    fake_generator = _FakeSimilarityGenerator(
+        {
+            "Body weight. Down 10%.": (1.0, 0.0),
+            "Body weight. Down 9%.": (0.95, 0.05),
+            "Unrelated. Nothing alike.": (0.0, 1.0),
+        }
+    )
+    monkeypatch.setattr(
+        entrypoint, "_build_embedding_generator", lambda generator, model: fake_generator
+    )
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "relationship-review-worksheet",
+            "--evidence",
+            str(evidence_path),
+            "--rank-by-similarity",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Ordering: semantic similarity (M61), descending" in unwrapped
+    assert "Semantic similarity:" in unwrapped
+    # ev-1 <-> ev-2 (both body weight) must rank ahead of any pair
+    # involving ev-3 (unrelated) -- assert by position, not just presence.
+    first_pair_index = unwrapped.index("## Pair 1")
+    ev1_ev2_index = unwrapped.index("ev-1 <-> ev-2")
+    ev3_index = min(
+        i for i in (unwrapped.find("ev-1 <-> ev-3"), unwrapped.find("ev-2 <-> ev-3")) if i != -1
+    )
+    assert first_pair_index <= ev1_ev2_index < ev3_index
+
+
+def test_relationship_review_worksheet_without_rank_flag_shows_shared_concept_ordering(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl", _evidence_record("ev-1"), _evidence_record("ev-2")
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["relationship-review-worksheet", "--evidence", str(evidence_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Ordering: shared-concept count, descending" in unwrapped
+    assert "Semantic similarity:" not in unwrapped

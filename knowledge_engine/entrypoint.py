@@ -134,6 +134,10 @@ from knowledge_engine.rejected_candidates import (
     load_rejected_ledger,
     parse_rejected_candidate,
 )
+from knowledge_engine.relationship_candidate_ranking import (
+    RankedCandidate,
+    rank_candidates_by_similarity,
+)
 from knowledge_engine.rxnorm_http import UrllibRxNavTransport
 from knowledge_engine.rxnorm_lookup import GetTransport as RxNormLookupGetTransport
 from knowledge_engine.rxnorm_lookup import (
@@ -455,6 +459,42 @@ EvidenceIntelligenceEvidenceRecordIdOption = Annotated[
     typer.Option(
         "--evidence-record-id",
         help="Compute Evidence Intelligence for this claim, by EvidenceRecord ID.",
+    ),
+]
+RelationshipReviewWorksheetEvidenceOption = Annotated[
+    Path,
+    typer.Option(
+        "--evidence",
+        help="Validated EvidenceRecord JSONL file (already passed `ke evidence-validate`).",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+RelationshipReviewWorksheetLimitOption = Annotated[
+    int,
+    typer.Option(
+        "--limit",
+        min=1,
+        help="Maximum candidate pairs to include in one worksheet -- a review-session batch size.",
+    ),
+]
+RelationshipReviewWorksheetOffsetOption = Annotated[
+    int,
+    typer.Option(
+        "--offset",
+        min=0,
+        help="Skip this many candidate pairs before starting -- page through a large list.",
+    ),
+]
+RelationshipReviewWorksheetRankBySimilarityOption = Annotated[
+    bool,
+    typer.Option(
+        "--rank-by-similarity",
+        help=(
+            "Re-sort candidates by outcome/result_summary text similarity "
+            "(local, offline embedding model) instead of shared-concept count."
+        ),
     ),
 ]
 DryRunOption = Annotated[
@@ -2809,6 +2849,273 @@ def graph_relationship_candidates(
         return
 
     console.print(report, markup=False)
+
+
+_WORKSHEET_PICO_FIELDS: tuple[tuple[str, str], ...] = (
+    ("study_type", "Study type"),
+    ("population", "Population"),
+    ("intervention", "Intervention"),
+    ("comparator", "Comparator"),
+    ("outcome", "Outcome"),
+    ("result_summary", "Result summary"),
+    ("short_source_excerpt", "Source excerpt"),
+)
+
+
+def _worksheet_claim_lines(evidence_record_id: str, record: dict[str, Any] | None) -> list[str]:
+    """Build Markdown lines for one claim's full evidence-record fields, for the review worksheet.
+
+    A record missing from `--evidence` (e.g. it exists in the graph but
+    was pruned from the current evidence file) is reported plainly rather
+    than silently skipped or guessed at.
+    """
+
+    if record is None:
+        return [
+            f"### {_graph_report_text(evidence_record_id)}",
+            "",
+            "**Not found in `--evidence` file** -- cannot show fields for this claim.",
+            "",
+        ]
+
+    source = record.get("source_title") or "(untitled)"
+    doi = record.get("source_doi")
+    header = f"### {_graph_report_text(evidence_record_id)} -- {_graph_report_text(source)}"
+    if doi:
+        header += f" (DOI: {_graph_report_text(doi)})"
+
+    lines = [header, ""]
+    for field, label in _WORKSHEET_PICO_FIELDS:
+        value = record.get(field)
+        lines.append(f"- **{label}:** {_graph_report_text(value) if value else '(not recorded)'}")
+    lines.append("")
+    return lines
+
+
+def _worksheet_relationship_template(claim_a_id: str, claim_b_id: str) -> list[str]:
+    """Build a fill-in-the-blank `RelationshipRecord` JSON block for one candidate pair.
+
+    A template only -- never a suggested or pre-filled relationship type
+    or rationale. Reduces the mechanical work of typing the schema's
+    boilerplate fields by hand for every relationship authored, exactly
+    as M56/M59 required; deciding whether a relationship exists at all,
+    and what it says, remains entirely the reviewer's own judgment call.
+    """
+
+    return [
+        "If you decide these relate, fill in and append this to `relationship_records.jsonl`:",
+        "",
+        "```json",
+        "{",
+        '  "schema_version": "0.1",',
+        '  "relationship_id": "rel-<fill-in>",',
+        f'  "source_evidence_record_id": "{claim_a_id}",',
+        f'  "target_evidence_record_id": "{claim_b_id}",',
+        '  "relationship_type": "<supports|contradicts|qualifies|contextualizes|supersedes>",',
+        '  "rationale": "<why -- cite the specific PICO/result fields above>",',
+        '  "provenance": {"created_by": "manual review", '
+        '"method": "reviewed via ke relationship-review-worksheet"},',
+        '  "created_for_milestone": "<fill-in>"',
+        "}",
+        "```",
+        "",
+        "(Swap `source`/`target` if the relationship reads more naturally "
+        "the other way -- direction only affects the rationale's wording, "
+        "not the relationship's validity.)",
+        "",
+    ]
+
+
+def _build_relationship_review_worksheet(
+    ranked_candidates: list[RankedCandidate],
+    evidence_records_by_id: dict[str, dict[str, Any]],
+    *,
+    minimum_shared_concepts: int,
+    offset: int,
+    limit: int,
+    ranked_by_similarity: bool,
+) -> str:
+    """Build a Markdown worksheet assembling full field detail for a batch of candidate pairs.
+
+    Candidate selection is exactly `GraphRepository.relationship_candidates`
+    unchanged -- this command adds no new candidate-selection logic of
+    its own, only removes the busywork of looking up each claim's full
+    fields separately once a pair is already surfaced. `ranked_candidates`
+    is either that method's own output (shared-concept order) or M61's
+    semantic-similarity re-ranking of it, sliced by the caller as needed;
+    this function only renders whatever order it is handed. Never infers,
+    scores, or suggests a relationship; see `ke relationship-validate`
+    for the only thing that ever writes one.
+    """
+
+    batch = ranked_candidates[offset : offset + limit]
+
+    lines = [
+        "# Knowledge Engine Relationship Review Worksheet",
+        "",
+        f"Generated: {_utc_now_iso_for_report()}",
+        "",
+        f"Minimum shared concepts: {minimum_shared_concepts}",
+        f"Candidate pairs total: {len(ranked_candidates)}",
+        f"This worksheet: pairs {offset + 1}-{offset + len(batch)} of {len(ranked_candidates)}"
+        if batch
+        else "This worksheet: no pairs at this offset.",
+        "Ordering: "
+        + ("semantic similarity (M61)" if ranked_by_similarity else "shared-concept count")
+        + ", descending",
+        "",
+        "This worksheet assembles both claims' full evidence-record fields "
+        "side by side, and a fill-in-the-blank `RelationshipRecord` "
+        "template, so reviewing a batch of candidates doesn't require "
+        "opening each evidence record separately. It never infers, "
+        "scores, or suggests a relationship -- deciding whether, and how, "
+        "two claims relate remains entirely a human judgment call, "
+        "exactly as `ke relationship-validate` already requires.",
+        "",
+    ]
+
+    for index, ranked in enumerate(batch, start=offset + 1):
+        claim_a, claim_b, shared_concepts = ranked.claim_a, ranked.claim_b, ranked.shared_concepts
+        concept_labels = ", ".join(_graph_report_text(concept.label) for concept in shared_concepts)
+        similarity_line = (
+            f"Semantic similarity: {ranked.similarity:.2f}"
+            if ranked.similarity is not None
+            else "Semantic similarity: not available (missing text or record)"
+        )
+        lines.extend(
+            [
+                f"## Pair {index} of {len(ranked_candidates)}: "
+                f"{_graph_report_text(claim_a.evidence_record_id)} <-> "
+                f"{_graph_report_text(claim_b.evidence_record_id)}",
+                "",
+                f"Shared concepts ({len(shared_concepts)}): {concept_labels}",
+            ]
+        )
+        if ranked_by_similarity:
+            lines.append(similarity_line)
+        lines.append("")
+        lines.extend(
+            _worksheet_claim_lines(
+                claim_a.evidence_record_id, evidence_records_by_id.get(claim_a.evidence_record_id)
+            )
+        )
+        lines.extend(
+            _worksheet_claim_lines(
+                claim_b.evidence_record_id, evidence_records_by_id.get(claim_b.evidence_record_id)
+            )
+        )
+        lines.extend(
+            _worksheet_relationship_template(claim_a.evidence_record_id, claim_b.evidence_record_id)
+        )
+        lines.append("---")
+        lines.append("")
+
+    if not batch:
+        lines.extend(["No candidate pairs at this offset.", ""])
+
+    lines.extend(
+        [
+            "## Scope",
+            "",
+            "This worksheet surfaces structural overlap and stored field "
+            "content only -- nothing here is inferred or synthesized. "
+            "Candidate selection is exactly `ke graph-relationship-candidates`'s "
+            "own; ordering is either that command's own shared-concept "
+            "count or M61's semantic-similarity ranking, never a "
+            "relationship judgment of any kind.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+@app.command("relationship-review-worksheet")
+def relationship_review_worksheet(
+    evidence: RelationshipReviewWorksheetEvidenceOption,
+    minimum_shared_concepts: GraphRelationshipCandidatesMinimumSharedConceptsOption = 1,
+    limit: RelationshipReviewWorksheetLimitOption = 10,
+    offset: RelationshipReviewWorksheetOffsetOption = 0,
+    rank_by_similarity: RelationshipReviewWorksheetRankBySimilarityOption = False,
+    output: GraphReportOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Assemble a batch of relationship candidates into one side-by-side review worksheet.
+
+    Reuses `ke graph-relationship-candidates`'s exact candidate list, then
+    looks up each claim's full evidence-record fields (PICO,
+    `result_summary`, `short_source_excerpt`) from `--evidence` so a
+    reviewer doesn't have to open every record separately -- the same
+    manual assembly work done by hand for every relationship in M56/M59.
+    Also includes a fill-in-the-blank `RelationshipRecord` JSON template
+    per pair. Never infers, scores, or suggests a relationship; deciding
+    whether one exists, and authoring it, remains entirely a human
+    judgment call, validated afterward with `ke relationship-validate`.
+
+    `--rank-by-similarity` (M61) re-sorts the candidate list by cosine
+    similarity of each pair's `outcome`/`result_summary` text, using a
+    local, offline `sentence-transformers` model -- no network access, no
+    API key. Useful once the 2+-shared-concept tier is exhausted (as it
+    is for the real GLP-1 corpus after M56/M59) and remaining candidates
+    only share a weak, near-universal concept like `placebo`: ranking by
+    actual text similarity surfaces the pairs most likely to be real
+    relationships first, without ever deciding one exists. `--limit`/
+    `--offset` page through a large candidate list in batches across
+    multiple review sessions; a pair already linked by a validated
+    relationship edge stops appearing automatically, exactly as `ke
+    graph-relationship-candidates` already excludes it.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    evidence_records = _read_jsonl_records(evidence)
+    evidence_records_by_id = {
+        str(record["evidence_record_id"]): record
+        for record in evidence_records
+        if isinstance(record.get("evidence_record_id"), str)
+        and record["evidence_record_id"].strip()
+    }
+
+    database = _local_database()
+    database.initialize()
+
+    with database.session() as session:
+        graph_repository = GraphRepository(session)
+        raw_candidates = graph_repository.relationship_candidates(
+            minimum_shared_concepts=minimum_shared_concepts
+        )
+
+        if rank_by_similarity:
+            generator = _build_embedding_generator("local", None)
+            ranked_candidates = rank_candidates_by_similarity(
+                raw_candidates, evidence_records_by_id, generator
+            )
+        else:
+            ranked_candidates = [
+                RankedCandidate(
+                    claim_a=claim_a,
+                    claim_b=claim_b,
+                    shared_concepts=shared_concepts,
+                    similarity=None,
+                )
+                for claim_a, claim_b, shared_concepts in raw_candidates
+            ]
+
+        worksheet = _build_relationship_review_worksheet(
+            ranked_candidates,
+            evidence_records_by_id,
+            minimum_shared_concepts=minimum_shared_concepts,
+            offset=offset,
+            limit=limit,
+            ranked_by_similarity=rank_by_similarity,
+        )
+
+    if output is not None:
+        _write_output(output, worksheet)
+        console.print(f"[green]Wrote relationship review worksheet:[/green] {output}")
+        return
+
+    console.print(worksheet, markup=False)
 
 
 def _build_unconfirmed_claims_report(graph_repository: GraphRepository) -> str:
