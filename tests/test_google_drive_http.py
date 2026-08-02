@@ -30,6 +30,7 @@ def _file_payload(file_id: str, name: str, sha256: str = "", size: str = "12") -
         "size": size,
         "appProperties": {"knowledgeEngineSha256": sha256} if sha256 else {},
         "trashed": False,
+        "createdTime": "2026-01-01T00:00:00Z",
     }
 
 

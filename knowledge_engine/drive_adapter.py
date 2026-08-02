@@ -34,6 +34,7 @@ class DriveFileMetadata:
     parent_ids: tuple[str, ...]
     byte_count: int
     sha256: str
+    created_time: str = ""
 
 
 class DriveTransport(Protocol):

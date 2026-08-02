@@ -106,7 +106,9 @@ class GoogleDriveHttpTransport:
                     f"'{folder_id}' in parents and trashed = false "
                     f"and mimeType != '{_FOLDER_MIME_TYPE}'"
                 ),
-                "fields": "nextPageToken,files(id,name,parents,size,appProperties,trashed)",
+                "fields": (
+                    "nextPageToken,files(id,name,parents,size,appProperties,trashed,createdTime)"
+                ),
                 "pageSize": "1000",
                 "supportsAllDrives": "true",
                 "includeItemsFromAllDrives": "true",
@@ -137,7 +139,7 @@ class GoogleDriveHttpTransport:
             f"{_DRIVE_API}/files/{quote(file_id, safe='')}?"
             + urlencode(
                 {
-                    "fields": "id,name,parents,size,appProperties,trashed",
+                    "fields": "id,name,parents,size,appProperties,trashed,createdTime",
                     "supportsAllDrives": "true",
                 }
             )
@@ -217,6 +219,7 @@ def _file_metadata_from_payload(payload: dict[str, object]) -> DriveFileMetadata
         parent_ids=tuple(_string_list(payload.get("parents"))),
         byte_count=byte_count,
         sha256=sha256,
+        created_time=_required_string(payload, "createdTime"),
     )
 
 

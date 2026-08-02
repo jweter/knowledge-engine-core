@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from datetime import UTC, datetime
 from email.message import Message
 from pathlib import Path
 from urllib.request import Request
@@ -10,7 +11,11 @@ from urllib.request import Request
 import pytest
 
 from knowledge_engine.drive_adapter import DriveFileMetadata, DriveFolderMetadata
-from knowledge_engine.drive_backup_pilot import DriveBackupPilotError, run_drive_backup_pilot
+from knowledge_engine.drive_backup_pilot import (
+    AmbiguousOrphanError,
+    DriveBackupPilotError,
+    run_drive_backup_pilot,
+)
 from knowledge_engine.drive_boundary import KNOWLEDGE_ENGINE_DRIVE_ROOT_ID
 from knowledge_engine.google_drive_http import GoogleDriveHttpTransport
 
@@ -37,6 +42,8 @@ class FakeDriveTransport:
         fail_manifest_upload: bool = False,
         corrupt_download: bool = False,
         fail_delete_ids: set[str] | None = None,
+        ambiguous_snapshot_upload: bool = False,
+        duplicate_orphan: bool = False,
     ) -> None:
         self.files: dict[str, bytes] = {}
         self.metadata: dict[str, DriveFileMetadata] = {}
@@ -44,14 +51,17 @@ class FakeDriveTransport:
         self.fail_manifest_upload = fail_manifest_upload
         self.corrupt_download = corrupt_download
         self.fail_delete_ids = fail_delete_ids or set()
+        # Simulates a request that actually wrote to Drive but whose response
+        # the client never received: the file really exists (so a real
+        # `list_files` would see it) even though `upload_bytes` raises.
+        self.ambiguous_snapshot_upload = ambiguous_snapshot_upload
+        self.duplicate_orphan = duplicate_orphan
 
     def get_folder_metadata(self, folder_id: str) -> DriveFolderMetadata:
         return DriveFolderMetadata(folder_id, (KNOWLEDGE_ENGINE_DRIVE_ROOT_ID,), True)
 
-    def upload_bytes(self, *, parent_folder_id: str, name: str, payload: bytes) -> str:
-        if self.fail_manifest_upload and name.endswith(".manifest.json"):
-            raise RuntimeError("simulated manifest upload failure")
-        file_id = f"file-{len(self.files) + 1}"
+    def _store(self, *, parent_folder_id: str, name: str, payload: bytes) -> str:
+        file_id = f"file-{len(self.metadata) + 1}"
         self.files[file_id] = payload
         self.metadata[file_id] = DriveFileMetadata(
             file_id=file_id,
@@ -59,11 +69,25 @@ class FakeDriveTransport:
             parent_ids=(parent_folder_id,),
             byte_count=len(payload),
             sha256=hashlib.sha256(payload).hexdigest(),
+            created_time=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         )
         return file_id
 
+    def upload_bytes(self, *, parent_folder_id: str, name: str, payload: bytes) -> str:
+        if self.fail_manifest_upload and name.endswith(".manifest.json"):
+            raise RuntimeError("simulated manifest upload failure")
+        if self.ambiguous_snapshot_upload and not name.endswith(".manifest.json"):
+            self._store(parent_folder_id=parent_folder_id, name=name, payload=payload)
+            if self.duplicate_orphan:
+                self._store(parent_folder_id=parent_folder_id, name=name, payload=payload)
+            raise RuntimeError("simulated ambiguous upload failure (write landed, response lost)")
+        return self._store(parent_folder_id=parent_folder_id, name=name, payload=payload)
+
     def get_file_metadata(self, file_id: str) -> DriveFileMetadata:
         return self.metadata[file_id]
+
+    def list_files(self, folder_id: str) -> list[DriveFileMetadata]:
+        return [entry for entry in self.metadata.values() if folder_id in entry.parent_ids]
 
     def download_bytes(self, file_id: str) -> bytes:
         if self.corrupt_download:
@@ -150,6 +174,47 @@ def test_cleanup_failure_is_reported_without_hiding_residue(tmp_path: Path) -> N
 
     assert transport.deleted_file_ids == ["file-1"]
     assert set(transport.files) == {"file-1"}
+
+
+def test_ambiguous_upload_reconciles_single_orphan(tmp_path: Path) -> None:
+    transport = FakeDriveTransport(ambiguous_snapshot_upload=True)
+
+    with pytest.raises(DriveBackupPilotError, match="uploaded files were removed"):
+        run_drive_backup_pilot(
+            source_database=_source_database(tmp_path),
+            output_directory=tmp_path / "bundle",
+            production_commit="abc123",
+            transport=transport,
+        )
+
+    assert transport.deleted_file_ids == ["file-1"]
+    assert transport.files == {}
+
+
+def test_ambiguous_upload_with_multiple_candidates_requires_manual_reconciliation(
+    tmp_path: Path,
+) -> None:
+    transport = FakeDriveTransport(ambiguous_snapshot_upload=True, duplicate_orphan=True)
+
+    with pytest.raises(AmbiguousOrphanError, match="2 matching"):
+        run_drive_backup_pilot(
+            source_database=_source_database(tmp_path),
+            output_directory=tmp_path / "bundle",
+            production_commit="abc123",
+            transport=transport,
+        )
+
+    assert transport.deleted_file_ids == []
+    assert set(transport.files) == {"file-1", "file-2"}
+
+
+def test_created_at_or_after_excludes_stale_timestamps() -> None:
+    from knowledge_engine.drive_backup_pilot import _created_at_or_after
+
+    threshold = datetime(2026, 1, 1, tzinfo=UTC)
+    assert _created_at_or_after("2026-01-01T00:00:01Z", threshold) is True
+    assert _created_at_or_after("2025-12-31T23:59:59Z", threshold) is False
+    assert _created_at_or_after("not-a-timestamp", threshold) is False
 
 
 def test_http_transport_uses_authorization_and_parses_folder() -> None:
