@@ -19,7 +19,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   corpus's actual fields (no `sample_size` field exists yet; `study_type`
   is free text with 18% missing; only 3 of 155 records currently
   participate in a relationship edge). Design only -- no computation
-  code yet.
+  code yet. Revised after owner review: the automated-vs-manual
+  extraction-rigor gap narrowed from 40-vs-15 to 40-vs-25 points, since
+  an automated record's content may be accurate even before a human
+  confirms it.
+- **M58**: implements M57's design -- `knowledge_engine/evidence_intelligence.py`
+  (`compute_evidence_quality`, `compute_evidence_consensus`,
+  `compute_claim_confidence`, `compute_evidence_coverage`,
+  `render_synthesis`, all pure functions, no LLM) and `ke
+  evidence-intelligence --evidence <records.jsonl> --evidence-record-id
+  <id> [--output <path.md>]`. Live-verified against the real corpus:
+  the STEP 5 trial claim (two `supports` edges from M56) scores
+  Evidence Quality 94/100, Evidence Consensus 100/100, Claim Confidence
+  96/100; a claim with no relationship edges honestly shows "not yet
+  assessable" rather than a guessed score. Evidence Quality, Evidence
+  Consensus, and Claim Confidence always render as three separate
+  fields, never one collapsed number.
 
 ### Removed
 

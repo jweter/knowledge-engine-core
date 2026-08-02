@@ -1,6 +1,16 @@
 # Evidence Intelligence Design: A Deterministic Confidence-Scoring Formula
 
-Status: design doc, not yet implemented. This is the document
+Status: design doc, implementation in progress (M58). **Revised** after
+owner review: the extraction-rigor gap between manually-reviewed and
+automated-pending-review records (originally 40 vs. 15 points) has been
+narrowed to 40 vs. 25 -- see "Evidence Quality" below. The underlying
+extracted content in an automated record may well be accurate even
+before a human confirms it; the original 15-point floor punished that
+possibility too harshly. The direction (manual still scores higher)
+and the reason (unverified is genuinely less certain than verified)
+both still hold -- only the size of the gap changed.
+
+This is the document
 `docs/ai_layer_architecture.md` and `docs/ai_interface_layer_scoping.md`
 both named as their own trigger condition for finally opening real work
 -- "a validated confidence-rating formula design grounded in real data,"
@@ -116,8 +126,13 @@ Three deterministic components, each independently inspectable:
    - Manual review with a fully-populated, all-true `review_checklist`
      (today: the 33 `manual_human_review` records): 40 points.
    - Automated extraction pending review (`draft_review_required`, no
-     `review_checklist`): 15 points -- present and usable, but
-     unverified.
+     `review_checklist`): **25 points** -- narrowed from an original 15
+     after owner review: the extracted content itself may well be
+     accurate even before a human confirms it, so the gap should
+     reflect "unverified," not "presumed low-quality." Still below
+     manual review, since unverified genuinely carries more uncertainty
+     than checked -- the direction of the gap is real signal, only its
+     size was too harsh originally.
    - (Reserved, not populated by any record today: a future
      `ready_for_secondary_review: true` + populated checklist state on
      an automated record would score between these two -- not
