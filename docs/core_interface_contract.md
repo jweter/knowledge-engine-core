@@ -189,6 +189,14 @@ most likely to actually call:
   rationale, the same boundary `ke relationship-validate` already draws.
   Supports `--output <path.md>` (Markdown, not JSON). See
   `docs/history/milestones/m49_graph_relationship_candidates.md`.
+- `ke relationship-review-worksheet --evidence <records.jsonl> [--min-shared-concepts <n>] [--limit <n>] [--offset <n>] [--output <path.md>]`
+  (M60) -- assembles a batch of `ke graph-relationship-candidates`'
+  exact candidate pairs into one worksheet with both claims' full PICO
+  fields side by side, plus a fill-in-the-blank `RelationshipRecord`
+  JSON template per pair. Adds no candidate-selection or ranking logic
+  of its own; never infers, scores, or suggests a relationship. `--limit`
+  (default 10) and `--offset` page through a large candidate list across
+  review sessions. Supports `--output <path.md>` (Markdown, not JSON).
 - `ke graph-unconfirmed-claims [--output <path.md>]` -- lists claims with
   zero relationship edges of any type, M50's Tracking the Unknown
   decision (`docs/stability_and_tracking_design.md`). No filtering, no

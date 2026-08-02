@@ -48,6 +48,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   head-to-head tirzepatide-vs-semaglutide comparison cannot directly
   confirm or refute a placebo-controlled finding, so it is linked as
   `contextualizes` instead. `unconfirmed_claims` drops from 152 to 148.
+- **M60**: `ke relationship-review-worksheet --evidence <records.jsonl>
+  [--min-shared-concepts <n>] [--limit <n>] [--offset <n>]` -- batches
+  `ke graph-relationship-candidates`' exact candidate pairs into one
+  worksheet with both claims' full PICO fields side by side, plus a
+  fill-in-the-blank `RelationshipRecord` JSON template per pair. Removes
+  the mechanical busywork of opening each evidence record separately
+  (the manual assembly done by hand for every M56/M59 relationship) --
+  adds no candidate-selection or ranking logic of its own, and never
+  infers, scores, or suggests a relationship.
 
 ### Removed
 

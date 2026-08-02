@@ -400,7 +400,14 @@ than placebo and so cannot directly confirm or refute the existing
 drops from 152 to 148. Every candidate considered but not used (drug-name
 overlap only, on a genuinely different outcome -- e.g. BNP, menstrual
 function as a *primary* endpoint) was left alone rather than forced into
-a relationship it would misrepresent.
+a relationship it would misrepresent. **M60** added
+`ke relationship-review-worksheet`, batching that same manual-review
+work: it assembles N candidate pairs' full PICO fields side by side plus
+a fill-in-the-blank `RelationshipRecord` template, so a review session
+isn't limited to opening one evidence record at a time -- the exact
+mechanical assembly done by hand for every M56/M59 relationship. Adds no
+candidate-selection or ranking logic of its own; still 100% human
+judgment on whether, and how, two claims relate.
 
 ### Supporting operator durability
 
