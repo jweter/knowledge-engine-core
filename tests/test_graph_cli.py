@@ -1087,3 +1087,219 @@ def test_relationship_review_worksheet_without_rank_flag_shows_shared_concept_or
     unwrapped = _unwrapped(result.output)
     assert "Ordering: shared-concept count, descending" in unwrapped
     assert "Semantic similarity:" not in unwrapped
+
+
+def test_evidence_review_queue_ranks_a_record_with_a_relationship_edge_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record(
+            "ev-tier1", extraction_method="m52-evidence-classification-v1", source_title="Tier One"
+        ),
+        _evidence_record(
+            "ev-tier3",
+            extraction_method="m52-evidence-classification-v1",
+            source_title="Tier Three",
+            population="Adults with a rare, unrelated condition",
+            intervention="An unrelated intervention",
+            comparator=None,
+        ),
+        _evidence_record(
+            "ev-manual", extraction_method="manual_human_review", source_title="Manual"
+        ),
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        tier1_claim = repository.find_claim_by_evidence_id("ev-tier1")
+        manual_claim = repository.find_claim_by_evidence_id("ev-manual")
+        assert tier1_claim is not None and manual_claim is not None
+        repository.get_or_create_relationship_edge(
+            "rel-1",
+            source_claim_id=tier1_claim.id,
+            target_claim_id=manual_claim.id,
+            relationship_type="supports",
+            rationale="For the test.",
+        )
+
+    result = CliRunner().invoke(
+        entrypoint.app, ["evidence-review-queue", "--evidence", str(evidence_path)]
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Automated (unreviewed) records total: 2" in unwrapped
+    assert "ev-manual" not in unwrapped
+    tier1_index = unwrapped.index("ev-tier1")
+    tier3_index = unwrapped.index("ev-tier3")
+    assert tier1_index < tier3_index
+    assert "tier 1 (already touches a relationship edge)" in unwrapped
+    assert "tier 3 (no relationship signal yet)" in unwrapped
+
+
+def test_evidence_review_queue_prioritizes_candidate_pair_membership_over_isolation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record(
+            "ev-shares-concept",
+            extraction_method="m52-evidence-classification-v1",
+            comparator="Placebo",
+        ),
+        _evidence_record(
+            "ev-isolated",
+            extraction_method="m52-evidence-classification-v1",
+            population="Adults with a rare condition",
+            intervention="An unrelated intervention",
+            comparator=None,
+        ),
+        _evidence_record(
+            "ev-other-shares-concept",
+            extraction_method="manual_human_review",
+            comparator="Placebo",
+        ),
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    result = CliRunner().invoke(
+        entrypoint.app, ["evidence-review-queue", "--evidence", str(evidence_path)]
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    shares_index = unwrapped.index("ev-shares-concept")
+    isolated_index = unwrapped.index("ev-isolated")
+    assert shares_index < isolated_index
+    assert "tier 2 (appears in a relationship candidate pair)" in unwrapped
+    assert "tier 3 (no relationship signal yet)" in unwrapped
+
+
+def test_evidence_review_queue_respects_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record("ev-1", extraction_method="m52-evidence-classification-v1"),
+        _evidence_record("ev-2", extraction_method="m52-evidence-classification-v1"),
+        _evidence_record("ev-3", extraction_method="m52-evidence-classification-v1"),
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["evidence-review-queue", "--evidence", str(evidence_path), "--limit", "2"],
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Automated (unreviewed) records total: 3" in unwrapped
+    assert "This queue: 2 of 3" in unwrapped
+
+
+def test_evidence_review_queue_excludes_a_confirmed_automated_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record(
+            "ev-confirmed",
+            extraction_method="m52-evidence-classification-v1",
+            review_checklist={"automated_classification": True, "human_reviewed": True},
+        ),
+        _evidence_record(
+            "ev-pending",
+            extraction_method="m52-evidence-classification-v1",
+            review_checklist={"automated_classification": True, "human_reviewed": False},
+        ),
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    result = CliRunner().invoke(
+        entrypoint.app, ["evidence-review-queue", "--evidence", str(evidence_path)]
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Automated (unreviewed) records total: 1" in unwrapped
+    assert "ev-confirmed" not in unwrapped
+    assert "ev-pending" in unwrapped
+
+
+def test_evidence_review_queue_writes_output_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record("ev-1", extraction_method="m52-evidence-classification-v1"),
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+    output_path = tmp_path / "queue.md"
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["evidence-review-queue", "--evidence", str(evidence_path), "--output", str(output_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Wrote evidence review queue" in _unwrapped(result.output)
+    assert "Automated (unreviewed) records total: 1" in output_path.read_text(encoding="utf-8")
+
+
+def test_evidence_review_queue_rejects_a_symbolic_link_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    evidence_path = _write_jsonl(tmp_path / "evidence.jsonl", _evidence_record("ev-1"))
+    target = tmp_path / "target.md"
+    target.write_text("private", encoding="utf-8")
+    output_path = tmp_path / "queue.md"
+    output_path.symlink_to(target)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "evidence-review-queue",
+            "--evidence",
+            str(evidence_path),
+            "--output",
+            str(output_path),
+            "--force",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert target.read_text(encoding="utf-8") == "private"

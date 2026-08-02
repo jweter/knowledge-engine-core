@@ -417,7 +417,16 @@ instead of raw shared-concept count. Verified live against the real
 corpus: it surfaced SELECT vs. an observational semaglutide cohort study
 (similarity 0.75, both body-weight outcomes) ahead of the raw ordering's
 first pick, a much weaker BNP-outcome candidate -- ranking only, never a
-relationship judgment.
+relationship judgment. **M62** turns the same "prioritize by real
+signal" approach on the other side of the review backlog: `ke
+evidence-review-queue` ranks the corpus's 122 still-automated (M52)
+evidence records for manual review by whether each already touches a
+relationship edge or a relationship candidate pair -- real, structural
+facts the graph already stores -- rather than an arbitrary order, so
+review effort goes where it already has visible impact on Evidence
+Quality/Claim Confidence scores first. Never a judgment about a
+record's own content or accuracy; that is what the review itself is
+for.
 
 ### Planned: Reviewer & Evidence Intelligence Tooling
 
@@ -428,12 +437,6 @@ flag still requires a human to actually read the source. The lever is
 removing mechanical busywork around that reading, never the reading or
 the judgment itself.
 
-- **M62: automated-evidence-record review queue.** A command
-  prioritizing the 122 still-automated (M52) evidence records by real
-  signal (already touching a relationship edge; appears in a
-  relationship candidate pair) rather than an arbitrary order, so manual
-  review effort goes where it most affects Evidence Quality/Claim
-  Confidence scores first.
 - **Corpus-wide Evidence Intelligence dashboard.** A report or
   `knowledge-engine-web` page showing the distribution of Evidence
   Quality scores and Claim Confidence reliability tiers across the whole

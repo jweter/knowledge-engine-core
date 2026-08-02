@@ -216,6 +216,14 @@ most likely to actually call:
   The three confidence numbers always render as three separate fields,
   never one collapsed score. Supports `--output <path.md>` (Markdown,
   not JSON). See `docs/evidence_intelligence_design.md`.
+- `ke evidence-review-queue --evidence <records.jsonl> [--limit <n>] [--output <path.md>]`
+  (M62) -- prioritizes automated (`m52-evidence-classification-v1`)
+  evidence records for manual review by real structural signal only: a
+  record already touching a relationship edge ranks above one merely
+  appearing in a relationship candidate pair, which ranks above
+  everything else. Never a judgment about a record's own content or
+  accuracy. `--limit` (default 20). Supports `--output <path.md>`
+  (Markdown, not JSON).
 
 **Corpus-building (the pipeline a consumer generally does not re-run
 itself, but may need to trigger for a specific paper):**
