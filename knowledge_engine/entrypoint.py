@@ -3430,14 +3430,17 @@ def _build_evidence_review_queue(
     """Build a Markdown report prioritizing automated evidence records for manual review.
 
     M62: "automated" means `extraction_method` is not `manual_human_review`/
-    `manual` -- M52's automated classification pass, still pending human
-    confirmation. Priority is real, structural signal only: tier 1
-    (already touches a relationship edge -- reviewing it directly firms
-    up a number already shown in reports/pages), tier 2 (appears in a
-    relationship candidate pair -- structurally likely to matter soon),
-    tier 3 (everything else, including records not yet graph-built).
-    Never a quality judgment about the record's own content; that is
-    what the review itself is for.
+    `manual` (M52's automated classification pass) and
+    `review_checklist.human_reviewed` is not already `true` -- a record
+    keeps its M52 `extraction_method` as provenance even after a human
+    confirms it, so `human_reviewed` is what actually distinguishes
+    still-pending from already-reviewed. Priority is real, structural
+    signal only: tier 1 (already touches a relationship edge -- reviewing
+    it directly firms up a number already shown in reports/pages), tier 2
+    (appears in a relationship candidate pair -- structurally likely to
+    matter soon), tier 3 (everything else, including records not yet
+    graph-built). Never a quality judgment about the record's own
+    content; that is what the review itself is for.
     """
 
     automated_records = [
@@ -3445,6 +3448,7 @@ def _build_evidence_review_queue(
         for record in evidence_records
         if isinstance(record.get("evidence_record_id"), str)
         and record.get("extraction_method") not in _MANUAL_EXTRACTION_METHODS
+        and not (record.get("review_checklist") or {}).get("human_reviewed")
     ]
 
     evidence_id_to_claim_id: dict[str, int] = {}

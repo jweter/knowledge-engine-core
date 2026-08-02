@@ -1217,6 +1217,41 @@ def test_evidence_review_queue_respects_limit(
     assert "This queue: 2 of 3" in unwrapped
 
 
+def test_evidence_review_queue_excludes_a_confirmed_automated_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(
+        tmp_path / "evidence.jsonl",
+        _evidence_record(
+            "ev-confirmed",
+            extraction_method="m52-evidence-classification-v1",
+            review_checklist={"automated_classification": True, "human_reviewed": True},
+        ),
+        _evidence_record(
+            "ev-pending",
+            extraction_method="m52-evidence-classification-v1",
+            review_checklist={"automated_classification": True, "human_reviewed": False},
+        ),
+    )
+    build_result = CliRunner().invoke(
+        entrypoint.app, ["graph-build", "--evidence", str(evidence_path)]
+    )
+    assert build_result.exit_code == 0, build_result.output
+
+    result = CliRunner().invoke(
+        entrypoint.app, ["evidence-review-queue", "--evidence", str(evidence_path)]
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Automated (unreviewed) records total: 1" in unwrapped
+    assert "ev-confirmed" not in unwrapped
+    assert "ev-pending" in unwrapped
+
+
 def test_evidence_review_queue_writes_output_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
