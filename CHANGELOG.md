@@ -57,6 +57,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (the manual assembly done by hand for every M56/M59 relationship) --
   adds no candidate-selection or ranking logic of its own, and never
   infers, scores, or suggests a relationship.
+- **M61**: `ke relationship-review-worksheet --rank-by-similarity` --
+  re-sorts candidates by cosine similarity of `outcome`/`result_summary`
+  text (M31's local, offline `sentence-transformers` generator) instead
+  of raw shared-concept count, now that the 2+-shared-concept tier is
+  exhausted. Ranking only, never a relationship judgment. Live-verified
+  against the real corpus: surfaced a genuinely more comparable pair
+  (SELECT trial vs. an observational cardiometabolic cohort, both
+  body-weight outcomes, similarity 0.75) ahead of the raw ordering's
+  weaker first pick.
 
 ### Removed
 

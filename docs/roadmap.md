@@ -407,7 +407,47 @@ a fill-in-the-blank `RelationshipRecord` template, so a review session
 isn't limited to opening one evidence record at a time -- the exact
 mechanical assembly done by hand for every M56/M59 relationship. Adds no
 candidate-selection or ranking logic of its own; still 100% human
-judgment on whether, and how, two claims relate.
+judgment on whether, and how, two claims relate. **M61** added
+`--rank-by-similarity`: with the 2+-shared-concept tier exhausted and
+~295 single-concept candidates left (most sharing only a weak,
+near-universal concept like `placebo`), it re-sorts candidates by cosine
+similarity of `outcome`/`result_summary` text (M31's local, offline
+`sentence-transformers` generator -- no network access, no API key)
+instead of raw shared-concept count. Verified live against the real
+corpus: it surfaced SELECT vs. an observational semaglutide cohort study
+(similarity 0.75, both body-weight outcomes) ahead of the raw ordering's
+first pick, a much weaker BNP-outcome candidate -- ranking only, never a
+relationship judgment.
+
+### Planned: Reviewer & Evidence Intelligence Tooling
+
+Promoted from `docs/future_ideas.md`'s "Reviewer Tooling" section into
+committed near-term work -- the project owner asked for these
+explicitly. None weaken review: every relationship and every "reviewed"
+flag still requires a human to actually read the source. The lever is
+removing mechanical busywork around that reading, never the reading or
+the judgment itself.
+
+- **M62: automated-evidence-record review queue.** A command
+  prioritizing the 122 still-automated (M52) evidence records by real
+  signal (already touching a relationship edge; appears in a
+  relationship candidate pair) rather than an arbitrary order, so manual
+  review effort goes where it most affects Evidence Quality/Claim
+  Confidence scores first.
+- **Corpus-wide Evidence Intelligence dashboard.** A report or
+  `knowledge-engine-web` page showing the distribution of Evidence
+  Quality scores and Claim Confidence reliability tiers across the whole
+  corpus, extending M58's per-claim view to a corpus-wide one.
+- **Live confidence-gauge visual.** Replace `knowledge-engine-web`'s
+  plain Evidence Intelligence table row with the gauge visual from the
+  `roadmap` page's concept-preview mockup, wired to M58/M1's real
+  computed numbers instead of illustrative content.
+- **"What changed" report.** A recurring status report (new claims, new
+  relationship edges, Evidence Quality/Coverage deltas between two
+  points in time) as a natural addition to the existing Reports page.
+
+Not yet scheduled with a milestone number -- built when picked up, in
+roughly this order unless the project owner says otherwise.
 
 ### Supporting operator durability
 
