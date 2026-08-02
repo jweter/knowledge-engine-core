@@ -94,58 +94,70 @@ def export_corpus_library(source_engine: Engine, output_path: Path) -> ExportSum
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     target_engine = create_engine(f"sqlite:///{output_path}", future=True)
-    tables = [Base.metadata.tables[name] for name in CORPUS_LIBRARY_TABLES]
-    Base.metadata.create_all(target_engine, tables=tables)
+    try:
+        tables = [Base.metadata.tables[name] for name in CORPUS_LIBRARY_TABLES]
+        Base.metadata.create_all(target_engine, tables=tables)
 
-    source_session_factory = sessionmaker(source_engine, future=True)
-    target_session_factory = sessionmaker(target_engine, future=True)
+        source_session_factory = sessionmaker(source_engine, future=True)
+        target_session_factory = sessionmaker(target_engine, future=True)
 
-    journal_cache: dict[int, Journal] = {}
-    author_cache: dict[int, Author] = {}
-    keyword_cache: dict[int, Keyword] = {}
+        journal_cache: dict[int, Journal] = {}
+        author_cache: dict[int, Author] = {}
+        keyword_cache: dict[int, Keyword] = {}
 
-    with source_session_factory() as source_session, target_session_factory() as target_session:
-        papers = source_session.scalars(
-            select(Paper).options(*_PAPER_LOAD_OPTIONS).order_by(Paper.id)
-        ).all()
+        with (
+            source_session_factory() as source_session,
+            target_session_factory() as target_session,
+        ):
+            papers = source_session.scalars(
+                select(Paper).options(*_PAPER_LOAD_OPTIONS).order_by(Paper.id)
+            ).all()
 
-        for paper in papers:
-            new_journal = None
-            if paper.journal is not None:
-                new_journal = journal_cache.get(paper.journal.id)
-                if new_journal is None:
-                    new_journal = Journal(name=paper.journal.name, issn=paper.journal.issn)
-                    journal_cache[paper.journal.id] = new_journal
+            for paper in papers:
+                new_journal = None
+                if paper.journal is not None:
+                    new_journal = journal_cache.get(paper.journal.id)
+                    if new_journal is None:
+                        new_journal = Journal(name=paper.journal.name, issn=paper.journal.issn)
+                        journal_cache[paper.journal.id] = new_journal
 
-            new_paper = _copy_paper_fields(paper, journal=new_journal)
+                new_paper = _copy_paper_fields(paper, journal=new_journal)
 
-            for author_link in paper.author_links:
-                new_author = author_cache.get(author_link.author.id)
-                if new_author is None:
-                    new_author = Author(
-                        name=author_link.author.name, orcid=author_link.author.orcid
+                for author_link in paper.author_links:
+                    new_author = author_cache.get(author_link.author.id)
+                    if new_author is None:
+                        new_author = Author(
+                            name=author_link.author.name, orcid=author_link.author.orcid
+                        )
+                        author_cache[author_link.author.id] = new_author
+                    new_paper.author_links.append(
+                        PaperAuthor(author=new_author, position=author_link.position)
                     )
-                    author_cache[author_link.author.id] = new_author
-                new_paper.author_links.append(
-                    PaperAuthor(author=new_author, position=author_link.position)
-                )
-            for keyword_link in paper.keyword_links:
-                new_keyword = keyword_cache.get(keyword_link.keyword.id)
-                if new_keyword is None:
-                    new_keyword = Keyword(value=keyword_link.keyword.value)
-                    keyword_cache[keyword_link.keyword.id] = new_keyword
-                new_paper.keyword_links.append(PaperKeyword(keyword=new_keyword))
+                for keyword_link in paper.keyword_links:
+                    new_keyword = keyword_cache.get(keyword_link.keyword.id)
+                    if new_keyword is None:
+                        new_keyword = Keyword(value=keyword_link.keyword.value)
+                        keyword_cache[keyword_link.keyword.id] = new_keyword
+                    new_paper.keyword_links.append(PaperKeyword(keyword=new_keyword))
 
-            target_session.add(new_paper)
+                target_session.add(new_paper)
 
-        target_session.commit()
+            target_session.commit()
 
-        return ExportSummary(
-            paper_count=len(papers),
-            journal_count=len(journal_cache),
-            author_count=len(author_cache),
-            keyword_count=len(keyword_cache),
-        )
+            return ExportSummary(
+                paper_count=len(papers),
+                journal_count=len(journal_cache),
+                author_count=len(author_cache),
+                keyword_count=len(keyword_cache),
+            )
+    finally:
+        # On Windows, a SQLAlchemy engine's connection pool keeps the underlying
+        # SQLite file handle open until disposed -- garbage collection alone
+        # doesn't release it deterministically. Left open, it blocks a caller's
+        # temp-directory cleanup (export_corpus_library_compressed) from
+        # deleting this file immediately afterward. Harmless on POSIX, fatal
+        # on Windows: PermissionError: [WinError 32].
+        target_engine.dispose()
 
 
 def import_corpus_library(target_session: Session, input_path: Path) -> ImportSummary:
@@ -168,63 +180,70 @@ def import_corpus_library(target_session: Session, input_path: Path) -> ImportSu
         raise FileNotFoundError(msg)
 
     source_engine = create_engine(f"sqlite:///{input_path}", future=True)
-    source_session_factory = sessionmaker(source_engine, future=True)
+    try:
+        source_session_factory = sessionmaker(source_engine, future=True)
 
-    imported = 0
-    skipped = 0
+        imported = 0
+        skipped = 0
 
-    with source_session_factory() as source_session:
-        papers = source_session.scalars(
-            select(Paper).options(*_PAPER_LOAD_OPTIONS).order_by(Paper.id)
-        ).all()
+        with source_session_factory() as source_session:
+            papers = source_session.scalars(
+                select(Paper).options(*_PAPER_LOAD_OPTIONS).order_by(Paper.id)
+            ).all()
 
-        for paper in papers:
-            existing = target_session.scalar(
-                select(Paper).where(Paper.content_hash == paper.content_hash)
-            )
-            if existing is not None:
-                skipped += 1
-                continue
-
-            new_journal = None
-            if paper.journal is not None:
-                source_journal = paper.journal
-                new_journal = _get_or_create(
-                    target_session,
-                    Journal,
-                    Journal.name == source_journal.name,
-                    Journal(name=source_journal.name, issn=source_journal.issn),
+            for paper in papers:
+                existing = target_session.scalar(
+                    select(Paper).where(Paper.content_hash == paper.content_hash)
                 )
+                if existing is not None:
+                    skipped += 1
+                    continue
 
-            new_paper = _copy_paper_fields(paper, journal=new_journal)
-            target_session.add(new_paper)
+                new_journal = None
+                if paper.journal is not None:
+                    source_journal = paper.journal
+                    new_journal = _get_or_create(
+                        target_session,
+                        Journal,
+                        Journal.name == source_journal.name,
+                        Journal(name=source_journal.name, issn=source_journal.issn),
+                    )
 
-            for author_link in paper.author_links:
-                source_author = author_link.author
-                new_author = _get_or_create(
-                    target_session,
-                    Author,
-                    Author.name == source_author.name,
-                    Author(name=source_author.name, orcid=source_author.orcid),
-                )
-                new_paper.author_links.append(
-                    PaperAuthor(author=new_author, position=author_link.position)
-                )
-            for keyword_link in paper.keyword_links:
-                source_keyword = keyword_link.keyword
-                new_keyword = _get_or_create(
-                    target_session,
-                    Keyword,
-                    Keyword.value == source_keyword.value,
-                    Keyword(value=source_keyword.value),
-                )
-                new_paper.keyword_links.append(PaperKeyword(keyword=new_keyword))
+                new_paper = _copy_paper_fields(paper, journal=new_journal)
+                target_session.add(new_paper)
 
-            target_session.flush()
-            PaperRepository(target_session).upsert_search_index(new_paper)
-            imported += 1
+                for author_link in paper.author_links:
+                    source_author = author_link.author
+                    new_author = _get_or_create(
+                        target_session,
+                        Author,
+                        Author.name == source_author.name,
+                        Author(name=source_author.name, orcid=source_author.orcid),
+                    )
+                    new_paper.author_links.append(
+                        PaperAuthor(author=new_author, position=author_link.position)
+                    )
+                for keyword_link in paper.keyword_links:
+                    source_keyword = keyword_link.keyword
+                    new_keyword = _get_or_create(
+                        target_session,
+                        Keyword,
+                        Keyword.value == source_keyword.value,
+                        Keyword(value=source_keyword.value),
+                    )
+                    new_paper.keyword_links.append(PaperKeyword(keyword=new_keyword))
 
-    return ImportSummary(imported_paper_count=imported, skipped_existing_paper_count=skipped)
+                target_session.flush()
+                PaperRepository(target_session).upsert_search_index(new_paper)
+                imported += 1
+
+        return ImportSummary(imported_paper_count=imported, skipped_existing_paper_count=skipped)
+    finally:
+        # Same leaked-handle hazard as export_corpus_library's target_engine:
+        # import_corpus_library_compressed deletes this file's temp directory
+        # immediately after this function returns, which Windows refuses while
+        # an undisposed engine still holds it open.
+        source_engine.dispose()
 
 
 def export_corpus_library_compressed(source_engine: Engine, output_path: Path) -> ExportSummary:
@@ -237,6 +256,14 @@ def export_corpus_library_compressed(source_engine: Engine, output_path: Path) -
     is conventionally named `*.sqlite3.gz`, though this function does not
     enforce it. `output_path` must not already exist, matching
     `export_corpus_library`'s own no-clobber contract.
+
+    Written with a fixed `mtime=0` gzip header: `gzip.open`'s default embeds
+    the current wall-clock time, so two exports of byte-for-byte identical
+    content would otherwise still produce different compressed bytes --
+    and therefore different SHA-256 hashes -- whenever they happen more
+    than about a second apart. `ke-corpus-library-drive-backup`'s entire
+    skip-if-unchanged behavior depends on identical content hashing
+    identically regardless of when it was exported.
     """
 
     if output_path.exists():
@@ -246,7 +273,10 @@ def export_corpus_library_compressed(source_engine: Engine, output_path: Path) -
     with tempfile.TemporaryDirectory() as raw_dir:
         raw_path = Path(raw_dir) / "snapshot.sqlite3"
         summary = export_corpus_library(source_engine, raw_path)
-        with raw_path.open("rb") as raw_file, gzip.open(output_path, "wb") as compressed_file:
+        with (
+            raw_path.open("rb") as raw_file,
+            gzip.GzipFile(output_path, "wb", mtime=0) as compressed_file,
+        ):
             shutil.copyfileobj(raw_file, compressed_file)
     return summary
 

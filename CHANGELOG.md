@@ -7,6 +7,31 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`corpus_library.py`: leaked SQLAlchemy engines break Windows.** Found
+  during the first live rehearsal of `ke-corpus-library-drive-backup` on
+  Windows: `export_corpus_library`'s `target_engine` and
+  `import_corpus_library`'s `source_engine` were never disposed, so their
+  underlying SQLite file handles stayed open past each function's `with`
+  block. On Windows this made `export_corpus_library_compressed`'s and
+  `import_corpus_library_compressed`'s own temp-directory cleanup fail
+  with `PermissionError: [WinError 32]` right after a correct export/import
+  had already completed -- the same class of bug fixed for
+  `sqlite_backup.py` in an earlier PR, in a different module this time.
+  Both engines are now disposed in a `finally` block.
+
+- **`corpus_library.py`: non-deterministic gzip output silently defeated
+  dedup.** Found while re-verifying the fix above: `gzip.open`'s default
+  header embeds the current wall-clock time, so
+  `export_corpus_library_compressed` produced different compressed bytes
+  -- and therefore a different SHA-256 -- for byte-for-byte identical
+  content whenever two exports happened more than about a second apart.
+  This directly broke `ke-corpus-library-drive-backup`'s entire
+  skip-if-unchanged premise: a week with zero new papers would still have
+  uploaded a "new" snapshot every run. Now exported with a fixed
+  `mtime=0` gzip header so identical content always hashes identically.
+
 ### Added
 
 - **`ke-corpus-library-drive-backup`**: relays the corpus-library snapshot
