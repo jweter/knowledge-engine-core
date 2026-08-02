@@ -62,9 +62,7 @@ def load_refresh_token_credentials(path: Path) -> RefreshTokenCredentials:
     try:
         payload = json.loads(raw)
     except json.JSONDecodeError:
-        raise OAuthRefreshError(
-            "OAuth refresh-token credentials file is not valid JSON."
-        ) from None
+        raise OAuthRefreshError("OAuth refresh-token credentials file is not valid JSON.") from None
     if not isinstance(payload, dict):
         raise OAuthRefreshError("OAuth refresh-token credentials file has an unexpected shape.")
     client_id = payload.get("client_id")
