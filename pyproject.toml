@@ -41,6 +41,7 @@ priority = "explicit"
 ke = "knowledge_engine.entrypoint:app"
 ke-drive-backup-pilot = "knowledge_engine.drive_backup_pilot:main"
 ke-corpus-pdf-backup = "knowledge_engine.corpus_pdf_backup:main"
+ke-corpus-library-drive-backup = "knowledge_engine.corpus_library_drive_backup:main"
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]

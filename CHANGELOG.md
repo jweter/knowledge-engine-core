@@ -7,6 +7,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`ke-corpus-library-drive-backup`**: relays the corpus-library snapshot
+  (`ke corpus-library-export`'s output) to Google Drive instead of git,
+  skipping the upload when an identical snapshot is already present. Reuses
+  `ke-drive-backup-pilot`'s OAuth refresh-token auth and
+  `ke-corpus-pdf-backup`'s skip-if-hash-matches dedup. Exists because
+  committing a growing multi-hundred-MB snapshot to git on every corpus
+  cycle permanently bloats the shared repository -- see
+  `docs/corpus_library_drive_backup.md`. New allowlisted Drive destination
+  `corpus_library.snapshot` in `knowledge_engine.drive_boundary`, pointing
+  at a real "15 - Corpus Library" folder under the Knowledge Engine root.
+
 ### Fixed
 
 - **Drive backup pilot: service accounts can't write here.** Confirmed

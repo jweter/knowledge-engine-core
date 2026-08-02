@@ -39,6 +39,13 @@ _FOLDER_IDS = {
     "database_backups.sqlite": "1xwjJkIOn3ytt34hIvQGyXyJHwsPlGb3Z",
     "database_backups.postgres": "1cAFlDghrBi8RGsB8PjRFN0ooK7lre7OI",
     "database_backups.integrity_reports": "1DH13oQ72dyDw2TwzJd4TL68qD4nNnEpL",
+    # "15 - Corpus Library" -- not "12", since 12/13/14 were already taken by
+    # "Extracted Data"/"Ingestion Runs"/"Exports". Created 2026-08-02 as a
+    # direct child of the Knowledge Engine root, owned by the same account
+    # the OAuth refresh-token credential authenticates as (no separate
+    # sharing step needed). Live-verified reachable via `get_folder_metadata`
+    # readback at creation time.
+    "corpus_library.snapshot": "15oAXGZaRI21UswrhREm-AB1hbj6Frdtf",
     "extracted_data": "1S-OocrFBEsmW4OoZcoJ_mQXu-TMm2TJ0",
     "extracted_data.text": "1hcykYrce0BXuzaXCbVad6xP4QMgMr0Qn",
     "extracted_data.metadata": "1Q6mXH1hTaSE6EoTzISJR5QU85xMdzZvw",
