@@ -4,18 +4,26 @@ The connected personal Google Drive is an independent backup and human-accessibl
 
 ## Approved root
 
-- Folder name: `10 - Source Documents`
-- Folder ID: `1p_-8Rc_g-D_-VHt0D_s4CQnfH2upL5Xh`
+- Folder name: `Knowledge Engine` (the project owner's top-level folder,
+  containing numbered subfolders such as `10 - Source Documents` and
+  `11 - Database Backups`)
+- Folder ID: `1ygxvhp7eEmU55LkmyrE0G3XjUMkagUjX`
 
-This repository originally recorded a different root (a planned `Knowledge
-Engine` folder, ID `1ygxvhp7eEmU55LkmyrE0G3XjUMkagUjX`) that live testing
-(2026-07-23) found unreachable -- it was never actually created or shared in
-the real Drive. `10 - Source Documents` is the actual top-level folder the
-project owner created and shared, and is now the approved root. Other
-logical destinations under `DRIVE_FOLDER_IDS` besides `source_documents` and
-`source_documents.pdf` have not been independently re-verified against the
-live Drive tree and may need the same correction before their first real
-use.
+This repository previously recorded a narrower root (`10 - Source
+Documents`, ID `1p_-8Rc_g-D_-VHt0D_s4CQnfH2upL5Xh`) after a 2026-07-23 check
+found this ID unreachable -- but that check did not record which credential
+it ran as. A 2026-08-02 live check using the project owner's own OAuth token
+(the credential `ke-drive-backup-pilot` authenticates as) read this folder
+back successfully, confirmed it is not trashed, and confirmed it is the
+direct parent of both `10 - Source Documents` and `11 - Database Backups`.
+Widening the root to this folder does not invalidate `source_documents` or
+`source_documents.pdf` (they remain valid descendants, just one level
+deeper); it additionally allows the `database_backups.*` destinations used
+by `ke-drive-backup-pilot`, which previously fell outside the approved root
+entirely. Reachability from the separate service-account credential used by
+`ke-corpus-pdf-backup` has not been independently re-confirmed against this
+wider root -- only `source_documents` and `source_documents.pdf` are known
+to work for that credential specifically.
 
 All Knowledge Engine Drive writes must target a logical destination defined in `knowledge_engine.drive_boundary.DRIVE_FOLDER_IDS`. Callers must not accept an arbitrary folder ID, URL, or free-form path from an ingestion record.
 
