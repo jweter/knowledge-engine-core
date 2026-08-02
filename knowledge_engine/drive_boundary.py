@@ -39,6 +39,12 @@ _FOLDER_IDS = {
     "database_backups.sqlite": "1xwjJkIOn3ytt34hIvQGyXyJHwsPlGb3Z",
     "database_backups.postgres": "1cAFlDghrBi8RGsB8PjRFN0ooK7lre7OI",
     "database_backups.integrity_reports": "1DH13oQ72dyDw2TwzJd4TL68qD4nNnEpL",
+    # PLACEHOLDER -- not a real Drive folder ID yet. `corpus_library_drive_backup.py`
+    # (2026-08-02) needs a real folder created under the "Knowledge Engine" root
+    # (e.g. "12 - Corpus Library", matching the existing "10 -"/"11 -" numbering)
+    # before it can run for real; this deliberately-invalid placeholder makes
+    # that unmistakable by failing closed rather than silently pointing anywhere.
+    "corpus_library.snapshot": "REPLACE_WITH_REAL_DRIVE_FOLDER_ID",
     "extracted_data": "1S-OocrFBEsmW4OoZcoJ_mQXu-TMm2TJ0",
     "extracted_data.text": "1hcykYrce0BXuzaXCbVad6xP4QMgMr0Qn",
     "extracted_data.metadata": "1Q6mXH1hTaSE6EoTzISJR5QU85xMdzZvw",
