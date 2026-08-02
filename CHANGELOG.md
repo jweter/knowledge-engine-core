@@ -7,17 +7,31 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Drive backup pilot: service accounts can't write here.** Confirmed
+  live: a bare Google service account has no Drive storage quota on a
+  personal (non-Workspace) account -- reads work (ACL sharing), every
+  write failed with `403 storageQuotaExceeded`. Replaced the
+  service-account auth just added for `ke-drive-backup-pilot` with a
+  stored OAuth refresh-token credential
+  (`KNOWLEDGE_ENGINE_GOOGLE_OAUTH_REFRESH_CREDENTIALS`/`--credentials`)
+  that authenticates as the human account's own identity instead -- the
+  one that actually owns the quota -- via the standard `refresh_token`
+  grant, so routine runs still need no interactive step. New
+  `knowledge_engine.google_drive_oauth_refresh` module. `ke-corpus-pdf-backup`
+  still uses a service account and likely has the same latent bug,
+  undiscovered because nothing had exercised a real write live -- not
+  fixed here, flagged for its own follow-up.
+
 ### Added
 
-- **Drive backup pilot: unattended-safe.** `ke-drive-backup-pilot` now
-  authenticates with a Google service-account key
-  (`KNOWLEDGE_ENGINE_GOOGLE_SERVICE_ACCOUNT`/`--credentials`, minting a
-  fresh short-lived token per run) instead of a manually-pasted OAuth
-  access token, and implements ambiguous-upload orphan reconciliation:
-  on any upload failure, it lists the destination folder and matches
-  candidate orphans by exact name, byte count, content SHA-256, and the
-  run's own time window. A single match is deleted automatically before
-  the failure propagates; more than one match raises a new
+- **Drive backup pilot: unattended-safe.** `ke-drive-backup-pilot`
+  implements ambiguous-upload orphan reconciliation: on any upload
+  failure, it lists the destination folder and matches candidate
+  orphans by exact name, byte count, content SHA-256, and the run's own
+  time window. A single match is deleted automatically before the
+  failure propagates; more than one match raises a new
   `AmbiguousOrphanError` naming every candidate instead of guessing.
   Both preconditions `docs/google_drive_backup_pilot.md` gated recurring
   automation on are now met.

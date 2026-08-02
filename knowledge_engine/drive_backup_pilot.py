@@ -18,20 +18,11 @@ from knowledge_engine.drive_adapter import (
 )
 from knowledge_engine.drive_boundary import DriveDestination, resolve_drive_destination
 from knowledge_engine.google_drive_http import GoogleDriveHttpTransport
-from knowledge_engine.google_drive_service_account import (
-    load_service_account_key,
+from knowledge_engine.google_drive_oauth_refresh import (
+    load_refresh_token_credentials,
     mint_access_token,
 )
 from knowledge_engine.sqlite_backup import create_sqlite_backup, verify_restored_snapshot
-
-# `drive.file` (least privilege) only covers files/folders the service account
-# itself created or that were explicitly opened via a Drive picker with this
-# app -- it does NOT cover a pre-existing folder a human shares with the
-# service account through ordinary Drive ACL sharing, which is exactly this
-# tool's real usage. Matches ke-corpus-pdf-backup's scope choice for the same
-# reason; ConstrainedDriveAdapter's destination allowlist remains the actual
-# write-safety boundary, not the OAuth scope.
-_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive"
 
 # Clock skew tolerance between this machine and Drive's server-recorded
 # createdTime when matching orphan candidates to this run's own uploads.
@@ -223,24 +214,26 @@ def main() -> None:
         type=Path,
         default=None,
         help=(
-            "Path to a Google service-account JSON key. Defaults to "
-            "KNOWLEDGE_ENGINE_GOOGLE_SERVICE_ACCOUNT if not given."
+            "Path to a stored OAuth refresh-token credentials file (client_id, "
+            "client_secret, refresh_token). Defaults to "
+            "KNOWLEDGE_ENGINE_GOOGLE_OAUTH_REFRESH_CREDENTIALS if not given. Not a "
+            "service-account key -- see docs/google_drive_backup_pilot.md for why."
         ),
     )
     arguments = parser.parse_args()
 
     credentials_path = arguments.credentials
     if credentials_path is None:
-        env_value = os.environ.get("KNOWLEDGE_ENGINE_GOOGLE_SERVICE_ACCOUNT", "")
+        env_value = os.environ.get("KNOWLEDGE_ENGINE_GOOGLE_OAUTH_REFRESH_CREDENTIALS", "")
         credentials_path = Path(env_value) if env_value else None
     if credentials_path is None:
         raise SystemExit(
-            "A service-account credentials path is required "
-            "(--credentials or KNOWLEDGE_ENGINE_GOOGLE_SERVICE_ACCOUNT)."
+            "OAuth refresh-token credentials are required "
+            "(--credentials or KNOWLEDGE_ENGINE_GOOGLE_OAUTH_REFRESH_CREDENTIALS)."
         )
 
-    key = load_service_account_key(credentials_path)
-    access_token = mint_access_token(key, scopes=(_DRIVE_SCOPE,))
+    refresh_credentials = load_refresh_token_credentials(credentials_path)
+    access_token = mint_access_token(refresh_credentials)
     transport = GoogleDriveHttpTransport(access_token=access_token)
     snapshot_id, manifest_id = run_drive_backup_pilot(
         source_database=arguments.database,
