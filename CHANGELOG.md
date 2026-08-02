@@ -45,6 +45,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `corpus_library.snapshot` in `knowledge_engine.drive_boundary`, pointing
   at a real "15 - Corpus Library" folder under the Knowledge Engine root.
 
+- **`ke-corpus-library-drive-restore`**: the pull side of the relay above --
+  lists the `corpus_library.snapshot` Drive folder, picks the most recently
+  created file, and downloads and imports it via
+  `import_corpus_library_compressed` (itself idempotent per paper). Skips
+  the download entirely when its SHA-256 matches a local marker file
+  recording the last snapshot this machine already imported, so a laptop
+  that's already current downloads nothing. Live-verified against the real
+  "15 - Corpus Library" snapshot: 150 real papers landed in a fresh empty
+  database on first run, re-running against that same database correctly
+  reported nothing to do, and running against the actual production
+  database correctly deduped all 150 as already present (that snapshot was
+  exported from this same database) while still exercising the real
+  download and verification path. Wired into `sync_corpus_graph.ps1`,
+  before `ke graph-citations-build` since it needs paper text already
+  present locally.
+
 ### Fixed
 
 - **Drive backup pilot: service accounts can't write here.** Confirmed
