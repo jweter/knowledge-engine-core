@@ -17,8 +17,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   committing a growing multi-hundred-MB snapshot to git on every corpus
   cycle permanently bloats the shared repository -- see
   `docs/corpus_library_drive_backup.md`. New allowlisted Drive destination
-  `corpus_library.snapshot` in `knowledge_engine.drive_boundary` (folder ID
-  pending manual Drive folder creation).
+  `corpus_library.snapshot` in `knowledge_engine.drive_boundary`, pointing
+  at a real "15 - Corpus Library" folder under the Knowledge Engine root.
 
 ### Fixed
 
