@@ -54,11 +54,17 @@ def create_sqlite_backup(
     snapshot_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        with (
-            sqlite3.connect(f"file:{source_path}?mode=ro", uri=True) as source,
-            sqlite3.connect(snapshot_path) as target,
-        ):
+        # See the matching note in inspect_sqlite_snapshot: sqlite3's own
+        # context manager never closes the connection, so close explicitly --
+        # the error path below unlinks snapshot_path, which Windows will
+        # refuse while `target` still holds it open.
+        source = sqlite3.connect(f"file:{source_path}?mode=ro", uri=True)
+        target = sqlite3.connect(snapshot_path)
+        try:
             source.backup(target)
+        finally:
+            target.close()
+            source.close()
         manifest = inspect_sqlite_snapshot(
             snapshot_path=snapshot_path,
             production_commit=production_commit,
@@ -85,7 +91,14 @@ def inspect_sqlite_snapshot(
         raise SQLiteBackupError("SQLite snapshot does not exist.")
     try:
         payload = snapshot_path.read_bytes()
-        with sqlite3.connect(f"file:{snapshot_path}?mode=ro", uri=True) as database:
+        # sqlite3.Connection's own context manager only commits/rolls back the
+        # transaction on exit -- it never closes the connection. Left open, the
+        # file handle survives the `with` block (until garbage collection gets
+        # to it), which is harmless on POSIX but blocks Windows from deleting
+        # the file immediately afterward, e.g. the caller's temp-directory
+        # cleanup. Close explicitly so the handle is released deterministically.
+        database = sqlite3.connect(f"file:{snapshot_path}?mode=ro", uri=True)
+        try:
             integrity_rows = database.execute("PRAGMA integrity_check").fetchall()
             integrity = "; ".join(str(row[0]) for row in integrity_rows)
             if integrity != "ok":
@@ -102,6 +115,8 @@ def inspect_sqlite_snapshot(
                 for table in COUNTED_TABLES
                 if table in known_tables
             }
+        finally:
+            database.close()
     except (OSError, sqlite3.Error) as exc:
         raise SQLiteBackupError("SQLite snapshot inspection failed.") from exc
 
