@@ -434,21 +434,32 @@ unblock `knowledge-engine-ai`'s next milestone (see "Question-first Ask
 experience" below), the same reason `ke evidence-report --format json`
 was added earlier.
 
-### Question-first Ask experience (in progress)
+### Question-first Ask experience (item 1 done)
 
-The project owner's next explicit priority, working down a five-item
-list in order: connect `knowledge-engine-web` + `knowledge-engine-ai` +
-`core` into one question-first "Ask" experience, instead of requiring a
-visitor to already understand this project's internal claims/graph
-navigation. **M63** (above) is the first piece: `core` now has a
-structured JSON contract for Evidence Intelligence, matching the one
-`ke evidence-report` already exposed, so `knowledge-engine-ai` can
-enrich retrieval results with each matched claim's real, already-computed
-Evidence Quality/Consensus/Claim Confidence numbers -- never a new
-cross-claim synthesis judgment, never a number this project hasn't
-already computed and stood behind elsewhere. Next: `knowledge-engine-ai`
-consumes it (retrieval + per-claim Evidence Intelligence, still zero LLM
-calls), then `knowledge-engine-web` adds the actual "Ask" page.
+The project owner's explicit five-item priority list, worked in order.
+**Item 1 -- connect `knowledge-engine-web` + `knowledge-engine-ai` +
+`core` into one question-first "Ask" experience** is done. **M63**
+(above) gave `core` a structured JSON contract for Evidence Intelligence,
+matching the one `ke evidence-report` already exposed.
+`knowledge-engine-ai`'s M2 then consumed it: `ke-ai ask` now enriches
+each retrieved claim with its real, already-computed Evidence
+Quality/Consensus/Claim Confidence numbers (`enriched_evidence_report`,
+still zero LLM calls) and gained its own `--format json`.
+`knowledge-engine-web`'s M2 shipped the actual page: `GET /ask` --
+retrieval over `core`'s own FTS5 index, ported (not imported, not shelled
+out to) into `knowledge_engine_web/retrieval.py`, each matched paper's
+evidence records shown with their Evidence Intelligence numbers where a
+graph claim exists. Never a new cross-claim synthesis judgment, never a
+number this project hasn't already computed and stood behind elsewhere.
+
+**Item 2 -- deepen the relationship graph before leaning on Claim
+Confidence publicly** is in progress. **M64** authored 4 more real
+`RelationshipRecord`s from the `M61` similarity-ranked worksheet, growing
+the graph from 7 to 11 relationship edges (see the M64 changelog entry
+above), and found a second duplicate evidence record while reviewing the
+worksheet (removed; see Removed in `CHANGELOG.md`). Items 3-5 (LLM-
+grounded synthesis, a real service boundary for `knowledge-engine-web`,
+an extraction-accuracy benchmark) remain not yet started.
 
 ### Planned: Reviewer & Evidence Intelligence Tooling
 
