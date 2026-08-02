@@ -9,6 +9,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Drive backup pilot: unattended-safe.** `ke-drive-backup-pilot` now
+  authenticates with a Google service-account key
+  (`KNOWLEDGE_ENGINE_GOOGLE_SERVICE_ACCOUNT`/`--credentials`, minting a
+  fresh short-lived token per run) instead of a manually-pasted OAuth
+  access token, and implements ambiguous-upload orphan reconciliation:
+  on any upload failure, it lists the destination folder and matches
+  candidate orphans by exact name, byte count, content SHA-256, and the
+  run's own time window. A single match is deleted automatically before
+  the failure propagates; more than one match raises a new
+  `AmbiguousOrphanError` naming every candidate instead of guessing.
+  Both preconditions `docs/google_drive_backup_pilot.md` gated recurring
+  automation on are now met.
+
 - **M64**: authored 4 more real `RelationshipRecord`s (2 `supports`, 2
   `contextualizes`), growing the graph from 7 to 11 relationship edges.
   Generated via `ke relationship-review-worksheet --rank-by-similarity

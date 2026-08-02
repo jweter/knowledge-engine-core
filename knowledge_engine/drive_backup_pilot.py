@@ -1,10 +1,12 @@
-"""Manual Google Drive backup-and-restore pilot."""
+"""Google Drive backup-and-restore pilot, safe for unattended/scheduled runs."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import tempfile
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Protocol
 
@@ -12,14 +14,47 @@ from knowledge_engine.drive_adapter import (
     ConstrainedDriveAdapter,
     DriveFileMetadata,
     DriveFolderMetadata,
+    VerifiedDriveUpload,
 )
-from knowledge_engine.drive_boundary import resolve_drive_destination
+from knowledge_engine.drive_boundary import DriveDestination, resolve_drive_destination
 from knowledge_engine.google_drive_http import GoogleDriveHttpTransport
+from knowledge_engine.google_drive_service_account import (
+    load_service_account_key,
+    mint_access_token,
+)
 from knowledge_engine.sqlite_backup import create_sqlite_backup, verify_restored_snapshot
+
+# `drive.file` (least privilege) only covers files/folders the service account
+# itself created or that were explicitly opened via a Drive picker with this
+# app -- it does NOT cover a pre-existing folder a human shares with the
+# service account through ordinary Drive ACL sharing, which is exactly this
+# tool's real usage. Matches ke-corpus-pdf-backup's scope choice for the same
+# reason; ConstrainedDriveAdapter's destination allowlist remains the actual
+# write-safety boundary, not the OAuth scope.
+_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive"
+
+# Clock skew tolerance between this machine and Drive's server-recorded
+# createdTime when matching orphan candidates to this run's own uploads.
+_RECONCILIATION_WINDOW_BUFFER = timedelta(minutes=5)
 
 
 class DriveBackupPilotError(RuntimeError):
     """Sanitized backup-pilot failure."""
+
+
+class AmbiguousOrphanError(DriveBackupPilotError):
+    """An ambiguous upload failure produced more than one orphan candidate.
+
+    A request can create a remote file even when the client never receives
+    the response, so a failed `adapter.upload()` call doesn't prove nothing
+    was written. Reconciliation lists the destination folder and matches on
+    exact name, byte count, content SHA-256, and this run's time window; a
+    single match is confidently this run's orphan and gets deleted
+    automatically. More than one match is not this run's alone to claim --
+    it could include an earlier, unrelated, still-wanted upload -- so nothing
+    is deleted and this error is raised instead, naming every candidate for
+    manual reconciliation.
+    """
 
 
 class DownloadingDriveTransport(Protocol):
@@ -29,9 +64,74 @@ class DownloadingDriveTransport(Protocol):
 
     def get_file_metadata(self, file_id: str) -> DriveFileMetadata: ...
 
+    def list_files(self, folder_id: str) -> list[DriveFileMetadata]: ...
+
     def download_bytes(self, file_id: str) -> bytes: ...
 
     def delete_file(self, file_id: str) -> None: ...
+
+
+def _created_at_or_after(created_time: str, threshold: datetime) -> bool:
+    try:
+        created = datetime.fromisoformat(created_time.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return created >= threshold
+
+
+def _reconcile_ambiguous_upload(
+    transport: DownloadingDriveTransport,
+    *,
+    destination: DriveDestination,
+    name: str,
+    payload: bytes,
+    run_started_at: datetime,
+) -> None:
+    """Delete the one orphan a failed, unconfirmed upload may have left behind."""
+
+    expected_hash = hashlib.sha256(payload).hexdigest()
+    window_start = run_started_at - _RECONCILIATION_WINDOW_BUFFER
+    candidates = [
+        entry
+        for entry in transport.list_files(destination.folder_id)
+        if entry.name == name
+        and entry.byte_count == len(payload)
+        and entry.sha256.casefold() == expected_hash
+        and _created_at_or_after(entry.created_time, window_start)
+    ]
+    if not candidates:
+        return
+    if len(candidates) > 1:
+        candidate_ids = ", ".join(sorted(entry.file_id for entry in candidates))
+        raise AmbiguousOrphanError(
+            f"Ambiguous upload failure for {name!r} produced {len(candidates)} matching "
+            f"candidate files ({candidate_ids}) -- reconcile manually before retrying."
+        )
+    transport.delete_file(candidates[0].file_id)
+
+
+def _upload_with_reconciliation(
+    adapter: ConstrainedDriveAdapter,
+    transport: DownloadingDriveTransport,
+    *,
+    destination: DriveDestination,
+    name: str,
+    payload: bytes,
+    run_started_at: datetime,
+) -> VerifiedDriveUpload:
+    """Upload one artifact; on failure, reconcile any orphan it may have left, then re-raise."""
+
+    try:
+        return adapter.upload(destination=destination, name=name, payload=payload)
+    except Exception:
+        _reconcile_ambiguous_upload(
+            transport,
+            destination=destination,
+            name=name,
+            payload=payload,
+            run_started_at=run_started_at,
+        )
+        raise
 
 
 def run_drive_backup_pilot(
@@ -43,6 +143,7 @@ def run_drive_backup_pilot(
 ) -> tuple[str, str]:
     """Upload and restore one verified bundle, compensating partial remote writes."""
 
+    run_started_at = datetime.now(UTC)
     output_directory.mkdir(parents=True, exist_ok=True)
     snapshot = output_directory / "knowledge-engine.sqlite"
     manifest_path = output_directory / "knowledge-engine.sqlite.manifest.json"
@@ -55,18 +156,26 @@ def run_drive_backup_pilot(
     manifest_path.write_bytes(manifest_bytes)
 
     uploaded_file_ids: list[str] = []
+    adapter = ConstrainedDriveAdapter(transport)
     try:
-        adapter = ConstrainedDriveAdapter(transport)
-        snapshot_upload = adapter.upload(
+        snapshot_payload = snapshot.read_bytes()
+        snapshot_upload = _upload_with_reconciliation(
+            adapter,
+            transport,
             destination=resolve_drive_destination("database_backups.sqlite"),
             name=snapshot.name,
-            payload=snapshot.read_bytes(),
+            payload=snapshot_payload,
+            run_started_at=run_started_at,
         )
         uploaded_file_ids.append(snapshot_upload.file_id)
-        manifest_upload = adapter.upload(
+
+        manifest_upload = _upload_with_reconciliation(
+            adapter,
+            transport,
             destination=resolve_drive_destination("database_backups.integrity_reports"),
             name=manifest_path.name,
             payload=manifest_bytes,
+            run_started_at=run_started_at,
         )
         uploaded_file_ids.append(manifest_upload.file_id)
 
@@ -74,6 +183,8 @@ def run_drive_backup_pilot(
             restored = Path(temporary_directory) / snapshot.name
             restored.write_bytes(transport.download_bytes(snapshot_upload.file_id))
             verify_restored_snapshot(snapshot_path=restored, manifest=manifest)
+    except AmbiguousOrphanError:
+        raise
     except Exception as exc:
         cleanup_failed = _delete_uploaded_files(transport, uploaded_file_ids)
         if cleanup_failed:
@@ -103,15 +214,34 @@ def _delete_uploaded_files(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Run one explicit Knowledge Engine Drive backup pilot."
-    )
+    parser = argparse.ArgumentParser(description="Run one Knowledge Engine Drive backup pilot.")
     parser.add_argument("--database", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--production-commit", required=True)
+    parser.add_argument(
+        "--credentials",
+        type=Path,
+        default=None,
+        help=(
+            "Path to a Google service-account JSON key. Defaults to "
+            "KNOWLEDGE_ENGINE_GOOGLE_SERVICE_ACCOUNT if not given."
+        ),
+    )
     arguments = parser.parse_args()
-    token = os.environ.get("KNOWLEDGE_ENGINE_GOOGLE_DRIVE_ACCESS_TOKEN", "")
-    transport = GoogleDriveHttpTransport(access_token=token)
+
+    credentials_path = arguments.credentials
+    if credentials_path is None:
+        env_value = os.environ.get("KNOWLEDGE_ENGINE_GOOGLE_SERVICE_ACCOUNT", "")
+        credentials_path = Path(env_value) if env_value else None
+    if credentials_path is None:
+        raise SystemExit(
+            "A service-account credentials path is required "
+            "(--credentials or KNOWLEDGE_ENGINE_GOOGLE_SERVICE_ACCOUNT)."
+        )
+
+    key = load_service_account_key(credentials_path)
+    access_token = mint_access_token(key, scopes=(_DRIVE_SCOPE,))
+    transport = GoogleDriveHttpTransport(access_token=access_token)
     snapshot_id, manifest_id = run_drive_backup_pilot(
         source_database=arguments.database,
         output_directory=arguments.output_dir,
