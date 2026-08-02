@@ -6,15 +6,20 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
-# Live verification against the real Drive tree (2026-07-23) found the
-# previous root ID unreachable -- it does not correspond to any folder the
-# project's service account can see. "source_documents" ("10 - Source
-# Documents") is the actual top-level folder the project owner created and
-# shared; its own children (e.g. "source_documents.pdf") verify correctly
-# beneath it. Other logical names below this root have not been independently
-# re-verified against the live Drive tree and may need the same correction
-# before their first real use.
-KNOWLEDGE_ENGINE_DRIVE_ROOT_ID = "1p_-8Rc_g-D_-VHt0D_s4CQnfH2upL5Xh"
+# The 2026-07-23 check that flagged this ID unreachable did not record which
+# credential it ran as. A 2026-08-02 live check with the project owner's own
+# OAuth token (the credential `ke-drive-backup-pilot` actually authenticates
+# as) reads this folder back successfully: it is real, not trashed, and is
+# the direct parent of both "10 - Source Documents" and "11 - Database
+# Backups" -- i.e. the actual top-level Knowledge Engine project folder, one
+# level above what this constant previously pointed at. Widening the root
+# here only ever permits more descendants through `verify_destination`'s
+# ancestry walk; it cannot invalidate a destination that already verified
+# under the narrower root. Reachability from the separate service-account
+# credential (`ke-corpus-pdf-backup`'s auth path) has not been independently
+# re-confirmed against this wider root -- only "source_documents" and
+# "source_documents.pdf" are.
+KNOWLEDGE_ENGINE_DRIVE_ROOT_ID = "1ygxvhp7eEmU55LkmyrE0G3XjUMkagUjX"
 
 _FOLDER_IDS = {
     "source_manifests": "1rWlSmnsuGyO4LZIaVpP1hIWcqWzFO8rQ",
