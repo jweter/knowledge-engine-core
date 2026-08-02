@@ -426,7 +426,29 @@ facts the graph already stores -- rather than an arbitrary order, so
 review effort goes where it already has visible impact on Evidence
 Quality/Claim Confidence scores first. Never a judgment about a
 record's own content or accuracy; that is what the review itself is
-for.
+for. **M63** added `ke evidence-intelligence --format json`, the
+structured sibling of that command's existing Markdown report -- no new
+computation, just a versioned JSON shape (`schema_version: 1`) a
+programmatic consumer can parse instead of scraping prose. Built to
+unblock `knowledge-engine-ai`'s next milestone (see "Question-first Ask
+experience" below), the same reason `ke evidence-report --format json`
+was added earlier.
+
+### Question-first Ask experience (in progress)
+
+The project owner's next explicit priority, working down a five-item
+list in order: connect `knowledge-engine-web` + `knowledge-engine-ai` +
+`core` into one question-first "Ask" experience, instead of requiring a
+visitor to already understand this project's internal claims/graph
+navigation. **M63** (above) is the first piece: `core` now has a
+structured JSON contract for Evidence Intelligence, matching the one
+`ke evidence-report` already exposed, so `knowledge-engine-ai` can
+enrich retrieval results with each matched claim's real, already-computed
+Evidence Quality/Consensus/Claim Confidence numbers -- never a new
+cross-claim synthesis judgment, never a number this project hasn't
+already computed and stood behind elsewhere. Next: `knowledge-engine-ai`
+consumes it (retrieval + per-claim Evidence Intelligence, still zero LLM
+calls), then `knowledge-engine-web` adds the actual "Ask" page.
 
 ### Planned: Reviewer & Evidence Intelligence Tooling
 

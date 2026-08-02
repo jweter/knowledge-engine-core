@@ -73,6 +73,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   relationship candidate pair, which ranks above everything else. Never
   a judgment about a record's own content or accuracy -- purely about
   where review effort already has visible impact.
+- **M63**: `ke evidence-intelligence --format json`, the structured,
+  machine-readable sibling of the existing Markdown report -- same
+  Evidence Quality/Consensus/Claim Confidence/Coverage numbers as a
+  versioned JSON object (`schema_version: 1`) instead of prose, for a
+  consumer (starting with `knowledge-engine-ai`) that needs to parse
+  results programmatically rather than scrape text. Same reasoning `ke
+  evidence-report --format json` was added for; no new computation, only
+  a new output shape.
 
 ### Removed
 

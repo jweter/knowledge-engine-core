@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 import tempfile
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, cast
@@ -15,8 +17,8 @@ from rich.table import Table
 
 from knowledge_engine.candidate_review import CandidateReviewError, prepare_candidate_review
 from knowledge_engine.citation_extraction import find_cited_dois
+from knowledge_engine.cli import ReportFormatOption, console
 from knowledge_engine.cli import app as app
-from knowledge_engine.cli import console
 from knowledge_engine.config import build_settings
 from knowledge_engine.core_candidate_review import (
     CoreCandidateReviewError,
@@ -66,6 +68,10 @@ from knowledge_engine.europepmc_discovery import (
 from knowledge_engine.europepmc_discovery import GetTransport as EuropePmcGetTransport
 from knowledge_engine.europepmc_http import UrllibEuropePmcTransport
 from knowledge_engine.evidence_intelligence import (
+    ClaimConfidence,
+    EvidenceConsensus,
+    EvidenceCoverage,
+    EvidenceQuality,
     compute_claim_confidence,
     compute_evidence_consensus,
     compute_evidence_coverage,
@@ -3226,19 +3232,28 @@ def graph_unconfirmed_claims(
     console.print(report, markup=False)
 
 
-def _build_evidence_intelligence_report(
+@dataclass(frozen=True)
+class _ComputedEvidenceIntelligence:
+    """One claim's fully computed Evidence Intelligence numbers, shared by Markdown/JSON output."""
+
+    claim_id: int
+    quality: EvidenceQuality
+    consensus: EvidenceConsensus
+    confidence: ClaimConfidence
+    coverage: EvidenceCoverage
+
+
+def _compute_evidence_intelligence(
     graph_repository: GraphRepository,
     evidence_records_by_id: dict[str, dict[str, Any]],
     evidence_record_id: str,
-) -> str:
-    """Build a Markdown Evidence Intelligence report for one claim.
+) -> _ComputedEvidenceIntelligence:
+    """Compute Evidence Quality, Consensus, Claim Confidence, and Coverage for one claim.
 
-    See `docs/evidence_intelligence_design.md`. Computes Evidence Quality,
-    Evidence Consensus, Claim Confidence, and Evidence Coverage
-    deterministically from already-stored `EvidenceRecord`/
-    `RelationshipRecord` fields -- no LLM, nothing invented. The three
-    confidence numbers are always rendered as three separate fields, never
-    collapsed into one, per that document's explicit requirement.
+    See `docs/evidence_intelligence_design.md`. Deterministic from already-stored
+    `EvidenceRecord`/`RelationshipRecord` fields -- no LLM, nothing invented.
+    Exits with an error (never a guessed/partial result) if the evidence
+    record or its graph claim cannot be found.
     """
 
     record = evidence_records_by_id.get(evidence_record_id)
@@ -3291,6 +3306,36 @@ def _build_evidence_intelligence_report(
         total_records=total_records, records_in_relationship=records_in_relationship
     )
 
+    return _ComputedEvidenceIntelligence(
+        claim_id=claim.id,
+        quality=quality,
+        consensus=consensus,
+        confidence=confidence,
+        coverage=coverage,
+    )
+
+
+def _build_evidence_intelligence_report(
+    graph_repository: GraphRepository,
+    evidence_records_by_id: dict[str, dict[str, Any]],
+    evidence_record_id: str,
+) -> str:
+    """Build a Markdown Evidence Intelligence report for one claim.
+
+    See `docs/evidence_intelligence_design.md`. The three confidence
+    numbers are always rendered as three separate fields, never collapsed
+    into one, per that document's explicit requirement.
+    """
+
+    computed = _compute_evidence_intelligence(
+        graph_repository, evidence_records_by_id, evidence_record_id
+    )
+    claim_id = computed.claim_id
+    quality = computed.quality
+    consensus = computed.consensus
+    confidence = computed.confidence
+    coverage = computed.coverage
+
     lines = [
         "# Knowledge Engine Evidence Intelligence Report",
         "",
@@ -3299,7 +3344,7 @@ def _build_evidence_intelligence_report(
         "## Claim",
         "",
         f"- Evidence record ID: {_graph_report_text(evidence_record_id)}",
-        f"- Graph claim ID: {claim.id}",
+        f"- Graph claim ID: {claim_id}",
         "",
         "## Evidence Quality",
         "",
@@ -3354,12 +3399,75 @@ def _build_evidence_intelligence_report(
     return "\n".join(lines)
 
 
+def _build_evidence_intelligence_json(
+    graph_repository: GraphRepository,
+    evidence_records_by_id: dict[str, dict[str, Any]],
+    evidence_record_id: str,
+) -> dict[str, Any]:
+    """Build a structured JSON Evidence Intelligence report for one claim.
+
+    Same computation as `_build_evidence_intelligence_report`'s Markdown
+    output, as a JSON object instead of prose -- for a consumer that needs
+    to parse results programmatically (e.g. `knowledge-engine-ai`), the
+    same reasoning `ke evidence-report --format json` was added for. Fields
+    match the Markdown report's sections; nothing here is computed
+    differently or invented.
+    """
+
+    computed = _compute_evidence_intelligence(
+        graph_repository, evidence_records_by_id, evidence_record_id
+    )
+    quality = computed.quality
+    consensus = computed.consensus
+    confidence = computed.confidence
+    coverage = computed.coverage
+
+    return {
+        "schema_version": 1,
+        "evidence_record_id": evidence_record_id,
+        "claim_id": computed.claim_id,
+        "evidence_quality": {
+            "score": quality.score,
+            "study_design_tier": quality.study_design_tier,
+            "manually_reviewed": quality.manually_reviewed,
+        },
+        "evidence_consensus": {
+            "relationship_edge_count": consensus.relationship_edge_count,
+            "supports_count": consensus.supports_count,
+            "contradicts_count": consensus.contradicts_count,
+            "agreement_total": consensus.agreement_total,
+            "score": consensus.score,
+            "reliability": consensus.reliability,
+        },
+        "claim_confidence": {
+            "score": confidence.score,
+            "reliability": confidence.reliability,
+        },
+        "evidence_coverage": {
+            "records_in_relationship": coverage.records_in_relationship,
+            "total_records": coverage.total_records,
+            "percentage": coverage.percentage,
+        },
+        "synthesis": render_synthesis(
+            consensus=consensus, quality=quality, confidence=confidence, coverage=coverage
+        ),
+        "scope_note": (
+            "Every number above is computed deterministically from already-stored "
+            "EvidenceRecord/RelationshipRecord fields -- no LLM, nothing invented or "
+            "inferred beyond what is already stored. evidence_quality, "
+            "evidence_consensus, and claim_confidence are three separate numbers and "
+            "must never be read as one collapsed score."
+        ),
+    }
+
+
 @app.command("evidence-intelligence")
 def evidence_intelligence(
     evidence: EvidenceIntelligenceEvidenceOption,
     evidence_record_id: EvidenceIntelligenceEvidenceRecordIdOption,
     output: GraphReportOutputOption = None,
     force: ForceOutputOption = False,
+    report_format: ReportFormatOption = "markdown",
 ) -> None:
     """Compute deterministic Evidence Quality, Consensus, and Claim Confidence for one claim.
 
@@ -3372,8 +3480,14 @@ def evidence_intelligence(
     edges (`supports`/`contradicts`/`qualifies`/`contextualizes`) honestly
     shows Evidence Consensus and Claim Confidence as "not yet assessable"
     rather than a guessed score. Scoped to exactly the
-    `clinical_medicine_v1` profile.
+    `clinical_medicine_v1` profile. `--format json` is the structured,
+    machine-readable sibling of the default Markdown report, for a
+    consumer (e.g. `knowledge-engine-ai`) that needs to parse results
+    programmatically rather than scrape prose.
     """
+
+    if report_format not in ("markdown", "json"):
+        raise typer.BadParameter("--format must be 'markdown' or 'json'.")
 
     if output is not None:
         _validate_output(output, force=force)
@@ -3391,13 +3505,31 @@ def evidence_intelligence(
 
     with database.session() as session:
         graph_repository = GraphRepository(session)
-        report = _build_evidence_intelligence_report(
-            graph_repository, evidence_records_by_id, evidence_record_id
-        )
+        if report_format == "json":
+            report = (
+                json.dumps(
+                    _build_evidence_intelligence_json(
+                        graph_repository, evidence_records_by_id, evidence_record_id
+                    ),
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+        else:
+            report = _build_evidence_intelligence_report(
+                graph_repository, evidence_records_by_id, evidence_record_id
+            )
 
     if output is not None:
         _write_output(output, report)
         console.print(f"[green]Wrote evidence intelligence report:[/green] {output}")
+        return
+
+    if report_format == "json":
+        # Avoid Rich's word-wrapping corrupting JSON output with inserted
+        # newlines, matching `ke evidence-report --format json`'s same fix.
+        sys.stdout.write(report)
         return
 
     console.print(report, markup=False)
