@@ -429,3 +429,28 @@ a new batch, would close this gap; not built here, since it is a
 process/tooling change beyond what one growth batch's correction should
 unilaterally decide, the same reasoning `retstart=2000`'s
 `evaluate_scientific_scope` open follow-up above already applied.
+
+The `retstart=3550` cycle (2026-08-03) was this corpus's first run of
+M55's `ke discovery-cycle-run` against a real, previously-empty
+`discovery_state.json`/`rejected_candidates.csv` pair (both seeded this
+run): 50 candidates discovered, 17 deterministically accepted, 0 already
+in the ledger (nothing had been logged yet). The manual scope screen
+this project has always required before acquisition found all 17 were
+exclusions, not net-new evidence: cross-checking each accepted PMID
+against `sources.csv` (the open follow-up above, finally closed for real
+by this cycle) caught 15 as exact-PMID pagination-drift duplicates
+already present in the corpus -- PubMed's `sort=pub_date` ordering
+shifting the same records to a different page under `retstart=3550`,
+the same failure mode the `retstart=3000`/`retstart=3250` batches
+documented, now caught before acquisition instead of after. The
+remaining 2 were genuinely off-target: an ovarian-cancer
+chemoresistance/circadian-rhythm study (no obesity/T2D/metabolic-
+syndrome scope term or named metabolic-disease treatment) and a
+knowledge/attitudes/practices diabetes survey naming no treatment or
+intervention. All 17 recorded in the newly-seeded
+`rejected_candidates.csv` ledger with PMID-level provenance -- the first
+real population of the M53 ledger this corpus has had. Zero net-new
+papers accepted or imported this cycle; corpus remains at 951, 49 below
+the 1,000-paper cap. `discovery_state.json` advanced to
+`next_retstart: 3600` regardless, so the next scheduled cycle resumes
+from the correct page rather than rescanning this one.
