@@ -170,6 +170,16 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   own roadmap doc still listed it as unbuilt. Documentation sync only,
   no code change in this repo.
 
+- **`docs/roadmap.md`** and **`docs/future_ideas.md`**: marked the
+  remaining three "Planned: Reviewer & Evidence Intelligence Tooling"
+  items done -- the live confidence-gauge visual (`knowledge-engine-web`
+  PR #22), the "what changed" report (PR #23), and the side-by-side
+  relationship-candidate compare page (`GET
+  /relationship-candidates/{a}/{b}`, PR pending) -- all shipped in
+  `knowledge-engine-web` but this repo's own docs still listed them as
+  unbuilt or not yet scheduled. Documentation sync only, no code change
+  in this repo.
+
 - **M65 follow-up: `study_type` vocabulary-granularity question
   resolved as accepted (naming only), `classify_study_type` unchanged.**
   Investigated by running the real classifier against the actual
