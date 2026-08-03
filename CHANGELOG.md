@@ -7,6 +7,41 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **M68: automated evidence-record review, batch 1.** Continuing
+  `docs/future_ideas.md`'s "Reviewer Tooling" backlog (122 automated
+  `m52-evidence-classification-v1` records, unreviewed). Used `ke
+  evidence-review-queue` to prioritize the top 5 tier-2 candidates, then
+  read each source paper's full text (via `paper_pages`) before touching
+  any field. Two records checked out as genuinely mangled: the automated
+  classifier had pulled unrelated boilerplate (article metadata,
+  adjacent unrelated sentences) into `population`/`intervention`/
+  `comparator` fields, and one record's `claim_text` stated only a
+  baseline demographic sentence, missing the paper's actual reported
+  result and its negative primary endpoint entirely. Corrected PICO
+  fields, `claim_text`, `result_summary`, `evidence_direction`, and
+  `limitations` for 3 records against the real source text (an
+  Akkermansia-muciniphila RCT, a GLP-1/chronic-venous-insufficiency
+  retrospective cohort, and a SiPore21 glycaemic-control RCT), flipped
+  `extraction_method` to `manual_human_review` with a populated
+  `review_checklist`. Evidence Quality scores moved from largely
+  boilerplate-driven values to source-grounded ones: 31->94, 69->94,
+  62->69. Along the way, checked whether these (and 2 other top-5
+  candidates: an SGLT2-inhibitor real-world study and a PCOS
+  lifestyle-dropout trial, neither mentioning GLP-1) were off-target for
+  the corpus -- they are not: `data/corpora/glp1_weight_loss/inclusion_criteria.md`
+  confirms this is the "Obesity and Metabolic-Disease Therapeutics
+  Corpus," scoped to obesity/T2D/metabolic-syndrome therapeutics
+  generally, with GLP-1 retained only as its first named subtopic, so a
+  literal-GLP-1-mention heuristic is not a valid scope proxy. Graph
+  rebuilt for the 3 corrected claims only (`ke graph-build`'s M54
+  incremental design skips already-persisted claims, so their stale
+  `graph_claims`/`graph_claim_concepts` rows were cleared first): 3 new
+  claim-concept links resolved, 151 claims unchanged, all 17
+  relationship edges intact (none touch these 3 claims). Automated
+  backlog: 121 -> 118 of 154 records.
+
 ### Fixed
 
 - **`corpus_library.py`: leaked SQLAlchemy engines break Windows.** Found
