@@ -11,9 +11,10 @@ endpoint got the paper's overall enrolled-population sentence glued onto
 it, and vice versa.
 
 This module's fix is narrow and specific: extract PICO fields **per
-candidate**, scoped to that candidate's own local context (its own page
-text), not the whole paper -- the same fix the M69 decision doc's
-"narrowest fix" recommendation names. It does not replace
+candidate**, scoped to bounded local context (the claim page plus page 1
+when they differ), not the whole paper. The page-1 addition is an M69
+follow-up for terse result sentences whose study framing lives in the
+title/abstract. It does not replace
 `knowledge_engine.extraction.pico.extract_pico` (still used by the
 deterministic M17-M28 draft-generation pipeline); it is a separate,
 additive extraction path for M69's automated-review pipeline, used to
@@ -28,7 +29,9 @@ judges what a claim *means* (`core`'s "never decide truth" seam is
 unchanged); it only asks the local model to locate PICO-relevant spans
 inside a page it has already been given, the same paper-intrinsic
 extraction M28 already does, with an LLM as a better pattern-matcher and a
-deterministic grounding check as the safety net.
+deterministic grounding check as the safety net. The v1 provenance label
+remains recognized for records produced before the bounded page-1 follow-up;
+newly accepted records use v2.
 """
 
 from __future__ import annotations
@@ -45,30 +48,37 @@ from knowledge_engine.extraction.grounding import (
 )
 from knowledge_engine.llm import LocalLLM, LocalLLMError
 
-LLM_GROUNDED_PICO_RULES_VERSION = "m69-llm-grounded-pico-v1"
+LLM_GROUNDED_PICO_RULES_VERSION = "m69-llm-grounded-pico-v2"
+LLM_GROUNDED_PICO_RULES_VERSIONS = frozenset(
+    {"m69-llm-grounded-pico-v1", LLM_GROUNDED_PICO_RULES_VERSION}
+)
 
 _FIELD_NAMES = ("population", "intervention", "comparator", "outcome")
 
-_PROMPT_TEMPLATE = """You are extracting facts from one page of a clinical \
-research paper. You will be shown one specific finding (the "claim \
-sentence") and the full page it came from.
+_PROMPT_TEMPLATE = """You are extracting facts from bounded source context \
+from one clinical research paper. You will be shown one specific finding \
+(the "claim sentence"), the full page it came from, and sometimes page 1 \
+of the same paper for title/abstract study framing.
 
-Your task: find the sentence(s) elsewhere on this same page, if any, that \
+Your task: find the sentence(s) in the provided source context, if any, that \
 state the paper's Population, Intervention, Comparator, and Outcome \
 relevant to that claim.
 
 Rules:
-- Quote the source page's own wording as closely as possible. Do not \
+- Quote the provided source pages' own wording as closely as possible. Do not \
 paraphrase, summarize, or invent.
-- If a field is not stated anywhere on this page, use an empty string "" \
+- If a field is not stated anywhere in the provided source context, use an \
+empty string "" \
 for it. Never guess.
 - Respond with ONLY a JSON object, no other text, in exactly this shape:
 {{"population": "...", "intervention": "...", "comparator": "...", "outcome": "..."}}
 
 Claim sentence: {claim_sentence}
 
-Full page text:
-{page_text}
+Claim page text:
+{claim_page_text}
+
+{first_page_context}
 
 JSON:"""
 
@@ -103,10 +113,11 @@ def extract_pico_for_candidate(
     candidate: ClaimCandidate,
     page_text: str,
     *,
+    paper_first_page_text: str | None = None,
     min_similarity: float = DEFAULT_MIN_SIMILARITY,
     max_tokens: int = 600,
 ) -> LlmGroundedPico:
-    """Extract PICO fields for one claim candidate, scoped to its own page.
+    """Extract PICO fields from the claim page and, when supplied, page 1.
 
     Never raises on a malformed or empty LLM response, or on the LLM being
     unreachable -- every field simply comes back ungrounded
@@ -116,7 +127,26 @@ def extract_pico_for_candidate(
     overwrite it with nothing).
     """
 
-    prompt = _PROMPT_TEMPLATE.format(claim_sentence=candidate.sentence_text, page_text=page_text)
+    additional_first_page = (
+        paper_first_page_text
+        if paper_first_page_text is not None and paper_first_page_text.strip()
+        else None
+    )
+    first_page_context = (
+        f"Paper page 1 text:\n{additional_first_page}"
+        if additional_first_page is not None
+        else "No additional page 1 context was provided."
+    )
+    prompt = _PROMPT_TEMPLATE.format(
+        claim_sentence=candidate.sentence_text,
+        claim_page_text=page_text,
+        first_page_context=first_page_context,
+    )
+    grounding_context = (
+        f"{page_text}\n\n{additional_first_page}"
+        if additional_first_page is not None
+        else page_text
+    )
     try:
         raw_response = llm.generate(prompt, max_tokens=max_tokens)
     except LocalLLMError:
@@ -130,7 +160,7 @@ def extract_pico_for_candidate(
         if not proposed_text or not proposed_text.strip():
             grounded_fields[field_name] = GroundedField(value=None, grounding=None)
             continue
-        result = verify_grounding(proposed_text, page_text, min_similarity=min_similarity)
+        result = verify_grounding(proposed_text, grounding_context, min_similarity=min_similarity)
         grounded_fields[field_name] = GroundedField(
             value=proposed_text.strip() if result.grounded else None,
             grounding=result,

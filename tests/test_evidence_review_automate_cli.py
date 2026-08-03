@@ -50,6 +50,36 @@ def _database(tmp_path: Path) -> Database:
     return database
 
 
+def _two_page_database(tmp_path: Path) -> Database:
+    first_page = "Adults with obesity were randomized to oral semaglutide or placebo."
+    claim_page = "Mean body weight decreased by 8.4% in the treatment group."
+    database = Database(
+        Settings(
+            project_root=tmp_path,
+            data_dir=tmp_path / "data",
+            database_url=f"sqlite:///{tmp_path / 'source'}.sqlite3",
+        )
+    )
+    database.initialize()
+    parsed = ParsedPaper(
+        source_path=tmp_path / "paper.pdf",
+        content_hash="b" * 64,
+        title="An oral semaglutide trial",
+        doi="10.1000/cross-page",
+        page_count=2,
+        word_count=len(f"{first_page} {claim_page}".split()),
+        raw_text=f"{first_page}\n\n{claim_page}",
+        body_text=f"{first_page}\n\n{claim_page}",
+        pages=[
+            ParsedPage(page_number=1, text=first_page),
+            ParsedPage(page_number=2, text=claim_page),
+        ],
+    )
+    with database.session() as session:
+        PaperRepository(session).add_parsed_paper(parsed)
+    return database
+
+
 class _FakeLLM:
     def __init__(self, *, model: str, host: str) -> None:
         self.model = model
@@ -60,6 +90,17 @@ class _FakeLLM:
             '{"population": "A total of 318 participants were enrolled.", '
             '"intervention": "Participants received SiPore21 or a matching placebo '
             'for 12 weeks.", "comparator": "", "outcome": ""}'
+        )
+
+
+class _CrossPageFakeLLM(_FakeLLM):
+    def generate(self, prompt: str, *, max_tokens: int = 400) -> str:
+        assert "Mean body weight decreased by 8.4%" in prompt
+        assert "Adults with obesity were randomized" in prompt
+        return (
+            '{"population": "Adults with obesity", '
+            '"intervention": "oral semaglutide", "comparator": "placebo", '
+            '"outcome": "Mean body weight decreased by 8.4%"}'
         )
 
 
@@ -113,6 +154,36 @@ def test_evidence_review_automate_grounds_fields_and_rewrites_the_file(
     )
     assert updated["review_checklist"]["llm_grounded"] is True
     assert updated["review_checklist"]["human_reviewed"] is False
+
+
+def test_evidence_review_automate_uses_page_one_with_a_later_claim_page(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _two_page_database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    monkeypatch.setattr(entrypoint, "OllamaLLM", _CrossPageFakeLLM)
+    record = _automated_record(
+        claim_text="Mean body weight decreased by 8.4% in the treatment group.",
+        source_span={"paper_id": 1, "page_number": 2, "section": "results"},
+    )
+    evidence_path = tmp_path / "evidence_records.jsonl"
+    evidence_path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "evidence-review-automate",
+            "--evidence",
+            str(evidence_path),
+            "--model",
+            "fake-model",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    updated = json.loads(evidence_path.read_text(encoding="utf-8").strip())
+    assert updated["population"] == "Adults with obesity"
+    assert updated["intervention"] == "oral semaglutide"
 
 
 def test_evidence_review_automate_dry_run_does_not_write(
@@ -189,6 +260,39 @@ def test_evidence_review_automate_skips_a_human_reviewed_checklist_record(
             _automated_record(
                 extraction_method="m52-evidence-classification-v1",
                 review_checklist={"human_reviewed": True},
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "evidence-review-automate",
+            "--evidence",
+            str(evidence_path),
+            "--model",
+            "fake-model",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Automated records still eligible: 0" in _unwrapped(result.output)
+
+
+def test_evidence_review_automate_does_not_reprocess_m69_v1_records(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    monkeypatch.setattr(entrypoint, "OllamaLLM", _FakeLLM)
+    evidence_path = tmp_path / "evidence_records.jsonl"
+    evidence_path.write_text(
+        json.dumps(
+            _automated_record(
+                extraction_method="m69-llm-grounded-pico-v1",
+                review_checklist={"llm_grounded": True},
             )
         )
         + "\n",

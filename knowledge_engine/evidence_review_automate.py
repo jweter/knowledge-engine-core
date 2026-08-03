@@ -5,8 +5,7 @@ at scale" replaces the human-reading review gate with a grounding-verified
 LLM extraction path. This module is the batch driver: for each still-automated
 `EvidenceRecord`, it re-derives `population`/`intervention`/`comparator`/
 `outcome` per candidate (via `knowledge_engine.extraction.llm_grounded_pico`,
-scoped to the claim's own source page -- the fix for the PICO-broadcast
-bug M68 found by hand), accepts only fields that pass
+scoped to the claim page plus page 1 when they differ), accepts only fields that pass
 `knowledge_engine.extraction.grounding.verify_grounding`, and honestly
 labels the result. It never touches `claim_text`, `research_question`, or
 `evidence_direction` -- those stay on their existing deterministic path,
@@ -61,6 +60,7 @@ def automate_review_for_record(
     record: dict[str, Any],
     page_text: str | None,
     *,
+    paper_first_page_text: str | None = None,
     min_similarity: float = DEFAULT_MIN_SIMILARITY,
 ) -> AutomatedReviewResult:
     """Run the LLM-grounded PICO pipeline for one automated `EvidenceRecord`.
@@ -100,7 +100,11 @@ def automate_review_for_record(
     )
 
     extraction = extract_pico_for_candidate(
-        llm, candidate, page_text, min_similarity=min_similarity
+        llm,
+        candidate,
+        page_text,
+        paper_first_page_text=paper_first_page_text,
+        min_similarity=min_similarity,
     )
 
     grounded_fields: list[str] = []
@@ -131,8 +135,9 @@ def automate_review_for_record(
     record["review_checklist"] = merged_checklist
     record["review_notes"] = (
         "M69 automated review: LLM-proposed PICO fields "
-        f"({', '.join(grounded_fields)}) verified against the source "
-        "page text before being accepted; any field that failed grounding "
+        f"({', '.join(grounded_fields)}) verified against bounded source "
+        "context (the claim page plus page 1 when different) before being "
+        "accepted; any field that failed grounding "
         "was left unchanged. No human read this record."
     )
 

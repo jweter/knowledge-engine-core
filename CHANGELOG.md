@@ -63,6 +63,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **M69 follow-up: bounded cross-page PICO context.** The first full
+  automated-review backlog pass left 21 records on the M52 extraction
+  method because their terse result sentences were correctly tagged to
+  pages that did not repeat the paper's population/intervention framing.
+  `ke evidence-review-automate` now supplies the claim page plus page 1
+  from the same paper when those pages differ. Every proposed value still
+  has to pass the unchanged `verify_grounding` check against those real
+  source texts; prompt labels are excluded from the grounding corpus and
+  whole-paper context is not used. The widened contract is recorded as
+  `m69-llm-grounded-pico-v2`, while v1 records remain recognized as
+  reviewed and retain the same Evidence Quality tier. A real-corpus rerun
+  grounded 11 of the 21 remaining records; the other 10 stayed byte-for-byte
+  untouched. The 11 updates changed only PICO fields and review provenance,
+  and all accepted quotes reverified against source text at 1.000 similarity.
+
 - **M69 pipeline: fix-forward on Copilot's PR #239 review findings.**
   PR #239 merged with CI failing and five Copilot code-review findings
   unaddressed; two auto-merged Copilot PRs (#240, #242) fixed only the

@@ -84,7 +84,7 @@ from knowledge_engine.extraction import (
     CLAIM_FRAMING_RULES_VERSION,
     DRAFT_EVIDENCE_ITEM_RULES_VERSION,
     EVIDENCE_CLASSIFICATION_RULES_VERSION,
-    LLM_GROUNDED_PICO_RULES_VERSION,
+    LLM_GROUNDED_PICO_RULES_VERSIONS,
     PICO_EXTRACTION_RULES_VERSION,
     SECTION_DETECTION_RULES_VERSION,
     STUDY_DESIGN_RULES_VERSION,
@@ -3748,7 +3748,7 @@ def _is_already_reviewed(record: dict[str, Any]) -> bool:
     convention `_build_evidence_review_queue` documents: a manually
     reviewed record keeps its prior `extraction_method` as provenance) and
     `compute_evidence_quality`'s `llm_grounded`-tier rule: an
-    `extraction_method` of `LLM_GROUNDED_PICO_RULES_VERSION` only counts as
+    `extraction_method` in `LLM_GROUNDED_PICO_RULES_VERSIONS` only counts as
     already reviewed when `review_checklist` is actually populated --
     otherwise it is the same as any other automated record and stays
     eligible for reprocessing.
@@ -3760,7 +3760,7 @@ def _is_already_reviewed(record: dict[str, Any]) -> bool:
     if isinstance(review_checklist, dict) and review_checklist.get("human_reviewed") is True:
         return True
     return (
-        record.get("extraction_method") == LLM_GROUNDED_PICO_RULES_VERSION
+        record.get("extraction_method") in LLM_GROUNDED_PICO_RULES_VERSIONS
         and isinstance(review_checklist, dict)
         and bool(review_checklist)
     )
@@ -3782,11 +3782,12 @@ def evidence_review_automate(
     to this project's real corpus-growth plans. For each still-automated
     (`m52-evidence-classification-v1`) record, re-derives
     `population`/`intervention`/`comparator`/`outcome` from that record's
-    own source page (fixing the PICO-broadcast bug M68 found by hand,
-    where a paper-level extraction got glued onto every claim in that
-    paper regardless of which sentence it actually came from), using the
+    own source page plus page 1 when they differ. This fixes both the
+    PICO-broadcast bug M68 found by hand (where a paper-level extraction
+    got glued onto every claim) and the terse-result context gap found
+    after the first full M69 backlog run. The command uses the
     local model at `--model`/`KE_LLM_MODEL`. Every LLM-proposed field is
-    checked against the source page text before being accepted; a field
+    checked against that bounded source context before being accepted; a field
     that fails grounding is left unchanged, never blanked or guessed.
     `claim_text`, `research_question`, and `evidence_direction` are never
     touched -- they stay on their existing deterministic path.
@@ -3866,6 +3867,7 @@ def evidence_review_automate(
         page_number = source_span.get("page_number")
 
         page_text: str | None = None
+        paper_first_page_text: str | None = None
         if isinstance(paper_id, int) and isinstance(page_number, int):
             cache_key = (paper_id, page_number)
             if cache_key not in page_text_cache:
@@ -3878,9 +3880,16 @@ def evidence_review_automate(
                 for candidate_page_number, candidate_text in page_by_number.items():
                     page_text_cache[(paper_id, candidate_page_number)] = candidate_text
             page_text = page_text_cache.get(cache_key)
+            if page_number != 1:
+                paper_first_page_text = page_text_cache.get((paper_id, 1))
 
         try:
-            result = automate_review_for_record(llm, record, page_text)
+            result = automate_review_for_record(
+                llm,
+                record,
+                page_text,
+                paper_first_page_text=paper_first_page_text,
+            )
         except LocalLLMError as exc:
             console.print(f"[red]{record_evidence_id}: {exc}[/red]")
             raise typer.Exit(1) from exc

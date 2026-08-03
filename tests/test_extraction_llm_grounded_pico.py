@@ -133,6 +133,45 @@ def test_prompt_includes_the_candidate_sentence_and_page_text() -> None:
     assert _PAGE_TEXT in llm.prompts[0]
 
 
+def test_page_one_can_ground_context_missing_from_the_claim_page() -> None:
+    claim_page = "Results: HbA1c decreased significantly in the treatment group."
+    first_page = "Adults with type 2 diabetes were randomized to SiPore21 or matching placebo."
+    llm = _FakeLLM(
+        '{"population": "Adults with type 2 diabetes", '
+        '"intervention": "SiPore21", "comparator": "matching placebo", '
+        '"outcome": "HbA1c decreased significantly"}'
+    )
+
+    result = extract_pico_for_candidate(
+        llm,
+        _candidate(),
+        claim_page,
+        paper_first_page_text=first_page,
+    )
+
+    assert result.population.value == "Adults with type 2 diabetes"
+    assert result.intervention.value == "SiPore21"
+    assert result.comparator.value == "matching placebo"
+    assert result.outcome.value == "HbA1c decreased significantly"
+    assert "Claim page text:" in llm.prompts[0]
+    assert "Paper page 1 text:" in llm.prompts[0]
+
+
+def test_prompt_labels_are_not_part_of_the_grounding_context() -> None:
+    llm = _FakeLLM(
+        '{"population": "Paper page 1 text", "intervention": "", "comparator": "", "outcome": ""}'
+    )
+
+    result = extract_pico_for_candidate(
+        llm,
+        _candidate(),
+        "A terse result sentence.",
+        paper_first_page_text="Adults with obesity were enrolled.",
+    )
+
+    assert result.population.value is None
+
+
 def test_max_tokens_is_passed_through_to_the_llm() -> None:
     llm = _FakeLLM('{"population": "", "intervention": "", "comparator": "", "outcome": ""}')
 
