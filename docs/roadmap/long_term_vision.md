@@ -114,16 +114,20 @@ future sessions should build against it, not re-litigate it.
 
 **What replaces the human-reading gate:** review's actual job was never
 "a person's eyes touched this" for its own sake -- it was making sure a
-record's `claim_text`/PICO fields/`evidence_direction` are genuinely
-grounded in the source paper's own text, not invented or mismatched
-from an unrelated passage (exactly the bug class M68 found and fixed by
-hand: the automated `m52` pipeline broadcasts one paper-level PICO
-extraction onto every claim candidate in that paper, regardless of
-which sentence/subgroup/section a given claim actually came from -- see
+record's `claim_text` and PICO fields are genuinely grounded in the
+source paper's own text, not invented or mismatched from an unrelated
+passage (exactly the bug class M68 found and fixed by hand: the
+automated `m52` pipeline broadcasts one paper-level PICO extraction onto
+every claim candidate in that paper, regardless of which
+sentence/subgroup/section a given claim actually came from -- see
 `knowledge_engine/extraction/evidence_items.py`'s
 `build_draft_evidence_items` and `extraction_review_batch.py`'s
-`run_extraction_review_for_paper`). A verifiable, falsifiable, grounded
-extraction satisfies that job without a human doing the reading:
+`run_extraction_review_for_paper`). `evidence_direction` is a separate
+kind of fact -- a classification relative to a `research_question`, not
+a span of source text -- and is not part of what "grounding" checks; see
+below for why it stays on its existing deterministic path unchanged. A
+verifiable, falsifiable, grounded PICO extraction satisfies the
+claim-text/PICO half of that job without a human doing the reading:
 
 - Extract per claim candidate (one call per candidate sentence,
   constrained to that candidate's own local page/section context), not
@@ -133,8 +137,22 @@ extraction satisfies that job without a human doing the reading:
   `knowledge-engine-web`/`knowledge-engine-ai`
   (`OllamaLLM`/`LocalLLM.generate(prompt, max_tokens=...)`, a plain
   synchronous `urllib` call against Ollama's `/api/chat`, no SDK) to
-  propose `population`/`intervention`/`comparator`/`outcome`/
-  `claim_text`/`evidence_direction` from that local context.
+  propose `population`/`intervention`/`comparator`/`outcome` from that
+  local context -- the same four fields M28's per-paper `extract_pico`
+  already produces, just scoped correctly this time. `claim_text` and
+  `evidence_direction` are deliberately **not** LLM-proposed:
+  `claim_text` is already the candidate's own sentence, unaffected by
+  the broadcast bug; `evidence_direction` is a classification relative
+  to a `research_question` (supports/contradicts/qualifies/
+  contextualizes), not text extractable from the source, so it can
+  never pass a substring/near-match grounding check by construction.
+  Both stay on the existing deterministic path
+  (`classify_evidence_direction`, `generate_research_question`, both in
+  `knowledge_engine/extraction/evidence_classification.py`), which
+  already operates correctly per candidate -- `generate_research_question`
+  only needs the four (now correctly-scoped) PICO fields as input, and
+  `classify_evidence_direction` only reads `claim_text`, which was never
+  broadcast in the first place.
 - Add a **grounding-check verifier** -- this does not exist anywhere in
   the codebase today and is the load-bearing piece: before an
   LLM-proposed field is accepted, check it is an actual substring or
