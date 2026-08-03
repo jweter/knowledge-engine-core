@@ -146,7 +146,7 @@ def extract_pico_for_candidate(
     )
 
 
-_JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
+_JSON_OBJECT_RE = re.compile(r"\{[^{}]*\}", re.DOTALL)
 
 
 def _parse_proposed_fields(raw_response: str) -> dict[str, str]:
@@ -154,9 +154,10 @@ def _parse_proposed_fields(raw_response: str) -> dict[str, str]:
 
     A small local model does not always follow the "JSON only" instruction
     perfectly -- this tolerates surrounding prose by locating the first
-    `{...}` span, but never tolerates malformed JSON itself: a parse
-    failure returns an empty dict, so every field ends up ungrounded rather
-    than guessed from a corrupted parse.
+    flat, non-nested `{...}` span (the expected shape is always a single
+    object with four string keys, never nested), but never tolerates
+    malformed JSON itself: a parse failure returns an empty dict, so every
+    field ends up ungrounded rather than guessed from a corrupted parse.
     """
 
     match = _JSON_OBJECT_RE.search(raw_response)

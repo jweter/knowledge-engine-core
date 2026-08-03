@@ -45,7 +45,35 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `graph_claims` row. Running this against the full 118-record backlog
   is its own follow-up batch, the same pattern M68 established.
 
-### Changed
+### Fixed
+
+- **M69 pipeline: fix-forward on Copilot's PR #239 review findings.**
+  PR #239 merged with CI failing and five Copilot code-review findings
+  unaddressed; two auto-merged Copilot PRs (#240, #242) fixed only the
+  mypy typing error, leaving the rest live in `main`. Fixed here: (1)
+  `automate_review_for_record` and the `ke evidence-review-automate`
+  CLI's eligibility filter now also check `review_checklist.
+  human_reviewed`, not just `extraction_method` -- per the convention
+  `_build_evidence_review_queue` already documents (a manually reviewed
+  record can keep its prior automated `extraction_method` as provenance),
+  a genuinely human-reviewed record could otherwise be silently
+  reprocessed and have `human_reviewed` flipped back to `False`. (2) the
+  CLI's eligibility filter no longer blanket-excludes every
+  `LLM_GROUNDED_PICO_RULES_VERSION` record regardless of whether
+  `review_checklist` is actually populated, matching
+  `compute_evidence_quality`'s own tiering rule. (3)
+  `llm_grounded_pico.py`'s `_JSON_OBJECT_RE` no longer greedily spans
+  from the first `{` to the last `}` in the raw LLM response -- bounded
+  to a single flat, non-nested object, since the expected shape never
+  nests. (4) `automate_review_for_record` now merges into any existing
+  `review_checklist` dict instead of overwriting it outright, preserving
+  unrelated keys. (5) `render_synthesis` now renders `EvidenceQuality.
+  extraction_tier`'s three-way label instead of the two-way
+  `manually_reviewed` boolean, so an `llm_grounded` record no longer
+  reads as "automated, pending review". Live-verified against the real
+  corpus: `ke evidence-review-automate --dry-run` still reports the same
+  118 eligible records (the corpus currently has no record that exercises
+  the fixed provenance-corruption scenario), confirming no regression.
 
 - **M69 decision doc: two Codex-caught fixes.** Codex review on PR #237
   caught two real issues in `docs/roadmap/long_term_vision.md`'s

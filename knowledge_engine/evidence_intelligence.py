@@ -61,6 +61,15 @@ _LLM_GROUNDED_EXTRACTION_METHODS = frozenset({LLM_GROUNDED_PICO_RULES_VERSION})
 # larger of the two (human review remains the clearly higher tier).
 _LLM_GROUNDED_RIGOR_POINTS = 33
 
+# render_synthesis's honest three-way label for `EvidenceQuality.extraction_tier`
+# -- must never collapse "llm_grounded" into either "manually reviewed" or
+# the undifferentiated "automated, pending review" the two-tier text used.
+_EXTRACTION_TIER_LABELS = {
+    "manual": "manually reviewed",
+    "llm_grounded": "LLM-extracted, grounding-verified",
+    "automated": "automated, pending review",
+}
+
 # Relationship types whose count feeds the reliability label. `supersedes`
 # is deliberately excluded -- it retires the older claim rather than
 # stating current agreement/disagreement; see
@@ -280,7 +289,7 @@ def render_synthesis(
         f"{consensus.relationship_edge_count} relationship(s) recorded for this claim: "
         f"{consensus.supports_count} support, {consensus.contradicts_count} contradict.",
         f"Evidence Quality: {quality.score}/100 ({quality.study_design_tier}, "
-        f"{'manually reviewed' if quality.manually_reviewed else 'automated, pending review'}).",
+        f"{_EXTRACTION_TIER_LABELS.get(quality.extraction_tier, 'automated, pending review')}).",
     ]
     if consensus.score is None:
         lines.append(

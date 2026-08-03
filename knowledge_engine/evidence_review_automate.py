@@ -74,7 +74,11 @@ def automate_review_for_record(
 
     evidence_record_id = str(record.get("evidence_record_id", ""))
 
-    if record.get("extraction_method") in _MANUAL_EXTRACTION_METHODS:
+    review_checklist = record.get("review_checklist")
+    already_human_reviewed = (
+        isinstance(review_checklist, dict) and review_checklist.get("human_reviewed") is True
+    )
+    if record.get("extraction_method") in _MANUAL_EXTRACTION_METHODS or already_human_reviewed:
         return AutomatedReviewResult(evidence_record_id, False, (), "already manually reviewed")
 
     claim_text = record.get("claim_text")
@@ -112,12 +116,19 @@ def automate_review_for_record(
         )
 
     record["extraction_method"] = LLM_GROUNDED_PICO_RULES_VERSION
-    record["review_checklist"] = {
-        "automated_classification": True,
-        "llm_grounded": True,
-        "human_reviewed": False,
-        "fields_grounded": list(grounded_fields),
-    }
+    existing_checklist = record.get("review_checklist")
+    merged_checklist: dict[str, Any] = (
+        dict(existing_checklist) if isinstance(existing_checklist, dict) else {}
+    )
+    merged_checklist.update(
+        {
+            "automated_classification": True,
+            "llm_grounded": True,
+            "human_reviewed": False,
+            "fields_grounded": list(grounded_fields),
+        }
+    )
+    record["review_checklist"] = merged_checklist
     record["review_notes"] = (
         "M69 automated review: LLM-proposed PICO fields "
         f"({', '.join(grounded_fields)}) verified against the source "

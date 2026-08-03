@@ -117,6 +117,46 @@ def test_already_manually_reviewed_record_is_skipped() -> None:
     assert record["extraction_method"] == "manual_human_review"
 
 
+def test_human_reviewed_checklist_is_skipped_even_with_old_extraction_method() -> None:
+    """A human-reviewed record keeps its prior `extraction_method` as
+    provenance (the convention `_build_evidence_review_queue` documents) --
+    only `review_checklist.human_reviewed` marks it as actually reviewed.
+    The automation must honor that convention, not just the literal
+    `extraction_method` value, or it will silently reprocess and overwrite
+    a genuinely human-reviewed record."""
+
+    llm = _FakeLLM(
+        '{"population": "irrelevant", "intervention": "", "comparator": "", "outcome": ""}'
+    )
+    record = _automated_record(
+        extraction_method="m52-evidence-classification-v1",
+        review_checklist={"human_reviewed": True, "source_verified": True},
+    )
+    original_population = record["population"]
+
+    result = automate_review_for_record(llm, record, _PAGE_TEXT)
+
+    assert result.updated is False
+    assert result.skipped_reason == "already manually reviewed"
+    assert record["population"] == original_population
+    assert record["extraction_method"] == "m52-evidence-classification-v1"
+
+
+def test_review_checklist_merge_preserves_existing_keys() -> None:
+    llm = _FakeLLM(
+        '{"population": "A total of 318 participants were enrolled.", '
+        '"intervention": "", "comparator": "", "outcome": ""}'
+    )
+    record = _automated_record(review_checklist={"some_other_key": "kept"})
+
+    automate_review_for_record(llm, record, _PAGE_TEXT)
+
+    checklist = record["review_checklist"]
+    assert isinstance(checklist, dict)
+    assert checklist["some_other_key"] == "kept"
+    assert checklist["llm_grounded"] is True
+
+
 def test_missing_claim_text_is_skipped() -> None:
     llm = _FakeLLM('{"population": "", "intervention": "", "comparator": "", "outcome": ""}')
     record = _automated_record(claim_text=None)

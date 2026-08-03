@@ -171,6 +171,45 @@ def test_evidence_review_automate_skips_an_already_manually_reviewed_record(
     assert "Automated records still eligible: 0" in _unwrapped(result.output)
 
 
+def test_evidence_review_automate_skips_a_human_reviewed_checklist_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A record can be human-reviewed while keeping an older automated
+    `extraction_method` as provenance -- `review_checklist.human_reviewed`
+    is what actually marks it reviewed. The CLI's eligibility filter must
+    honor that, not just the literal `extraction_method` value."""
+
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    monkeypatch.setattr(entrypoint, "OllamaLLM", _FakeLLM)
+
+    evidence_path = tmp_path / "evidence_records.jsonl"
+    evidence_path.write_text(
+        json.dumps(
+            _automated_record(
+                extraction_method="m52-evidence-classification-v1",
+                review_checklist={"human_reviewed": True},
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "evidence-review-automate",
+            "--evidence",
+            str(evidence_path),
+            "--model",
+            "fake-model",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Automated records still eligible: 0" in _unwrapped(result.output)
+
+
 def test_evidence_review_automate_requires_a_model(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

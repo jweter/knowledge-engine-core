@@ -141,6 +141,23 @@ def test_max_tokens_is_passed_through_to_the_llm() -> None:
     assert llm.max_tokens_seen == [250]
 
 
+def test_trailing_brace_after_the_json_object_does_not_corrupt_parsing() -> None:
+    """A greedy `\\{.*\\}` regex would span from the first `{` all the way to
+    the LAST `}` in the response, swallowing this trailing aside and
+    producing invalid JSON -- the fix bounds the match to a single flat,
+    non-nested object, so the real answer still parses."""
+
+    llm = _FakeLLM(
+        '{"population": "A total of 318 participants were enrolled.", '
+        '"intervention": "", "comparator": "", "outcome": ""} '
+        "Note: the shape above follows the format shown as {example}."
+    )
+
+    result = extract_pico_for_candidate(llm, _candidate(), _PAGE_TEXT)
+
+    assert result.population.value == "A total of 318 participants were enrolled."
+
+
 def test_a_field_only_present_in_an_unrelated_paper_section_is_not_grounded() -> None:
     """A proposed field that sounds plausible but is not actually on this
     page must fail grounding -- the check is presence, not plausibility."""

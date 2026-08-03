@@ -3739,9 +3739,31 @@ def evidence_review_queue(
     console.print(queue, markup=False)
 
 
-_LLM_GROUNDED_ALREADY_REVIEWED_METHODS = _MANUAL_EXTRACTION_METHODS | frozenset(
-    {LLM_GROUNDED_PICO_RULES_VERSION}
-)
+def _is_already_reviewed(record: dict[str, Any]) -> bool:
+    """True when a record needs no further automated-review pass.
+
+    Mirrors `automate_review_for_record`'s own skip rule (manual
+    `extraction_method`, or `review_checklist.human_reviewed=True` even
+    when `extraction_method` is still an older automated value -- the
+    convention `_build_evidence_review_queue` documents: a manually
+    reviewed record keeps its prior `extraction_method` as provenance) and
+    `compute_evidence_quality`'s `llm_grounded`-tier rule: an
+    `extraction_method` of `LLM_GROUNDED_PICO_RULES_VERSION` only counts as
+    already reviewed when `review_checklist` is actually populated --
+    otherwise it is the same as any other automated record and stays
+    eligible for reprocessing.
+    """
+
+    if record.get("extraction_method") in _MANUAL_EXTRACTION_METHODS:
+        return True
+    review_checklist = record.get("review_checklist")
+    if isinstance(review_checklist, dict) and review_checklist.get("human_reviewed") is True:
+        return True
+    return (
+        record.get("extraction_method") == LLM_GROUNDED_PICO_RULES_VERSION
+        and isinstance(review_checklist, dict)
+        and bool(review_checklist)
+    )
 
 
 @app.command("evidence-review-automate")
@@ -3810,7 +3832,7 @@ def evidence_review_automate(
         index
         for index, record in enumerate(records)
         if record is not None
-        and record.get("extraction_method") not in _LLM_GROUNDED_ALREADY_REVIEWED_METHODS
+        and not _is_already_reviewed(record)
         and (evidence_record_id is None or record.get("evidence_record_id") == evidence_record_id)
     ]
 
@@ -3831,6 +3853,7 @@ def evidence_review_automate(
     )
 
     updated_ids: list[str] = []
+    updated_indices: set[int] = set()
     skipped: list[tuple[str, str]] = []
     page_text_cache: dict[tuple[int, int], str | None] = {}
 
@@ -3864,6 +3887,7 @@ def evidence_review_automate(
 
         if result.updated:
             updated_ids.append(record_evidence_id)
+            updated_indices.add(index)
             console.print(
                 f"[green]{record_evidence_id}:[/green] grounded {', '.join(result.fields_grounded)}"
             )
@@ -3880,15 +3904,12 @@ def evidence_review_automate(
         )
         return
 
-    if updated_ids:
+    if updated_indices:
         with evidence.open("w", encoding="utf-8") as handle:
             for index, raw_line in enumerate(raw_lines):
-                record = records[index]
-                if (
-                    record is not None
-                    and index in batch_indices
-                    and record.get("evidence_record_id") in updated_ids
-                ):
+                if index in updated_indices:
+                    record = records[index]
+                    assert record is not None
                     handle.write(json.dumps(record, separators=(",", ":")) + "\n")
                 else:
                     handle.write(raw_line + "\n")
