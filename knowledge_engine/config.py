@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     core_api_key: str | None = None
     unpaywall_email: str | None = None
+    llm_model: str | None = None
+    ollama_host: str = "http://127.0.0.1:11434"
 
     model_config = SettingsConfigDict(env_prefix="KE_", env_file=".env", extra="ignore")
 

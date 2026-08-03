@@ -23,6 +23,17 @@ from knowledge_engine.extraction.evidence_items import (
     build_draft_evidence_item,
     build_draft_evidence_items,
 )
+from knowledge_engine.extraction.grounding import (
+    GROUNDING_RULES_VERSION,
+    GroundingResult,
+    verify_grounding,
+)
+from knowledge_engine.extraction.llm_grounded_pico import (
+    LLM_GROUNDED_PICO_RULES_VERSION,
+    GroundedField,
+    LlmGroundedPico,
+    extract_pico_for_candidate,
+)
 from knowledge_engine.extraction.pico import (
     PICO_EXTRACTION_RULES_VERSION,
     PicoFields,
@@ -52,6 +63,8 @@ __all__ = [
     "CLAIM_FRAMING_RULES_VERSION",
     "DRAFT_EVIDENCE_ITEM_RULES_VERSION",
     "EVIDENCE_CLASSIFICATION_RULES_VERSION",
+    "GROUNDING_RULES_VERSION",
+    "LLM_GROUNDED_PICO_RULES_VERSION",
     "PICO_EXTRACTION_RULES_VERSION",
     "SECTION_DETECTION_RULES_VERSION",
     "SECTION_TYPES",
@@ -60,6 +73,9 @@ __all__ = [
     "ClaimCandidate",
     "ClaimFraming",
     "DraftEvidenceItem",
+    "GroundedField",
+    "GroundingResult",
+    "LlmGroundedPico",
     "PaperMetadata",
     "PicoFields",
     "SectionSpan",
@@ -73,9 +89,11 @@ __all__ = [
     "detect_sections",
     "extract_limitations",
     "extract_pico",
+    "extract_pico_for_candidate",
     "generate_research_question",
     "is_table_derived",
     "section_content",
     "section_page_ranges",
     "section_text",
+    "verify_grounding",
 ]
