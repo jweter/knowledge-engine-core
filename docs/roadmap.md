@@ -478,6 +478,16 @@ consistent secondary finding, without confirming the *target* record's
 own specific claim -- corrected to `contextualizes`, the same
 supports-vs-contextualizes discipline M59 established for exactly this
 failure mode, mis-applied here on first pass.
+The post-M69 review continued with similarity ranks 36-50: 3 of 15
+pairs justified `contextualizes` edges, growing the graph 17 -> 20
+relationships and the set of claims participating in at least one edge
+from 9 -> 11. Two edges connect the GLP-1RA insulin-resistance-marker
+cohort to STEP 5 and SELECT as metabolic context for their weight-loss
+findings; the third connects observational oral-semaglutide findings in
+HFrEF and HFpEF while preserving their different endpoints. The other
+12 candidates were left unrelated because generic concept overlap,
+different intervention/outcome domains, or duplicate records from one
+paper did not justify a scientific relationship.
 
 **Item 3 -- LLM-grounded synthesis (local model)** is done: `knowledge-engine-ai`'s
 M3 built the local, offline `OllamaLLM`/`synthesize_answer` synthesis

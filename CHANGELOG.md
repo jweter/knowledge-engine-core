@@ -9,6 +9,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Post-M69 relationship graph review, ranks 36-50.** Reviewed the next
+  15 similarity-ranked pairs from `ke relationship-review-worksheet
+  --rank-by-similarity` against both records' full PICO and result fields.
+  Authored 3 conservative `contextualizes` relationships: the GLP-1RA
+  insulin-resistance-marker cohort with STEP 5 and SELECT respectively,
+  and the oral-semaglutide HFrEF cohort with the HFpEF/BNP cohort. These
+  records preserve the studies' different populations, comparators, and
+  endpoints and do not count contextual evidence as direct support. The
+  other 12 pairs were deliberately left unrelated: most shared only a
+  generic concept (`Patients`, `Health`, or `placebo`), involved different
+  interventions or outcomes, or represented duplicate evidence records
+  from the same paper. `ke relationship-validate` passed with 20 records;
+  rebuilding the local graph projected 17 -> 20 relationship edges, with
+  154 claims and 149 claim-concept edges unchanged.
+
 - **M69: automated evidence review pipeline.** Implements the decision
   in `docs/roadmap/long_term_vision.md`: replaces the human-reading
   review gate with a grounding-verified LLM extraction path.
