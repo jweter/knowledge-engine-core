@@ -457,7 +457,15 @@ Confidence publicly** is in progress. **M64** authored 4 more real
 `RelationshipRecord`s from the `M61` similarity-ranked worksheet, growing
 the graph from 7 to 11 relationship edges (see the M64 changelog entry
 above), and found a second duplicate evidence record while reviewing the
-worksheet (removed; see Removed in `CHANGELOG.md`).
+worksheet (removed; see Removed in `CHANGELOG.md`). **M66** reviewed the
+top 20 similarity-ranked candidates and authored 3 more real
+`supports` records where the evidence genuinely justified it, growing
+the graph 11 -> 14 edges (`unconfirmed_claims` 148 -> 145): most of the
+top-ranked candidates by embedding similarity turned out to be spurious
+matches on overly generic shared concepts (`Health`, `Adult`,
+`Patients`) or genuinely different intervention/outcome domains despite
+high textual similarity, and were left alone rather than forced into a
+relationship, the same discipline M59 established.
 
 **Item 3 -- LLM-grounded synthesis (local model)** is done: `knowledge-engine-ai`'s
 M3 built the local, offline `OllamaLLM`/`synthesize_answer` synthesis

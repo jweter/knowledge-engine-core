@@ -107,6 +107,31 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   field (expected to be low -- ground truth is human-paraphrased prose,
   not the same span the deterministic extractor pulls).
 
+- **M66: relationship graph deepening**, continuing `docs/roadmap.md`'s
+  priority-list item 2. Reviewed the top 20 candidate pairs from `ke
+  relationship-review-worksheet --rank-by-similarity` and authored 3
+  more real `supports` records where the evidence genuinely justified
+  it: `ev-glp1-semaglutide-hfref-outcomes-001` <-> the SELECT trial
+  (both report semaglutide substantially reducing body weight, -8.0kg
+  vs a non-GLP-1 comparator and -10.2% vs placebo respectively);
+  `ev-tirzepatide-vs-semaglutide-weightloss-001` <-> a post-bariatric
+  weight-regain cohort (both report substantial tirzepatide-associated
+  weight loss, 14.7% and 18.1% respectively, in different populations);
+  and the semaglutide/cardiometabolic-risk cohort <-> the HFrEF cohort
+  (both report a comparable ~8-9kg semaglutide-associated weight-loss
+  magnitude in overlapping obesity/T2D populations). Most of the
+  top-ranked candidates by embedding similarity turned out to be
+  spurious matches on overly generic shared concepts (`Health`,
+  `Adult`, `Patients`, `Power, Psychological`) or genuinely different
+  intervention/outcome domains despite high textual similarity (e.g.
+  two different weight-loss drugs studied against different endpoints)
+  -- left alone rather than forced into a relationship, the same
+  discipline M59 established. `ke graph-build` run against the updated
+  `relationship_records.jsonl`: relationship edges 11 -> 14,
+  `unconfirmed_claims` 148 -> 145.
+
+### Fixed
+
 - **Drive backup pilot: service accounts can't write here.** Confirmed
   live: a bare Google service account has no Drive storage quota on a
   personal (non-Workspace) account -- reads work (ACL sharing), every
