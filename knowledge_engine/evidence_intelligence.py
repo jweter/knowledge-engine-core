@@ -3,20 +3,30 @@
 See `docs/evidence_intelligence_design.md` for the full design and its
 verification against `docs/ai_layer_architecture.md`. Every function here
 is a pure computation over already-stored `EvidenceRecord`/
-`RelationshipRecord` fields -- never an LLM call, never a guess, never a
-number without a stored source. Scoped to exactly the
+`RelationshipRecord` fields -- never an LLM call itself, never a guess,
+never a number without a stored source. Scoped to exactly the
 `clinical_medicine_v1` profile; not proposed as portable to another
 field.
 
 Evidence Quality, Evidence Consensus, and Claim Confidence are three
 separate numbers that must never collapse into one -- callers must keep
 them displayed separately, per the design doc's explicit requirement.
+
+M69 (`docs/roadmap/long_term_vision.md`'s "Decision: automated evidence
+review at scale") added a third extraction-rigor tier here: a
+grounding-verified LLM extraction (`knowledge_engine.extraction.
+llm_grounded_pico`) is real signal beyond an unverified automated pass,
+but is still not the same rigor as a human reading the source -- this
+module only reads the `extraction_method` value that pipeline already
+wrote; it does not call an LLM or judge grounding itself.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+
+from knowledge_engine.extraction import LLM_GROUNDED_PICO_RULES_VERSION
 
 CLINICAL_MEDICINE_V1 = "clinical_medicine_v1"
 
@@ -41,6 +51,15 @@ _STUDY_DESIGN_WEIGHTS: dict[str, int] = {
 }
 
 _MANUAL_EXTRACTION_METHODS = frozenset({"manual_human_review", "manual"})
+_LLM_GROUNDED_EXTRACTION_METHODS = frozenset({LLM_GROUNDED_PICO_RULES_VERSION})
+
+# The reserved middle tier `docs/evidence_intelligence_design.md` named
+# (between raw-automated 25 and human-manual 40) -- a grounding-verified
+# LLM record carries real signal an unverified `m52` record does not, but
+# is not the same rigor as a person reading the source. Set to the
+# midpoint, rounded down slightly so the gap to human-manual stays the
+# larger of the two (human review remains the clearly higher tier).
+_LLM_GROUNDED_RIGOR_POINTS = 33
 
 # Relationship types whose count feeds the reliability label. `supersedes`
 # is deliberately excluded -- it retires the older claim rather than
@@ -59,19 +78,27 @@ class EvidenceQuality:
     study_design_tier: str
     study_type_missing: bool
     manually_reviewed: bool
+    extraction_tier: str
+    """One of "manual", "llm_grounded", or "automated" -- `manually_reviewed`
+    stays a plain bool (true only for "manual") so existing callers reading
+    it are unaffected; this field exists for callers that need to render
+    the llm_grounded tier honestly rather than collapsing it into either
+    "manually reviewed" or an undifferentiated "automated"."""
 
 
 def compute_evidence_quality(record: dict[str, Any]) -> EvidenceQuality:
     """Compute Evidence Quality for one `EvidenceRecord` dict.
 
     Three deterministic, independently inspectable components: a
-    study-design weight (0-40), extraction rigor (25 or 40), and a
-    completeness penalty (0 to -10) for missing `limitations` or
-    `uncertainty_notes`. Summed, clamped to the achievable [0, 80] raw
-    range, then scaled to a 0-100 display score. No component reads or
-    invents a field the record does not already have -- notably, no
-    `sample_size` term, since that field does not exist in
-    `EvidenceRecord` today (see the design doc's real-data audit).
+    study-design weight (0-40), extraction rigor (25/33/40 across three
+    tiers -- automated, LLM-grounded, manual; see M69 in the module
+    docstring), and a completeness penalty (0 to -10) for missing
+    `limitations` or `uncertainty_notes`. Summed, clamped to the
+    achievable [0, 80] raw range, then scaled to a 0-100 display score.
+    No component reads or invents a field the record does not already
+    have -- notably, no `sample_size` term, since that field does not
+    exist in `EvidenceRecord` today (see the design doc's real-data
+    audit).
     """
 
     evidence_record_id = str(record.get("evidence_record_id", ""))
@@ -85,8 +112,19 @@ def compute_evidence_quality(record: dict[str, Any]) -> EvidenceQuality:
 
     extraction_method = record.get("extraction_method")
     review_checklist = record.get("review_checklist") or {}
-    manually_reviewed = extraction_method in _MANUAL_EXTRACTION_METHODS and bool(review_checklist)
-    rigor_points = 40 if manually_reviewed else 25
+    has_checklist = bool(review_checklist)
+    manually_reviewed = extraction_method in _MANUAL_EXTRACTION_METHODS and has_checklist
+    llm_grounded = extraction_method in _LLM_GROUNDED_EXTRACTION_METHODS and has_checklist
+
+    if manually_reviewed:
+        extraction_tier = "manual"
+        rigor_points = 40
+    elif llm_grounded:
+        extraction_tier = "llm_grounded"
+        rigor_points = _LLM_GROUNDED_RIGOR_POINTS
+    else:
+        extraction_tier = "automated"
+        rigor_points = 25
 
     penalty = 0
     if not record.get("limitations"):
@@ -103,6 +141,7 @@ def compute_evidence_quality(record: dict[str, Any]) -> EvidenceQuality:
         study_design_tier=tier,
         study_type_missing=not study_type,
         manually_reviewed=manually_reviewed,
+        extraction_tier=extraction_tier,
     )
 
 

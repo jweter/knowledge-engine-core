@@ -78,11 +78,13 @@ from knowledge_engine.evidence_intelligence import (
     compute_evidence_quality,
     render_synthesis,
 )
+from knowledge_engine.evidence_review_automate import automate_review_for_record
 from knowledge_engine.extraction import (
     CLAIM_CANDIDATE_RULES_VERSION,
     CLAIM_FRAMING_RULES_VERSION,
     DRAFT_EVIDENCE_ITEM_RULES_VERSION,
     EVIDENCE_CLASSIFICATION_RULES_VERSION,
+    LLM_GROUNDED_PICO_RULES_VERSION,
     PICO_EXTRACTION_RULES_VERSION,
     SECTION_DETECTION_RULES_VERSION,
     STUDY_DESIGN_RULES_VERSION,
@@ -96,6 +98,7 @@ from knowledge_engine.extraction_review_batch import (
 )
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
+from knowledge_engine.llm import LocalLLMError, OllamaLLM
 from knowledge_engine.manual_pdf_preview import (
     ManualPdfPreviewError,
     export_manual_pdf_manifest_draft,
@@ -520,6 +523,28 @@ EvidenceReviewQueueEvidenceOption = Annotated[
 EvidenceReviewQueueLimitOption = Annotated[
     int,
     typer.Option("--limit", min=1, help="Maximum records to include in the queue."),
+]
+EvidenceReviewAutomateLimitOption = Annotated[
+    int,
+    typer.Option(
+        "--limit",
+        min=1,
+        help="Maximum still-automated records to process this run.",
+    ),
+]
+EvidenceReviewAutomateModelOption = Annotated[
+    str | None,
+    typer.Option(
+        "--model",
+        help="Ollama model name (e.g. qwen2.5:1.5b). Defaults to KE_LLM_MODEL.",
+    ),
+]
+EvidenceReviewAutomateRecordIdOption = Annotated[
+    str | None,
+    typer.Option(
+        "--evidence-record-id",
+        help="Process only this one evidence_record_id, ignoring --limit.",
+    ),
 ]
 CorpusLibraryOutputOption = Annotated[
     Path,
@@ -3712,6 +3737,169 @@ def evidence_review_queue(
         return
 
     console.print(queue, markup=False)
+
+
+_LLM_GROUNDED_ALREADY_REVIEWED_METHODS = _MANUAL_EXTRACTION_METHODS | frozenset(
+    {LLM_GROUNDED_PICO_RULES_VERSION}
+)
+
+
+@app.command("evidence-review-automate")
+def evidence_review_automate(
+    evidence: EvidenceReviewQueueEvidenceOption,
+    limit: EvidenceReviewAutomateLimitOption = 5,
+    model: EvidenceReviewAutomateModelOption = None,
+    evidence_record_id: EvidenceReviewAutomateRecordIdOption = None,
+    dry_run: DryRunOption = False,
+) -> None:
+    """M69: run the LLM-grounded PICO pipeline over still-automated records.
+
+    Replaces the human-reading review gate with a grounding-verified LLM
+    extraction path, per `docs/roadmap/long_term_vision.md`'s "Decision:
+    automated evidence review at scale" -- manual review does not scale
+    to this project's real corpus-growth plans. For each still-automated
+    (`m52-evidence-classification-v1`) record, re-derives
+    `population`/`intervention`/`comparator`/`outcome` from that record's
+    own source page (fixing the PICO-broadcast bug M68 found by hand,
+    where a paper-level extraction got glued onto every claim in that
+    paper regardless of which sentence it actually came from), using the
+    local model at `--model`/`KE_LLM_MODEL`. Every LLM-proposed field is
+    checked against the source page text before being accepted; a field
+    that fails grounding is left unchanged, never blanked or guessed.
+    `claim_text`, `research_question`, and `evidence_direction` are never
+    touched -- they stay on their existing deterministic path.
+
+    A record is relabeled with its own honest `extraction_method`
+    (never `manual_human_review`) only when at least one field is
+    accepted. Requires a running `ollama serve` with the model already
+    pulled. Writes `--evidence` in place, rewriting only the lines for
+    records this run actually changed. Does **not** rebuild the graph --
+    print a reminder listing which `evidence_record_id`s changed, since
+    `ke graph-build`'s M54 incremental design skips any
+    `evidence_record_id` that already has a `graph_claims` row; clear
+    those rows before the next `ke graph-build` run to pick up the
+    correction.
+    """
+
+    llm_model = model or build_settings(Path.cwd()).llm_model
+    if not llm_model:
+        console.print("[red]No model given.[/red] Pass --model or set KE_LLM_MODEL.")
+        raise typer.Exit(1)
+
+    settings = build_settings(Path.cwd())
+    llm = OllamaLLM(model=llm_model, host=settings.ollama_host)
+
+    raw_lines = evidence.read_text(encoding="utf-8").splitlines()
+    records: list[dict[str, Any] | None] = []
+    for line_number, raw_line in enumerate(raw_lines, start=1):
+        stripped = raw_line.strip()
+        if not stripped:
+            records.append(None)
+            continue
+        try:
+            record = json.loads(stripped)
+        except json.JSONDecodeError as exc:
+            console.print(f"[red]Line {line_number}: invalid JSON.[/red]")
+            raise typer.Exit(1) from exc
+        if not isinstance(record, dict):
+            console.print(f"[red]Line {line_number}: record must be a JSON object.[/red]")
+            raise typer.Exit(1)
+        records.append(record)
+
+    eligible_indices = [
+        index
+        for index, record in enumerate(records)
+        if record is not None
+        and record.get("extraction_method") not in _LLM_GROUNDED_ALREADY_REVIEWED_METHODS
+        and (evidence_record_id is None or record.get("evidence_record_id") == evidence_record_id)
+    ]
+
+    if evidence_record_id is not None and not eligible_indices:
+        console.print(
+            f"[red]No eligible record found for evidence_record_id "
+            f"{evidence_record_id!r}[/red] (missing, already manually reviewed, or "
+            "already llm-grounded)."
+        )
+        raise typer.Exit(1)
+
+    batch_indices = eligible_indices[:limit]
+    total_eligible = len(eligible_indices)
+
+    console.print(
+        f"Automated records still eligible: {total_eligible}. "
+        f"Processing {len(batch_indices)} this run."
+    )
+
+    updated_ids: list[str] = []
+    skipped: list[tuple[str, str]] = []
+    page_text_cache: dict[tuple[int, int], str | None] = {}
+
+    for index in batch_indices:
+        record = records[index]
+        assert record is not None
+        record_evidence_id = str(record.get("evidence_record_id", f"line {index + 1}"))
+        source_span = record.get("source_span") or {}
+        paper_id = source_span.get("paper_id")
+        page_number = source_span.get("page_number")
+
+        page_text: str | None = None
+        if isinstance(paper_id, int) and isinstance(page_number, int):
+            cache_key = (paper_id, page_number)
+            if cache_key not in page_text_cache:
+                loaded = _load_paper_pages(paper_id)
+                page_by_number = (
+                    {page.page_number: page.text for page in loaded[1]}
+                    if loaded is not None
+                    else {}
+                )
+                for candidate_page_number, candidate_text in page_by_number.items():
+                    page_text_cache[(paper_id, candidate_page_number)] = candidate_text
+            page_text = page_text_cache.get(cache_key)
+
+        try:
+            result = automate_review_for_record(llm, record, page_text)
+        except LocalLLMError as exc:
+            console.print(f"[red]{record_evidence_id}: {exc}[/red]")
+            raise typer.Exit(1) from exc
+
+        if result.updated:
+            updated_ids.append(record_evidence_id)
+            console.print(
+                f"[green]{record_evidence_id}:[/green] grounded {', '.join(result.fields_grounded)}"
+            )
+        else:
+            skipped.append((record_evidence_id, result.skipped_reason or "unknown"))
+            console.print(
+                f"[yellow]{record_evidence_id}:[/yellow] skipped ({result.skipped_reason})"
+            )
+
+    if dry_run:
+        console.print(
+            f"[yellow]Dry run:[/yellow] {len(updated_ids)} record(s) would be updated; "
+            "nothing written."
+        )
+        return
+
+    if updated_ids:
+        with evidence.open("w", encoding="utf-8") as handle:
+            for index, raw_line in enumerate(raw_lines):
+                record = records[index]
+                if (
+                    record is not None
+                    and index in batch_indices
+                    and record.get("evidence_record_id") in updated_ids
+                ):
+                    handle.write(json.dumps(record, separators=(",", ":")) + "\n")
+                else:
+                    handle.write(raw_line + "\n")
+
+    console.print(f"[green]Updated {len(updated_ids)} record(s), skipped {len(skipped)}.[/green]")
+    if updated_ids:
+        console.print(
+            "[yellow]Graph not rebuilt.[/yellow] Clear stale graph_claims/"
+            "graph_claim_concepts rows for the updated evidence_record_id(s) "
+            f"before the next `ke graph-build` run: {', '.join(updated_ids)}"
+        )
 
 
 @app.command("paper-pages-backfill")
