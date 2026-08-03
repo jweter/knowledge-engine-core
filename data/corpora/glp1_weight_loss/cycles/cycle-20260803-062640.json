@@ -1,0 +1,674 @@
+{
+  "already_in_rejected_ledger": 0,
+  "candidates_discovered": 50,
+  "cycle_number": 1,
+  "deterministically_accepted": 17,
+  "held_for_manual_review": 33,
+  "next_retstart": 3600,
+  "query": "(obesity OR overweight OR \"type 2 diabetes\" OR \"metabolic syndrome\") AND (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR liraglutide OR tirzepatide OR metformin OR \"SGLT2 inhibitor\") AND pubmed pmc open access[filter]",
+  "ready_for_scope_review": [
+    {
+      "abstract": "INTRODUCTION/PURPOSE: Access to bariatric surgery (BS) remains limited in most countries with public healthcare systems, despite the continued rise in obesity prevalence, and Brazil is no exception. This study aimed to estimate the BS rate among adults with severe obesity who were potentially eligible for the procedure in Brazilian state capitals and the Federal District between 2017 and 2023. METHODS: Publicly available national databases were used to obtain the number of performed surgeries and to estimate the eligible population. Severe forms of obesity were defined as body mass index (BMI) \u2265 40 kg/m\u00b2 or BMI between 35 and 40 kg/m\u00b2 in the presence of diabetes or hypertension. The BS rate was calculated using, as the denominator, the number of adults with severe forms of obesity who reported having no private healthcare insurance. RESULTS: 1,251,075 adults living in the study sites had severe forms of obesity. Of these, 738,430 reported having no private healthcare insurance. Between 2017 and 2023, 8,205 BS were performed on residents who underwent the procedure in their state capital. Overall, only 1% (95% CI 1.09-1.14) of eligible individuals underwent BS in the Brazilian Unified Health System (SUS) over the study period. CONCLUSION: These findings highlight the extremely limited access to surgical treatment for severe forms of obesity in the SUS, despite the country being a global leader in the absolute numbers of BS. Accurate estimates of the number of potential candidates for BS may help identify barriers to treatment which may, in turn, increase the BS rates in Brazil and elsewhere.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Luis Roberto da Silva",
+        "Claudio Makoto Kanai",
+        "Anna Carolina Batista Dantas",
+        "Wayner Vieira de Souza",
+        "Denis Pajecki",
+        "Beatriz Helena Tess"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1007/s11695-026-08720-3",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13249625.1/PMC13249625.1.pdf?md5=5a636167013fb2fd58642884d1a0ca17",
+      "pmcid": "PMC13249625",
+      "pmid": "42129081",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Estimating the Bariatric Surgery Rate in the Potentially Eligible Population within the Brazilian Public Healthcare System, 2017-2023.",
+      "unresolved_ambiguities": [],
+      "venue": "Obesity surgery"
+    },
+    {
+      "abstract": "Bempedoic acid has a powerful hypocholesterolemic activity and decreases the risk of major adverse cardiovascular events. However, results from the CLEAR Outcomes trial documented an increased incidence of gallstone disease, with mechanisms still unexplained. This evidence generates critical concerns in a worldwide scenario characterized by an increasing incidence of cholelithiasis and by an increasing prescribing trend of bempedoic acid. Therapy with bempedoic acid affects key pathways involved in cholesterol/bile acids secretion and in bile acid homeostasis, possibly leading to cholesterol gallstone formation. Bempedoic acid can increase the expression of ABCG5 and ABCG8 genes leading to increased cholesterol efflux, can inhibit the expression of the Cyp7a1 gene, leading to decreased bile acid synthesis (secondary to decreased Cyp7a1 mRNA and protein), and can inhibit OATP1B1 and OATP1B3 transporters, leading to reduced uptake of bile acids from the entero-hepatic circulation. Bempedoic acid can also inhibit liver MRP1 transporter and glutathione efflux into blood, can increase nuclear FXR transcriptional activity and can suppress PXR activation, with multi-level effects on bile acid/lipid homeostasis and bile lithogenicity, as anticipated by the analysis of the ternary cholesterol-phospholipid-bile salt phase diagram. The risk of cholesterol crystallization and lithogenesis increases on the background of well-known predisposing conditions such as advanced age, female gender, obesity, associated diseases or pharmacological treatments. Future lines of research need to better dissect the interplay between bempedoic acid and the pathogenesis of cholesterol gallstones, particularly in individuals at increased risk for gallstones.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Agostino Di Ciaula",
+        "Mohamad Khalil",
+        "Gabriella Garruti",
+        "Piero Portincasa"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1016/j.jlr.2026.101056",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13273690.1/PMC13273690.1.pdf?md5=d8aa9160d321b8817aef5bf41b2d2068",
+      "pmcid": "PMC13273690",
+      "pmid": "42119848",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Bempedoic acid within the phase ternary diagram governing biliary cholesterol solubilization and gallstone risk.",
+      "unresolved_ambiguities": [],
+      "venue": "Journal of lipid research"
+    },
+    {
+      "abstract": "BACKGROUND: Insulin resistance plays a key role in the development of type 2 diabetes and predates the development of frank hyperglycemia. Thyroid hormone (TH) signaling plays a critical role in glucose homeostasis, as both hyperthyroidism and hypothyroidism have been linked to the development of insulin resistance and diabetes. The mechanism behind the effects of TH action on insulin sensitivity is incompletely understood, but the liver is thought to play a key role. Indeed, resmetirom, a selective thyroid hormone receptor beta (THR\u03b2) agonist, has recently been approved for treatment of liver fibrosis, and more THR\u03b2 agonists are currently in phase 2-3 clinical trials for use in metabolic dysfunction-associated fatty liver disease. As insulin resistance is closely associated with this disease, it is crucial that we understand the role of hepatic THR\u03b2 in glucose homeostasis. Thus, we hypothesized that TH, acting via the THR\u03b2, is a key regulator of hepatic glucose metabolism. METHODS: In wild-type (WT) and liver-specific THR\u03b2 knock-out (L-TRBKO) mice we analyzed the effect of changes in thyroid status and diet on glucose homeostasis and insulin signaling. Mice were assessed under basal conditions on a chow fed diet, under hypothyroid conditions using a propylthiouracil/low iodine diet with and without T3 treatment and following a high-fat diet. We measured glucose tolerance, hepatic insulin signaling, liver histology, energy expenditure and skeletal muscle metabolism. In high-fat diet fed WT and L-TRBKO mice we addidionally analyzed the effect of a single i.p. injection of T3. Finally we studied insulin signaling in human induced pluripotent stem cells differentiated to hepatocytes (iHeps) both with and without THR\u03b2 expression. RESULTS: In contrast to our hypothesis, we found that insulin signaling in mice was not impacted by the selective deletion of THR\u03b2 only in hepatocytes. Both WT and L-TRBKO mice have similar glucose homeostasis under basal conditions and developed hyperglycemia on a high-fat diet. Further, a single dose of T3 administered to high-fat diet fed insulin-resistant mice improves insulin sensitivity to the levels of control chow-fed mice in both WT and L-TRBKO male mice. This single dose of T3 also increased glucose transporter expression in skeletal muscle. In iHeps, THR\u03b21 was not required to activate insulin signaling, and T3 treatment did not affect insulin signaling. CONCLUSION: T3 signaling impacts glucose homeostasis independently of its actions through the THR\u03b21 in hepatocytes in both a murine and human model.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Anne H van der Spek",
+        "Megan J Ritter",
+        "Izuki Amano",
+        "Lorraine Soares de Oliveira",
+        "Joseph E Kaserman",
+        "Isabella Salguero Cespedes",
+        "Taylor Vierling",
+        "Andrew A Wilson",
+        "Anthony N Hollenberg"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1097/HC9.0000000000000937",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13218675.1/PMC13218675.1.pdf?md5=05f79220717a6c5cbec398749e449246",
+      "pmcid": "PMC13218675",
+      "pmid": "42118980",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Thyroid hormone acts independently of the thyroid hormone receptor beta in hepatocytes to improve systemic insulin sensitivity.",
+      "unresolved_ambiguities": [],
+      "venue": "Hepatology communications"
+    },
+    {
+      "abstract": "OBJECTIVE: The aim of this study was to investigate the effects of a moderate-intensity multicomponent training (MCT) program on body composition, physical function, glycaemic control and lipid profiles in overweight and obese older people. METHODS: This single-arm quasi-experimental study included 48 male (n = 10) and female (n = 38) overweight (n = 27) and obese (n = 21) older individuals (69.2 \u00b1 4.3 years; 76.4 \u00b1 12.3 kg; 1.60 \u00b1 0.1 m; 30.3 \u00b1 4.7 kg\u00b7m2) who were subjected to a 36-week moderate-intensity MCT intervention, including strength, stretching, endurance and balance exercises, twice a week, along with nutritional counselling and psychoeducation. Body composition, physical function (upper- and lower-body strength endurance, lower-body flexibility and dynamic balance), fasting plasma glucose, total cholesterol (TC), low-density lipoprotein (LDL-c) and high-density lipoprotein (HDL-c) levels were assessed before and after 12, 24 and 36 weeks of intervention. Food consumption was evaluated at baseline and after 36 weeks. RESULTS: Except for TC (p = 0.58; W = 0.014), a significant improvement was detected in LDL-c (p < 0.001; W = 0.132) and HDL-c (p < 0.001; W = 0.195), as well as in fasting glucose (p < 0.001; W = 0.556). Upper- and lower-body strength endurance (both p < 0.0001, W = 0.447 and W = 0.175, respectively), lower-body flexibility (p = 0.02; W = 0.068) and dynamic balance (p = 0.04; W = 0.060) also improved in response to MCT. However, all body composition outcomes remained unchanged throughout the MCT intervention (all p > 0.05). Similarly, no significant differences were identified in the food intake variables (all p > 0.05). CONCLUSIONS: Our moderate-intensity MCT program effectively improved physical function, glycaemic control and lipid profile, but not body composition, in overweight and obese older adults.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Enzo Berbery",
+        "Vitor de Salles Painelli",
+        "Paulo Vitor Suto Aizava",
+        "Marilene Ghiraldi de Souza Marques",
+        "Endriw Domingues Noronha",
+        "D\u00e9borah Cristina de Souza Marques",
+        "Kan Oishi",
+        "Jordan Hernandez-Martinez",
+        "Pablo Vald\u00e9s-Badilla",
+        "Braulio Henrique Magnani Branco"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1111/ajag.70176",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13159616.1/PMC13159616.1.pdf?md5=cb739b3a4a213a48f186c856ae9c1ff6",
+      "pmcid": "PMC13159616",
+      "pmid": "42112879",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Impact of Moderate-Intensity Multicomponent Training on Cardiometabolic Health-Related Outcomes in Older Adults With Overweight and Obesity: A 9-Month Quasi-Experimental Single-Arm Pretest-Posttest Study.",
+      "unresolved_ambiguities": [],
+      "venue": "Australasian journal on ageing"
+    },
+    {
+      "abstract": "AIM: Drug poisonings involving opioids and/or stimulants are a major public health concern. Pharmaceutical interventions to treat substance use disorders, particularly those involving stimulants, are limited. Glucagon-like peptide-1 receptor agonists (GLP-1RAs), approved to manage conditions such as type 2 diabetes, have been observed to reduce substance use as a secondary effect. We examined the current literature on GLP-1RAs as a potential treatment for either stimulant or opioid use disorder. METHODS: We conducted an electronic search in PubMed, PsycINFO, Scopus, and Web of Science in September 2025 and January 2026 to identify studies investigating GLP-1RA treatment for stimulant or opioid use disorder. We identified 630 unique search results. One reviewer screened the title, abstract, and the full-text of results before performing data extraction. Metrics synthesized included study design, population characteristics, dosage information, and substance use behaviours or outcomes. RESULTS: We identified eighteen studies between animal (n = 14) or human (n = 4) participants and stimulant- (n = 6) or opioid-related (n = 12) outcomes. Research conducted in the United States represented the majority of studies (n = 13). Overall, sixteen studies found a relationship between GLP-1RA administration and reduced stimulant- or opioid-related outcomes, three observing greater reduction in groups with higher GLP-1RA dosages or more extreme substance use at baseline. One study identified the incidence rate ratio of opioid overdose as 40% lower for people with a GLP-1 RA prescription compared to those without. CONCLUSION: These preliminary findings support that GLP-1RAs may be a potential pharmaceutical treatment for opioid or stimulant use disorders. Further research in human populations is needed.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Marisa Leach",
+        "Megan E Marziali",
+        "Surita Parashar",
+        "Greg Bondy",
+        "Silvia Guillemi",
+        "Marianne Harris",
+        "Mark Hull",
+        "Sarah Stone",
+        "Katherine W Kooij",
+        "Robert S Hogg",
+        "Julio S G Montaner"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1016/j.dadr.2026.100440",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13156756.1/PMC13156756.1.pdf?md5=a83a39e015cb2b19cd6b0f78bf886277",
+      "pmcid": "PMC13156756",
+      "pmid": "42111969",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "A rapid review of the effects of GLP-1 receptor agonists on opioid and stimulant use-related outcomes.",
+      "unresolved_ambiguities": [],
+      "venue": "Drug and alcohol dependence reports"
+    },
+    {
+      "abstract": "Obesity is a growing health and economic burden. This study investigates dexamphetamine, an inexpensive drug, as a potential safe and effective treatment for obesity when combined with diet and lifestyle changes over six months in general practice. The trial is a double-blind, randomised, placebo-controlled study with a six-month active treatment phase and two years of follow-up. Participants are randomised 1:1 to receive either dexamphetamine or placebo, starting at 5 mg twice daily, with weekly titration up to 30 mg twice daily as tolerated. Weekly reviews during titration assess tolerability and support lifestyle modifications, followed by monthly reviews during the maintenance phase. Dose adjustments are guided by clinical effects and a standardised amphetamine rating scale, with gradual down-titration during the final month. If demonstrated to be effective and safe long-term, dexamphetamine could provide a scalable, practical solution to reduce the individual and societal burden of obesity.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Natalie Gauci",
+        "Emily Hibbert",
+        "Hazer Khalifa",
+        "Alison Poulton"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1016/j.mex.2026.103944",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13157000.1/PMC13157000.1.pdf?md5=e47d69845d6ed2d79192ff40fd29c4d8",
+      "pmcid": "PMC13157000",
+      "pmid": "42111443",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "A double-blind randomised controlled trial protocol comparing dexamphetamine and placebo effectiveness for obesity management in primary care settings.",
+      "unresolved_ambiguities": [],
+      "venue": "MethodsX"
+    },
+    {
+      "abstract": "Glucagon-like peptide-1 receptor agonists (GLP-1RAs) have transformed the management of obesity by producing substantial and durable weight loss. However, gastrointestinal adverse effects, including nausea, vomiting, and constipation, are a common, dose-dependent, and frequent cause of discontinuation. Furthermore, weight regain is typical after drug withdrawal, reflecting the chronic and relapsing nature of obesity. Long-term adherence is essential but is often constrained by high cost, injection burden, and patient preference. Moreover, the consequences of chronic GLP-1 receptor activation on gut physiology, microbiota composition, and immune tolerance remain incompletely defined. In parallel, dietary fibers offer a physiological means of engaging the same gut-brain axis through microbial fermentation and the stimulation of endogenous GLP-1. Fibers deliver broad benefits because they strengthen gut barrier function, enrich short-chain fatty acids, and recalibrate immunity toward an anti-inflammatory state. Nevertheless, weight loss with fiber alone is typically more modest than with GLP-1RAs and depends on the type, dose, and duration of use. Tolerability can be limited by bloating or gas, particularly if intake is increased too rapidly. This review critically examines the convergence and divergence between GLP-1RAs and dietary fibers. We discuss their mechanistic overlaps in appetite control, metabolism, and immune modulation, and highlight potential interactions, such as altered fermentation dynamics during pharmacological slowing of gastric emptying and the potential for GLP-1R desensitization. We explore opportunities for fibers to mitigate GLP-1RA-related adverse effects, support bowel regularity, and stabilize the microbiota during treatment or after discontinuation. A pragmatic framework is raised to place dietary fiber and lifestyle measures as the foundation of care, reserve GLP-1RA therapy for the highest-risk individuals, and plan for fiber supplements once pharmacotherapy is reduced. Well-designed trials that combine GLP-1RAs with well-characterized fibers, include microbiome endpoints, and assess long-term outcomes are needed to optimize efficacy and reduce dependence on costly pharmacotherapy.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Yuxin Wang",
+        "Jiaxin Liu",
+        "Kristin Verbeke",
+        "Naschla Gasaly Retamal",
+        "Renate Akkerman",
+        "Paul de Vos"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1016/j.advnut.2026.100647",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13234238.1/PMC13234238.1.pdf?md5=a120643eea75db463b46c377b1131c1f",
+      "pmcid": "PMC13234238",
+      "pmid": "42106160",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Dietary Fiber and Glucagon-Like Peptide-1 Receptor Agonists in Obesity Management: Converging Mechanisms, Interactions, and Strategies for Durable Weight Control.",
+      "unresolved_ambiguities": [],
+      "venue": "Advances in nutrition (Bethesda, Md.)"
+    },
+    {
+      "abstract": "Cushing'sdisease (CD), caused by an adrenocorticotropin-secreting pituitary adenoma, is a rare but severe endocrine disorder associated with high cardiometabolic morbidity and mortality. Diagnosis is challenging as many symptoms are nonspecific, and biochemical or imaging results may be inconclusive, contributing to substantial diagnostic delay. Although the core features of CD are consistent across the lifespan, certain clinical manifestations of chronic hypercortisolism vary from childhood through older age, reflecting differences in growth, puberty, metabolism, and comorbidity burden. In children, impaired growth coupled with weight gain is most prominent, whereas adolescents often present with pubertal disturbances and psychological or academic difficulties. Adults typically exhibit the classic Cushingoid features such as round face, plethora, and central obesity, along with metabolic and reproductive complications. Older individuals typically present with frailty, sarcopenia, fractures, and cognitive decline. Age also influences the interpretation of endocrine tests, the accuracy of pituitary magnetic resonance imaging, the role of inferior petrosal sinus sampling, perioperative risks, and the long-term impact of remission or persistent disease. Given this context, this narrative review used five representative clinical vignettes (pediatric, adolescent, adult female, adult male, and elderly) to illustrate how the presentation, diagnostic evaluation, and management of CD vary across the lifespan. Each case was paired with a structured synthesis of current evidence, highlighting both shared principles and age-specific nuances essential for timely diagnosis, appropriate treatment selection, and effective long-term multidisciplinary care. Understanding age-related differences is crucial to improving outcomes and reducing the substantial morbidity and mortality associated with CD throughout the lifespan.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Elisabeth Nowak",
+        "J\u00fania Ribeiro de Oliveira Longo Schweizer",
+        "Margaret Cristina da Silva Boguszewski",
+        "Martin Reincke",
+        "Cesar Luiz Boguszewski"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.20945/2359-4292-2026-0043",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13124087.1/PMC13124087.1.pdf?md5=16954e54096920050efe92fe1f4ce513",
+      "pmcid": "PMC13124087",
+      "pmid": "42095775",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Cushing's disease across the lifespan: a case-based clinical review.",
+      "unresolved_ambiguities": [],
+      "venue": "Archives of endocrinology and metabolism"
+    },
+    {
+      "abstract": "BACKGROUND: Obesity is an escalating global health challenge, particularly among patients with inflammatory bowel disease (IBD), where the coexistence of metabolic dysfunction and chronic intestinal inflammation complicates clinical management. Glucagon-like peptide-1 receptor agonists (GLP-1 RAs) are potent weight-management agents; however, their efficacy and safety profiles in patients with obesity and IBD specifically regarding gastrointestinal tolerability remain poorly characterized. METHODS: We conducted a systematic review to evaluate the impact of GLP-1 RAs on anthropometric outcomes in patients with obesity and IBD. A comprehensive search of PubMed, Embase, and Web of Science was performed through November 10, 2024. Observational studies reporting weight-related metrics were synthesized. To ensure scientific rigor, all imperial units were converted to metric (kg), and a narrative synthesis was employed to address heterogeneity in study designs. RESULTS: A total of n = 7 studies (sample sizes from 16 to 47,424 participants) were analyzed. GLP-1 RAs consistently demonstrated significant weight reduction, with reported losses ranging from a median of -6.2 kg (range: -3.4 to -8.5 kg) to a mean of approximately -9.5 kg (SD = 8.5) over follow-up periods of 3-18 months. Greater weight loss was observed in patients with higher baseline body mass index and longer treatment duration. Overall, reductions ranged from approximately -16 lbs (SD = 13) to -26 lbs (SD = 20), with longer follow-up studies (up to 450 days) showing median reductions of -8.15 kg (range: -15.9 to -2.2 kg). CONCLUSIONS: GLP-1 RAs are effective pharmacological adjuncts for weight loss in patients with obesity and IBD, with outcomes modulated by treatment duration and agent selection. These findings support the clinical utility of incretin-based therapies in this complex patient population. However, large-scale randomized controlled trials are essential to establish long-term safety and determine the impact of these agents on IBD disease activity.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Asif Jan",
+        "Daniel Dubwa"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1016/j.obpill.2026.100272",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13141732.1/PMC13141732.1.pdf?md5=f97a2ce538fae38851f7ebdf6aeb1216",
+      "pmcid": "PMC13141732",
+      "pmid": "42095067",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Pharmacological interventions for obesity in patients with inflammatory bowel disease: A systematic review of GLP-1 receptor agonist efficacy and safety.",
+      "unresolved_ambiguities": [],
+      "venue": "Obesity pillars"
+    },
+    {
+      "abstract": "We report a case of interstitial nephritis, likely secondary to tirzepatide. A 66-year-old man with type 2 diabetes, stage 3b chronic kidney disease, and other metabolic comorbidities experienced a progressive decline in renal function. Serum creatinine rose from 1.1 mg/dL (SI: 97.2 \u00b5mol/L) to 2.11 mg/dL (SI: 186.5 \u00b5mol/L) (reference range, 0.6-1.2 mg/dL [SI: 53-106 \u00b5mol/L]); estimated glomerular filtration rate (eGFR) fell from 68 to 34 mL/min/1.73 m2 over 8 months while receiving escalating doses of tirzepatide. Despite cessation of other medications and supportive care, renal dysfunction persisted. Kidney biopsy revealed chronic active tubulointerstitial nephritis with eosinophilic infiltrates and fibrosis implicating tirzepatide as the likely cause. Discontinuation of tirzepatide and initiation of prednisone resulted in significant improvement (serum creatinine measured 1.68 mg/dL (SI: 148.5 \u00b5mol/L) at 1 month and stabilized at 1.78 mg/dL (SI: 157.3 \u00b5mol/L); eGFR improved from 34 mL/min/1.73 m2 to 42 mL/min/1.73 m2 by 3 months). This case highlights a rare, biopsy-proven adverse renal effect of tirzepatide and underscores the importance of considering interstitial nephritis in patients with unexplained kidney injury on incretin mimetic therapy. Although glucagon-like peptide-1 receptor agonists benefits outweigh rare risks of nephrotoxicity, regular monitoring of creatinine monitoring is advised.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Mohamed Eldib",
+        "Vaidehi Mendpara",
+        "Leal Herlitz",
+        "Paloma Rodriguez Alvarez",
+        "Jagmeet Dhingra",
+        "Leila Zeinab Khan"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1210/jcemcr/luag125",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13142148.1/PMC13142148.1.pdf?md5=7e5f93db4446439f432d969105407446",
+      "pmcid": "PMC13142148",
+      "pmid": "42093865",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Tirzepatide-associated interstitial kidney injury.",
+      "unresolved_ambiguities": [],
+      "venue": "JCEM case reports"
+    },
+    {
+      "abstract": "INTRODUCTION: Obesity is a complex health condition marked by an excessive accumulation of adipose tissue. Bariatric surgery continues to be the most efficacious intervention for attaining significant and enduring weight loss. This study aimed to assess a 6-month probiotics supplementation effect on quality of life (QoL), bowel habits, excess weight loss (EWL) and changes in stool composition and fecal Calprotectin in severely obese patients undergoing different types of bariatric surgeries. METHODS: This prospective randomized controlled trial involved 200 cases underwent standardized bariatric procedures. Cases were randomized into two equal groups: Probiotic group received either Enterogermina\u00ae 6 billion sachets or Lacteol forte\u00ae sachets, one sachet twice daily for 6 months postoperatively and control group: Patients received standard postoperative care without probiotics. RESULTS: At 1 month postoperatively, the probiotics group showed a significantly higher QOL and EWL% (p < 0.001) compared to controls. At 3 months, the probiotics group had a significantly higher QOL and EWL% (p < 0.001). At 6 months, the probiotics group showed a statistically significant improvements across all measured outcomes, including QOL, BHQ, and EWL% compared to the control group(p < 0.001). Probiotic group had a significantly lower fecal calprotectin compared to control group (p < 0.001). CONCLUSION: The probiotic use post-bariatric surgery offers measurable benefits in QOL, weight loss, and gastrointestinal inflammation, regardless of the surgical type. Although procedures like RYGB and OAGB yield superior weight loss, they may induce higher gut inflammation. Meanwhile, sleeve gastrectomy appears to be the most gut-friendly in terms of inflammatory markers and bowel consistency.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Mostafa Mahmoud Abdelfatah",
+        "Osama Salah Mohammad",
+        "Ismail Ahmed Shafik",
+        "Mahmoud Ali Mohammed AbdelMohsen"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1007/s11695-026-08706-1",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13249904.1/PMC13249904.1.pdf?md5=3c3d0d2bce614fbe32f9dbee295273d0",
+      "pmcid": "PMC13249904",
+      "pmid": "42091844",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Probiotic Effect on Quality of Life, Bowel Habits and Weight Loss after Different Types of Bariatric Surgeries, a Randomized Controlled Trial.",
+      "unresolved_ambiguities": [],
+      "venue": "Obesity surgery"
+    },
+    {
+      "abstract": "OBJECTIVE: To evaluate shifts in waist-to-height ratio (WHtR) categories among adults with obesity or overweight, with or without prediabetes, treated with tirzepatide in the SURMOUNT-1 study. METHODS: This post hoc analysis included 2,538 participants from the SURMOUNT-1 Phase 3, double-blind, randomized, placebo-controlled trial. Adults with BMI \u2265 30 or \u2265 27 kg/m\u00b2 and at least one obesity-related complication (ORC), excluding diabetes, were randomized to receive once-weekly tirzepatide (5, 10, or 15 mg) or placebo, alongside a reduced-calorie diet and increased physical activity. Participants were grouped by baseline WHtR (\u2264 0.49, > 0.49 to \u2264 0.59, > 0.59) according to the National Institute for Health and Care Excellence (NICE) framework. Participants with prediabetes at baseline had additional follow-up data beyond week 72, and shifts in their WHtR categories at week 176 were also included. Change from baseline in WHtR was analyzed using a mixed model for repeated measures (MMRM). Shift tables were used to summarize changes from baseline to post-baseline WHtR category levels. RESULTS: At baseline, 89.8% of participants had a WHtR > 0.59, 10.1% had > 0.49 to \u2264 0.59, and 0.1% had \u2264 0.49. After 72 weeks of tirzepatide (10/15 mg), 16.7% of participants achieved a WHtR \u2264 0.49, and 54.7% improved their baseline WHtR category compared to 9.6% with placebo. At 176 weeks, among participants with prediabetes, 12.2% achieved WHtR \u2264 0.49, and 46.4% improved their category with tirzepatide versus 9.3% with placebo. CONCLUSIONS: Tirzepatide treatment was associated with sustained improvements in WHtR categories, with a greater proportion of participants shifting to a better WHtR category compared to participants treated with placebo. Improved WHtR may be suggestive of lower future cardiometabolic risk. Further analyses of this nature will enhance the understanding and application of WHtR in obesity management across diverse populations.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Naveed Sattar",
+        "Beverly G Tchang",
+        "Royce P Vincent",
+        "Hui Wang",
+        "Madhumita Murphy",
+        "Julia P Dunn",
+        "Georgios K Dimitriadis",
+        "Julia Fraseur Brumm"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1007/s40618-026-02883-7",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13219146.1/PMC13219146.1.pdf?md5=a155158c3e82496e01ac030e13a6f85e",
+      "pmcid": "PMC13219146",
+      "pmid": "42082865",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Shifts in waist-to-height ratio categories within tirzepatide groups: a post-hoc analysis of SURMOUNT-1.",
+      "unresolved_ambiguities": [],
+      "venue": "Journal of endocrinological investigation"
+    },
+    {
+      "abstract": "Ovarian cancer (OC) accounts for a significant percentage of cancer-related deaths in women worldwide. A small proportion of ovarian cancers, usually in women under 40, originate from germ cells and stromal cells within the ovary, but the vast majority are epithelial malignancies. The preferred treatment for ovarian malignancies consists of platinum-based chemotherapy and surgical intervention.Chemoresistance in ovarian cancer is a complex problem that significantly impedes tratment efficacy. Many pathways contribute to this resistance, including genetic factors, tumor microenvironment interactions, and lifestyle variables such as obesity. Understanding these mechanisms is crucial for developing effective treatment solutions. The circadian rhythm, or circadian clock, regulates the sleep-wake cycle, body temperature, hormone secretion, metabolism, and many physiological processes. Circadian genes are highly expressed in the ovaries, which regulate ovulation. Disruption of circadian rhythm asociated with many risk factors for ovarian cancer. This article examines the relationship between circadian rhythm and chemotherapy resistance in ovarian cancer, and reviews circadian rhythm to reduce chemotherapy resistance in this context.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Fatma Seher Pektopal",
+        "Selen Kum \u00d6z\u015fengezer",
+        "Zekiye Sultan Altun"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1007/s43032-026-02093-9",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13328239.1/PMC13328239.1.pdf?md5=b8230fea778c372737899880e21af2e9",
+      "pmcid": "PMC13328239",
+      "pmid": "42082821",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Chemoresistance in Ovarian Cancer and Association with Circadian Rhythm.",
+      "unresolved_ambiguities": [],
+      "venue": "Reproductive sciences (Thousand Oaks, Calif.)"
+    },
+    {
+      "abstract": "INTRODUCTION: The risk of de novo inflammatory bowel disease (IBD) after metabolic bariatric surgery (MBS) has been described, but the timing and severity of de novo IBD is unclear. METHODS: Using MarketScan Databases, patients with severe obesity undergoing Roux-en-Y-gastric bypass (RYGB) and vertical sleeve gastrectomy (VSG) were propensity-matched with patients with severe obesity without MBS (controls). Adjusted hazard ratio (aHR) assessed ulcerative colitis (UC) or Crohn's disease (CD) hazard <3 or \u22653 years from surgery or severe obesity. IBD severity was assessed using healthcare utilization-based proxies including medication exposure, IBD-related hospitalizations, and surgical interventions. RESULTS: The cohort included 100,832 adults with MBS versus 376,855 controls (76.0% females, median age of 44 years). The incidence of IBD was higher in MBS cohort versus controls (61.2 vs. 44.4 per 100,000 adults/year). Within 3 years, patients with MBS had a 24% lower risk of de novo IBD versus controls (aHR: 0.76, 95% CI: 0.60-0.95). When stratified by surgery and IBD type, VSG had reduction in CD risk (aHR=0.46, 95% CI:0.22-0.96), while RYGB had reduction in UC risk (aHR=0.22, 95% CI:0.06-0.75). After 3 years, patients with MBS, particularly VSG, had greater than 2-fold increased risk of IBD (aHR=2.28, 95%CI: 1.02-5.06). Markers of treatment intensity and healthcare utilization did not significantly differ between groups overall; however, a higher proportion of UC patients in the MBS cohort underwent colectomy, though absolute event numbers were small. (8.70% vs 1.57%, p=0.03). CONCLUSION: While MBS may lower IBD risk initially, IBD risk increases after 3 years, especially UC after VSG, and may be more severe as indicated by the higher proportion of colectomies for patients in the MBS cohort versus controls. Findings regarding treatment intensity should be interpreted cautiously, as objective measures of disease activity were not available in claims data.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Antoinette Pusateri",
+        "Yevgeniya Gokun",
+        "Kenneth Allen",
+        "ChienWei Chang",
+        "Adeeti Chiplunker",
+        "Madalina Butnariu",
+        "Hisham Hussan"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1007/s11695-026-08714-1",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13249756.1/PMC13249756.1.pdf?md5=a96d75ced4b1ecc3540f508bb69eef44",
+      "pmcid": "PMC13249756",
+      "pmid": "42082785",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "The Impact of Metabolic Bariatric Surgery on Inflammatory Bowel Disease Risk and Outcomes in Adults With Obesity: a Propensity-matched, Nationwide, Analysis.",
+      "unresolved_ambiguities": [],
+      "venue": "Obesity surgery"
+    },
+    {
+      "abstract": "With the advent of new effective treatments for obesity, the field is rapidly changing creating an urgent need for evidence to guide best patient management. To help prioritise and plan for future trials, a meeting of experts was convened with the aim of reviewing the current literature to identify and prioritise current knowledge gaps; identify relevant research questions, and discuss appropriate trial methodologies that could be utilised to address the identified gaps in a timely and pragmatic manner. Participants included research-active academic surgeons and physicians, and industry representatives from various pharmaceutical and device companies. This report summarizes the key outcomes from this meeting.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Wendy A Brown",
+        "Priya Sumithran",
+        "Michael Cowley",
+        "Ricardo Cohen",
+        "Carel Le Roux",
+        "Philip Schauer",
+        "Santosh Agarwal",
+        "Jamie Ard",
+        "Camilo Boza",
+        "Jenny Lynn Cargiuolo",
+        "Letizia Ceccarelli",
+        "Jake Coverdale",
+        "Brian Dunkin",
+        "Francis Finucane",
+        "Kapil Gupta",
+        "Lee M Kaplan",
+        "Marina Kurian",
+        "Ildiko Lingvay",
+        "Alex Miras",
+        "Chuck Pearlman",
+        "Terissa Petry",
+        "Dimitri Pournaras",
+        "Jonthan Purnell",
+        "Roxana Ruiz",
+        "Carlos Schiavon",
+        "Abd Tahrani",
+        "Hanan Tarek",
+        "Jorg Tomaszewski",
+        "Sascha Tumik",
+        "Ramy Younes"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1007/s11695-026-08692-4",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13249646.1/PMC13249646.1.pdf?md5=297350e7d65bb9f73d1f0be0b9db9f29",
+      "pmcid": "PMC13249646",
+      "pmid": "42082784",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "The Future of Obesity Care: Exploring Synergies Between Metabolic Bariatric Surgery, Interventional Endoscopy and Pharmacotherapy.",
+      "unresolved_ambiguities": [],
+      "venue": "Obesity surgery"
+    },
+    {
+      "abstract": "BACKGROUND: Obesity is recognized as a risk factor for several cancer types and is linked with different patient outcomes. However, the extent to which obesity prevalence at treatment initiation differs from lifetime (ever) obesity exposure remains unclear. MATERIALS AND METHODS: In this descriptive real-world study, we analysed longitudinal body mass index (BMI) records from the QResearch general practice database linked to the National Health Service England Systemic Anti-Cancer Therapy dataset including patients with a first systemic treatment in 2013-2023. We calculated age-standardised obesity prevalence at first treatment and lifetime obesity prevalence based on BMI \u226530 kg/m2 at treatment initiation and from historic measurements for patients across 13 cancer types. RESULTS: In total, 79 271 patients were included (median age 66.5 years at first treatment, 54.2% female, and 89.0% white ethnicity). Age-standardised obesity prevalence at first treatment was 26.4% [95% confidence interval (CI) 26.0% to 26.9%] for all cancers, ranging from 13.7% (95% CI 11.6% to 15.9%) for pancreatic cancer to 36.3% (95% CI 29.9% to 42.7%) for uterine cancer. Lifetime obesity prevalence was 53.5% (95% CI 53.2% to 53.9%) for all cancers, ranging from 51.1% (95% CI 50.3% to 52.0%) for lung cancer to 63.0% (95% CI 58.8% to 67.2%) for hepatocellular carcinoma. CONCLUSIONS: We found that approximately one in four cancer patients in England were living with obesity at the start of systemic treatment, while half had a history of obesity. Reliance on BMI at treatment initiation for cancer prognostication substantially underestimates lifetime exposure to obesity with implications for precision medicine and outcomes research.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "V Perletta",
+        "S Kulkarni",
+        "Z Wang",
+        "J W Tomlinson",
+        "J Hippisley-Cox",
+        "G S Collins",
+        "A K Clift",
+        "D Dodwell",
+        "S R Lord"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1016/j.esmorw.2026.100700",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13129467.1/PMC13129467.1.pdf?md5=e9ccf7567790166a323940d28d2ed7f1",
+      "pmcid": "PMC13129467",
+      "pmid": "42079413",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Real-world obesity prevalence and history in 79 271 patients receiving systemic anticancer therapy across 13 cancer types in England (2013-2023).",
+      "unresolved_ambiguities": [],
+      "venue": "ESMO real world data and digital oncology"
+    },
+    {
+      "abstract": "OBJECTIVES: This study investigates the knowledge, attitudes, and practices (KAP) related to diabetes mellitus (DM) among outpatients in Herat, aiming to identify key gaps and inform educational and policy interventions. METHODS: An outpatient-based cross-sectional study, using a structured-, validated-, and interviewer-administered questionnaire, was conducted among 421 adult outpatients at Herat Regional and Jami Hospitals. Descriptive statistics, chi-square tests, and logistic regression were performed in SPSS 27 to explore associations between KAP levels and sociodemographic factors. RESULTS: Overall, 54.4% had good knowledge, 51.3% positive attitudes, and 52.5% good practices. Knowledge correlated with education, diabetes education, and family history (p < 0.001). Positive attitudes were more common in singles, urban residents, and media users (p < 0.05). Good practices were higher in females, housewives, and those working fewer hours (p < 0.05). In multivariable analysis, knowledge was associated with age 25-34 (AOR 3.94, p = 0.044), rural residence (AOR 0.20, p = 0.032), university education (AOR 0.19, p = 0.028), normal BMI (AOR 0.11, p = 0.019), and family history of Type 2 diabetes (AOR 0.25, p = 0.007). Positive attitudes were linked to working 2-9 h (AOR 3.41, p = 0.012), whereas medium income decreased odds (AOR 0.23, p = 0.013). Good practices were associated with female sex (AOR 0.13, p = 0.010), being married (AOR 0.20, p = 0.047), working 2-9 h (AOR 3.50, p = 0.033), literacy without schooling (AOR 12.31, p = 0.012), and prior diabetes education (AOR 8.90, p < 0.001). High income showed a negative association (AOR 0.21, p = 0.040). CONCLUSION: Although moderate KAP levels were observed, critical gaps remain, particularly in lifestyle practices and routine monitoring. Comprehensive public health strategies including structured education, media outreach, and culturally tailored interventions are vital to improve diabetes awareness and management in Afghanistan.",
+      "adjudicated_at": "2026-08-03T06:27:51.265118+00:00",
+      "authors": [
+        "Mohammad Masudi",
+        "Mohammad Shafi Saljuqi",
+        "Fatemah Rezaei",
+        "Zhila Arjmand",
+        "Parwin Arsin",
+        "Ali Rahimi",
+        "Enayatollah Ejaz",
+        "Fahim Ahmadi",
+        "Nasar Ahmad Shayan"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1002/puh2.70256",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13129491.1/PMC13129491.1.pdf?md5=a6fc95add021fc2c6e65c128cb7d13fd",
+      "pmcid": "PMC13129491",
+      "pmid": "42078087",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Knowledge, Attitudes, and Practices Related to Diabetes Mellitus Among Hospital Outpatients and Their Companions in Herat, Afghanistan: A Cross-Sectional Study.",
+      "unresolved_ambiguities": [],
+      "venue": "Public health challenges"
+    }
+  ],
+  "rejected_by_adjudication": 0,
+  "retstart_used": 3550,
+  "rules_version": "m55-discovery-cycle-v1"
+}

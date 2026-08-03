@@ -61,6 +61,25 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   before `ke graph-citations-build` since it needs paper text already
   present locally.
 
+- Ran the corpus's first real weekly discovery cycle (`ke
+  discovery-cycle-run`, discovery `retstart=3550`) against a
+  previously-empty `discovery_state.json`/`rejected_candidates.csv`
+  pair (both seeded this run): 50 candidates discovered, 17
+  deterministically accepted, 0 already in the ledger. The manual scope
+  screen found all 17 were exclusions: 15 exact-PMID pagination-drift
+  duplicates already present in `sources.csv` (PubMed's `sort=pub_date`
+  ordering resurfacing already-included records under a new `retstart`
+  offset, the same failure mode the `retstart=3000`/`retstart=3250`
+  batches documented, this time caught before acquisition) and 2
+  genuinely off-target (an ovarian-cancer chemoresistance/circadian-
+  rhythm study, a diabetes knowledge/attitudes/practices survey naming
+  no intervention). All 17 recorded in the newly-seeded
+  `rejected_candidates.csv` ledger -- its first real population. Zero
+  net-new papers accepted; corpus remains at 951, 49 below the
+  1,000-paper cap. `discovery_state.json` advanced to
+  `next_retstart: 3600` for the next cycle. See the corpus README's
+  `retstart=3550` batch-history entry.
+
 ### Fixed
 
 - **Drive backup pilot: service accounts can't write here.** Confirmed
