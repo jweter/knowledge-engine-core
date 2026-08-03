@@ -5,9 +5,9 @@ This file is the roadmap index. Phase-specific notes live in `docs/roadmap/`.
 These phases describe the near-term, buildable work inside
 `knowledge-engine-core` itself. `docs/roadmap/long_term_vision.md` describes
 the larger, multi-package ecosystem this roadmap builds toward -- including
-the future `knowledge-engine-ai` layer that will eventually consume the
-Evidence Records (Phase 2) and Knowledge Graph (Phase 4) this roadmap
-produces. Each phase below stays deliberately scoped to what `core` alone
+the active `knowledge-engine-ai` and `knowledge-engine-web` repositories that
+consume the Evidence Records (Phase 2) and Knowledge Graph (Phase 4) this
+roadmap produces. Each phase below stays deliberately scoped to what `core` alone
 should own; anything that requires judgment about what evidence means, not
 just locating and validating it, is out of scope here by design -- see the
 long-term vision doc for where that responsibility lives instead.
@@ -16,6 +16,50 @@ One section, Reference Knowledge Layer, sits between Phase 2 and Phase 3
 but is not itself a numbered phase: it is cross-cutting background-context
 tooling `core` has already built (M41-M45), not a stage this roadmap
 completes and moves past.
+
+## Current Project Path
+
+The Source Vault, evidence pipeline, graph foundation, public web alpha, and
+first local-AI retrieval/synthesis slices now exist. The next project cycle is
+not another broad expansion. It is an ordered effort to make the existing
+system coherent, measurable, scientifically complete for one question, and
+operationally durable.
+
+These five goals are worked in order unless a blocking defect requires a
+temporary detour:
+
+1. **Create one coherent public journey.** The polished showcase is the public
+   front door; `knowledge-engine-web` is the live laboratory. They should share
+   current status language, clear links, consistent trust boundaries, and one
+   guided route from the mission to a real evidence-backed demonstration.
+   Illustrative numbers must be labeled as such or replaced by traceable corpus
+   values. Snapshot revision time must be visible, and relationship-only graph
+   updates must no longer wait silently for a later weekly/manual refresh.
+2. **Measure and improve Ask retrieval.** Establish a small golden-question
+   benchmark with expected relevant papers, evidence records, study types, and
+   citations. Use the measured failures to make source-linked evidence outrank
+   incidental keyword mentions. Do not hide poor retrieval behind better prose
+   or more LLM output.
+3. **Complete one golden scientific evidence map.** Make the GLP-1/body-weight
+   question defensible end to end: landmark trials and reviews, population and
+   comparator differences, limitations, contradictory or qualifying evidence,
+   citations, and conservatively reviewed relationships. Prefer depth and
+   coherence here over expanding the corpus beyond its current bounded scope.
+4. **Advance Evidence and Analytical Intelligence.** Once the golden map is
+   strong enough to evaluate, build structured cross-study comparison and
+   deterministic statistical checks before broader LLM narration. Evidence
+   Quality, Evidence Consensus, and Claim Confidence remain separate,
+   inspectable quantities; no model invents a confidence number.
+5. **Operationalize the persistent host when its trigger is met.** Continue
+   event-triggered web snapshots and AI subprocess calls until the operator,
+   accepted API fixtures, published-data procedure, consumer migration, and
+   network-security conditions in `docs/persistent_host_design.md` are ready.
+   Then migrate web and AI one parity-tested, read-only slice at a time.
+
+The strategic preference behind this order is explicit: retrieval quality and
+one complete scientific evidence map take priority over more corpus growth,
+cosmetic polish in isolation, or more autonomous AI. These are attainable
+product milestones, not replacements for the longer founding vision below.
 
 ## Phase 0: Local Source Vault
 
@@ -434,9 +478,12 @@ unblock `knowledge-engine-ai`'s next milestone (see "Question-first Ask
 experience" below), the same reason `ke evidence-report --format json`
 was added earlier.
 
-### Question-first Ask experience (item 1 done)
+### Previous five-item priority list
 
-The project owner's explicit five-item priority list, worked in order.
+This list preceded the Current Project Path above. It is retained as the record
+of how the present system was reached; incomplete work now rolls into the new
+ordered goals rather than remaining a competing roadmap.
+
 **Item 1 -- connect `knowledge-engine-web` + `knowledge-engine-ai` +
 `core` into one question-first "Ask" experience** is done. **M63**
 (above) gave `core` a structured JSON contract for Evidence Intelligence,
@@ -453,7 +500,7 @@ graph claim exists. Never a new cross-claim synthesis judgment, never a
 number this project hasn't already computed and stood behind elsewhere.
 
 **Item 2 -- deepen the relationship graph before leaning on Claim
-Confidence publicly** is in progress. **M64** authored 4 more real
+Confidence publicly** continues under Current Project Path goal 3. **M64** authored 4 more real
 `RelationshipRecord`s from the `M61` similarity-ranked worksheet, growing
 the graph from 7 to 11 relationship edges (see the M64 changelog entry
 above), and found a second duplicate evidence record while reviewing the
@@ -730,7 +777,7 @@ Detailed milestone records include:
   classifying `evidence_direction` against it, and any real confidence
   *rating* (beyond the existing free-text `confidence_note` field) were
   left for a human reviewer to supply, as the deliberate seam where the
-  future `knowledge-engine-ai` layer plugs in; see
+  `knowledge-engine-ai` layer plugs in; see
   `docs/roadmap/long_term_vision.md`'s AI Interface Layer section. **M52**
   revisited the `research_question`/`evidence_direction` half of that
   seam specifically: after four evidence-promotion batches all built by
@@ -840,7 +887,7 @@ later ran that pipeline against the real corpus at scale for the first time.
 ## Reference Knowledge Layer
 
 Not one of the numbered phases above -- a cross-cutting layer giving the
-extraction pipeline and future AI Interface Layer the background context
+extraction pipeline and AI Interface Layer the background context
 (drug names, medical terminology, chemical structure) a primary-research
 paper always assumes but never restates. Corresponds to
 `knowledge-engine-reference` in the long-term ecosystem; see
@@ -1043,8 +1090,11 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
 ## Phase 4: Knowledge Graph
 
 - Model concepts, claims, citations, support, contradiction, and uncertainty.
-- Add Neo4j or another graph backend behind a repository interface.
-- Corresponds to `knowledge-engine-graph` in the long-term ecosystem; see
+- Keep graph persistence behind `GraphRepository`; the implemented first
+  backend is relational SQLite. Neo4j or another graph database requires a
+  measured query/scale need and is not current roadmap work.
+- Implements the ecosystem's graph capability inside core; a separate graph
+  service is not planned without a measured ownership or scale need. See
   `docs/roadmap/long_term_vision.md`.
 - **`docs/phase4_design.md`** is the implementation-ready design sketch,
   written before any Phase 4 code, mirroring `docs/phase2_design.md`/
@@ -1140,9 +1190,13 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
 
 ## Phase 5: Human Interface
 
-- Add API and web repositories as separate projects.
+- `knowledge-engine-web` and `knowledge-engine-ai` now exist as separate
+  projects. A separate API repository is not planned: the current persistent-
+  host design puts the first read-only HTTP boundary in core and requires a
+  measured consumer/deployment trigger before implementation.
 - Provide evidence-first explanations with visible uncertainty and sources.
-- This is where the future `knowledge-engine-ai`/`-web`/`-agents` layers'
+- This is where the active `knowledge-engine-ai`/`-web` layers and any future
+  `knowledge-engine-agents` layer's
   research-question crafting, evidence synthesis, and confidence rating
   (see `docs/roadmap/long_term_vision.md`) actually reach a person, on top
   of the Evidence and Knowledge Graph layers Phases 2 and 4 build.
@@ -1158,12 +1212,13 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   everywhere else in that addendum: none of them feed the confidence
   rating.
 - `docs/ai_interface_layer_scoping.md` and `docs/ai_layer_architecture.md`
-  record scoping ideas for `knowledge-engine-ai`'s Decision, Discovery,
-  and Education Engines -- the latter's refined "one Research Copilot,
+  record architecture for `knowledge-engine-ai`'s Evidence, Analytical,
+  Discovery, and Education work -- the latter's refined "one Research Copilot,
   four intelligences" framing, a three-way Evidence Quality/Consensus/
-  Claim Confidence split, and domain-specific confidence profiles. Both
-  are records of ideas, not implementation-ready designs; no code, no
-  repository yet, per the project owner's explicit direction.
+  Claim Confidence split, and domain-specific confidence profiles.
+  `knowledge-engine-ai` now exists and has shipped Retrieval Intelligence,
+  core-provided Evidence Intelligence display, and opt-in local grounded
+  synthesis. Analytical and Discovery Intelligence remain future work.
 - **M57** (see `docs/evidence_intelligence_design.md`) is the
   implementation-ready formula both documents above named as their own
   trigger condition: a deterministic, no-LLM Evidence Quality/Consensus/
@@ -1186,6 +1241,16 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   tracked as parallel follow-on work, not part of this milestone.
 
 ## Release Milestones
+
+The phase-to-version list below was the original release intent, not the
+history that actually occurred. The latest public tag remains
+`v0.2.0-alpha.1`, while main has since shipped capabilities originally placed
+under several later version labels (metadata/citation work, vector retrieval,
+the graph, web, and AI). Do not assign the next tag from this old mapping.
+Perform a dedicated release assessment after Current Project Path goals 1-3
+produce a coherent public journey, measured retrieval, and a defensible golden
+evidence map. Preserve the historical entries below as context until that
+assessment replaces them with a truthful pre-1.0 release plan.
 
 - `v0.1.0`: Phase 0 local source vault, CLI, tests, docs, and repository hygiene.
 - `v0.1.1`: Bug fixes and setup improvements.
@@ -1225,10 +1290,10 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   (`QdrantVectorIndex`, not yet CLI-wired), and M39 (`ke fused-search`,
   lexical+semantic Reciprocal Rank Fusion) are implemented
 - `docs/roadmap/long_term_vision.md` -- the multi-package ecosystem and final
-  goal these phases build toward, including the future `knowledge-engine-ai`
-  layer's role once Phase 2's Evidence Records exist
+  goal these phases build toward, including the active `knowledge-engine-ai`
+  layer's present and future role over Phase 2's Evidence Records
 - `docs/reference_knowledge_layer_design.md` -- design sketch for a
-  reference knowledge layer giving the extraction pipeline and future AI
+  reference knowledge layer giving the extraction pipeline and AI
   Interface Layer the background context a primary-research paper always
   assumes but never restates. **M41** (see the "Reference Knowledge
   Layer" section above) built the sketch's
@@ -1250,7 +1315,7 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   `docs/history/milestones/m43_mesh_lookup.md`, `docs/history/milestones/m44_pubchem_lookup.md`, and
   `docs/history/milestones/m45_extraction_review_annotate.md`. The design doc's "Addendum:
   where this plugs into the final report" section records ten concrete
-  ways reference-layer content can shape the future AI Interface Layer's
+  ways reference-layer content can shape the AI Interface Layer's
   report (grouping, gap disclosure, provenance labeling, glossary/appendix
   content, Knowledge Graph concept nodes), ordered cheapest-to-build
   first, with the owner's direction to eventually build all ten --

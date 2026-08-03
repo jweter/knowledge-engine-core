@@ -50,7 +50,7 @@ needed.
 
 ## Modular Architecture
 
-Parsing, persistence, search, metadata enrichment, graph modeling, and future AI
+Parsing, persistence, search, metadata enrichment, graph modeling, and AI
 systems should remain separable. Modules should be replaceable without requiring
 the entire project to be rewritten.
 

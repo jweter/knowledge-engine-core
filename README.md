@@ -1,21 +1,35 @@
 # Knowledge Engine Core
 
-Knowledge Engine Core is the offline-first scientific source-vault foundation for
-the wider Knowledge Engine project. It imports local scientific PDFs, extracts text
-and best-effort metadata, stores traceable corpus/import state, and provides local
-lexical retrieval.
+Knowledge Engine Core is the offline-first scientific source, evidence, and graph
+foundation for the wider Knowledge Engine project. It imports local scientific
+PDFs, preserves provenance, extracts traceable evidence, supports lexical and
+semantic retrieval, and builds a reviewable scientific relationship graph.
 
 The long-term mission is to help humanity preserve, connect, evaluate, and apply
 scientific knowledge with traceable evidence and visible uncertainty. This
-repository does not yet implement AI reasoning, a knowledge graph, vector search,
-a public API, or a web application. It builds the reliable core those later systems
-must be able to trust.
+Core does not decide scientific truth or hide reasoning inside an AI model. The
+separate web and AI repositories consume its evidence and graph outputs; the
+read-only persistent-host boundary remains designed but deliberately unbuilt.
+
+Public entry points:
+
+- [Project showcase](https://knowledge-engine.steelzombie9999.chatgpt.site/)
+  -- the mission and public introduction.
+- [Working web alpha](https://knowledge-engine-web-alpha.onrender.com/)
+  -- the current read-only laboratory over a published point-in-time snapshot.
+
+The showcase is the front door; the alpha is the inspectable demonstration.
+Neither should imply that the system has reached scientific synthesis or open
+public-service maturity.
 
 ## Status
 
 Current version: `0.2.0a1`
 
-Current phase: **Phase 2 — Evidence Records** (Phase 1 ingestion complete through M14, plus M34/M35's second and third discovery sources)
+Current strategic cycle: **measured retrieval and one complete GLP-1 evidence
+map**. The ingestion, Evidence Record, semantic retrieval, relationship-graph,
+web-alpha, and first AI retrieval/synthesis foundations already exist. See
+[Current Project Path](docs/roadmap.md#current-project-path).
 
 Phase 1 completed capabilities include:
 
@@ -279,12 +293,11 @@ architecture and milestone-by-milestone status.
   evidence already passed. See
   [docs/history/milestones/m37_manual_pdf_preview.md](docs/history/milestones/m37_manual_pdf_preview.md).
 
-Phase 1 ingestion is complete through M14, plus M34/M35's second and third
-discovery sources, M36's evidence lookup tool, and M37's manual-PDF
-preview tool. Phase 2 evidence extraction is complete through M29. Phase 3
-(search plus semantics) is in progress with M33. See
-[docs/roadmap.md](docs/roadmap.md) and
-[docs/phase3_design.md](docs/phase3_design.md) for the next milestone.
+These milestone notes preserve the sequence that built the present system.
+Later work added corpus-scale evidence extraction, the relationship graph,
+Evidence Intelligence, web and AI consumers, and grounding-verified local-LLM
+PICO extraction. See [docs/roadmap.md](docs/roadmap.md) for current status and
+the next ordered goals.
 
 ## Requirements
 
@@ -474,52 +487,28 @@ or high-confidence duplicate evidence is evaluated before paper persistence.
 
 ## Roadmap
 
-The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Phase 1 now includes
-completed M9–M14 ingestion, duplicate/resume, metadata, 100-paper rehearsal,
-scale-readiness, and the controlled 500-paper rehearsal
-([`PROCEED`](docs/history/milestones/m14_500_paper_rehearsal_report.md)) work. Phase 2 (see
-[docs/phase2_design.md](docs/phase2_design.md)) is in progress through M29:
-deterministic, rule-based structured-section detection, claim-candidate
-detection, claim framing-cue classification, and draft extraction
-review-item generation, runnable end-to-end via `ke
-extraction-review-generate`, with a reviewer-completed draft now
-promotable into a real `EvidenceRecord` via `ke extraction-review-promote`.
-`ke paper-pages-backfill` restores extractability for papers imported
-before M15. `ke evidence-validate` now constrains `extraction_status` to a
-closed vocabulary and validates `source_span` offset ranges. The
-Relationship Layer's first slice -- a human-authored relationship schema and
-`ke relationship-validate` -- lets a reviewer link two evidence records with
-a typed `supports`/`contradicts`/`qualifies`/`contextualizes` relationship;
-`ke relationship-report` (M29) renders each relationship next to the claim
-text of the two evidence records it links; automated relationship detection
-is not yet built. `ke
-extraction-review-generate` now records a durable `extraction_runs` row per
-invocation, so a paper's extraction history is findable without re-reading
-JSONL files; `core` never automatically re-runs extraction on a ruleset
-change. `ke extraction-review-generate` also now classifies a paper's own
-stated `study_type` (randomized controlled trial, meta-analysis,
-systematic review, cohort/case-control/cross-sectional/pilot/
-observational study) from an explicit cue in its Abstract or Methods, and
-extracts its own stated `limitations` from an explicit "Limitations"
-heading -- the first slice of deterministic, non-human-typed
-PICO-adjacent extraction; a missing signal produces `None`, never a
-guess. `ke extraction-review-generate` also now extracts `population`,
-`intervention`, `comparator`, and `outcome` (the second and final PICO
-slice) as the first sentence matching an explicit cue within Abstract/
-Methods (and also Results for comparator/outcome) -- the same
-absence-over-guessing discipline. Automated, research-question-relative
-`evidence_direction` classification is not yet implemented --
-`research_question` acquisition has no automated source anywhere in this
-pipeline yet; a human reviewer supplies it before promotion. All Phase 2
-extraction is rule-based, with no LLM-based extraction, synthesis, or
-reasoning of any kind.
+The authoritative roadmap is [docs/roadmap.md](docs/roadmap.md). Its current
+five-goal sequence is: unify the public showcase and live alpha; benchmark and
+improve Ask retrieval; complete one defensible GLP-1/body-weight evidence map;
+advance Evidence and Analytical Intelligence over that evaluated foundation;
+then migrate web and AI to a parity-tested read-only persistent host when its
+operator and security trigger is met.
 
-Neither Phase 1 nor Phase 2 should be expanded into Alembic adoption, a new
-package manager, persistent telemetry, vector search, a graph, AI reasoning,
-an API, web functionality, or unrelated refactoring without separate
-evidence and authorization. Vector search itself is Phase 3's own explicit
-goal (see M30/M31/M32/M33 above and [docs/phase3_design.md](docs/phase3_design.md)), not
-an out-of-scope expansion of Phases 1/2.
+Historical phase and milestone details remain in the roadmap and
+`docs/history/`. They are implementation records, not competing current plans.
+The project now prefers retrieval quality and one coherent scientific evidence
+map over further corpus growth, cosmetic polish in isolation, or more
+autonomous AI.
+
+The first three tasks are therefore:
+
+1. Align the showcase, live alpha, and repository READMEs into one truthful
+   guided public journey, with visible snapshot freshness and trust boundaries.
+2. Establish a golden-question retrieval benchmark and fix measured ranking
+   failures before adding more narration.
+3. Complete the GLP-1/body-weight evidence map across key sources,
+   populations, limitations, citations, and conservatively reviewed
+   relationships.
 
 ## Known Issues
 

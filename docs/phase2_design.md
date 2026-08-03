@@ -10,6 +10,15 @@ implementation-ready architecture, sequencing, and open-question list. See
 `docs/history/vertical_slice/vertical_slice.md` for the historical manual evidence-record prototype
 this phase supersedes with automated extraction.
 
+Current status: the design's extraction and provenance foundation has shipped,
+and subsequent milestones extended it well beyond the early sequence retained
+below. M69 added grounding-verified local-LLM PICO extraction; its bounded
+cross-page follow-up grounded 108 of the original 118-record automated backlog
+and left 10 records untouched rather than weakening source checks. The current
+priority is not another extraction redesign: it is measured retrieval and one
+complete GLP-1/body-weight evidence map. See `docs/roadmap.md` for authoritative
+status and sequencing.
+
 M15 (issue #89, PR #90, merged) implemented this design's foundation
 prerequisite: page/span-level extraction provenance (`ParsedPaper.pages`, the
 `paper_pages` table), plus the evidence-record validator and renderer fixes
