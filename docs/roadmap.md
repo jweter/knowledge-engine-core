@@ -581,10 +581,13 @@ ongoing plan in place rather than being fully closed out.
 
 Promoted from `docs/future_ideas.md`'s "Reviewer Tooling" section into
 committed near-term work -- the project owner asked for these
-explicitly. None weaken review: every relationship and every "reviewed"
-flag still requires a human to actually read the source. The lever is
-removing mechanical busywork around that reading, never the reading or
-the judgment itself.
+explicitly. The first four items below made human review faster without
+weakening it. **That premise changed with M69** (see
+`docs/roadmap/long_term_vision.md`'s "Decision: automated evidence
+review at scale"): manual human review does not scale to this project's
+real corpus-growth plans, so it is no longer relied on as the review
+mechanism for every record. The fifth item is that decision's
+implementation.
 
 - **Corpus-wide Evidence Intelligence dashboard.** Done:
   `knowledge-engine-web`'s `GET /dashboard`
@@ -624,9 +627,29 @@ the judgment itself.
   document, browsable instead of generated. Never infers, scores, or
   suggests a relationship; deciding whether one exists remains a human
   judgment call authored directly in `relationship_records.jsonl`.
+- **M69: automated evidence review pipeline (in progress).** Replaces
+  the human-reading gate for evidence records with a grounding-verified
+  LLM extraction path, per `docs/roadmap/long_term_vision.md`'s
+  "Decision: automated evidence review at scale." Concretely: (1) run
+  extraction per claim candidate instead of once per paper, fixing the
+  PICO-broadcast bug M68 found by hand (`build_draft_evidence_items`
+  currently glues one paper-level PICO extraction onto every claim in
+  that paper); (2) call the local model already wired up for `/ask`
+  synthesis (`OllamaLLM.generate`) to propose PICO fields/`claim_text`/
+  `evidence_direction` from each candidate's own local context; (3) add
+  a grounding-check verifier -- new, does not exist today -- that drops
+  any proposed field failing to trace to the source text, the same
+  "skip, don't invent" posture M18/M28 already use; (4) label results
+  with a new `extraction_method` value (never `manual_human_review`)
+  and give it its own Evidence Quality tier between raw-automated (25
+  points) and human-manual (40 points), filling the reserved slot
+  `docs/evidence_intelligence_design.md` already named. Human review
+  stays available as the highest-rigor tier; it is no longer required
+  for a record to be usable at scale.
 
-All four items above are done; see `knowledge-engine-web`'s own README
-Roadmap section for implementation detail.
+The first four items above are done; see `knowledge-engine-web`'s own
+README Roadmap section for implementation detail. M69 is in progress --
+see `docs/roadmap/long_term_vision.md` for the full decision record.
 
 ### Supporting operator durability
 

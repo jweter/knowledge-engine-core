@@ -95,6 +95,79 @@ outside it:
   confirms rather than composes from scratch, the same conservative
   posture M18 already uses for framing cues.
 
+### Decision: automated evidence review at scale (M69)
+
+**Superseded by this decision:** `docs/future_ideas.md`'s "Reviewer
+Tooling" section previously stated that the automated-evidence-record
+backlog "should never be closed by weakening review -- every
+relationship and every 'reviewed' flag must still trace to a human
+actually reading the source." That policy assumed a human reviewer's
+time was the scaling constraint to work around, not a wall the project
+cannot get past. It is a wall: M68's real audit found 118 of 154
+evidence records (79%) already automated and unreviewed, at today's
+1,000-paper corpus cap -- before any real scale-up. The project owner
+has explicitly and permanently decided: manual, human-read review of
+every record does not scale to this project's actual corpus-growth
+plans and will not be relied on as the review mechanism going forward.
+This is now a fixed constraint of the project, not an open question --
+future sessions should build against it, not re-litigate it.
+
+**What replaces the human-reading gate:** review's actual job was never
+"a person's eyes touched this" for its own sake -- it was making sure a
+record's `claim_text`/PICO fields/`evidence_direction` are genuinely
+grounded in the source paper's own text, not invented or mismatched
+from an unrelated passage (exactly the bug class M68 found and fixed by
+hand: the automated `m52` pipeline broadcasts one paper-level PICO
+extraction onto every claim candidate in that paper, regardless of
+which sentence/subgroup/section a given claim actually came from -- see
+`knowledge_engine/extraction/evidence_items.py`'s
+`build_draft_evidence_items` and `extraction_review_batch.py`'s
+`run_extraction_review_for_paper`). A verifiable, falsifiable, grounded
+extraction satisfies that job without a human doing the reading:
+
+- Extract per claim candidate (one call per candidate sentence,
+  constrained to that candidate's own local page/section context), not
+  once per paper -- this alone fixes the PICO-broadcast bug, independent
+  of whether the extractor is deterministic or an LLM.
+- Use the local model already wired up for `/ask` synthesis in
+  `knowledge-engine-web`/`knowledge-engine-ai`
+  (`OllamaLLM`/`LocalLLM.generate(prompt, max_tokens=...)`, a plain
+  synchronous `urllib` call against Ollama's `/api/chat`, no SDK) to
+  propose `population`/`intervention`/`comparator`/`outcome`/
+  `claim_text`/`evidence_direction` from that local context.
+- Add a **grounding-check verifier** -- this does not exist anywhere in
+  the codebase today and is the load-bearing piece: before an
+  LLM-proposed field is accepted, check it is an actual substring or
+  close near-match of the source page text at the claim's own span, the
+  same discipline `core` already applies to `source_span`. A field that
+  fails grounding is dropped (never guessed), the same "skip, don't
+  invent" posture M18/M28 already established for the deterministic
+  extractors.
+- Label the result honestly. This is still never `manual_human_review`
+  -- it gets its own `extraction_method` value (e.g.
+  `llm-grounded-extraction-v1`), and `review_notes`/`provenance` state
+  plainly what actually happened: an LLM proposed it, a deterministic
+  check verified it against the source, no human read it. `core`'s
+  honesty invariant (never claim a review happened that didn't) is
+  unchanged by this decision -- only the identity of the reviewer is
+  new.
+- Evidence Intelligence scoring (`knowledge_engine/evidence_intelligence.py`,
+  `compute_evidence_quality`) already reserved a middle extraction-rigor
+  tier for exactly this case (`docs/evidence_intelligence_design.md`:
+  *"a future `ready_for_secondary_review: true` + populated checklist
+  state on an automated record would score between these two"*) -- a
+  grounding-verified LLM record should score between raw-automated (25
+  points) and human-manual (40 points), not identically to an
+  unverified `m52` record.
+
+**What does not change:** a human can still read and confirm any
+record -- that path stays available and is still the highest-rigor
+tier. `core`'s "never decide truth" boundary (see above) is unchanged:
+grounding verification checks that extracted text traces to the source,
+it does not judge whether the source itself is correct. This decision
+only removes human reading as a *required* gate for a record to be
+usable in the corpus at scale.
+
 ## The AI Interface Layer (Future, `knowledge-engine-ai`)
 
 `knowledge-engine-core` deliberately stops short of deciding what a piece of

@@ -133,10 +133,15 @@ Three deterministic components, each independently inspectable:
      manual review, since unverified genuinely carries more uncertainty
      than checked -- the direction of the gap is real signal, only its
      size was too harsh originally.
-   - (Reserved, not populated by any record today: a future
-     `ready_for_secondary_review: true` + populated checklist state on
-     an automated record would score between these two -- not
-     designed further here since no record currently reaches it.)
+   - **Reserved slot, now committed (M69):** a grounding-verified LLM
+     extraction (`docs/roadmap/long_term_vision.md`'s "Decision:
+     automated evidence review at scale") fills exactly this middle
+     tier -- scores between raw-automated (25) and human-manual (40),
+     never equal to either, since a checked-but-not-human-read record
+     carries real signal beyond "unverified" but is not the same rigor
+     as a person reading the source. Exact point value and the new
+     `extraction_method` string are M69 implementation details, not
+     finalized in this doc.
 
 3. **Completeness penalty** (0 to -10 points): -5 if `limitations` is
    empty or missing, -5 if `uncertainty_notes` is empty or missing.

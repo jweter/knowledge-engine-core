@@ -68,12 +68,21 @@ than ever before, while making every conclusion transparent and reproducible.
 
 The project's two biggest real backlogs are both one-record-at-a-time
 today: ~148 of 155 claims still have zero relationship edges (M56/M59
-authored 7, by hand, reading full text each time), and 122 of 155
-evidence records are still automated (M52) and unreviewed. Neither
-backlog should ever be closed by weakening review -- every relationship
-and every "reviewed" flag must still trace to a human actually reading
-the source. The lever available is making each individual review faster
-and batching the *mechanical* assembly work, never the judgment itself.
+authored 7, by hand, reading full text each time), and 118 of 154
+evidence records are still automated (M52) and unreviewed (M68 reviewed
+the first 3). **Superseded by `docs/roadmap/long_term_vision.md`'s
+"Decision: automated evidence review at scale (M69)":** this section
+previously said neither backlog should ever be closed by "weakening
+review," meaning every record had to trace to a human actually reading
+the source. The project owner has since decided that does not scale to
+this project's real corpus-growth plans and will not be the review
+mechanism going forward -- see that decision for the full reasoning and
+replacement mechanism (grounding-verified LLM extraction). The items
+below that assumed a human reviewer as the bottleneck to make faster are
+kept for their still-useful mechanical ideas (batching, ranking,
+surfacing), but the backlog itself is now expected to close primarily
+through M69's automated pipeline, not through faster human review
+sessions.
 
 - **Relationship-candidate review worksheet.** A command that, for a
   batch of N candidate pairs (from `ke graph-relationship-candidates`),

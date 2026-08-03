@@ -7,6 +7,30 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Decision: automated evidence review at scale (M69), documentation
+  only.** The project owner explicitly and permanently decided that
+  manual, human-read review of every evidence record does not scale to
+  this project's real corpus-growth plans (M68's audit found 118 of 154
+  records, 79%, already automated-and-unreviewed at today's small
+  scale) and will not be relied on going forward. Updated every doc
+  asserting the superseded "every record must trace to a human reading
+  the source" policy to point at the new decision instead of
+  contradicting it: `docs/roadmap/long_term_vision.md` (new "Decision:
+  automated evidence review at scale (M69)" section with the full
+  reasoning and replacement mechanism -- per-claim-candidate LLM
+  extraction via the existing `OllamaLLM` client, a new grounding-check
+  verifier that does not exist yet, and a new honestly-labeled
+  `extraction_method` tier), `docs/future_ideas.md`'s "Reviewer
+  Tooling" intro, `docs/core_interface_contract.md`'s seam description,
+  `docs/roadmap.md`'s "Planned: Reviewer & Evidence Intelligence
+  Tooling" section (new fifth item, M69 in progress), and
+  `docs/evidence_intelligence_design.md`'s already-reserved
+  extraction-rigor middle tier (now committed, not just reserved). No
+  code changed in this entry -- the pipeline itself is the next
+  milestone.
+
 ### Added
 
 - **M68: automated evidence-record review, batch 1.** Continuing
