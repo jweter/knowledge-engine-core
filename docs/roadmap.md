@@ -465,7 +465,19 @@ top-ranked candidates by embedding similarity turned out to be spurious
 matches on overly generic shared concepts (`Health`, `Adult`,
 `Patients`) or genuinely different intervention/outcome domains despite
 high textual similarity, and were left alone rather than forced into a
-relationship, the same discipline M59 established.
+relationship, the same discipline M59 established. **M67** reviewed the
+next tier (ranks 21-35) and authored 3 more real records, growing the
+graph 14 -> 17 edges: the same discipline again rejected most
+candidates in this tier, including several sharing only a generic
+concept (`Patients`, `Adult`, `Risk`) or the same drug class studied
+against a genuinely different outcome (e.g. GLP-1 receptor agonists and
+psoriasis, GLP-1 receptor agonists and rotator cuff disease). Codex
+review on PR #233 caught that all 3 of M67's own new records were
+initially authored as `supports` on the strength of a directionally-
+consistent secondary finding, without confirming the *target* record's
+own specific claim -- corrected to `contextualizes`, the same
+supports-vs-contextualizes discipline M59 established for exactly this
+failure mode, mis-applied here on first pass.
 
 **Item 3 -- LLM-grounded synthesis (local model)** is done: `knowledge-engine-ai`'s
 M3 built the local, offline `OllamaLLM`/`synthesize_answer` synthesis

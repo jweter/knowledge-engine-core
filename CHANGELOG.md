@@ -130,6 +130,37 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `relationship_records.jsonl`: relationship edges 11 -> 14,
   `unconfirmed_claims` 148 -> 145.
 
+- **M67: relationship graph deepening**, continuing `docs/roadmap.md`'s
+  priority-list item 2. Reviewed the next tier (ranks 21-35) from `ke
+  relationship-review-worksheet --rank-by-similarity` and authored 3
+  more real records: the post-bariatric tirzepatide weight-regain
+  cohort <-> SURMOUNT-1's waist-to-height-ratio post-hoc analysis; the
+  semaglutide cardiometabolic-risk retrospective cohort <-> the
+  tirzepatide-vs-semaglutide propensity-matched comparison; and the
+  STEP 5 trial <-> the PMOS (Polyendocrine Metabolic Ovarian Syndrome)
+  cohort. All three were initially authored as `supports`, each citing
+  a directionally-consistent secondary finding (a weight-related
+  improvement) -- Codex review on PR #233 correctly caught that none of
+  the three actually confirm the *target* record's own specific claim:
+  SURMOUNT-1's target claim is a placebo-*relative* WHtR improvement,
+  which an uncontrolled single-arm cohort cannot confirm; the
+  tirzepatide-vs-semaglutide record's claim is the head-to-head
+  comparison itself, which an uncontrolled semaglutide-only cohort says
+  nothing about; and the PMOS record's actual research question is
+  ovulatory/menstrual restoration, not body weight, which STEP 5 never
+  tested. Corrected all three to `contextualizes` -- real magnitude
+  context, never counted as agreement toward a claim the source
+  evidence doesn't actually address, the same supports-vs-contextualizes
+  discipline M59's own SURMOUNT-1/tirzepatide-vs-semaglutide edges
+  already established, mis-applied here on first pass. Most of this
+  tier's remaining candidates were spurious matches on generic shared
+  concepts (`Patients`, `Adult`, `Risk`) or genuinely different
+  intervention/outcome domains despite moderate textual similarity
+  (e.g. GLP-1 receptor agonists and psoriasis, GLP-1 receptor agonists
+  and rotator cuff disease) -- left alone. `ke graph-build` run against
+  the corrected `relationship_records.jsonl`: relationship edges
+  14 -> 17 (0 `supports`, 3 `contextualizes` added this milestone).
+
 ### Changed
 
 - **`docs/roadmap.md`**: marked the corpus-wide Evidence Intelligence
