@@ -130,6 +130,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `relationship_records.jsonl`: relationship edges 11 -> 14,
   `unconfirmed_claims` 148 -> 145.
 
+### Changed
+
+- **`docs/roadmap.md`**: marked the corpus-wide Evidence Intelligence
+  dashboard done under "Planned: Reviewer & Evidence Intelligence
+  Tooling" -- it shipped in `knowledge-engine-web` (PR #21,
+  `knowledge_engine_web/dashboard.py`, `GET /dashboard`) but this repo's
+  own roadmap doc still listed it as unbuilt. Documentation sync only,
+  no code change in this repo.
+
 ### Fixed
 
 - **Drive backup pilot: service accounts can't write here.** Confirmed
