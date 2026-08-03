@@ -9,6 +9,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Persistent host architecture decision.** Added
+  `docs/persistent_host_design.md`, defining a read-only, localhost-first HTTP
+  host over core's existing readers as the eventual replacement for web
+  snapshots and AI subprocess calls. The design limits the API to current
+  consumer needs, preserves scientific trust boundaries, aligns deployment
+  with the existing systemd/password-gated-alpha precedent, and names concrete
+  operational and consumer triggers that must be met before server code is
+  built. No host, endpoint, dependency, or application behavior is added.
+
 - **Post-M69 relationship graph review, ranks 36-50.** Reviewed the next
   15 similarity-ranked pairs from
   `ke relationship-review-worksheet --rank-by-similarity`

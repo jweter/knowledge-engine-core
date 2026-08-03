@@ -501,9 +501,14 @@ elsewhere in that project -- see `knowledge-engine-web/docs/web_design.md`'s
 committed design decision: `knowledge-engine-web/docs/service_boundary_design.md`
 recommends event-triggered snapshot refreshes now (no new
 infrastructure -- `core` has no persistent host yet) and a real
-read-only HTTP API once `core` actually runs as one. The corpus-growth
-and evidence-extraction Routines in this repo now fire the Web Alpha
-Snapshot Refresh Routine directly after a real merge, cutting staleness
+read-only HTTP API once `core` actually runs as one. Core's corresponding
+decision is now documented in `docs/persistent_host_design.md`: retain the
+current snapshot/subprocess boundaries until a named operator, a measured
+consumer need, accepted API fixtures, a coherent published-data procedure,
+and network security are all ready; then build a localhost-first ASGI host
+over the existing reader services, one consumer slice at a time. The
+corpus-growth and evidence-extraction Routines in this repo now fire the Web
+Alpha Snapshot Refresh Routine directly after a real merge, cutting staleness
 from "up to ~7 days" to "typically same day."
 
 **Item 5 -- an extraction-accuracy benchmark** is done: **M65**
