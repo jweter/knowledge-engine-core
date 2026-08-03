@@ -80,7 +80,32 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `next_retstart: 3600` for the next cycle. See the corpus README's
   `retstart=3550` batch-history entry.
 
-### Fixed
+- **M65: extraction-accuracy benchmark**, closing `docs/roadmap.md`'s
+  priority-list item 5. M38/M40 measured Phase 2's deterministic
+  extraction pipeline's *coverage* at scale; M65 measures its *accuracy*
+  against independent ground truth for the first time --
+  `knowledge_engine.extraction_accuracy_benchmark` re-runs the same
+  pipeline against each of the corpus's 33 genuinely human-authored
+  `EvidenceRecord`s' own source papers (`extraction_method` in
+  `manual_human_review`/`manual` only -- M52's automated records are
+  excluded from ground truth since they template these same fields from
+  this same pipeline, which would make the comparison circular) and
+  compares fresh output to the promoted field values. `study_type` gets
+  an exact-match rate (closed vocabulary); free-text PICO fields and
+  `limitations` get presence agreement plus Jaccard token-overlap, since
+  exact string equality is meaningless against human-edited prose. Run
+  live against the real corpus (`scripts/m65_extraction_accuracy_benchmark.py`,
+  all 33 ground-truth records resolved and benchmarked, 0 skipped):
+  `study_type` exact-match 15% (real, diagnosed cause -- several
+  disagreements are vocabulary granularity, not wrong answers, e.g.
+  ground truth's `systematic_review_meta_analysis` vs the classifier's
+  `meta_analysis`, or `retrospective_observational_cohort` vs
+  `observational_study`; flagged here, not silently reconciled, pending
+  an explicit decision on whether to widen the classifier's vocabulary
+  or accept the mismatch), `limitations` presence-match 85%, PICO
+  presence-match 73-91% per field, PICO mean token-overlap 5-17% per
+  field (expected to be low -- ground truth is human-paraphrased prose,
+  not the same span the deterministic extractor pulls).
 
 - **Drive backup pilot: service accounts can't write here.** Confirmed
   live: a bare Google service account has no Drive storage quota on a

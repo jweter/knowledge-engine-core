@@ -457,9 +457,40 @@ Confidence publicly** is in progress. **M64** authored 4 more real
 `RelationshipRecord`s from the `M61` similarity-ranked worksheet, growing
 the graph from 7 to 11 relationship edges (see the M64 changelog entry
 above), and found a second duplicate evidence record while reviewing the
-worksheet (removed; see Removed in `CHANGELOG.md`). Items 3-5 (LLM-
-grounded synthesis, a real service boundary for `knowledge-engine-web`,
-an extraction-accuracy benchmark) remain not yet started.
+worksheet (removed; see Removed in `CHANGELOG.md`).
+
+**Item 3 -- LLM-grounded synthesis (local model)** is done: `knowledge-engine-ai`'s
+M3 built the local, offline `OllamaLLM`/`synthesize_answer` synthesis
+(PR #3 in that repo), and `knowledge-engine-web`'s own M4 wired it into
+`/ask`'s optional, opt-in synthesis checkbox (self-contained mirror
+modules, same reasoning as the reflection-not-import boundary
+elsewhere in that project -- see `knowledge-engine-web/docs/web_design.md`'s
+"Decision: local LLM").
+
+**Item 4 -- a real service boundary for `knowledge-engine-web`** has a
+committed design decision: `knowledge-engine-web/docs/service_boundary_design.md`
+recommends event-triggered snapshot refreshes now (no new
+infrastructure -- `core` has no persistent host yet) and a real
+read-only HTTP API once `core` actually runs as one. The corpus-growth
+and evidence-extraction Routines in this repo now fire the Web Alpha
+Snapshot Refresh Routine directly after a real merge, cutting staleness
+from "up to ~7 days" to "typically same day."
+
+**Item 5 -- an extraction-accuracy benchmark** is done: **M65**
+(see this milestone's CHANGELOG entry) measures Phase 2's deterministic
+extraction pipeline's accuracy against the corpus's 33 genuinely
+human-authored `EvidenceRecord`s (M52's automated records excluded from
+ground truth as circular). Real, diagnosed findings: `study_type` exact-match
+15% (mostly a vocabulary-granularity mismatch between ground truth's
+and the classifier's category names, not wrong answers -- flagged, not
+reconciled, pending an explicit decision), `limitations` presence-match
+85%, PICO presence-match 73-91% per field. See
+`knowledge_engine/extraction_accuracy_benchmark.py` and
+`scripts/m65_extraction_accuracy_benchmark.py`.
+
+All five items on the project owner's original priority list have now
+been started; items 1, 3, and 5 are done, items 2 and 4 have a real,
+ongoing plan in place rather than being fully closed out.
 
 ### Planned: Reviewer & Evidence Intelligence Tooling
 
