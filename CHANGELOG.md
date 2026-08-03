@@ -130,6 +130,31 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `relationship_records.jsonl`: relationship edges 11 -> 14,
   `unconfirmed_claims` 148 -> 145.
 
+- **M67: relationship graph deepening**, continuing `docs/roadmap.md`'s
+  priority-list item 2. Reviewed the next tier (ranks 21-35) from `ke
+  relationship-review-worksheet --rank-by-similarity` and authored 3
+  more real `supports` records: the post-bariatric tirzepatide
+  weight-regain cohort <-> SURMOUNT-1's waist-to-height-ratio post-hoc
+  analysis (both report substantial, significant tirzepatide-associated
+  improvement in a weight-related anthropometric measure -- 18.1% mean
+  %TBWL and 54.7% WHtR-category improvement respectively -- in
+  populations SURMOUNT-1's own trial did not test); the semaglutide
+  cardiometabolic-risk retrospective cohort <-> the tirzepatide-vs-
+  semaglutide propensity-matched comparison (both report meaningful
+  semaglutide-associated weight loss, -9kg and 10.8% respectively, in
+  two independent, non-overlapping real-world cohorts); and the STEP 5
+  trial <-> the PMOS (Polyendocrine Metabolic Ovarian Syndrome) cohort
+  (both report semaglutide-associated weight loss on their shared body-
+  weight outcome, -15.2%/-2.6% placebo and -11.3% respectively, in a
+  population STEP 5 did not test). Most of this tier's candidates were
+  again spurious matches on generic shared concepts (`Patients`,
+  `Adult`, `Risk`) or genuinely different intervention/outcome domains
+  despite moderate textual similarity (e.g. GLP-1 receptor agonists and
+  psoriasis, GLP-1 receptor agonists and rotator cuff disease) -- left
+  alone, same discipline as M56/M59/M64/M66. `ke graph-build` run
+  against the updated `relationship_records.jsonl`: relationship edges
+  14 -> 17.
+
 ### Changed
 
 - **`docs/roadmap.md`**: marked the corpus-wide Evidence Intelligence
