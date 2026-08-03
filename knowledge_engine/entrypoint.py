@@ -76,6 +76,7 @@ from knowledge_engine.evidence_intelligence import (
     compute_evidence_consensus,
     compute_evidence_coverage,
     compute_evidence_quality,
+    extraction_tier_label,
     render_synthesis,
 )
 from knowledge_engine.evidence_review_automate import automate_review_for_record
@@ -3375,7 +3376,7 @@ def _build_evidence_intelligence_report(
         "",
         f"- Score: {quality.score}/100",
         f"- Study design tier: {_graph_report_text(quality.study_design_tier)}",
-        f"- Manually reviewed: {'yes' if quality.manually_reviewed else 'no'}",
+        f"- Extraction tier: {extraction_tier_label(quality.extraction_tier)}",
         "",
         "## Evidence Consensus",
         "",
@@ -3455,6 +3456,7 @@ def _build_evidence_intelligence_json(
             "score": quality.score,
             "study_design_tier": quality.study_design_tier,
             "manually_reviewed": quality.manually_reviewed,
+            "extraction_tier": quality.extraction_tier,
         },
         "evidence_consensus": {
             "relationship_edge_count": consensus.relationship_edge_count,

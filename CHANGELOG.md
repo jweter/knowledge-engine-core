@@ -63,6 +63,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Evidence Intelligence extraction-tier exports.** The Markdown report
+  now renders the same honest three-way extraction label as synthesis
+  (`manually reviewed`, `LLM-extracted, grounding-verified`, or
+  `automated, pending review`) instead of collapsing the latter two into
+  `Manually reviewed: no`. The JSON contract now includes
+  `evidence_quality.extraction_tier` while retaining `manually_reviewed`
+  for backward compatibility, allowing downstream consumers to preserve
+  the M69 review tier.
+
 - **M69 follow-up: bounded cross-page PICO context.** The first full
   automated-review backlog pass left 21 records on the M52 extraction
   method because their terse result sentences were correctly tagged to
