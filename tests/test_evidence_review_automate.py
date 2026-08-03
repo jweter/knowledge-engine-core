@@ -1,3 +1,5 @@
+from typing import TypedDict, cast
+
 from knowledge_engine.evidence_review_automate import automate_review_for_record
 from knowledge_engine.extraction import LLM_GROUNDED_PICO_RULES_VERSION
 
@@ -8,6 +10,13 @@ _PAGE_TEXT = (
     "reduced HbA1c from baseline (p=0.0036), whereas no significant "
     "reduction was observed with placebo (p=0.0872)."
 )
+
+
+class _ReviewChecklist(TypedDict):
+    automated_classification: bool
+    llm_grounded: bool
+    human_reviewed: bool
+    fields_grounded: list[str]
 
 
 class _FakeLLM:
@@ -51,9 +60,10 @@ def test_grounded_fields_are_written_and_record_is_relabeled() -> None:
         "Participants received SiPore21 or a matching placebo for 12 weeks."
     )
     assert record["extraction_method"] == LLM_GROUNDED_PICO_RULES_VERSION
-    assert record["review_checklist"]["llm_grounded"] is True
-    assert record["review_checklist"]["human_reviewed"] is False
-    assert "population" in record["review_checklist"]["fields_grounded"]
+    checklist = cast(_ReviewChecklist, record["review_checklist"])
+    assert checklist["llm_grounded"] is True
+    assert checklist["human_reviewed"] is False
+    assert "population" in checklist["fields_grounded"]
 
 
 def test_ungrounded_fields_are_left_unchanged_not_blanked() -> None:
