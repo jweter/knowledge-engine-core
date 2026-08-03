@@ -96,9 +96,9 @@ and batching the *mechanical* assembly work, never the judgment itself.
   study-design tier but still unreviewed) so review effort goes to the
   records that most affect Evidence Quality/Claim Confidence scores
   first, rather than an arbitrary or alphabetical order.
-- **Side-by-side web compare page** (`GET /relationship-candidates/{a}/{b}`)
-  -- the same worksheet idea as a browsable page instead of a generated
-  document, for reviewing from the browser rather than the CLI.
+- ~~**Side-by-side web compare page**~~ **Built** -- `knowledge-engine-web`'s
+  `GET /relationship-candidates/{a}/{b}`, the same worksheet fields as a
+  browsable page instead of a generated document.
 
 ## Scientific Methods
 

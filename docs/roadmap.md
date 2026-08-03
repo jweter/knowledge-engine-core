@@ -598,17 +598,35 @@ the judgment itself.
   `edge_count < 2` or an edge count with no `supports`/`contradicts`
   agreement); fixed before merge. See `knowledge-engine-web`'s own
   README Roadmap section.
-- **Live confidence-gauge visual.** Replace `knowledge-engine-web`'s
-  plain Evidence Intelligence table row with the gauge visual from the
-  `roadmap` page's concept-preview mockup, wired to M58/M1's real
-  computed numbers instead of illustrative content.
-- **"What changed" report.** A recurring status report (new claims, new
-  relationship edges, Evidence Quality/Coverage deltas between two
-  points in time) as a natural addition to the existing Reports page.
+- **Live confidence-gauge visual.** Done: `knowledge-engine-web`'s claim
+  detail page (`GET /claims/{evidence_record_id}`) replaced the plain
+  Evidence Intelligence table row with an SVG gauge, wired to M58/M1's
+  real computed numbers instead of illustrative content. Codex review
+  caught a reliability/confidence labeling conflation and a
+  `prefers-reduced-motion` bug (needle stuck at a fixed position
+  regardless of the real score); both fixed before merge.
+- **"What changed" report.** Done: a recurring status report on the
+  existing Reports page, comparing the current graph/evidence state
+  against a baseline captured at each alpha-snapshot refresh
+  (`scripts/capture_whats_changed_baseline.py`, persisted to
+  `data/whats_changed_baseline.json`) -- new claims, new relationship
+  edges, and Evidence Quality/Coverage deltas since that baseline. An
+  earlier design compared against `graph_claims.created_at` directly;
+  Codex review caught that this is unreliable, since `core`'s working
+  database is rebuilt from scratch every session and `created_at` does
+  not survive an alpha-snapshot refresh. Redesigned around a persisted
+  baseline file instead, per the project owner's explicit choice.
+- **Side-by-side relationship-candidate compare page.** Done:
+  `knowledge-engine-web`'s `GET
+  /relationship-candidates/{evidence_record_id_a}/{evidence_record_id_b}`
+  renders both claims' full evidence content side by side -- the same
+  fields `ke relationship-review-worksheet` assembles into a Markdown
+  document, browsable instead of generated. Never infers, scores, or
+  suggests a relationship; deciding whether one exists remains a human
+  judgment call authored directly in `relationship_records.jsonl`.
 
-The dashboard is done; the remaining two are not yet scheduled with a
-milestone number -- built when picked up, in roughly this order unless
-the project owner says otherwise.
+All four items above are done; see `knowledge-engine-web`'s own README
+Roadmap section for implementation detail.
 
 ### Supporting operator durability
 
