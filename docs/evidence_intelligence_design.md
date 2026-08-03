@@ -98,20 +98,24 @@ proposing weights surfaced real constraints this document must respect:
   Also real, usable signal (per-record, deterministic, no judgment
   required beyond "is this field populated").
 
-**Updated as of M68/M69** (live re-audit, not the original M57-era
+**Updated as of M68/M69 plus the post-M69 ranks 36-50 relationship
+review** (live re-audit, not the original M57-era
 snapshot above -- kept for its own historical record rather than
 silently overwritten): the corpus now has **154** `EvidenceRecord`s (a
 duplicate removal after this document was first written accounts for
 the 155->154 drop, unrelated to M68/M69). **36** records are
 `manual_human_review`/`manual` (up from 33 -- M68 reviewed 3 automated
-records by hand). **118** records are `m52-evidence-classification-v1`
-(down from 122). `study_type` is now missing on **26** of 154 records
+records by hand). Before M69 automation, **118** records were
+`m52-evidence-classification-v1`; after PR #244, **97** records are
+`m69-llm-grounded-pico-v1` and **21** remain on
+`m52-evidence-classification-v1`. `study_type` is now missing on **26**
+of 154 records
 (~17%, was 28 of 155/18%; `study_type`'s 13 distinct populated strings
-are unchanged). **9** of 154 records now participate in at least one of
-the graph's 17 relationship edges (up from "only 3 of 155" --
-M56/M59/M64/M66/M67 each authored more real relationships since this
-document's original audit). **8** of 154 records have an empty or
-missing `limitations` list (was 9 of 155).
+are unchanged). **11** of 154 records now participate in at least one of
+the graph's 20 relationship edges (up from "only 3 of 155" --
+M56/M59/M64/M66/M67 and the post-M69 ranks 36-50 review each authored
+more real relationships since this document's original audit). **8** of
+154 records have an empty or missing `limitations` list (was 9 of 155).
 
 ## Evidence Quality (per `EvidenceRecord`)
 
