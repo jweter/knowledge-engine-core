@@ -170,6 +170,33 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   own roadmap doc still listed it as unbuilt. Documentation sync only,
   no code change in this repo.
 
+- **M65 follow-up: `study_type` vocabulary-granularity question
+  resolved as accepted (naming only), `classify_study_type` unchanged.**
+  Investigated by running the real classifier against the actual
+  parsed pages behind every M65 disagreement, not just comparing label
+  strings. The `retrospective_observational_cohort`/
+  `prospective_observational_cohort` naming gap is a real,
+  mostly-mechanical mismatch (roughly 40% of cases have the exact
+  prefix phrase in-text, collapsed under the generic `cohort_study`
+  label today) mixed with unrelated coverage gaps and a precedence
+  false-positive -- not cleanly fixable by renaming alone. The
+  `systematic_review_meta_analysis` naming gap looked similar but is
+  not: 3 of 4 ground-truth `systematic_review` records also contain
+  literal "meta-analysis" wording (discussing prior meta-analyses, not
+  performing one), so a co-occurrence-based widening would misclassify
+  true systematic-review-only papers rather than fix the mismatch.
+  Decisive factor, scoped to the naming-alias subset only:
+  `evidence_intelligence.py`'s `_STUDY_DESIGN_WEIGHTS` table already
+  weights both naming conventions identically, so Evidence Quality
+  scoring is unaffected by that subset either way. The coverage-gap
+  and precedence-false-positive cases found in the same investigation
+  are **not** covered by this "no downstream effect" reasoning --
+  those assign a genuinely different weight than the record's true
+  design, feed straight into automated-promotion draft records via
+  `run_extraction_review_for_paper`, and remain a real, open
+  extraction-accuracy issue for a future milestone. See
+  `docs/roadmap.md`'s Item 5 section for the full investigation.
+
 ### Fixed
 
 - **Drive backup pilot: service accounts can't write here.** Confirmed

@@ -501,12 +501,77 @@ from "up to ~7 days" to "typically same day."
 extraction pipeline's accuracy against the corpus's 33 genuinely
 human-authored `EvidenceRecord`s (M52's automated records excluded from
 ground truth as circular). Real, diagnosed findings: `study_type` exact-match
-15% (mostly a vocabulary-granularity mismatch between ground truth's
-and the classifier's category names, not wrong answers -- flagged, not
-reconciled, pending an explicit decision), `limitations` presence-match
-85%, PICO presence-match 73-91% per field. See
-`knowledge_engine/extraction_accuracy_benchmark.py` and
+15% (a mix of a real vocabulary-granularity mismatch, a real coverage
+gap, and a real pattern-precedence bug -- see the resolution below),
+`limitations` presence-match 85%, PICO presence-match 73-91% per field.
+See `knowledge_engine/extraction_accuracy_benchmark.py` and
 `scripts/m65_extraction_accuracy_benchmark.py`.
+
+**M65's `study_type` vocabulary-granularity question is resolved: accept
+it, do not widen `classify_study_type`.** The separate coverage-gap and
+precedence-false-positive findings below remain open, unresolved
+accuracy issues -- not covered by this decision, and not something to
+read as "accepted" alongside the naming question. Investigated by actually
+running `classify_study_type` against the real parsed pages behind
+every disagreeing ground-truth record, not just comparing label
+strings. Two distinct patterns emerged, and they point in opposite
+directions:
+
+- The `retrospective_observational_cohort`/`prospective_observational_cohort`
+  vs `cohort_study` split is a genuine, mostly-mechanical naming
+  difference -- roughly 40% of these disagreements (6 of 16
+  `retrospective_observational_cohort` records checked) have the exact
+  "retrospective/prospective ... cohort" phrase directly in the
+  Abstract/Methods text the classifier already scans, just collapsed
+  under the generic `cohort_study` label today. The remainder are not
+  naming issues at all: the classifier finds no cue (`None`), the wrong
+  pattern wins (a false-positive `meta_analysis`/`observational_study`
+  match), or ground truth's "cohort" framing isn't literally stated in
+  the paper's own text -- a real coverage gap and a real precedence bug,
+  neither fixable by renaming a label.
+- The `systematic_review_meta_analysis` vs separate `meta_analysis`/
+  `systematic_review` split looked at first like the same kind of
+  naming difference, but checking the actual source text disproved
+  that: 3 of the 4 records ground truth calls plain `systematic_review`
+  *also* contain literal "meta-analysis" wording elsewhere in
+  Abstract/Methods (discussing prior meta-analyses in the literature,
+  not performing their own), which is exactly what a naive
+  co-occurrence pattern would need to trigger on. Widening the
+  vocabulary this way would not fix the mismatch -- it would
+  misclassify true systematic-review-only papers as
+  `systematic_review_meta_analysis`, trading one wrong label for
+  another. Distinguishing "performs its own meta-analysis" from
+  "discusses meta-analyses" is a judgment call the paper's own text
+  does not reliably signal via keyword presence alone, the same kind of
+  interpretive step `classify_study_type`'s design has always declined
+  to make.
+
+Decisive factor, scoped precisely: for the naming-alias subset only,
+`study_type` exact-match is not blocking anything downstream today.
+`knowledge_engine/evidence_intelligence.py`'s `_STUDY_DESIGN_WEIGHTS`
+table already treats both naming conventions as equal-weight synonyms
+(`cohort_study`/`prospective_observational_cohort` both 25,
+`retrospective_study`/`retrospective_observational_cohort` both 15,
+`meta_analysis`/`systematic_review`/`systematic_review_meta_analysis`
+all 40) -- Evidence Quality scoring is already correct regardless of
+which of the two alias names a given record carries, so a
+judgment-risking regex change to move a benchmark metric with no real
+effect on that subset's actual output isn't worth it. This does **not**
+extend to the coverage-gap (`None`) or precedence-false-positive
+(e.g. `meta_analysis` matched on a paper that never performs one)
+cases found during the same investigation: those assign a genuinely
+different, and sometimes materially different, weight than the correct
+value (0 for a missed cue vs. the true design's real weight; 40 for a
+false-positive `meta_analysis` vs. 15 for the paper's actual
+retrospective-cohort design), and `run_extraction_review_for_paper`
+passes the detected value straight into generated draft records, so an
+automated promotion really can inherit a wrong Evidence Quality score
+from one of these. Those are real, open extraction-accuracy bugs,
+unrelated to naming, not resolved by this decision -- worth a future
+milestone's own investigation and fix, most likely to
+`detect_sections`' Abstract/Methods coverage and to the classification
+loop's fixed pattern-precedence order. `classify_study_type` is
+unchanged by this decision.
 
 All five items on the project owner's original priority list have now
 been started; items 1, 3, and 5 are done, items 2 and 4 have a real,
