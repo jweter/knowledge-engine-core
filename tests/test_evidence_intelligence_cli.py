@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, GraphRepository
+from knowledge_engine.extraction import LLM_GROUNDED_PICO_RULES_VERSION
 
 
 def _unwrapped(output: str) -> str:
@@ -46,6 +47,61 @@ def _manual_record(evidence_record_id: str, **overrides: object) -> dict[str, ob
     }
     record.update(overrides)
     return record
+
+
+def _record_for_extraction_tier(evidence_record_id: str, extraction_tier: str) -> dict[str, object]:
+    if extraction_tier == "manual":
+        return _manual_record(evidence_record_id)
+    if extraction_tier == "llm_grounded":
+        return _manual_record(
+            evidence_record_id,
+            extraction_method=LLM_GROUNDED_PICO_RULES_VERSION,
+            review_checklist={"llm_grounded": True, "human_reviewed": False},
+        )
+    return _manual_record(
+        evidence_record_id,
+        extraction_method="m52-evidence-classification-v1",
+        review_checklist={},
+    )
+
+
+@pytest.mark.parametrize(
+    ("extraction_tier", "expected_label"),
+    [
+        ("manual", "manually reviewed"),
+        ("llm_grounded", "LLM-extracted, grounding-verified"),
+        ("automated", "automated, pending review"),
+    ],
+)
+def test_evidence_intelligence_markdown_renders_the_three_way_extraction_tier(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    extraction_tier: str,
+    expected_label: str,
+) -> None:
+    database = _database(tmp_path)
+    with database.session() as session:
+        GraphRepository(session).get_or_create_claim("ev-1")
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    evidence_path = _write_evidence_jsonl(
+        tmp_path, [_record_for_extraction_tier("ev-1", extraction_tier)]
+    )
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "evidence-intelligence",
+            "--evidence",
+            str(evidence_path),
+            "--evidence-record-id",
+            "ev-1",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    output = _unwrapped(result.output)
+    assert f"Extraction tier: {expected_label}" in output
+    assert "Manually reviewed:" not in output
 
 
 def test_evidence_intelligence_shows_insufficient_consensus_with_no_edges(
@@ -252,6 +308,38 @@ def test_evidence_intelligence_json_format_matches_markdown_numbers(
     assert payload["evidence_consensus"]["agreement_total"] == 2
     assert payload["claim_confidence"]["score"] is not None
     assert isinstance(payload["synthesis"], list) and payload["synthesis"]
+
+
+@pytest.mark.parametrize("extraction_tier", ["manual", "llm_grounded", "automated"])
+def test_evidence_intelligence_json_includes_each_extraction_tier(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    extraction_tier: str,
+) -> None:
+    database = _database(tmp_path)
+    with database.session() as session:
+        GraphRepository(session).get_or_create_claim("ev-1")
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    evidence_path = _write_evidence_jsonl(
+        tmp_path, [_record_for_extraction_tier("ev-1", extraction_tier)]
+    )
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "evidence-intelligence",
+            "--evidence",
+            str(evidence_path),
+            "--evidence-record-id",
+            "ev-1",
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["evidence_quality"]["extraction_tier"] == extraction_tier
 
 
 def test_evidence_intelligence_json_format_writes_valid_json_output_file(

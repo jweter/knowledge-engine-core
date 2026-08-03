@@ -70,6 +70,13 @@ _EXTRACTION_TIER_LABELS = {
     "automated": "automated, pending review",
 }
 
+
+def extraction_tier_label(extraction_tier: str) -> str:
+    """Return the stable human-facing label for an extraction tier."""
+
+    return _EXTRACTION_TIER_LABELS.get(extraction_tier, "automated, pending review")
+
+
 # Relationship types whose count feeds the reliability label. `supersedes`
 # is deliberately excluded -- it retires the older claim rather than
 # stating current agreement/disagreement; see
@@ -289,7 +296,7 @@ def render_synthesis(
         f"{consensus.relationship_edge_count} relationship(s) recorded for this claim: "
         f"{consensus.supports_count} support, {consensus.contradicts_count} contradict.",
         f"Evidence Quality: {quality.score}/100 ({quality.study_design_tier}, "
-        f"{_EXTRACTION_TIER_LABELS.get(quality.extraction_tier, 'automated, pending review')}).",
+        f"{extraction_tier_label(quality.extraction_tier)}).",
     ]
     if consensus.score is None:
         lines.append(

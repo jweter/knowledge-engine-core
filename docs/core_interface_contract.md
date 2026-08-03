@@ -242,6 +242,9 @@ most likely to actually call:
   1`) instead of prose, for a consumer that needs to parse results
   programmatically (e.g. `knowledge-engine-ai`) rather than scrape text,
   the same reasoning `ke evidence-report --format json` was added for.
+  `evidence_quality` includes both the backward-compatible
+  `manually_reviewed` boolean and the canonical three-way
+  `extraction_tier` (`manual`, `llm_grounded`, or `automated`).
   See `docs/evidence_intelligence_design.md`.
 - `ke evidence-review-queue --evidence <records.jsonl> [--limit <n>] [--output <path.md>]`
   (M62) -- prioritizes automated (`m52-evidence-classification-v1`)
