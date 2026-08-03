@@ -245,6 +245,26 @@ def test_render_synthesis_insufficient_consensus_omits_confidence_number() -> No
     assert f"Evidence Quality: {quality.score}/100" in joined
 
 
+def test_render_synthesis_labels_llm_grounded_tier_honestly() -> None:
+    """An llm_grounded record must render as its own honest label, not
+    collapse into "manually reviewed" or the undifferentiated "automated,
+    pending review" text a two-tier render would produce."""
+
+    quality = compute_evidence_quality(_llm_grounded_record())
+    consensus = compute_evidence_consensus(["supports"])
+    confidence = compute_claim_confidence([quality], consensus)
+    coverage = compute_evidence_coverage(total_records=155, records_in_relationship=3)
+
+    lines = render_synthesis(
+        consensus=consensus, quality=quality, confidence=confidence, coverage=coverage
+    )
+    joined = "\n".join(lines)
+
+    assert "grounding-verified" in joined
+    assert "manually reviewed" not in joined
+    assert "automated, pending review" not in joined
+
+
 def test_render_synthesis_full_consensus_shows_all_four_numbers() -> None:
     quality = compute_evidence_quality(_manual_record())
     consensus = compute_evidence_consensus(["supports", "supports", "supports"])
