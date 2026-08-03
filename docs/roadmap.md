@@ -509,10 +509,18 @@ flag still requires a human to actually read the source. The lever is
 removing mechanical busywork around that reading, never the reading or
 the judgment itself.
 
-- **Corpus-wide Evidence Intelligence dashboard.** A report or
-  `knowledge-engine-web` page showing the distribution of Evidence
-  Quality scores and Claim Confidence reliability tiers across the whole
-  corpus, extending M58's per-claim view to a corpus-wide one.
+- **Corpus-wide Evidence Intelligence dashboard.** Done:
+  `knowledge-engine-web`'s `GET /dashboard`
+  (`knowledge_engine_web/dashboard.py`) shows the distribution of
+  Evidence Quality scores and Claim Confidence reliability tiers across
+  every claim with evidence configured, extending M58's per-claim view
+  to a corpus-wide aggregate -- no new computation, same deterministic
+  formulas. Codex review caught that the first version's "not yet
+  assessable" disclaimer text was inaccurate (it claimed every such
+  claim "has no relationship edge," but the real condition is
+  `edge_count < 2` or an edge count with no `supports`/`contradicts`
+  agreement); fixed before merge. See `knowledge-engine-web`'s own
+  README Roadmap section.
 - **Live confidence-gauge visual.** Replace `knowledge-engine-web`'s
   plain Evidence Intelligence table row with the gauge visual from the
   `roadmap` page's concept-preview mockup, wired to M58/M1's real
@@ -521,8 +529,9 @@ the judgment itself.
   relationship edges, Evidence Quality/Coverage deltas between two
   points in time) as a natural addition to the existing Reports page.
 
-Not yet scheduled with a milestone number -- built when picked up, in
-roughly this order unless the project owner says otherwise.
+The dashboard is done; the remaining two are not yet scheduled with a
+milestone number -- built when picked up, in roughly this order unless
+the project owner says otherwise.
 
 ### Supporting operator durability
 
