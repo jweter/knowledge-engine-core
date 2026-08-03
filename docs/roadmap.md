@@ -496,6 +496,54 @@ reconciled, pending an explicit decision), `limitations` presence-match
 `knowledge_engine/extraction_accuracy_benchmark.py` and
 `scripts/m65_extraction_accuracy_benchmark.py`.
 
+**M65's `study_type` vocabulary-granularity mismatch is resolved: accept
+it, do not widen `classify_study_type`.** Investigated by actually
+running `classify_study_type` against the real parsed pages behind
+every disagreeing ground-truth record, not just comparing label
+strings. Two distinct patterns emerged, and they point in opposite
+directions:
+
+- The `retrospective_observational_cohort`/`prospective_observational_cohort`
+  vs `cohort_study` split is a genuine, mostly-mechanical naming
+  difference -- roughly 40% of these disagreements (6 of 16
+  `retrospective_observational_cohort` records checked) have the exact
+  "retrospective/prospective ... cohort" phrase directly in the
+  Abstract/Methods text the classifier already scans, just collapsed
+  under the generic `cohort_study` label today. The remainder are not
+  naming issues at all: the classifier finds no cue (`None`), the wrong
+  pattern wins (a false-positive `meta_analysis`/`observational_study`
+  match), or ground truth's "cohort" framing isn't literally stated in
+  the paper's own text -- a real coverage gap and a real precedence bug,
+  neither fixable by renaming a label.
+- The `systematic_review_meta_analysis` vs separate `meta_analysis`/
+  `systematic_review` split looked at first like the same kind of
+  naming difference, but checking the actual source text disproved
+  that: 3 of the 4 records ground truth calls plain `systematic_review`
+  *also* contain literal "meta-analysis" wording elsewhere in
+  Abstract/Methods (discussing prior meta-analyses in the literature,
+  not performing their own), which is exactly what a naive
+  co-occurrence pattern would need to trigger on. Widening the
+  vocabulary this way would not fix the mismatch -- it would
+  misclassify true systematic-review-only papers as
+  `systematic_review_meta_analysis`, trading one wrong label for
+  another. Distinguishing "performs its own meta-analysis" from
+  "discusses meta-analyses" is a judgment call the paper's own text
+  does not reliably signal via keyword presence alone, the same kind of
+  interpretive step `classify_study_type`'s design has always declined
+  to make.
+
+Decisive factor: `study_type` exact-match is not blocking anything
+downstream today. `knowledge_engine/evidence_intelligence.py`'s
+`_STUDY_DESIGN_WEIGHTS` table already treats both naming conventions as
+equal-weight synonyms (`cohort_study`/`prospective_observational_cohort`
+both 25, `retrospective_study`/`retrospective_observational_cohort`
+both 15, `meta_analysis`/`systematic_review`/`systematic_review_meta_analysis`
+all 40) -- Evidence Quality scoring is already correct regardless of
+which of the two names a given record carries. A partial, judgment-risking
+regex change to move a benchmark metric that has no real effect on the
+system's actual output is not worth the false-positive risk measured
+above. `classify_study_type` is unchanged.
+
 All five items on the project owner's original priority list have now
 been started; items 1, 3, and 5 are done, items 2 and 4 have a real,
 ongoing plan in place rather than being fully closed out.
