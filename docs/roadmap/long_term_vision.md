@@ -5,19 +5,25 @@ knowledge. `docs/founding_vision.md` is the project's original founding
 proposal, preserved verbatim; this document translates that ambition into
 the concrete, multi-package ecosystem plan below.
 
-Long term, the ecosystem may include:
+The active project family is:
 
 - `knowledge-engine-core`: document ingestion and local source vault
-- `knowledge-engine-ai`: reasoning, synthesis, and evidence summaries
-- `knowledge-engine-web`: web interface
-- `knowledge-engine-api`: public API
-- `knowledge-engine-agents`: research agents
-- `knowledge-engine-graph`: citation and knowledge graph
-- `knowledge-engine-models`: trained and evaluated models
+- `knowledge-engine-ai`: retrieval and opt-in grounded synthesis, with later
+  analytical and discovery stages gated by measured evidence quality
+- `knowledge-engine-web`: read-only evidence and graph interface
+
+The graph currently belongs in `core` behind `GraphRepository`. The first HTTP
+boundary is also designed to live in `core` as a read-only persistent host once
+its trigger is met; a separate API repository is not planned. Agents, trained
+models, or a separate graph service remain possible future packages only when a
+measured ownership or deployment need justifies them.
+
+One additional layer is designed but not started:
+
 - `knowledge-engine-reference` (sketched, not started): a foundational
   reference layer -- open-license chemistry, biology, microbiology,
   physics, biochemistry, pharmacology, and lab-technique textbooks --
-  giving the extraction pipeline and the future AI Interface Layer the
+  giving the extraction pipeline and the AI Interface Layer the
   background knowledge a primary-research paper always assumes but never
   restates. See `docs/reference_knowledge_layer_design.md`.
 
@@ -62,8 +68,8 @@ it. A field belongs to deterministic, automated extraction whenever the
 fact it records is intrinsic to the paper's own text -- something a
 careful reader could point to a specific sentence and confirm, the same
 way M16-M19 already locate a claim candidate and its source span. A field
-belongs to a human (today) or the future `knowledge-engine-ai` layer
-(eventually) only when the fact is genuinely external to the paper, or
+belongs to a human or `knowledge-engine-ai` only when the fact is genuinely
+external to the paper, or
 requires judgment about what the paper means relative to something
 outside it:
 
@@ -197,7 +203,7 @@ proposed field, never accepts prompt labels as evidence, and never widens to
 the whole paper. The follow-up grounded 11 records and left the other 10
 untouched. Existing v1 records remain valid grounded-review provenance.
 
-## The AI Interface Layer (Future, `knowledge-engine-ai`)
+## The AI Interface Layer (Active Foundation, Future Stages)
 
 `knowledge-engine-core` deliberately stops short of deciding what a piece of
 evidence means for a person's actual research question -- see
@@ -206,8 +212,10 @@ evidence means for a person's actual research question -- see
 and `evidence_direction` for a human reviewer to supply by hand, and which
 explicitly exclude confidence *scoring* (beyond the existing free-text
 `confidence_note` field) from Phase 2's scope. That is not a temporary gap
-waiting for `core` to get smarter -- it is the deliberate seam where a future
-`knowledge-engine-ai` layer plugs in.
+waiting for `core` to get smarter -- it is the deliberate seam where
+`knowledge-engine-ai` now plugs in. Retrieval Intelligence and opt-in grounded
+synthesis are shipped; Analytical and Discovery Intelligence remain future
+stages.
 
 In the finished, full ecosystem, an AI interface built on top of `core`'s
 Evidence and Relationship Layers should:
@@ -267,9 +275,9 @@ This works in two levels:
    produce a visibly different, lower rating -- never collapsed to the same
    number.
 
-This is design guidance for the future `knowledge-engine-ai` layer, not a
-formula `core` implements. But it is also not free of consequences for
-`core`: a rigorous confidence rating can only be as good as the quality
+This is design guidance for `knowledge-engine-ai`'s future Analytical
+Intelligence work, not a formula `core` implements. But it is also not free of
+consequences for `core`: a rigorous confidence rating can only be as good as the quality
 signals `core` chose to capture on the way there. `core`'s PICO extraction
 and Relationship Layer milestones are this rating's specific future
 inputs, not just organizational nice-to-haves -- they should be scoped
@@ -291,7 +299,7 @@ something to revise *against*, which requires the graph to exist first.
 A primary-research paper is written for a domain expert and never
 restates the chemistry, biochemistry, microbiology, physics,
 pharmacology, or lab-technique background that expert already has. This
-project's extraction pipeline, and the future AI Interface Layer above
+project's extraction pipeline, and the AI Interface Layer above
 it, currently have no equivalent grounding to draw on -- they read a
 claim about "GLP-1 receptor agonism, assessed by ELISA" with no more
 context than the paper itself provides.
@@ -355,19 +363,20 @@ cannot be meaningfully measured before those layers exist, so this is
 explicitly post-`v1.0.0` scope -- named here so it is not forgotten, not
 because it is actionable now.
 
-## The Discovery and Education Layers (Future, Not Yet Named)
+## The Discovery and Education Layers (Future)
 
-`docs/founding_vision.md`'s six-layer architecture names two layers this
-ecosystem plan has not yet given a home to:
+`docs/founding_vision.md`'s six-layer architecture names two later layers at
+different levels of architectural maturity:
 
 - **Discovery Engine** (identify knowledge gaps, propose hypotheses,
   suggest experiments, estimate expected information gain). The closest
   existing hook is the Knowledge Graph (Phase 4) -- a gap is naturally
   something the graph can represent as a missing or weakly-supported edge
-  -- but no phase or future package currently claims this responsibility.
-  Likely home: `knowledge-engine-ai` or a dedicated
-  `knowledge-engine-agents` capability, once the Knowledge Graph exists to
-  identify gaps against.
+  -- and `docs/ai_layer_architecture.md` now assigns the first responsible
+  implementation to `knowledge-engine-ai`'s Stage 5 Discovery Intelligence.
+  It is named but not started, and remains gated by Analytical Intelligence
+  and adequate relationship coverage. A future `knowledge-engine-agents`
+  capability may extend it later but is not required by the current plan.
 - **Education Engine** (adaptive explanations, personalized learning
   paths, prerequisite mapping, expertise tracking). Not claimed by any
   phase or ecosystem package named above. This is the largest outright gap
@@ -376,16 +385,19 @@ ecosystem plan has not yet given a home to:
   the foreseeable roadmap. Left as an open decision here rather than a
   silent omission.
 
-Both are explicitly deferred, not started, and not blocking any current
-`core` milestone. **See `docs/ai_interface_layer_scoping.md`** for
+Both remain deferred and do not block current `core` work. **See
+`docs/ai_interface_layer_scoping.md`** for
 scoped-down first-slice ideas for both engines, recorded once Phase 4
 (the Knowledge Graph, M46-M51) gave Discovery Engine something real to
 identify gaps against -- that document is a record of ideas, not a
 design doc ready for implementation, and does not change either engine's
-status here: still deferred, still not started, still no repository
-created. **See `docs/ai_layer_architecture.md`** for a later refinement
+status here: still deferred and still not started. **See
+`docs/ai_layer_architecture.md`** for a later refinement
 of the Decision Engine framing above -- one Research Copilot
 orchestrating Retrieval/Evidence/Analytical/Discovery intelligences
 rather than separate bots, plus a three-way Evidence Quality/Consensus/
-Claim Confidence split and domain-specific confidence profiles. Same
-status: no code, no repository yet.
+Claim Confidence split and domain-specific confidence profiles.
+`knowledge-engine-ai` has since shipped Retrieval Intelligence,
+core-provided Evidence Intelligence display, and opt-in local grounded
+synthesis. Analytical and Discovery Intelligence remain gated by
+`docs/roadmap.md`'s Current Project Path.

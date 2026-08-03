@@ -13,6 +13,14 @@ persistence for validation attempts through `ke corpus-run-create` and
 `ke corpus-run-show` without importing papers. See
 `docs/history/milestones/m8_import_run_persistence.md`.
 
+The implementation continued through the complete M6-M14 sequence: controlled
+PDF ingestion, duplicate/resume handling, metadata preview/enrichment,
+scale-readiness review, and the 500-paper rehearsal. Later bounded acquisition
+grew the corpus used for Phase 2 tuning. This file remains the original design
+record; `docs/roadmap.md` is authoritative for current status and now
+prioritizes retrieval quality and one complete evidence map over further corpus
+breadth.
+
 ## Mission
 
 Phase 1 turns Knowledge Engine Core from a single-paper local source vault into

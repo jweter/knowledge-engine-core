@@ -72,6 +72,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Roadmap truth alignment.** Added one ordered five-goal Current Project
+  Path and corrected stale future-facing documentation that still described
+  `knowledge-engine-ai`, local synthesis, Evidence Intelligence, relationship
+  review tooling, and web dashboard/report features as unbuilt. Historical
+  milestone records remain intact; the phase index, long-term ecosystem map,
+  and current roadmap now distinguish shipped foundations from the retrieval,
+  evidence-map, analytical, and persistent-host work that actually comes next.
+
 - **Evidence Intelligence extraction-tier exports.** The Markdown report
   now renders the same honest three-way extraction label as synthesis
   (`manually reviewed`, `LLM-extracted, grounding-verified`, or

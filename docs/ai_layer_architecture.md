@@ -1,23 +1,19 @@
 # AI Layer Architecture: One Research Copilot, Four Intelligences
 
-Status: a refinement of `docs/ai_interface_layer_scoping.md`, recorded
-after further owner-side design discussion. **Still not a design doc
-ready for implementation, and per the project owner's explicit,
-standing direction, still no new repository or code for it.** The
-trigger conditions that document named for revisiting -- "substantially
-more validated `EvidenceRecord`s than the 2 that exist today" -- is
-close to met (156 as of this writing, see `data/corpora/glp1_weight_loss/evidence_records.jsonl`);
-the harder blocker, a confidence-rating formula validated against real
-data, is still unbuilt. This document exists for the same reason its
-predecessor does: so a real architectural decision is not lost in
-conversation.
+Status: architecture guidance for the active `knowledge-engine-ai`
+repository, not authorization to build every later stage at once. The original
+trigger conditions have been met: core now has a real evidence corpus and
+relationship graph; AI M1-M3 shipped Retrieval Intelligence, core-provided
+Evidence Intelligence display, and opt-in local grounded synthesis. The
+Analytical and Discovery stages below remain future work and must be earned
+against the Current Project Path in `docs/roadmap.md`.
 
 `ai_interface_layer_scoping.md` remains the historical record of the
 earlier three-engine framing (Decision/Discovery/Education) and is not
 deleted. This document resolves one of its "Open questions carried
 forward" (bot count) and substantially extends its Decision Engine
-section; it does not change Discovery/Education Engine's status
-(deferred) or the "no repository yet" direction.
+section. Discovery and Education remain deferred even though the AI
+repository and its first Retrieval slices now exist.
 
 ## The one rule that does not change
 
@@ -283,6 +279,24 @@ survive to production unchanged):
    Unknowns Engine, once there is a large enough, confidence-scored
    Evidence Graph for gap-surfacing to mean something real.
 
+### Current progress against the sequence
+
+- **Stage 1 is partially shipped.** `ke-ai ask` provides natural-language
+  lexical retrieval and source-linked results; `--synthesize` provides one
+  opt-in, local, citation-required narration. PICO query decomposition,
+  multi-turn research sessions, and broader retrieval evaluation remain open.
+- **Stage 2's core-side throughput path is shipped.** M69 performs per-claim,
+  grounding-verified local-LLM PICO extraction while preserving deterministic
+  source checks and honest provenance. This does not make AI the owner of core
+  evidence records.
+- **Stage 3 has real foundations, not complete coverage.** Core and web compute
+  and display deterministic Evidence Quality, Consensus, Claim Confidence, and
+  Coverage. AI reads those values. Sparse reviewed relationships still make
+  most claims honestly not assessable at the claim-confidence level.
+- **Stages 4 and 5 are not started.** Current Project Path goals 2 and 3 -- a
+  golden retrieval benchmark and one complete GLP-1 evidence map -- are the
+  prerequisites for beginning Analytical Intelligence responsibly.
+
 Autonomous hypothesis generation and experiment design -- the most
 exciting and least-grounded items on the founding vision's original
 list -- deliberately come after all five stages, not before, matching
@@ -311,10 +325,11 @@ posture toward Discovery Engine's most open-ended framing.
   package (`long_term_vision.md`'s own "largest outright gap"). Not
   addressed by this document.
 
-## When to revisit
+## Next implementation trigger
 
-Same posture as `ai_interface_layer_scoping.md`: real trigger
-conditions, not a calendar date. A validated confidence-rating formula
-design, a second real corpus (to make a second domain profile
-concrete), or the project owner explicitly saying it is time to open
-`knowledge-engine-ai`.
+Do not begin Analytical Intelligence because the repository now exists. Revisit
+its first implementation slice after the golden-question benchmark is running
+and the GLP-1/body-weight evidence map has enough reviewed relationships to
+exercise agreement, disagreement, population differences, and missing evidence
+against real cases. A second domain profile still waits for a second coherent
+domain corpus. Education remains a separate owner decision.
