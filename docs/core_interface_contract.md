@@ -106,6 +106,28 @@ change, not a loosening of the seam's actual substance:
   `docs/evidence_intelligence_design.md`'s own "Explicitly out of scope"
   section.
 
+**Revised in M69** for the "a human reviewer" clause in this section's
+own opening paragraph (line 35-36): the project owner has decided that
+manual human review does not scale to this project's real corpus-growth
+plans and will not be relied on as the review mechanism going forward
+-- see `docs/roadmap/long_term_vision.md`'s "Decision: automated
+evidence review at scale (M69)" for the full reasoning. Concretely:
+
+- "Today: a human reviewer, via `ke extraction-review-promote`" widens
+  to also include a grounding-verified LLM extraction path, honestly
+  labeled with its own `extraction_method` value (never
+  `manual_human_review`) and never claiming a human read it.
+- Line 90's "already-human-reviewed field" claim, true when M58 was
+  written, no longer describes every record a caller might read --
+  `manually_reviewed` in `compute_evidence_quality` narrows to mean
+  "human-reviewed" specifically; a grounding-verified LLM record is a
+  separate, honestly-labeled tier, not folded into that flag.
+- `core`'s "never decide truth" seam is unchanged: grounding
+  verification checks that extracted text traces to the source, the
+  same kind of check `source_span` already enforces -- it does not
+  judge whether the source itself is correct, and still never sets
+  `research_question` or a confidence *rating*.
+
 ## Configuration
 
 `core` reads settings via `knowledge_engine.config.Settings`
