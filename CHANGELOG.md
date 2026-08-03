@@ -10,8 +10,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - **Post-M69 relationship graph review, ranks 36-50.** Reviewed the next
-  15 similarity-ranked pairs from `ke relationship-review-worksheet
-  --rank-by-similarity` against both records' full PICO and result fields.
+  15 similarity-ranked pairs from
+  `ke relationship-review-worksheet --rank-by-similarity`
+  against both records' full PICO and result fields.
   Authored 3 conservative `contextualizes` relationships: the GLP-1RA
   insulin-resistance-marker cohort with STEP 5 and SELECT respectively,
   and the oral-semaglutide HFrEF cohort with the HFpEF/BNP cohort. These
