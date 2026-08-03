@@ -7,6 +7,44 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **M69: automated evidence review pipeline.** Implements the decision
+  in `docs/roadmap/long_term_vision.md`: replaces the human-reading
+  review gate with a grounding-verified LLM extraction path.
+  `knowledge_engine/llm.py` (new): a local Ollama client ported from
+  `knowledge-engine-web`/`-ai`'s own `llm.py` (same established
+  small-self-contained-copy-per-package pattern). `knowledge_engine/
+  extraction/grounding.py` (new): `verify_grounding` checks an
+  LLM-proposed field against the source text -- exact substring, or a
+  word-level `difflib` near-match tolerant of light rewording -- before
+  it can be accepted; nothing like this existed in the codebase before.
+  `knowledge_engine/extraction/llm_grounded_pico.py` (new):
+  `extract_pico_for_candidate` runs PICO extraction per claim candidate
+  scoped to that candidate's own source page, fixing the PICO-broadcast
+  bug M68 found by hand (`build_draft_evidence_items` previously glued
+  one paper-level PICO extraction onto every claim in that paper,
+  regardless of which sentence it actually came from).
+  `knowledge_engine/evidence_intelligence.py`: `compute_evidence_quality`
+  gets a third extraction-rigor tier (33 points, between raw-automated
+  25 and human-manual 40) and a new `extraction_tier` field so callers
+  can render `"llm_grounded"` honestly instead of collapsing it into
+  `manually_reviewed`. `knowledge_engine/evidence_review_automate.py`
+  (new) plus `ke evidence-review-automate` (new CLI command): batch
+  driver that reads the graph's paper pages, runs the pipeline, and
+  rewrites only the JSONL lines for records it actually changed --
+  `claim_text`/`research_question`/`evidence_direction` are never
+  touched. Live-verified against the real GLP-1 corpus DB (Ollama +
+  `qwen2.5:1.5b`): dry-run and real runs both correctly regrounded a
+  mangled record's `intervention` field (was a wrong study-design
+  description, now the actual drug name), Evidence Quality 81->91, only
+  the one changed record's JSONL line rewritten, all other 153 lines
+  byte-identical. Does not rebuild the graph itself -- prints a
+  reminder listing changed `evidence_record_id`s, since `ke
+  graph-build`'s M54 incremental design skips any ID that already has a
+  `graph_claims` row. Running this against the full 118-record backlog
+  is its own follow-up batch, the same pattern M68 established.
+
 ### Changed
 
 - **M69 decision doc: two Codex-caught fixes.** Codex review on PR #237

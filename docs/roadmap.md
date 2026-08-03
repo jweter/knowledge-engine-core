@@ -627,29 +627,45 @@ implementation.
   document, browsable instead of generated. Never infers, scores, or
   suggests a relationship; deciding whether one exists remains a human
   judgment call authored directly in `relationship_records.jsonl`.
-- **M69: automated evidence review pipeline (in progress).** Replaces
-  the human-reading gate for evidence records with a grounding-verified
-  LLM extraction path, per `docs/roadmap/long_term_vision.md`'s
-  "Decision: automated evidence review at scale." Concretely: (1) run
-  extraction per claim candidate instead of once per paper, fixing the
-  PICO-broadcast bug M68 found by hand (`build_draft_evidence_items`
-  currently glues one paper-level PICO extraction onto every claim in
-  that paper); (2) call the local model already wired up for `/ask`
-  synthesis (`OllamaLLM.generate`) to propose PICO fields/`claim_text`/
-  `evidence_direction` from each candidate's own local context; (3) add
-  a grounding-check verifier -- new, does not exist today -- that drops
-  any proposed field failing to trace to the source text, the same
-  "skip, don't invent" posture M18/M28 already use; (4) label results
-  with a new `extraction_method` value (never `manual_human_review`)
-  and give it its own Evidence Quality tier between raw-automated (25
-  points) and human-manual (40 points), filling the reserved slot
-  `docs/evidence_intelligence_design.md` already named. Human review
-  stays available as the highest-rigor tier; it is no longer required
-  for a record to be usable at scale.
+- **M69: automated evidence review pipeline.** Done: replaces the
+  human-reading gate for evidence records with a grounding-verified LLM
+  extraction path, per `docs/roadmap/long_term_vision.md`'s "Decision:
+  automated evidence review at scale." `knowledge_engine.extraction.
+  grounding.verify_grounding` (new -- nothing like it existed before)
+  checks an LLM-proposed field against the source page text (exact
+  substring, or a word-level near-match tolerant of light rewording)
+  before it can be accepted; a field that fails is dropped, never
+  guessed. `knowledge_engine.extraction.llm_grounded_pico.
+  extract_pico_for_candidate` runs PICO extraction per claim candidate,
+  scoped to that candidate's own source page, fixing the PICO-broadcast
+  bug M68 found by hand (`build_draft_evidence_items` previously glued
+  one paper-level PICO extraction onto every claim in that paper).
+  `claim_text`/`research_question`/`evidence_direction` stay on their
+  existing deterministic path, since none of the three needed or could
+  use grounding verification (`evidence_direction` is a classification
+  relative to a `research_question`, not extractable source text --
+  Codex caught an earlier draft of the decision doc overclaiming this).
+  `compute_evidence_quality` (`knowledge_engine/evidence_intelligence.py`)
+  now has a third extraction-rigor tier -- 33 points, between
+  raw-automated (25) and human-manual (40) -- filling the reserved slot
+  `docs/evidence_intelligence_design.md` already named; a new
+  `extraction_tier` field (`"manual"`/`"llm_grounded"`/`"automated"`)
+  lets callers render it honestly without collapsing it into
+  `manually_reviewed`. `ke evidence-review-automate` runs the pipeline
+  against the real backlog, live-verified against the real GLP-1 corpus
+  (Ollama + `qwen2.5:1.5b`): correctly regrounded a mangled record's
+  `intervention` field from a wrong study-design description to the
+  actual drug name, Evidence Quality 81->91, only the one changed
+  record's line rewritten in the JSONL file. Human review stays
+  available as the highest-rigor tier; it is no longer required for a
+  record to be usable at scale. Running the pipeline against the full
+  118-record backlog is its own follow-up batch, the same pattern M68
+  established.
 
 The first four items above are done; see `knowledge-engine-web`'s own
-README Roadmap section for implementation detail. M69 is in progress --
-see `docs/roadmap/long_term_vision.md` for the full decision record.
+README Roadmap section for implementation detail. M69's pipeline is
+done; see `docs/roadmap/long_term_vision.md` for the full decision
+record.
 
 ### Supporting operator durability
 

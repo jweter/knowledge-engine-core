@@ -7,6 +7,7 @@ from knowledge_engine.evidence_intelligence import (
     compute_evidence_quality,
     render_synthesis,
 )
+from knowledge_engine.extraction import LLM_GROUNDED_PICO_RULES_VERSION
 
 
 def _manual_record(**overrides: object) -> dict[str, object]:
@@ -35,6 +36,19 @@ def _automated_record(**overrides: object) -> dict[str, object]:
     return record
 
 
+def _llm_grounded_record(**overrides: object) -> dict[str, object]:
+    record: dict[str, object] = {
+        "evidence_record_id": "ev-llm-grounded-001",
+        "study_type": "cohort_study",
+        "extraction_method": LLM_GROUNDED_PICO_RULES_VERSION,
+        "review_checklist": {"grounding_verified": True},
+        "limitations": ["A limitation."],
+        "uncertainty_notes": ["An uncertainty."],
+    }
+    record.update(overrides)
+    return record
+
+
 def test_evidence_quality_manual_scores_higher_than_automated() -> None:
     manual = compute_evidence_quality(_manual_record())
     automated = compute_evidence_quality(_automated_record())
@@ -42,6 +56,45 @@ def test_evidence_quality_manual_scores_higher_than_automated() -> None:
     assert manual.manually_reviewed is True
     assert automated.manually_reviewed is False
     assert manual.score > automated.score
+
+
+def test_evidence_quality_llm_grounded_scores_between_automated_and_manual() -> None:
+    manual = compute_evidence_quality(_manual_record())
+    llm_grounded = compute_evidence_quality(_llm_grounded_record())
+    automated = compute_evidence_quality(_automated_record())
+
+    assert automated.score < llm_grounded.score < manual.score
+
+
+def test_evidence_quality_extraction_tier_labels_each_case_honestly() -> None:
+    manual = compute_evidence_quality(_manual_record())
+    llm_grounded = compute_evidence_quality(_llm_grounded_record())
+    automated = compute_evidence_quality(_automated_record())
+
+    assert manual.extraction_tier == "manual"
+    assert llm_grounded.extraction_tier == "llm_grounded"
+    assert automated.extraction_tier == "automated"
+    # manually_reviewed stays a plain bool, true only for actual manual
+    # review -- an llm_grounded record must never be reported as if a
+    # human read it.
+    assert manual.manually_reviewed is True
+    assert llm_grounded.manually_reviewed is False
+    assert automated.manually_reviewed is False
+
+
+def test_evidence_quality_llm_grounded_extraction_method_without_checklist_is_automated_tier() -> (
+    None
+):
+    """The `llm-grounded` extraction_method alone isn't enough -- an empty
+    review_checklist means grounding was never actually recorded, so it
+    must fall back to the automated tier, the same rule manual review
+    already follows."""
+
+    record = _llm_grounded_record(review_checklist={})
+
+    result = compute_evidence_quality(record)
+
+    assert result.extraction_tier == "automated"
 
 
 def test_evidence_quality_missing_study_type_scores_lower_than_recognized() -> None:
@@ -134,6 +187,7 @@ def test_claim_confidence_multiplies_rather_than_averages() -> None:
         study_design_tier="meta_analysis",
         study_type_missing=False,
         manually_reviewed=True,
+        extraction_tier="manual",
     )
     low_quality = EvidenceQuality(
         evidence_record_id="ev-2",
@@ -141,6 +195,7 @@ def test_claim_confidence_multiplies_rather_than_averages() -> None:
         study_design_tier="case_report",
         study_type_missing=False,
         manually_reviewed=False,
+        extraction_tier="automated",
     )
     high_consensus = EvidenceConsensus(
         relationship_edge_count=10,
