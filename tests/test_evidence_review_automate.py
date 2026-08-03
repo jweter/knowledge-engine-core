@@ -51,9 +51,11 @@ def test_grounded_fields_are_written_and_record_is_relabeled() -> None:
         "Participants received SiPore21 or a matching placebo for 12 weeks."
     )
     assert record["extraction_method"] == LLM_GROUNDED_PICO_RULES_VERSION
-    assert record["review_checklist"]["llm_grounded"] is True
-    assert record["review_checklist"]["human_reviewed"] is False
-    assert "population" in record["review_checklist"]["fields_grounded"]
+    review_checklist = record["review_checklist"]
+    assert isinstance(review_checklist, dict)
+    assert review_checklist["llm_grounded"] is True
+    assert review_checklist["human_reviewed"] is False
+    assert "population" in review_checklist["fields_grounded"]
 
 
 def test_ungrounded_fields_are_left_unchanged_not_blanked() -> None:
