@@ -66,6 +66,33 @@ def test_grounded_fields_are_written_and_record_is_relabeled() -> None:
     assert "population" in checklist["fields_grounded"]
 
 
+def test_page_one_context_can_supply_grounded_study_framing() -> None:
+    llm = _FakeLLM(
+        '{"population": "Adults with type 2 diabetes", '
+        '"intervention": "SiPore21", "comparator": "matching placebo", '
+        '"outcome": "HbA1c decreased significantly"}'
+    )
+    record = _automated_record()
+
+    result = automate_review_for_record(
+        llm,
+        record,
+        "HbA1c decreased significantly in the treatment group.",
+        paper_first_page_text=(
+            "Adults with type 2 diabetes were randomized to SiPore21 or matching placebo."
+        ),
+    )
+
+    assert result.updated is True
+    assert set(result.fields_grounded) == {
+        "population",
+        "intervention",
+        "comparator",
+        "outcome",
+    }
+    assert "claim page plus page 1" in str(record["review_notes"])
+
+
 def test_ungrounded_fields_are_left_unchanged_not_blanked() -> None:
     llm = _FakeLLM(
         '{"population": "A total of 318 participants were enrolled.", '

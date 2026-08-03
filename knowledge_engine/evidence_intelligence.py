@@ -26,7 +26,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from knowledge_engine.extraction import LLM_GROUNDED_PICO_RULES_VERSION
+from knowledge_engine.extraction import LLM_GROUNDED_PICO_RULES_VERSIONS
 
 CLINICAL_MEDICINE_V1 = "clinical_medicine_v1"
 
@@ -51,7 +51,7 @@ _STUDY_DESIGN_WEIGHTS: dict[str, int] = {
 }
 
 _MANUAL_EXTRACTION_METHODS = frozenset({"manual_human_review", "manual"})
-_LLM_GROUNDED_EXTRACTION_METHODS = frozenset({LLM_GROUNDED_PICO_RULES_VERSION})
+_LLM_GROUNDED_EXTRACTION_METHODS = LLM_GROUNDED_PICO_RULES_VERSIONS
 
 # The reserved middle tier `docs/evidence_intelligence_design.md` named
 # (between raw-automated 25 and human-manual 40) -- a grounding-verified

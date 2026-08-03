@@ -671,6 +671,16 @@ implementation.
   record to be usable at scale. Running the pipeline against the full
   118-record backlog is its own follow-up batch, the same pattern M68
   established.
+- **M69 follow-up: bounded cross-page PICO context.** Done: the full
+  backlog run showed that 21 terse results claims had correct page tags
+  but no study framing on that page. The extractor now receives the
+  claim page plus page 1 from the same paper when they differ, under the
+  new `m69-llm-grounded-pico-v2` provenance label. The deterministic
+  grounding verifier is unchanged and checks every accepted field
+  against the raw text of those two pages; no whole-paper context is
+  used. Eleven records gained at least one grounded field, while 10 that
+  still could not ground remained untouched. Existing v1 records remain
+  recognized as reviewed and keep the same Evidence Quality tier.
 
 The first four items above are done; see `knowledge-engine-web`'s own
 README Roadmap section for implementation detail. M69's pipeline is

@@ -30,6 +30,7 @@ from knowledge_engine.extraction.grounding import (
 )
 from knowledge_engine.extraction.llm_grounded_pico import (
     LLM_GROUNDED_PICO_RULES_VERSION,
+    LLM_GROUNDED_PICO_RULES_VERSIONS,
     GroundedField,
     LlmGroundedPico,
     extract_pico_for_candidate,
@@ -65,6 +66,7 @@ __all__ = [
     "EVIDENCE_CLASSIFICATION_RULES_VERSION",
     "GROUNDING_RULES_VERSION",
     "LLM_GROUNDED_PICO_RULES_VERSION",
+    "LLM_GROUNDED_PICO_RULES_VERSIONS",
     "PICO_EXTRACTION_RULES_VERSION",
     "SECTION_DETECTION_RULES_VERSION",
     "SECTION_TYPES",

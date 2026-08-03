@@ -106,9 +106,13 @@ duplicate removal after this document was first written accounts for
 the 155->154 drop, unrelated to M68/M69). **36** records are
 `manual_human_review`/`manual` (up from 33 -- M68 reviewed 3 automated
 records by hand). Before M69 automation, **118** records were
-`m52-evidence-classification-v1`; after PR #244, **97** records are
-`m69-llm-grounded-pico-v1` and **21** remain on
-`m52-evidence-classification-v1`. `study_type` is now missing on **26**
+`m52-evidence-classification-v1`; after PR #244 and the bounded-context
+M69 follow-up, **108** records are grounding-verified (97 on
+`m69-llm-grounded-pico-v1`, 11 on `m69-llm-grounded-pico-v2`) and **10**
+remain on `m52-evidence-classification-v1`. Both grounded versions use
+the same Evidence Quality tier; v2 widens only from the claim page to the
+claim page plus page 1 while preserving the same deterministic grounding
+gate. `study_type` is now missing on **26**
 of 154 records
 (~17%, was 28 of 155/18%; `study_type`'s 13 distinct populated strings
 are unchanged). **11** of 154 records now participate in at least one of

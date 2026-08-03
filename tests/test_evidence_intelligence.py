@@ -66,6 +66,14 @@ def test_evidence_quality_llm_grounded_scores_between_automated_and_manual() -> 
     assert automated.score < llm_grounded.score < manual.score
 
 
+def test_evidence_quality_preserves_the_m69_v1_grounded_tier() -> None:
+    result = compute_evidence_quality(
+        _llm_grounded_record(extraction_method="m69-llm-grounded-pico-v1")
+    )
+
+    assert result.extraction_tier == "llm_grounded"
+
+
 def test_evidence_quality_extraction_tier_labels_each_case_honestly() -> None:
     manual = compute_evidence_quality(_manual_record())
     llm_grounded = compute_evidence_quality(_llm_grounded_record())

@@ -130,7 +130,7 @@ verifiable, falsifiable, grounded PICO extraction satisfies the
 claim-text/PICO half of that job without a human doing the reading:
 
 - Extract per claim candidate (one call per candidate sentence,
-  constrained to that candidate's own local page/section context), not
+  constrained to bounded local source context), not
   once per paper -- this alone fixes the PICO-broadcast bug, independent
   of whether the extractor is deterministic or an LLM.
 - Use the local model already wired up for `/ask` synthesis in
@@ -156,7 +156,7 @@ claim-text/PICO half of that job without a human doing the reading:
 - Add a **grounding-check verifier** -- this does not exist anywhere in
   the codebase today and is the load-bearing piece: before an
   LLM-proposed field is accepted, check it is an actual substring or
-  close near-match of the source page text at the claim's own span, the
+  close near-match of the provided source-page text, the
   same discipline `core` already applies to `source_span`. A field that
   fails grounding is dropped (never guessed), the same "skip, don't
   invent" posture M18/M28 already established for the deterministic
@@ -185,6 +185,17 @@ grounding verification checks that extracted text traces to the source,
 it does not judge whether the source itself is correct. This decision
 only removes human reading as a *required* gate for a record to be
 usable in the corpus at scale.
+
+**M69 follow-up: bounded cross-page context.** The first full backlog run
+left 21 terse result claims ungrounded. A source audit confirmed that their
+recorded page numbers and claim offsets were correct; the missing PICO
+framing was usually on page 1, not evidence of a parser/page-boundary bug.
+The v2 extractor therefore provides exactly two real source pages when
+they differ: the claim page and page 1 from the same paper. It still runs
+the unchanged `verify_grounding` check over the raw provided text for every
+proposed field, never accepts prompt labels as evidence, and never widens to
+the whole paper. The follow-up grounded 11 records and left the other 10
+untouched. Existing v1 records remain valid grounded-review provenance.
 
 ## The AI Interface Layer (Future, `knowledge-engine-ai`)
 
