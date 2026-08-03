@@ -9,6 +9,25 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **M69 decision doc: two Codex-caught fixes.** Codex review on PR #237
+  caught two real issues in `docs/roadmap/long_term_vision.md`'s
+  "Decision: automated evidence review at scale (M69)" section, after it
+  had already merged: (1) the decision described the LLM proposing
+  `evidence_direction` and having it grounding-checked, but
+  `evidence_direction` is a classification relative to a
+  `research_question`, not source text -- it can never pass a
+  substring/near-match grounding check by construction. Corrected to
+  scope the LLM+grounding path to the four PICO fields only;
+  `evidence_direction`/`research_question` stay on their existing
+  deterministic path (`classify_evidence_direction`/
+  `generate_research_question`), which already operates correctly per
+  candidate. (2) `docs/evidence_intelligence_design.md`'s "real data"
+  audit, which the decision cites as the scoring-tier's basis, still had
+  its original M57-era numbers (155 total, 33 manual, 122 automated),
+  contradicting the decision's own M68-era citation (154/36/118). Added
+  a live-re-audited update note with current corpus numbers, kept
+  alongside the original snapshot rather than silently overwriting it.
+
 - **Decision: automated evidence review at scale (M69), documentation
   only.** The project owner explicitly and permanently decided that
   manual, human-read review of every evidence record does not scale to

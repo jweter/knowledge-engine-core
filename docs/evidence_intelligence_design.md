@@ -15,8 +15,12 @@ This is the document
 both named as their own trigger condition for finally opening real work
 -- "a validated confidence-rating formula design grounded in real data,"
 alongside the project owner explicitly asking for it. Both hold now: the
-GLP-1 corpus has 155 validated `EvidenceRecord`s and 3 real
-`RelationshipRecord`s (M56), and this document was requested directly.
+GLP-1 corpus had 155 validated `EvidenceRecord`s and 3 real
+`RelationshipRecord`s (M56) when this document was first written, and
+this document was requested directly. See the "What the real data
+actually supports" numbers below for the corpus's current state (as of
+M68/M69) -- record counts have moved since this document's original
+audit; the formulas and reasoning have not.
 
 This document proposes **Stage 3 of `ai_layer_architecture.md`'s
 5-stage build sequence -- Evidence Intelligence** -- and nothing past
@@ -93,6 +97,21 @@ proposing weights surfaced real constraints this document must respect:
 - **9 of 155 records have an empty or missing `limitations` list.**
   Also real, usable signal (per-record, deterministic, no judgment
   required beyond "is this field populated").
+
+**Updated as of M68/M69** (live re-audit, not the original M57-era
+snapshot above -- kept for its own historical record rather than
+silently overwritten): the corpus now has **154** `EvidenceRecord`s (a
+duplicate removal after this document was first written accounts for
+the 155->154 drop, unrelated to M68/M69). **36** records are
+`manual_human_review`/`manual` (up from 33 -- M68 reviewed 3 automated
+records by hand). **118** records are `m52-evidence-classification-v1`
+(down from 122). `study_type` is now missing on **26** of 154 records
+(~17%, was 28 of 155/18%; `study_type`'s 13 distinct populated strings
+are unchanged). **9** of 154 records now participate in at least one of
+the graph's 17 relationship edges (up from "only 3 of 155" --
+M56/M59/M64/M66/M67 each authored more real relationships since this
+document's original audit). **8** of 154 records have an empty or
+missing `limitations` list (was 9 of 155).
 
 ## Evidence Quality (per `EvidenceRecord`)
 
