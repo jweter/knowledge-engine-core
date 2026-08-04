@@ -118,7 +118,11 @@ def export_corpus_library(source_engine: Engine, output_path: Path) -> ExportSum
                 if paper.journal is not None:
                     new_journal = journal_cache.get(paper.journal.id)
                     if new_journal is None:
-                        new_journal = Journal(name=paper.journal.name, issn=paper.journal.issn)
+                        new_journal = Journal(
+                            name=paper.journal.name,
+                            issn=paper.journal.issn,
+                            created_at=paper.journal.created_at,
+                        )
                         journal_cache[paper.journal.id] = new_journal
 
                 new_paper = _copy_paper_fields(paper, journal=new_journal)
@@ -127,7 +131,9 @@ def export_corpus_library(source_engine: Engine, output_path: Path) -> ExportSum
                     new_author = author_cache.get(author_link.author.id)
                     if new_author is None:
                         new_author = Author(
-                            name=author_link.author.name, orcid=author_link.author.orcid
+                            name=author_link.author.name,
+                            orcid=author_link.author.orcid,
+                            created_at=author_link.author.created_at,
                         )
                         author_cache[author_link.author.id] = new_author
                     new_paper.author_links.append(
@@ -136,7 +142,10 @@ def export_corpus_library(source_engine: Engine, output_path: Path) -> ExportSum
                 for keyword_link in paper.keyword_links:
                     new_keyword = keyword_cache.get(keyword_link.keyword.id)
                     if new_keyword is None:
-                        new_keyword = Keyword(value=keyword_link.keyword.value)
+                        new_keyword = Keyword(
+                            value=keyword_link.keyword.value,
+                            created_at=keyword_link.keyword.created_at,
+                        )
                         keyword_cache[keyword_link.keyword.id] = new_keyword
                     new_paper.keyword_links.append(PaperKeyword(keyword=new_keyword))
 
@@ -319,6 +328,8 @@ def _copy_paper_fields(paper: Paper, *, journal: Journal | None) -> Paper:
         journal=journal,
         page_count=paper.page_count,
         word_count=paper.word_count,
+        created_at=paper.created_at,
+        updated_at=paper.updated_at,
     )
     if paper.text is not None:
         new_paper.text = PaperText(
@@ -327,6 +338,7 @@ def _copy_paper_fields(paper: Paper, *, journal: Journal | None) -> Paper:
             extraction_method=paper.text.extraction_method,
             extraction_version=paper.text.extraction_version,
             language=paper.text.language,
+            created_at=paper.text.created_at,
         )
     new_paper.pages = [
         PaperPage(page_number=page.page_number, text=page.text) for page in paper.pages

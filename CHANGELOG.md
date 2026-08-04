@@ -16,6 +16,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   identifies the AI-assisted audit and does not claim human domain-expert
   approval, scientific synthesis, consensus, confidence, or truth.
 
+- **Deterministic corpus-library backup snapshots.** Preserve source row
+  timestamps during portable snapshot export so unchanged corpus content has
+  stable compressed bytes and Drive backups reliably skip duplicate uploads.
+
 - **Provisional GLP-1/body-weight golden evidence map.** Added a versioned map
   selecting 9 cited Evidence Records and 13 reviewer-authored relationships,
   with explicit population, comparator, endpoint, limitation, and

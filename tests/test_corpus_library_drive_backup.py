@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import time
 from pathlib import Path
 
 import pytest
@@ -104,6 +105,10 @@ def test_skips_upload_when_snapshot_hash_matches_existing(tmp_path: Path) -> Non
     )
     uploaded_payload = next(iter(probe_transport.uploaded.values()))
     existing_hash = hashlib.sha256(uploaded_payload).hexdigest()
+
+    # Cross SQLite's one-second CURRENT_TIMESTAMP resolution. The second
+    # export must remain byte-identical rather than regenerating row timestamps.
+    time.sleep(1.1)
 
     transport = FakeCorpusLibraryTransport(
         existing_files=[
