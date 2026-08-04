@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
+from click import unstyle
 from typer.testing import CliRunner
 
 from knowledge_engine.cli import app
@@ -283,7 +284,7 @@ def test_cli_refuses_invalid_map_and_existing_output(tmp_path: Path) -> None:
     assert invalid.exit_code == 1
     assert "map validation failed" in invalid.output
     assert existing.exit_code == 2
-    assert "Use --force to overwrite" in existing.output
+    assert "Use --force to overwrite" in unstyle(existing.output)
     assert output.read_text(encoding="utf-8") == "keep"
 
     forced = CliRunner().invoke(
