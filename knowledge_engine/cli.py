@@ -840,11 +840,12 @@ def statistical_verify(
     output: OutputMarkdownOption = None,
     force: ForceOutputOption = False,
 ) -> None:
-    """Verify explicitly curated reported-effect arithmetic.
+    """Verify explicitly curated effect arithmetic and interval approximations.
 
     Version 1 checks intervention-minus-comparator mean body-weight change.
-    It never extracts numbers from prose, opens source PDFs, or performs
-    scientific synthesis.
+    Version 2 may also approximate a confidence interval from explicit arm
+    standard errors. It never extracts numbers from prose, opens source PDFs,
+    or performs scientific synthesis.
     """
 
     if output and output.resolve() in {inputs_path.resolve(), evidence.resolve()}:
@@ -876,7 +877,14 @@ def statistical_verify(
     results = verify_statistical_inputs(validation.records)
     report = render_statistical_verification_report(results)
     consistent_count = sum(result.status == "consistent" for result in results)
-    discrepant_count = len(results) - consistent_count
+    arithmetic_discrepancy_count = len(results) - consistent_count
+    interval_results = [
+        result.interval_approximation
+        for result in results
+        if result.interval_approximation is not None
+    ]
+    compatible_interval_count = sum(result.status == "compatible" for result in interval_results)
+    interval_discrepancy_count = len(interval_results) - compatible_interval_count
 
     if output:
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -884,12 +892,16 @@ def statistical_verify(
         console.print(f"[green]Wrote statistical verification report:[/green] {output}")
         console.print(f"Typed inputs: {len(results)}")
         console.print(f"Consistent arithmetic checks: {consistent_count}")
-        console.print(f"Discrepancies: {discrepant_count}")
+        console.print(f"Discrepancies: {arithmetic_discrepancy_count}")
+        console.print(f"Arithmetic discrepancies: {arithmetic_discrepancy_count}")
+        console.print(f"Interval approximations: {len(interval_results)}")
+        console.print(f"Compatible interval approximations: {compatible_interval_count}")
+        console.print(f"Interval discrepancies: {interval_discrepancy_count}")
         console.print("No scientific synthesis was performed.")
     else:
         typer.echo(report, nl=False)
 
-    if discrepant_count:
+    if arithmetic_discrepancy_count or interval_discrepancy_count:
         raise typer.Exit(1)
 
 

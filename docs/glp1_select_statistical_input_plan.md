@@ -1,5 +1,8 @@
 # GLP-1 SELECT Statistical Input Plan
 
+**Status:** Completed. The next bounded STEP 5 interval-approximation contract
+is documented in `docs/glp1_confidence_interval_approximation_plan.md`.
+
 ## Decision
 
 Expand the version 1 typed statistical-input pilot from STEP 5 to SELECT while

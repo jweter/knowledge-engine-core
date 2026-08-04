@@ -300,10 +300,13 @@ survive to production unchanged):
   manually source-audited STEP 5 and SELECT records whose explicit randomized-
   arm means reproduce their reported treatment differences with Decimal
   arithmetic. Typed numerical locators may differ from claim locators while
-  remaining bound to the same DOI and reviewed Evidence Record. The command
-  does not parse statistical values from prose, recompute reported confidence
-  intervals, or assess source analyses. Broader sensitivity analysis,
-  meta-analysis, and LLM narration remain unstarted.
+  remaining bound to the same DOI and reviewed Evidence Record. Version 2 adds
+  one STEP 5 interval approximation from explicit arm standard errors, sample
+  sizes, and a declared independent-arm normal assumption. It is compatible
+  within rounding tolerance, not a reconstruction of the trial's model-based
+  interval; SELECT remains display-only. The command does not parse statistical
+  values from prose or assess source analyses. Binary-outcome checks, broader
+  sensitivity analysis, meta-analysis, and LLM narration remain unstarted.
 - **Stage 5 is not started.** Discovery Intelligence remains gated by adequate
   analytical inputs and relationship coverage.
 

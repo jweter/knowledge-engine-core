@@ -61,6 +61,9 @@ original prototype narrative, one-off status reports) live in
 - **`glp1_select_statistical_input_plan.md`** -- the source audit and contract
   refinement that adds SELECT and separates claim locators from typed numerical
   locators over the same reviewed source.
+- **`glp1_confidence_interval_approximation_plan.md`** -- the source audit,
+  version 2 contract, formula, assumptions, and trust boundary for STEP 5's
+  first deterministic independent-arm confidence-interval approximation.
 - **`founding_vision.md`** -- the project's original founding proposal,
   preserved verbatim.
 - **`future_ideas.md`** -- promising ideas parked outside the current

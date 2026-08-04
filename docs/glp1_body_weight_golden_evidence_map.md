@@ -174,11 +174,16 @@ ke statistical-verify \
 
 The verifier independently reproduces STEP 5's reported `-12.6`
 percentage-point difference from `-15.2` and `-2.6`, and SELECT's reported
-`-8.7` difference from `-10.2` and `-1.5`. Reported confidence intervals are
-preserved for display but are not recomputed. SELECT's typed numerical locator
-points to the complete identity on page 4 rather than reusing its page-1 claim
-locator; both remain bound to the same DOI and reviewed Evidence Record. No
-number is parsed from this map or its Evidence Record prose.
+`-8.7` difference from `-10.2` and `-1.5`. STEP 5's explicitly reported arm
+standard errors (`0.9`, `1.1`) also support a declared independent-arm normal
+95% interval approximation of `-15.385683...` to `-9.814317...`; both endpoints
+are within `0.1` of the reported `-15.3` to `-9.8`. This is not a reconstruction
+of the paper's ANCOVA and multiple-imputation analysis. SELECT's interval
+remains display-only because both numerical arm standard errors are not
+reported. Its typed locator points to the complete identity on page 4 rather
+than reusing the page-1 claim locator; both remain bound to the same DOI and
+reviewed Evidence Record. No number is parsed from this map or its Evidence
+Record prose.
 
 ## Remaining Work
 
@@ -198,7 +203,8 @@ analytical intelligence:
    traceable review; human domain-expert adjudication remains available where
    the scientific stakes or disagreement warrant it.
 
-The reviewed map, deterministic comparison report, and two typed arithmetic
-checks are now an evaluated foundation for closing those coverage gaps and a
-traceable public demonstration. They still are not statistical synthesis,
+The reviewed map, deterministic comparison report, two typed arithmetic
+checks, and one explicitly assumed interval approximation are now an evaluated
+foundation for closing those coverage gaps and a traceable public
+demonstration. They still are not statistical synthesis,
 independent replication, or a declaration of scientific truth.
