@@ -47,6 +47,22 @@ def _payload() -> dict[str, object]:
     }
 
 
+def _interval_payload() -> dict[str, object]:
+    payload = _payload()
+    payload["schema_version"] = 2
+    payload["confidence_interval_verification"] = {
+        "method": "independent_arm_standard_errors_normal",
+        "intervention_standard_error": 0.9,
+        "comparator_standard_error": 1.1,
+        "intervention_sample_size": 152,
+        "comparator_sample_size": 152,
+        "critical_value": 1.96,
+        "endpoint_tolerance": 0.1,
+        "assumption_note": "Independent-arm normal approximation; not the source model.",
+    }
+    return payload
+
+
 def _evidence() -> list[dict[str, object]]:
     return [
         {
@@ -101,10 +117,60 @@ def test_discrepancy_is_deterministic(tmp_path: Path) -> None:
     assert result.status == "discrepant"
 
 
+def test_interval_approximation_is_deterministic_and_explicit(tmp_path: Path) -> None:
+    path = tmp_path / "inputs.jsonl"
+    _write(path, _interval_payload())
+
+    validation = validate_statistical_inputs(path, evidence_records=_evidence())
+    first = verify_statistical_inputs(validation.records)[0]
+    second = verify_statistical_inputs(validation.records)[0]
+
+    assert validation.valid
+    assert first == second
+    assert first.interval_approximation is not None
+    interval = first.interval_approximation
+    assert interval.difference_standard_error == Decimal("1.421267040355189549697092949")
+    assert interval.margin == Decimal("2.785683399096171517406302180")
+    assert interval.lower == Decimal("-15.38568339909617151740630218")
+    assert interval.upper == Decimal("-9.814316600903828482593697820")
+    assert interval.lower_difference == Decimal("0.08568339909617151740630218")
+    assert interval.upper_difference == Decimal("0.014316600903828482593697820")
+    assert interval.status == "compatible"
+    assert not first.has_discrepancy
+    report = render_statistical_verification_report((first,))
+    assert "**Interval status:** **compatible**" in report
+    assert "not a reconstruction or validation" in report
+
+
+def test_interval_discrepancy_is_separate_from_arithmetic(tmp_path: Path) -> None:
+    payload = _interval_payload()
+    interval_input = payload["confidence_interval_verification"]
+    assert isinstance(interval_input, dict)
+    interval_input["endpoint_tolerance"] = 0.01
+    path = tmp_path / "inputs.jsonl"
+    _write(path, payload)
+
+    validation = validate_statistical_inputs(path, evidence_records=_evidence())
+    result = verify_statistical_inputs(validation.records)[0]
+
+    assert validation.valid
+    assert result.status == "consistent"
+    assert result.interval_approximation is not None
+    assert result.interval_approximation.status == "discrepant"
+    assert result.has_discrepancy
+
+
 @pytest.mark.parametrize(
     ("mutate", "expected"),
     [
-        (lambda value: value.update(schema_version=True), "schema_version must be integer 1"),
+        (
+            lambda value: value.update(schema_version=True),
+            "schema_version must be integer 1 or 2",
+        ),
+        (
+            lambda value: value.update(schema_version=3),
+            "schema_version must be integer 1 or 2",
+        ),
         (
             lambda value: value.update(statistical_input_id="Bad ID"),
             "statistical_input_id has an invalid format",
@@ -155,6 +221,113 @@ def test_contract_rejects_invalid_fields(
 
     assert not result.valid
     assert any(expected in error for error in result.errors)
+
+
+def test_version_one_rejects_interval_object_and_version_two_may_omit_it(
+    tmp_path: Path,
+) -> None:
+    version_one = _interval_payload()
+    version_one["schema_version"] = 1
+    version_two = _payload()
+    version_two["schema_version"] = 2
+    rejected = tmp_path / "rejected.jsonl"
+    accepted = tmp_path / "accepted.jsonl"
+    _write(rejected, version_one)
+    _write(accepted, version_two)
+
+    rejected_result = validate_statistical_inputs(rejected, evidence_records=_evidence())
+    accepted_result = validate_statistical_inputs(accepted, evidence_records=_evidence())
+
+    assert not rejected_result.valid
+    assert any(
+        "supported only by statistical input schema version 2" in error
+        for error in rejected_result.errors
+    )
+    assert accepted_result.valid
+    assert accepted_result.records[0].schema_version == 2
+    assert accepted_result.records[0].confidence_interval_verification is None
+
+
+@pytest.mark.parametrize(
+    ("mutate", "expected"),
+    [
+        (
+            lambda value: value.update(method="student_t"),
+            "method must be 'independent_arm_standard_errors_normal'",
+        ),
+        (
+            lambda value: value.update(intervention_standard_error=0),
+            "intervention_standard_error must be positive",
+        ),
+        (
+            lambda value: value.update(comparator_standard_error=True),
+            "comparator_standard_error must be a finite JSON number",
+        ),
+        (
+            lambda value: value.update(intervention_sample_size=True),
+            "intervention_sample_size must be a positive integer",
+        ),
+        (
+            lambda value: value.update(comparator_sample_size=0),
+            "comparator_sample_size must be a positive integer",
+        ),
+        (
+            lambda value: value.update(critical_value=1.645),
+            "critical_value must be 1.96",
+        ),
+        (
+            lambda value: value.update(endpoint_tolerance=0),
+            "endpoint_tolerance must be positive",
+        ),
+        (
+            lambda value: value.update(assumption_note="  "),
+            "assumption_note must be non-empty text",
+        ),
+    ],
+)
+def test_interval_contract_rejects_invalid_fields(
+    tmp_path: Path, mutate: object, expected: str
+) -> None:
+    payload = _interval_payload()
+    interval = payload["confidence_interval_verification"]
+    assert isinstance(interval, dict)
+    assert callable(mutate)
+    mutate(interval)
+    path = tmp_path / "inputs.jsonl"
+    _write(path, payload)
+
+    result = validate_statistical_inputs(path, evidence_records=_evidence())
+
+    assert not result.valid
+    assert any(expected in error for error in result.errors)
+
+
+def test_interval_contract_requires_complete_reported_95_percent_interval(
+    tmp_path: Path,
+) -> None:
+    wrong_level = _interval_payload()
+    reported_interval = wrong_level["reported_confidence_interval"]
+    assert isinstance(reported_interval, dict)
+    reported_interval["level"] = 90
+    missing_interval = _interval_payload()
+    del missing_interval["reported_confidence_interval"]
+    wrong_path = tmp_path / "wrong-level.jsonl"
+    missing_path = tmp_path / "missing.jsonl"
+    _write(wrong_path, wrong_level)
+    _write(missing_path, missing_interval)
+
+    wrong_result = validate_statistical_inputs(wrong_path, evidence_records=_evidence())
+    missing_result = validate_statistical_inputs(missing_path, evidence_records=_evidence())
+
+    assert not wrong_result.valid
+    assert any(
+        "requires a reported 95% confidence interval" in error for error in wrong_result.errors
+    )
+    assert not missing_result.valid
+    assert any(
+        "requires complete reported confidence interval endpoints" in error
+        for error in missing_result.errors
+    )
 
 
 @pytest.mark.parametrize(
@@ -270,11 +443,18 @@ def test_committed_step5_and_select_inputs_verify_without_database(
     assert "Typed inputs: 2" in result.output
     assert "Consistent arithmetic checks: 2" in result.output
     assert "Discrepancies: 0" in result.output
+    assert "Arithmetic discrepancies: 0" in result.output
+    assert "Interval approximations: 1" in result.output
+    assert "Compatible interval approximations: 1" in result.output
+    assert "Interval discrepancies: 0" in result.output
     report = output.read_text(encoding="utf-8")
     assert "stat-glp1-step5-week104-treatment-difference-001" in report
     assert "stat-glp1-select-week208-treatment-difference-001" in report
     assert "`-15.2 - (-2.6) = -12.6`" in report
     assert "`-10.2 - (-1.5) = -8.7`" in report
+    assert "**Interval status:** **compatible**" in report
+    assert "`independent_arm_standard_errors_normal`" in report
+    assert "**Approximate confidence interval:** `-15.38568339909617151740630218` to" in report
     assert "95% CI `-9.42` to `-7.88` (displayed only; not recomputed)" in report
     assert "In-trial intention-to-treat analysis" in report
     assert "**Source span:** page 4, Results / Change in body weight" in report
@@ -308,7 +488,37 @@ def test_cli_discrepancy_exits_one_after_rendering(tmp_path: Path) -> None:
 
     assert result.exit_code == 1
     assert "Discrepancies: 1" in result.output
+    assert "Arithmetic discrepancies: 1" in result.output
     assert "**Status:** **discrepant**" in output.read_text(encoding="utf-8")
+
+
+def test_cli_interval_discrepancy_exits_one_after_rendering(tmp_path: Path) -> None:
+    root = Path(__file__).parents[1]
+    corpus = root / "data" / "corpora" / "glp1_weight_loss"
+    first_line = (corpus / "statistical_inputs.jsonl").read_text(encoding="utf-8").splitlines()[0]
+    payload = json.loads(first_line)
+    payload["confidence_interval_verification"]["endpoint_tolerance"] = 0.01
+    inputs = tmp_path / "discrepant-interval.jsonl"
+    output = tmp_path / "report.md"
+    _write(inputs, payload)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "statistical-verify",
+            str(inputs),
+            "--evidence",
+            str(corpus / "evidence_records.jsonl"),
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Discrepancies: 0" in result.output
+    assert "Arithmetic discrepancies: 0" in result.output
+    assert "Interval discrepancies: 1" in result.output
+    assert "**Interval status:** **discrepant**" in output.read_text(encoding="utf-8")
 
 
 def test_cli_terminal_and_forced_file_output_match(tmp_path: Path) -> None:

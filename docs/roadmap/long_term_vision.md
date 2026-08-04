@@ -404,7 +404,10 @@ cross-study comparison foundation for Analytical Intelligence. Typed
 statistical inputs now have a bounded two-source implementation: source-audited
 STEP 5 and SELECT inputs independently reproduce their reported treatment
 differences using explicit Decimal formula inputs and independent numerical
-locators. Confidence-interval recomputation, broader analysis, and AI narration
-remain gated by `docs/roadmap.md`'s Current Project Path. Discovery Intelligence
-remains gated by those analytical prerequisites and adequate relationship
-coverage.
+locators. STEP 5 also has the first explicitly assumed, independent-arm normal
+confidence-interval approximation from reported arm standard errors; it is
+compatible within declared rounding tolerance and is not represented as the
+paper's model-based interval reconstruction. SELECT remains display-only.
+Binary-outcome verification, broader analysis, and AI narration remain gated
+by `docs/roadmap.md`'s Current Project Path. Discovery Intelligence remains
+gated by those analytical prerequisites and adequate relationship coverage.

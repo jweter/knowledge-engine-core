@@ -34,9 +34,10 @@ diabetes, or metabolic syndrome?
 - `golden_evidence_map.json`: source-audited, reviewed version 1 map for the
   bounded GLP-1 and body-weight question; see
   `docs/glp1_body_weight_golden_evidence_map.md` for its scope and limitations.
-- `statistical_inputs.jsonl`: version 1 explicitly curated statistical inputs;
-  currently source-verified STEP 5 week-104 and SELECT week-208
-  treatment-difference identities.
+- `statistical_inputs.jsonl`: version 2 explicitly curated statistical inputs,
+  preserving version 1 compatibility; currently source-verified STEP 5
+  week-104 and SELECT week-208 treatment-difference identities plus STEP 5's
+  bounded interval-approximation inputs.
 
 The current map includes one legally reusable GLIDE pilot record as an explicit
 liraglutide/post-gastric-banding qualifier. Its ignored local source is
@@ -67,12 +68,16 @@ ke statistical-verify \
 ```
 
 The checks reproduce STEP 5's `-12.6` percentage points from `-15.2` and `-2.6`
-and SELECT's `-8.7` from `-10.2` and `-1.5`. A typed numerical locator may
+and SELECT's `-8.7` from `-10.2` and `-1.5`. STEP 5 also approximates a 95% CI
+from its reported arm standard errors and a declared independent-arm normal
+assumption; the approximation is compatible with the reported endpoints within
+`0.1` percentage points. It does not reconstruct the source ANCOVA or
+multiple-imputation procedure. SELECT remains display-only because both
+numerical arm standard errors are unavailable. A typed numerical locator may
 point to a different page from its Evidence Record's claim locator when that is
 where the complete arithmetic identity is reported. The command does not
-extract numbers from prose, recompute confidence intervals, open PDFs, access
-SQLite, pool studies, or perform scientific synthesis. `consistent` means
-arithmetic agreement within the declared tolerance only.
+extract numbers from prose, open PDFs, access SQLite, pool studies, or perform
+scientific synthesis.
 
 ## Manifest Validation
 

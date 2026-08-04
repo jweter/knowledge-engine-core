@@ -9,6 +9,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **First source-audited confidence-interval approximation.** Extended
+  `ke statistical-verify` with statistical-input schema version 2 while
+  preserving version 1 compatibility. STEP 5 now uses its explicitly reported
+  arm standard errors, sample sizes, a declared `1.96` normal critical value,
+  and an independent-arm assumption to approximate the reported week-104 95%
+  interval deterministically. Both endpoints are compatible within the
+  declared `0.1` percentage-point tolerance. The report labels this as an
+  approximation rather than a reconstruction of the source ANCOVA,
+  multiple-imputation, covariance, or Rubin-combination procedure. SELECT
+  remains display-only because its source does not expose both required
+  numerical arm standard errors. No values are parsed from prose, and no
+  pooling, confidence scoring, SQLite access, PDF access, or synthesis occurs.
+
 - **SELECT typed statistical-input expansion.** Added a second source-audited
   randomized body-weight identity to `statistical_inputs.jsonl`. SELECT's
   explicit week-208 arm means reproduce its reported `-8.7` percentage-point

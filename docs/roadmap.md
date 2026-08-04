@@ -71,12 +71,18 @@ temporary detour:
    declare randomized-arm means, estimands, units, time points, reported
    differences, confidence intervals, formulas, tolerances, and provenance.
    Decimal arithmetic independently reproduces STEP 5's `-12.6` and SELECT's
-   `-8.7` percentage-point treatment differences exactly. Claim locators and
-   typed numerical locators remain distinct while DOI and Evidence Record
-   identity stay enforced. These are arithmetic consistency checks only; the
-   confidence intervals are displayed but not recomputed. The next bounded
-   step is confidence-interval recomputation only where all required
-   uncertainty inputs and formula assumptions are explicit.
+   `-8.7` percentage-point treatment differences exactly. Statistical-input
+   schema version 2 now adds one bounded uncertainty calculation: STEP 5's
+   explicitly reported arm standard errors and sample sizes feed a declared
+   independent-arm normal approximation whose endpoints are compatible with
+   the reported 95% CI within `0.1` percentage points. It is not a
+   reconstruction of the source ANCOVA, multiple-imputation, covariance, or
+   Rubin-combination procedure. SELECT remains display-only because both
+   numerical arm standard errors are unavailable. Claim and typed locators
+   remain distinct while DOI and Evidence Record identity stay enforced. The
+   next bounded step is a source-audited binary-outcome verification contract,
+   only where counts, denominators, estimand, interval method, and correction
+   policy are explicit.
 5. **Operationalize the persistent host when its trigger is met.** Continue
    event-triggered web snapshots and AI subprocess calls until the operator,
    accepted API fixtures, published-data procedure, consumer migration, and

@@ -2,7 +2,9 @@
 
 **Status:** Completed for STEP 5. The SELECT continuation and independent
 typed-locator refinement are documented in
-`docs/glp1_select_statistical_input_plan.md`.
+`docs/glp1_select_statistical_input_plan.md`; the later schema version 2
+interval-approximation contract is documented in
+`docs/glp1_confidence_interval_approximation_plan.md`.
 
 ## Decision
 

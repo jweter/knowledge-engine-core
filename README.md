@@ -69,14 +69,18 @@ ke statistical-verify \
   --output glp1-statistical-verification.md
 ```
 
-The version 1 contract recomputes one supported effect form from manually
-transcribed, source-located values. STEP 5 reproduces its reported week-104
-difference as `-15.2 - (-2.6) = -12.6` percentage points; SELECT reproduces
-its week-208 difference as `-10.2 - (-1.5) = -8.7` percentage points. Typed
-numerical locators may differ from Evidence Record claim locators while DOI
-and reviewed source identity remain enforced. These are arithmetic consistency
-checks, not independent replication, statistical synthesis, confidence
-scoring, or judgments that the source analyses are scientifically correct.
+The version 2 contract preserves version 1 arithmetic inputs and adds an
+optional, explicitly assumed interval approximation. STEP 5 reproduces its
+reported week-104 difference as `-15.2 - (-2.6) = -12.6` percentage points and
+uses its reported arm standard errors (`0.9`, `1.1`) to approximate a 95% CI of
+`-15.385683...` to `-9.814317...`; both endpoints are within `0.1` of the
+reported `-15.3` to `-9.8`. SELECT reproduces its week-208 difference as
+`-10.2 - (-1.5) = -8.7`, but its CI remains display-only because both numerical
+arm standard errors are unavailable. Typed numerical locators may differ from
+Evidence Record claim locators while DOI and reviewed source identity remain
+enforced. These are declared arithmetic and approximation checks, not a
+reconstruction of the source model, independent replication, statistical
+synthesis, confidence scoring, or a judgment that the analyses are correct.
 
 Phase 1 completed capabilities include:
 
@@ -553,10 +557,11 @@ Current handoff:
 
 1. The public-journey alignment, golden retrieval benchmark, and reviewed
    GLP-1/body-weight evidence-map foundations are implemented.
-2. Goal 4 is active. The cross-study report and source-audited STEP 5 and SELECT
-   arithmetic verifications are implemented without statistical synthesis.
-3. Next, design confidence-interval recomputation only when every required
-   uncertainty input and formula assumption is explicit.
+2. Goal 4 is active. The cross-study report, STEP 5 and SELECT arithmetic
+   checks, and the first source-audited STEP 5 interval approximation are
+   implemented without statistical synthesis.
+3. Next, design one source-audited binary-outcome check only where event counts,
+   denominators, estimand, interval method, and correction policy are explicit.
 
 ## Known Issues
 
