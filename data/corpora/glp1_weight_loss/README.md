@@ -26,12 +26,13 @@ diabetes, or metabolic syndrome?
   papers.
 - `license_policy.md`: policy for legal and reproducible use of source
   documents.
-- `evidence_records.jsonl`: historical draft evidence records from the original
-  GLP-1 vertical slice.
+- `evidence_records.jsonl`: traceable evidence records from the GLP-1 vertical
+  slice and later extraction work; the nine golden-map records have completed
+  the map's secondary source audit.
 - `relationship_records.jsonl`: reviewer-authored links between selected
   Evidence Records.
-- `golden_evidence_map.json`: provisional version 1 map for the bounded GLP-1
-  and body-weight question; see
+- `golden_evidence_map.json`: source-audited, reviewed version 1 map for the
+  bounded GLP-1 and body-weight question; see
   `docs/glp1_body_weight_golden_evidence_map.md` for its scope and limitations.
 
 ## Manifest Validation

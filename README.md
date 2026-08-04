@@ -32,11 +32,12 @@ web-alpha, and first AI retrieval/synthesis foundations already exist. See
 [Current Project Path](docs/roadmap.md#current-project-path).
 
 The first bounded GLP-1/body-weight map is now available as a
-[provisional golden evidence map](docs/glp1_body_weight_golden_evidence_map.md).
+[reviewed golden evidence map](docs/glp1_body_weight_golden_evidence_map.md).
 It links nine cited Evidence Records through thirteen reviewer-authored
 relationships while keeping population, comparator, endpoint, and review
-boundaries explicit. It remains provisional until independent secondary
-review; it is not a scientific conclusion.
+boundaries explicit. An AI-assisted independent source audit verified
+record-to-source fidelity; it is not human domain-expert approval or a
+scientific conclusion.
 
 Phase 1 completed capabilities include:
 
@@ -515,8 +516,8 @@ The first three tasks are therefore:
    failures before adding more narration.
 3. Complete the GLP-1/body-weight evidence map across key sources,
    populations, limitations, citations, and conservatively reviewed
-   relationships. The version 1 provisional map is implemented; independent
-   secondary review and identified coverage gaps remain.
+   relationships. The version 1 map and its source-fidelity review are
+   implemented; identified coverage gaps remain.
 
 ## Known Issues
 
