@@ -46,14 +46,18 @@ temporary detour:
    citations, and conservatively reviewed relationships. Prefer depth and
    coherence here over expanding the corpus beyond its current bounded scope.
    A [reviewed version 1 map](glp1_body_weight_golden_evidence_map.md) now
-   selects eleven cited Evidence Records and sixteen reviewer-authored
+   selects twelve cited Evidence Records and seventeen reviewer-authored
    relationships with explicit population, comparator, endpoint, limitation,
    and contradiction boundaries. An AI-assisted independent source audit has
    verified record-to-source fidelity. A direct STEP 1 withdrawal qualifier and
    pooled semaglutide safety/discontinuation qualifier now close the first
-   durability and tolerability gaps without computing benefit-harm. Longer
-   withdrawal follow-up, newer safety synthesis, population, agent, and
-   contradictory-evidence gaps remain.
+   durability and tolerability gaps without computing benefit-harm. A
+   reproducible same-PICO contradiction audit found no aligned
+   direction-reversing semaglutide result and added GLIDE only as an explicit
+   liraglutide/post-gastric-banding agent-population qualifier. Longer
+   withdrawal follow-up, newer safety synthesis, and broader population and
+   agent gaps remain; contradiction monitoring should be rerun as evidence
+   changes rather than filled with a mismatched result.
 4. **Advance Evidence and Analytical Intelligence.** Once the golden map is
    strong enough to evaluate, build structured cross-study comparison and
    deterministic statistical checks before broader LLM narration. Evidence

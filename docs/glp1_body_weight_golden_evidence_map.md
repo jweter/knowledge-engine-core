@@ -11,11 +11,13 @@ question:
 
 The machine-readable artifact is
 `data/corpora/glp1_weight_loss/golden_evidence_map.json`. Its status is
-`reviewed`. AI-assisted independent source audits checked all eleven selected
-Evidence Records and all sixteen selected Relationship Records against the
+`reviewed`. AI-assisted independent source audits checked all twelve selected
+Evidence Records and all seventeen selected Relationship Records against the
 legally usable local PDFs. The initial audit is documented in
 `docs/glp1_golden_map_secondary_review.md`; the durability and safety follow-up
-is documented in `docs/glp1_map_durability_safety.md`.
+is documented in `docs/glp1_map_durability_safety.md`; and the bounded
+same-PICO search is documented in
+`docs/glp1_same_pico_contradiction_search_audit.md`.
 
 Reviewed means accepted for record-to-source fidelity under this map's
 contract. It does not mean human domain-expert approval, independent
@@ -31,8 +33,9 @@ continued use in adults with overweight or obesity. One exploratory STEP 1
 extension separately represents the first year after withdrawal, and one RCT
 meta-analysis record separately represents adverse events and discontinuation.
 Population extensions remain separate when diabetes, cardiovascular disease,
-heart failure, or PMOS changes applicability. Liraglutide and tirzepatide
-appear only as explicit endpoint or active-comparator context.
+heart failure, PMOS, or prior metabolic surgery changes applicability.
+Liraglutide and tirzepatide appear only as explicit endpoint,
+agent/population, or active-comparator context.
 
 The bounded map excludes class-wide conclusions, pediatric and pregnancy
 populations, cost-effectiveness, and a comprehensive current safety analysis.
@@ -55,6 +58,7 @@ for or contradiction of body-weight reduction.
 | `ev-tirzepatide-vs-semaglutide-weightloss-001` | Active-comparator context | Propensity-matched EHR cohort; tirzepatide vs semaglutide | Mean reduction: 14.7% vs 10.8% | Comparative effectiveness, not a randomized head-to-head or placebo trial |
 | `ev-glp1-waist-circumference-meta-001` | Evidence synthesis | Meta-analysis of heterogeneous intervention categories | GLP-1RA subgroup waist change: -5.93 cm | Waist circumference is not body weight; between-category differences were not significant |
 | `ev-liraglutide-alone-physical-fitness-001` | Endpoint qualifier | Randomized secondary analysis after diet-induced weight loss | Liraglutide alone did not improve physical fitness | The primary sample-size calculation was for body weight; specified fitness differences had estimated secondary-analysis power |
+| `ev-glp1-glide-liraglutide-post-lagb-weight-001` | Agent/population qualifier | Underpowered pilot RCT; liraglutide 1.8 mg vs placebo after gastric banding | Six-month adjusted difference 2.0 kg (95% CI -4.2 to 8.1); p=0.50 | Adults with obesity and T2D after LAGB; different agent, dose, population, surgical context, and outcome priority from STEP 5 |
 
 ## Population and Comparator Boundaries
 
@@ -70,22 +74,28 @@ comparison:
   and tirzepatide active comparison remain distinct comparator classes.
 - Waist circumference and physical fitness qualify interpretation but do not
   answer the body-weight question by substitution.
+- GLIDE's post-gastric-banding liraglutide comparison is an explicit
+  agent/population boundary and cannot be substituted for semaglutide evidence
+  in non-surgical adults without diabetes.
 
 ## Relationship Review
 
-The map references 16 reviewer-authored relationships whose endpoints are both
-selected: 10 `supports`, 4 `contextualizes`, and 2 `qualifies`. It does not
+The map references 17 reviewer-authored relationships whose endpoints are both
+selected: 10 `supports`, 4 `contextualizes`, and 3 `qualifies`. It does not
 infer edges. Support links preserve aligned direction while their rationales
 retain study-design and population differences. Context and qualifier links
 prevent active comparators, withdrawal trajectories, safety outcomes, PMOS
 evidence, and other population extensions from being misrepresented as direct
 replication or as a computed benefit-harm conclusion.
 
-No reviewed same-PICO `contradicts` relationship was identified in this bounded
-selection. Tirzepatide's larger active-comparator estimate and liraglutide's
-null fitness result are not contradictions of semaglutide-versus-placebo
-body-weight findings. This absence is a search result within the selected map,
-not evidence that contradictory literature does not exist.
+No reviewed same-PICO `contradicts` relationship was identified. The
+2026-08-04 audit screened 156 Evidence Records, 952 source rows, 261
+shared-concept candidate pairs, 113 direct PubMed results, and 45
+negative-signal abstracts. GLIDE's null six-month liraglutide result after
+gastric banding, liraglutide's null fitness result, and tirzepatide's larger
+active-comparator estimate are qualifiers rather than contradictions of
+semaglutide-versus-placebo body-weight findings. This bounded negative search
+is not evidence that contradictory literature does not exist.
 
 ## Citations
 
@@ -102,6 +112,7 @@ row in `sources.csv`:
 - Tirzepatide comparison: `10.1093/pnasnexus/pgag171`
 - Waist-circumference synthesis: `10.1016/j.obpill.2026.100281`
 - Liraglutide fitness analysis: `10.1007/s40279-025-02386-0`
+- GLIDE pilot: `10.1038/s41366-023-01368-4`
 
 The source manifest remains authoritative for title, authors, year, venue,
 source URL, and declared license provenance. Structural validation confirms
@@ -141,8 +152,8 @@ analytical intelligence:
    and population differences.
 3. Expand agent and population coverage without collapsing drug, dose,
    formulation, duration, or eligibility differences.
-4. Search explicitly for same-PICO contradictory or qualifying evidence and
-   preserve a negative search outcome honestly when none is found.
+4. Rerun the documented same-PICO contradiction search as new trials mature or
+   the map's direct PICO changes; preserve future negative results honestly.
 5. Route disputed records and substantive future changes through another
    traceable review; human domain-expert adjudication remains available where
    the scientific stakes or disagreement warrant it.

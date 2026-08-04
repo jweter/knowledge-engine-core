@@ -26,6 +26,7 @@ ALLOWED_EVIDENCE_ROLES = {
     "active_comparator_context",
     "durability_qualifier",
     "endpoint_qualifier",
+    "agent_population_qualifier",
     "safety_qualifier",
 }
 ALLOWED_CONTRADICTION_STATUSES = {

@@ -33,10 +33,13 @@ web-alpha, and first AI retrieval/synthesis foundations already exist. See
 
 The first bounded GLP-1/body-weight map is now available as a
 [reviewed golden evidence map](docs/glp1_body_weight_golden_evidence_map.md).
-It links eleven cited Evidence Records through sixteen reviewer-authored
+It links twelve cited Evidence Records through seventeen reviewer-authored
 relationships while keeping population, comparator, endpoint, and review
 boundaries explicit. An AI-assisted independent source audit verified
-record-to-source fidelity, including bounded withdrawal and safety qualifiers;
+record-to-source fidelity, including bounded withdrawal, safety, and
+agent/population qualifiers. A reproducible same-PICO search found no aligned
+direction-reversing semaglutide result and preserved that as a bounded negative
+finding rather than manufacturing a contradiction;
 it is not human domain-expert approval, a benefit-harm assessment, or a
 scientific conclusion.
 

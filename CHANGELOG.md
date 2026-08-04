@@ -9,6 +9,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Reproducible GLP-1 same-PICO contradiction audit.** Added a written search
+  plan and completed audit across committed evidence, source metadata,
+  relationship candidates, and bounded PubMed queries. No aligned
+  direction-reversing semaglutide result was found. Added the legally reusable,
+  underpowered GLIDE liraglutide-after-gastric-banding trial as one reviewed
+  agent/population qualifier and one `qualifies` relationship, bringing the
+  reviewed map to 12 cited records and 17 relationships without manufacturing
+  a contradiction or implying synthesis, consensus, confidence, or truth.
+
 - **GLP-1 golden-map durability and safety qualifiers.** Added a reviewed STEP
   1 withdrawal-extension Evidence Record and a reviewed semaglutide RCT
   safety/discontinuation Evidence Record, linked through three bounded
