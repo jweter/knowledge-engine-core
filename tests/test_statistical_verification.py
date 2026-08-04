@@ -164,12 +164,8 @@ def test_contract_rejects_invalid_fields(
         (lambda record: record.update(source_doi="10.1000/wrong"), "source_doi does not match"),
         (lambda record: record.update(outcome="Blood pressure"), "body-weight outcome"),
         (
-            lambda record: record.update(source_span={"page_number": 3}),
-            "source_span.page_number does not match",
-        ),
-        (
-            lambda record: record.update(source_span={"page_number": 2, "section": "Discussion"}),
-            "source_span.section does not match",
+            lambda record: record.update(source_span={"page_number": 0, "section": ""}),
+            "must have a valid source span",
         ),
     ],
 )
@@ -188,6 +184,19 @@ def test_reference_validation_rejects_mismatches(
 
     assert not result.valid
     assert any(expected in error for error in result.errors)
+
+
+def test_typed_locator_can_differ_from_evidence_claim_locator(tmp_path: Path) -> None:
+    payload = _payload()
+    payload["source_span"] = {"page_number": 4, "section": "Results / Body weight"}
+    path = tmp_path / "inputs.jsonl"
+    _write(path, payload)
+
+    result = validate_statistical_inputs(path, evidence_records=_evidence())
+
+    assert result.valid
+    assert result.records[0].source_span.page_number == 4
+    assert result.records[0].source_span.section == "Results / Body weight"
 
 
 def test_unknown_reference_malformed_json_and_duplicate_ids_are_rejected(
@@ -237,7 +246,7 @@ def test_report_escapes_source_controlled_markdown(tmp_path: Path) -> None:
     assert "\n# Injected" not in report
 
 
-def test_committed_step5_input_verifies_without_database(
+def test_committed_step5_and_select_inputs_verify_without_database(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = Path(__file__).parents[1]
@@ -258,13 +267,19 @@ def test_committed_step5_input_verifies_without_database(
     )
 
     assert result.exit_code == 0, result.output
-    assert "Typed inputs: 1" in result.output
-    assert "Consistent arithmetic checks: 1" in result.output
+    assert "Typed inputs: 2" in result.output
+    assert "Consistent arithmetic checks: 2" in result.output
     assert "Discrepancies: 0" in result.output
     report = output.read_text(encoding="utf-8")
     assert "stat-glp1-step5-week104-treatment-difference-001" in report
+    assert "stat-glp1-select-week208-treatment-difference-001" in report
     assert "`-15.2 - (-2.6) = -12.6`" in report
-    assert "**Status:** **consistent**" in report
+    assert "`-10.2 - (-1.5) = -8.7`" in report
+    assert "95% CI `-9.42` to `-7.88` (displayed only; not recomputed)" in report
+    assert "In-trial intention-to-treat analysis" in report
+    assert "**Source span:** page 4, Results / Change in body weight" in report
+    assert report.index("stat-glp1-step5") < report.index("stat-glp1-select")
+    assert report.count("**Status:** **consistent**") == 2
     assert "No scientific synthesis was performed" in report
     assert not (tmp_path / "data" / "knowledge_engine.sqlite3").exists()
 
@@ -272,7 +287,8 @@ def test_committed_step5_input_verifies_without_database(
 def test_cli_discrepancy_exits_one_after_rendering(tmp_path: Path) -> None:
     root = Path(__file__).parents[1]
     corpus = root / "data" / "corpora" / "glp1_weight_loss"
-    payload = json.loads((corpus / "statistical_inputs.jsonl").read_text(encoding="utf-8"))
+    first_line = (corpus / "statistical_inputs.jsonl").read_text(encoding="utf-8").splitlines()[0]
+    payload = json.loads(first_line)
     payload["reported_effect"] = -12.4
     inputs = tmp_path / "discrepant.jsonl"
     output = tmp_path / "report.md"

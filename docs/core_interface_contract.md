@@ -206,7 +206,11 @@ most likely to actually call:
   statistical inputs and verify the supported intervention-minus-comparator
   mean-change identity with Decimal arithmetic. Exit `1` on invalid inputs or
   a discrepancy. It opens no PDF or database and does not recompute confidence
-  intervals, pool effects, or assess scientific validity.
+  intervals, pool effects, or assess scientific validity. A typed numerical
+  locator is independently reviewed and may differ from the referenced
+  Evidence Record's claim locator; normalized DOI, reviewed Evidence Record
+  identity, outcome, and both artifacts' source-span completeness remain
+  enforced.
 - `ke relationship-report` -- read Relationship Records. Console output
   only.
 - `ke graph-report [--evidence-record-id <id> | --paper-id <id>] [--output <path.md>]`

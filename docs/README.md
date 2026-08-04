@@ -58,6 +58,9 @@ original prototype narrative, one-off status reports) live in
 - **`glp1_typed_statistical_inputs_plan.md`** -- the implementation contract
   for source-linked statistical inputs and the first deterministic STEP 5
   reported-effect verification.
+- **`glp1_select_statistical_input_plan.md`** -- the source audit and contract
+  refinement that adds SELECT and separates claim locators from typed numerical
+  locators over the same reviewed source.
 - **`founding_vision.md`** -- the project's original founding proposal,
   preserved verbatim.
 - **`future_ideas.md`** -- promising ideas parked outside the current

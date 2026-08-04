@@ -163,8 +163,8 @@ results are reviewed prose, not a typed effect-estimate contract. The command
 does not parse numbers from prose, recompute confidence intervals, pool effects,
 rank studies, calculate consensus or confidence, or call an LLM.
 
-The first separate typed statistical input now covers the STEP 5 week-104
-treatment-policy-estimand result. Run:
+The separate typed statistical inputs now cover the STEP 5 week-104
+treatment-policy-estimand result and SELECT's week-208 in-trial result. Run:
 
 ```bash
 ke statistical-verify \
@@ -172,10 +172,12 @@ ke statistical-verify \
   --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl
 ```
 
-The verifier independently reproduces the reported `-12.6` percentage-point
-difference from the explicitly curated arm means `-15.2` and `-2.6`. The
-reported 95% confidence interval is preserved for display but is not
-recomputed. The statistical input remains a separate analytical contract; no
+The verifier independently reproduces STEP 5's reported `-12.6`
+percentage-point difference from `-15.2` and `-2.6`, and SELECT's reported
+`-8.7` difference from `-10.2` and `-1.5`. Reported confidence intervals are
+preserved for display but are not recomputed. SELECT's typed numerical locator
+points to the complete identity on page 4 rather than reusing its page-1 claim
+locator; both remain bound to the same DOI and reviewed Evidence Record. No
 number is parsed from this map or its Evidence Record prose.
 
 ## Remaining Work
@@ -196,7 +198,7 @@ analytical intelligence:
    traceable review; human domain-expert adjudication remains available where
    the scientific stakes or disagreement warrant it.
 
-The reviewed map, deterministic comparison report, and first typed arithmetic
-check are now an evaluated foundation for closing those coverage gaps and a
+The reviewed map, deterministic comparison report, and two typed arithmetic
+checks are now an evaluated foundation for closing those coverage gaps and a
 traceable public demonstration. They still are not statistical synthesis,
 independent replication, or a declaration of scientific truth.

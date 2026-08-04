@@ -1,5 +1,9 @@
 # GLP-1 Typed Statistical Inputs Plan
 
+**Status:** Completed for STEP 5. The SELECT continuation and independent
+typed-locator refinement are documented in
+`docs/glp1_select_statistical_input_plan.md`.
+
 ## Decision
 
 The next bounded milestone begins deterministic statistical verification with

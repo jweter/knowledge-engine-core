@@ -60,7 +60,7 @@ citations, and reviewed relationships. It does not parse statistics from prose,
 recompute or pool effects, calculate consensus or confidence, or perform
 scientific synthesis.
 
-Verify the first explicitly curated STEP 5 statistical identity:
+Verify the explicitly curated STEP 5 and SELECT statistical identities:
 
 ```bash
 ke statistical-verify \
@@ -71,10 +71,12 @@ ke statistical-verify \
 
 The version 1 contract recomputes one supported effect form from manually
 transcribed, source-located values. STEP 5 reproduces its reported week-104
-treatment difference exactly: `-15.2 - (-2.6) = -12.6` percentage points.
-This is an arithmetic consistency check, not independent replication,
-statistical synthesis, confidence scoring, or a judgment that the source
-analysis is scientifically correct.
+difference as `-15.2 - (-2.6) = -12.6` percentage points; SELECT reproduces
+its week-208 difference as `-10.2 - (-1.5) = -8.7` percentage points. Typed
+numerical locators may differ from Evidence Record claim locators while DOI
+and reviewed source identity remain enforced. These are arithmetic consistency
+checks, not independent replication, statistical synthesis, confidence
+scoring, or judgments that the source analyses are scientifically correct.
 
 Phase 1 completed capabilities include:
 
@@ -551,10 +553,10 @@ Current handoff:
 
 1. The public-journey alignment, golden retrieval benchmark, and reviewed
    GLP-1/body-weight evidence-map foundations are implemented.
-2. Goal 4 is active. The cross-study report and first source-audited STEP 5
-   arithmetic verification are implemented without statistical synthesis.
-3. Next, add a source-audited SELECT input, then design confidence-interval
-   recomputation only when every required uncertainty input is explicit.
+2. Goal 4 is active. The cross-study report and source-audited STEP 5 and SELECT
+   arithmetic verifications are implemented without statistical synthesis.
+3. Next, design confidence-interval recomputation only when every required
+   uncertainty input and formula assumption is explicit.
 
 ## Known Issues
 
