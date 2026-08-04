@@ -55,6 +55,9 @@ original prototype narrative, one-off status reports) live in
 - **`glp1_cross_study_comparison_plan.md`** -- the written Goal 4 handoff from
   the reviewed map to `ke evidence-map-report`, including the boundary before
   typed statistical inputs and effect recomputation.
+- **`glp1_typed_statistical_inputs_plan.md`** -- the implementation contract
+  for source-linked statistical inputs and the first deterministic STEP 5
+  reported-effect verification.
 - **`founding_vision.md`** -- the project's original founding proposal,
   preserved verbatim.
 - **`future_ideas.md`** -- promising ideas parked outside the current

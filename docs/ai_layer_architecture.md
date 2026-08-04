@@ -296,11 +296,13 @@ survive to production unchanged):
 - **Stage 4 has a bounded core-side foundation.** The reviewed GLP-1 evidence
   map now feeds `ke evidence-map-report`, a deterministic cross-study display of
   stored PICO fields, reported results, limitations, citations, and reviewed
-  relationships. It deliberately does not parse statistical values from prose
-  or recompute an effect. The next step is a typed statistical-input contract
-  for a small set of direct randomized body-weight records, then one
-  independently reproducible calculation. Broader sensitivity analysis,
-  meta-analysis, and LLM narration remain unstarted.
+  relationships. `ke statistical-verify` adds the first typed numerical slice:
+  one manually source-audited STEP 5 record whose explicit randomized-arm means
+  reproduce the reported week-104 treatment difference with Decimal arithmetic.
+  It does not parse statistical values from prose, recompute the reported
+  confidence interval, or assess the source analysis. SELECT is the next input
+  expansion; broader sensitivity analysis, meta-analysis, and LLM narration
+  remain unstarted.
 - **Stage 5 is not started.** Discovery Intelligence remains gated by adequate
   analytical inputs and relationship coverage.
 

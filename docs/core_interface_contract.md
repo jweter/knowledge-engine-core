@@ -196,6 +196,17 @@ most likely to actually call:
   parse retrieval + matched-evidence results programmatically instead of
   scraping Markdown or Rich console text; see
   `docs/ai_layer_architecture.md`.
+- `ke evidence-map-report <map.json> --evidence <records.jsonl> --relationships
+  <relationships.jsonl> --sources <sources.csv> [--output <path.md>]` -- render
+  the reviewed map's stored PICO, results, limitations, citations, and
+  relationships in deterministic map order. It does not parse numerical prose
+  or perform synthesis.
+- `ke statistical-verify <statistical_inputs.jsonl> --evidence
+  <records.jsonl> [--output <path.md>]` -- validate version 1 source-linked
+  statistical inputs and verify the supported intervention-minus-comparator
+  mean-change identity with Decimal arithmetic. Exit `1` on invalid inputs or
+  a discrepancy. It opens no PDF or database and does not recompute confidence
+  intervals, pool effects, or assess scientific validity.
 - `ke relationship-report` -- read Relationship Records. Console output
   only.
 - `ke graph-report [--evidence-record-id <id> | --paper-id <id>] [--output <path.md>]`

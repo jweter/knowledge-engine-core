@@ -400,8 +400,10 @@ Claim Confidence split and domain-specific confidence profiles.
 `knowledge-engine-ai` has since shipped Retrieval Intelligence,
 core-provided Evidence Intelligence display, and opt-in local grounded
 synthesis. Core's `ke evidence-map-report` now supplies the first deterministic
-cross-study comparison foundation for Analytical Intelligence, while typed
-statistical inputs, independent recomputation, broader analysis, and AI
-narration remain gated by `docs/roadmap.md`'s Current Project Path. Discovery
-Intelligence remains gated by those analytical prerequisites and adequate
-relationship coverage.
+cross-study comparison foundation for Analytical Intelligence. Typed
+statistical inputs now have a first bounded implementation: a source-audited
+STEP 5 input independently reproduces one reported treatment difference using
+explicit Decimal formula inputs. Confidence-interval recomputation, broader
+analysis, and AI narration remain gated by `docs/roadmap.md`'s Current Project
+Path. Discovery Intelligence remains gated by those analytical prerequisites
+and adequate relationship coverage.

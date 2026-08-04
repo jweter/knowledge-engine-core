@@ -163,6 +163,21 @@ results are reviewed prose, not a typed effect-estimate contract. The command
 does not parse numbers from prose, recompute confidence intervals, pool effects,
 rank studies, calculate consensus or confidence, or call an LLM.
 
+The first separate typed statistical input now covers the STEP 5 week-104
+treatment-policy-estimand result. Run:
+
+```bash
+ke statistical-verify \
+  data/corpora/glp1_weight_loss/statistical_inputs.jsonl \
+  --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl
+```
+
+The verifier independently reproduces the reported `-12.6` percentage-point
+difference from the explicitly curated arm means `-15.2` and `-2.6`. The
+reported 95% confidence interval is preserved for display but is not
+recomputed. The statistical input remains a separate analytical contract; no
+number is parsed from this map or its Evidence Record prose.
+
 ## Remaining Work
 
 The initial record-to-source review and the first durability/safety follow-up
@@ -181,7 +196,7 @@ analytical intelligence:
    traceable review; human domain-expert adjudication remains available where
    the scientific stakes or disagreement warrant it.
 
-The reviewed map and deterministic comparison report are now an evaluated
-foundation for closing those coverage gaps, defining typed statistical inputs,
-and a traceable public demonstration. They still are not a declaration of
-scientific truth.
+The reviewed map, deterministic comparison report, and first typed arithmetic
+check are now an evaluated foundation for closing those coverage gaps and a
+traceable public demonstration. They still are not statistical synthesis,
+independent replication, or a declaration of scientific truth.
