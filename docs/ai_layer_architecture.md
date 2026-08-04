@@ -297,12 +297,13 @@ survive to production unchanged):
   map now feeds `ke evidence-map-report`, a deterministic cross-study display of
   stored PICO fields, reported results, limitations, citations, and reviewed
   relationships. `ke statistical-verify` adds the first typed numerical slice:
-  one manually source-audited STEP 5 record whose explicit randomized-arm means
-  reproduce the reported week-104 treatment difference with Decimal arithmetic.
-  It does not parse statistical values from prose, recompute the reported
-  confidence interval, or assess the source analysis. SELECT is the next input
-  expansion; broader sensitivity analysis, meta-analysis, and LLM narration
-  remain unstarted.
+  manually source-audited STEP 5 and SELECT records whose explicit randomized-
+  arm means reproduce their reported treatment differences with Decimal
+  arithmetic. Typed numerical locators may differ from claim locators while
+  remaining bound to the same DOI and reviewed Evidence Record. The command
+  does not parse statistical values from prose, recompute reported confidence
+  intervals, or assess source analyses. Broader sensitivity analysis,
+  meta-analysis, and LLM narration remain unstarted.
 - **Stage 5 is not started.** Discovery Intelligence remains gated by adequate
   analytical inputs and relationship coverage.
 

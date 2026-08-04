@@ -9,6 +9,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **SELECT typed statistical-input expansion.** Added a second source-audited
+  randomized body-weight identity to `statistical_inputs.jsonl`. SELECT's
+  explicit week-208 arm means reproduce its reported `-8.7` percentage-point
+  treatment difference exactly. Refined the version 1 provenance contract so a
+  typed numerical locator can identify a different source page from its
+  Evidence Record claim locator while normalized DOI, reviewed record identity,
+  outcome, and both source spans remain enforced. No values were parsed from
+  prose and no confidence interval was recomputed.
+
 - **First typed GLP-1 statistical verification.** Added
   `ke statistical-verify` and a version 1 source-linked JSONL contract for one
   supported effect form. The source-audited STEP 5 week-104 input independently

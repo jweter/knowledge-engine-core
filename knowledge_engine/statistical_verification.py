@@ -456,15 +456,13 @@ def _validate_evidence_reference(
     source_span = evidence.get("source_span")
     if (
         not isinstance(source_span, dict)
-        or source_span.get("page_number") != record.source_span.page_number
+        or isinstance(source_span.get("page_number"), bool)
+        or not isinstance(source_span.get("page_number"), int)
+        or source_span["page_number"] <= 0
+        or not isinstance(source_span.get("section"), str)
+        or not source_span["section"].strip()
     ):
-        errors.append(
-            f"{context}: source_span.page_number does not match the referenced Evidence Record."
-        )
-    elif source_span.get("section") != record.source_span.section:
-        errors.append(
-            f"{context}: source_span.section does not match the referenced Evidence Record."
-        )
+        errors.append(f"{context}: referenced Evidence Record must have a valid source span.")
 
 
 def _required_object(

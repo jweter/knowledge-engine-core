@@ -35,7 +35,8 @@ diabetes, or metabolic syndrome?
   bounded GLP-1 and body-weight question; see
   `docs/glp1_body_weight_golden_evidence_map.md` for its scope and limitations.
 - `statistical_inputs.jsonl`: version 1 explicitly curated statistical inputs;
-  currently one source-verified STEP 5 week-104 treatment-difference identity.
+  currently source-verified STEP 5 week-104 and SELECT week-208
+  treatment-difference identities.
 
 The current map includes one legally reusable GLIDE pilot record as an explicit
 liraglutide/post-gastric-banding qualifier. Its ignored local source is
@@ -56,7 +57,7 @@ ke evidence-map-report \
 The generated report is a display of stored, reviewed records. It does not
 perform scientific synthesis or statistical recomputation.
 
-Verify the committed STEP 5 arithmetic identity:
+Verify the committed STEP 5 and SELECT arithmetic identities:
 
 ```bash
 ke statistical-verify \
@@ -65,11 +66,13 @@ ke statistical-verify \
   --output glp1-statistical-verification.md
 ```
 
-The check reproduces `-12.6` percentage points from the explicitly transcribed
-arm means `-15.2` and `-2.6`. It does not extract numbers from prose, recompute
-the reported confidence interval, open a PDF, access SQLite, pool studies, or
-perform scientific synthesis. `consistent` means arithmetic agreement within
-the declared tolerance only.
+The checks reproduce STEP 5's `-12.6` percentage points from `-15.2` and `-2.6`
+and SELECT's `-8.7` from `-10.2` and `-1.5`. A typed numerical locator may
+point to a different page from its Evidence Record's claim locator when that is
+where the complete arithmetic identity is reported. The command does not
+extract numbers from prose, recompute confidence intervals, open PDFs, access
+SQLite, pool studies, or perform scientific synthesis. `consistent` means
+arithmetic agreement within the declared tolerance only.
 
 ## Manifest Validation
 

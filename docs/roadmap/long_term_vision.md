@@ -401,9 +401,10 @@ Claim Confidence split and domain-specific confidence profiles.
 core-provided Evidence Intelligence display, and opt-in local grounded
 synthesis. Core's `ke evidence-map-report` now supplies the first deterministic
 cross-study comparison foundation for Analytical Intelligence. Typed
-statistical inputs now have a first bounded implementation: a source-audited
-STEP 5 input independently reproduces one reported treatment difference using
-explicit Decimal formula inputs. Confidence-interval recomputation, broader
-analysis, and AI narration remain gated by `docs/roadmap.md`'s Current Project
-Path. Discovery Intelligence remains gated by those analytical prerequisites
-and adequate relationship coverage.
+statistical inputs now have a bounded two-source implementation: source-audited
+STEP 5 and SELECT inputs independently reproduce their reported treatment
+differences using explicit Decimal formula inputs and independent numerical
+locators. Confidence-interval recomputation, broader analysis, and AI narration
+remain gated by `docs/roadmap.md`'s Current Project Path. Discovery Intelligence
+remains gated by those analytical prerequisites and adequate relationship
+coverage.

@@ -67,15 +67,16 @@ temporary detour:
    the reviewed GLP-1 map's PICO, reported results, limitations, citations, and
    relationship context deterministically. It does not extract statistics from
    prose. The first typed statistical-input slice is now implemented by
-   `ke statistical-verify`: a source-audited STEP 5 record explicitly declares
-   its week-104 randomized-arm means, treatment-policy estimand, unit, time
-   point, reported difference, confidence interval, formula, tolerance, and
-   provenance. Decimal arithmetic independently reproduces the reported
-   `-12.6` percentage-point treatment difference exactly. This is arithmetic
-   consistency only; the confidence interval is displayed but not recomputed.
-   The next bounded step is to add a source-audited SELECT input, then design
-   confidence-interval recomputation only where all required uncertainty inputs
-   are explicit.
+   `ke statistical-verify`: source-audited STEP 5 and SELECT records explicitly
+   declare randomized-arm means, estimands, units, time points, reported
+   differences, confidence intervals, formulas, tolerances, and provenance.
+   Decimal arithmetic independently reproduces STEP 5's `-12.6` and SELECT's
+   `-8.7` percentage-point treatment differences exactly. Claim locators and
+   typed numerical locators remain distinct while DOI and Evidence Record
+   identity stay enforced. These are arithmetic consistency checks only; the
+   confidence intervals are displayed but not recomputed. The next bounded
+   step is confidence-interval recomputation only where all required
+   uncertainty inputs and formula assumptions are explicit.
 5. **Operationalize the persistent host when its trigger is met.** Continue
    event-triggered web snapshots and AI subprocess calls until the operator,
    accepted API fixtures, published-data procedure, consumer migration, and
