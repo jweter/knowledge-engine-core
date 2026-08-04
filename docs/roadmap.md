@@ -80,9 +80,14 @@ temporary detour:
    Rubin-combination procedure. SELECT remains display-only because both
    numerical arm standard errors are unavailable. Claim and typed locators
    remain distinct while DOI and Evidence Record identity stay enforced. The
-   next bounded step is a source-audited binary-outcome verification contract,
-   only where counts, denominators, estimand, interval method, and correction
-   policy are explicit.
+   first binary-outcome contract is now implemented separately from the
+   continuous schema: STEP 5's explicit `111/144` versus `44/128` observed
+   responder counts verify the source percentages and produce a crude risk
+   ratio with a declared no-correction log-Wald interval. The source-adjusted
+   OR remains display-only because its logistic-regression and
+   multiple-imputation estimand is not equivalent to the crude count contrast.
+   The next bounded analytical step should exercise one observed limitation,
+   such as a prespecified zero-cell correction, before pooling or AI narration.
 5. **Operationalize the persistent host when its trigger is met.** Continue
    event-triggered web snapshots and AI subprocess calls until the operator,
    accepted API fixtures, published-data procedure, consumer migration, and

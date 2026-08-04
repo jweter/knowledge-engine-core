@@ -18,6 +18,10 @@ from decimal import Decimal, InvalidOperation, localcontext
 from pathlib import Path
 from typing import Any
 
+from knowledge_engine.binary_statistical_verification import (
+    BinaryStatisticalVerification,
+    render_binary_verification_sections,
+)
 from knowledge_engine.utils import normalize_doi
 
 STATISTICAL_INPUT_SCHEMA_VERSION = 2
@@ -227,6 +231,8 @@ def verify_statistical_inputs(
 
 def render_statistical_verification_report(
     results: Sequence[StatisticalVerification],
+    *,
+    binary_results: Sequence[BinaryStatisticalVerification] = (),
 ) -> str:
     """Render deterministic Markdown for already-validated results."""
 
@@ -260,6 +266,18 @@ def render_statistical_verification_report(
         "was extracted from Evidence Record prose.",
         "",
     ]
+    if binary_results:
+        consistent_binary_count = sum(result.status == "consistent" for result in binary_results)
+        binary_discrepancy_count = len(binary_results) - consistent_binary_count
+        overall_discrepancy_count = (
+            discrepant_count + interval_discrepancy_count + binary_discrepancy_count
+        )
+        lines[-1:-1] = [
+            f"- **Binary count checks:** {len(binary_results)}",
+            f"- **Consistent binary percentage checks:** {consistent_binary_count}",
+            f"- **Binary percentage discrepancies:** {binary_discrepancy_count}",
+            f"- **Overall requested-check discrepancies:** {overall_discrepancy_count}",
+        ]
     for index, result in enumerate(results, start=1):
         record = result.record
         lines.extend(
@@ -356,6 +374,20 @@ def render_statistical_verification_report(
             ]
         )
 
+    if binary_results:
+        lines.extend(
+            render_binary_verification_sections(binary_results, start_index=len(results) + 1)
+        )
+
+    binary_trust_boundary = (
+        [
+            "- Binary count calculations derive crude risk ratios only under their declared "
+            "method and correction policy; they are not compared with source-adjusted odds "
+            "ratios."
+        ]
+        if binary_results
+        else []
+    )
     lines.extend(
         [
             "## Trust Boundary",
@@ -366,6 +398,7 @@ def render_statistical_verification_report(
             "display-only.",
             "- An interval marked compatible is not a reconstruction or validation of the "
             "source paper's model-based analysis.",
+            *binary_trust_boundary,
             "- No cross-study pooling, ranking, sensitivity analysis, or meta-analysis was "
             "performed.",
             "- No Evidence Quality, Consensus, or Claim Confidence value was calculated or "

@@ -20,6 +20,11 @@ from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
+from knowledge_engine.binary_statistical_verification import (
+    BinaryStatisticalVerification,
+    validate_binary_statistical_inputs,
+    verify_binary_statistical_inputs,
+)
 from knowledge_engine.config import build_settings
 from knowledge_engine.corpus import CorpusValidationResult, Issue, validate_corpus_manifest
 from knowledge_engine.database import Database, PaperRepository
@@ -76,7 +81,17 @@ EvidenceMapArgument = Annotated[
 StatisticalInputsArgument = Annotated[
     Path,
     typer.Argument(
-        help="Version 1 typed statistical inputs JSONL file.",
+        help="Version 1 or 2 continuous statistical inputs JSONL file.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+BinaryStatisticalInputsOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--binary-inputs",
+        help="Optional version 1 source-audited binary statistical inputs JSONL file.",
         exists=True,
         dir_okay=False,
         readable=True,
@@ -837,6 +852,7 @@ def evidence_map_report(
 def statistical_verify(
     inputs_path: StatisticalInputsArgument,
     evidence: RequiredEvidenceRecordsOption,
+    binary_inputs: BinaryStatisticalInputsOption = None,
     output: OutputMarkdownOption = None,
     force: ForceOutputOption = False,
 ) -> None:
@@ -844,11 +860,16 @@ def statistical_verify(
 
     Version 1 checks intervention-minus-comparator mean body-weight change.
     Version 2 may also approximate a confidence interval from explicit arm
-    standard errors. It never extracts numbers from prose, opens source PDFs,
-    or performs scientific synthesis.
+    standard errors. An optional, separately versioned binary-input contract
+    verifies reported arm percentages and derives a crude risk ratio. It never
+    extracts numbers from prose, opens source PDFs, or performs scientific
+    synthesis.
     """
 
-    if output and output.resolve() in {inputs_path.resolve(), evidence.resolve()}:
+    input_paths = {inputs_path.resolve(), evidence.resolve()}
+    if binary_inputs is not None:
+        input_paths.add(binary_inputs.resolve())
+    if output and output.resolve() in input_paths:
         raise typer.BadParameter("Output must not overwrite an input file.")
     if output and output.exists() and not force:
         raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
@@ -874,8 +895,23 @@ def statistical_verify(
         console.print("No scientific synthesis was performed.")
         raise typer.Exit(1)
 
+    binary_results: tuple[BinaryStatisticalVerification, ...] = ()
+    if binary_inputs is not None:
+        binary_validation = validate_binary_statistical_inputs(
+            binary_inputs,
+            evidence_records=evidence_result.records,
+        )
+        if binary_validation.errors:
+            console.print("[red]Binary statistical input validation failed.[/red]")
+            for error in binary_validation.errors:
+                console.print(f"- {_safe_text(error)}")
+            console.print("No statistical calculation was accepted.")
+            console.print("No scientific synthesis was performed.")
+            raise typer.Exit(1)
+        binary_results = verify_binary_statistical_inputs(binary_validation.records)
+
     results = verify_statistical_inputs(validation.records)
-    report = render_statistical_verification_report(results)
+    report = render_statistical_verification_report(results, binary_results=binary_results)
     consistent_count = sum(result.status == "consistent" for result in results)
     arithmetic_discrepancy_count = len(results) - consistent_count
     interval_results = [
@@ -885,6 +921,11 @@ def statistical_verify(
     ]
     compatible_interval_count = sum(result.status == "compatible" for result in interval_results)
     interval_discrepancy_count = len(interval_results) - compatible_interval_count
+    consistent_binary_count = sum(result.status == "consistent" for result in binary_results)
+    binary_discrepancy_count = len(binary_results) - consistent_binary_count
+    overall_discrepancy_count = (
+        arithmetic_discrepancy_count + interval_discrepancy_count + binary_discrepancy_count
+    )
 
     if output:
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -897,11 +938,16 @@ def statistical_verify(
         console.print(f"Interval approximations: {len(interval_results)}")
         console.print(f"Compatible interval approximations: {compatible_interval_count}")
         console.print(f"Interval discrepancies: {interval_discrepancy_count}")
+        if binary_inputs is not None:
+            console.print(f"Binary count checks: {len(binary_results)}")
+            console.print(f"Consistent binary percentage checks: {consistent_binary_count}")
+            console.print(f"Binary percentage discrepancies: {binary_discrepancy_count}")
+            console.print(f"Overall requested-check discrepancies: {overall_discrepancy_count}")
         console.print("No scientific synthesis was performed.")
     else:
         typer.echo(report, nl=False)
 
-    if arithmetic_discrepancy_count or interval_discrepancy_count:
+    if arithmetic_discrepancy_count or interval_discrepancy_count or binary_discrepancy_count:
         raise typer.Exit(1)
 
 
