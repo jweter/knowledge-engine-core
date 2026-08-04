@@ -140,6 +140,29 @@ The validator does not infer inclusion, relationships, contradiction,
 consensus, confidence, or truth. It does not read PDFs, query SQLite, follow
 URLs, or alter any source record.
 
+## Cross-Study Comparison
+
+Render the validated map as one deterministic Markdown report:
+
+```bash
+ke evidence-map-report \
+  data/corpora/glp1_weight_loss/golden_evidence_map.json \
+  --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl \
+  --relationships data/corpora/glp1_weight_loss/relationship_records.jsonl \
+  --sources data/corpora/glp1_weight_loss/sources.csv \
+  --output glp1-comparison.md
+```
+
+The report preserves map order and displays every selected study's design,
+PICO, reported result, limitations, citation, and reviewed relationship
+context. It also carries the map's population, comparator, and contradiction
+boundaries into the same artifact.
+
+This is a comparison display, not statistical synthesis. Current reported
+results are reviewed prose, not a typed effect-estimate contract. The command
+does not parse numbers from prose, recompute confidence intervals, pool effects,
+rank studies, calculate consensus or confidence, or call an LLM.
+
 ## Remaining Work
 
 The initial record-to-source review and the first durability/safety follow-up
@@ -158,6 +181,7 @@ analytical intelligence:
    traceable review; human domain-expert adjudication remains available where
    the scientific stakes or disagreement warrant it.
 
-The reviewed map is now an evaluated foundation for closing those coverage
-gaps, structured cross-study comparison, and a traceable public demonstration.
-It still is not a declaration of scientific truth.
+The reviewed map and deterministic comparison report are now an evaluated
+foundation for closing those coverage gaps, defining typed statistical inputs,
+and a traceable public demonstration. They still are not a declaration of
+scientific truth.

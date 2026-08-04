@@ -9,6 +9,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **GLP-1 deterministic cross-study comparison foundation.** Added
+  `ke evidence-map-report` to render a validated evidence map as a stable,
+  source-linked Markdown comparison of study design, PICO, reported results,
+  limitations, citations, grouping boundaries, and reviewed relationships.
+  The report explicitly identifies the missing typed statistical-input
+  contract and does not parse prose, recompute or pool effects, rank studies,
+  calculate consensus or confidence, or perform scientific synthesis.
+
 - **Reproducible GLP-1 same-PICO contradiction audit.** Added a written search
   plan and completed audit across committed evidence, source metadata,
   relationship candidates, and bounded PubMed queries. No aligned

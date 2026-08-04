@@ -28,6 +28,11 @@ from knowledge_engine.evidence_map import (
     load_evidence_map,
     validate_evidence_map,
 )
+from knowledge_engine.evidence_map_report import (
+    CitationMetadata,
+    build_comparison_rows,
+    render_evidence_map_report,
+)
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.cli_modes import resolve_corpus_import_mode
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService, ImportedCorpusRun
@@ -699,6 +704,119 @@ def evidence_map_validate(
     for warning in result.warnings:
         console.print(f"[yellow]Warning:[/yellow] {_safe_text(warning)}")
     _print_evidence_map_disclaimer()
+
+
+@app.command("evidence-map-report")
+def evidence_map_report(
+    map_path: EvidenceMapArgument,
+    evidence: RequiredEvidenceRecordsOption,
+    relationships: RequiredRelationshipRecordsOption,
+    sources: RequiredSourcesCsvOption,
+    output: OutputMarkdownOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Render a deterministic cross-study report from a validated evidence map.
+
+    Displays stored PICO fields, reported results, limitations, citations, and
+    reviewed relationship context. It does not parse statistical values from
+    prose, recompute effects, infer evidence, or perform scientific synthesis.
+    """
+
+    if output and output.resolve() in {
+        map_path.resolve(),
+        evidence.resolve(),
+        relationships.resolve(),
+        sources.resolve(),
+    }:
+        raise typer.BadParameter("Output must not overwrite an input file.")
+    if output and output.exists() and not force:
+        raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
+
+    evidence_result = _validate_evidence_records(evidence, require_review_fields=True)
+    if evidence_result.errors:
+        console.print(
+            f"[red]Evidence map report failed; evidence is invalid:[/red] {evidence.name}"
+        )
+        for error in evidence_result.errors:
+            console.print(f"- {_safe_text(error)}")
+        raise typer.Exit(1)
+    evidence_ids = {record["evidence_record_id"] for record in evidence_result.records}
+
+    relationship_result = _validate_relationship_records(
+        relationships, known_evidence_ids=evidence_ids
+    )
+    if relationship_result.errors:
+        console.print(
+            f"[red]Evidence map report failed; relationships are invalid:[/red] "
+            f"{relationships.name}"
+        )
+        for error in relationship_result.errors:
+            console.print(f"- {_safe_text(error)}")
+        raise typer.Exit(1)
+
+    metadata = _load_sources_overlay(sources)
+    citation_dois = {
+        doi
+        for doi, source in metadata.items()
+        if all(
+            (
+                source.title,
+                source.authors,
+                source.year,
+                source.journal,
+                source.source_url,
+                source.license_type,
+            )
+        )
+    }
+    try:
+        payload = load_evidence_map(map_path)
+    except EvidenceMapError as exc:
+        console.print(f"[red]Evidence map report failed:[/red] {_safe_text(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    validation = validate_evidence_map(
+        payload,
+        evidence_records=evidence_result.records,
+        relationship_records=relationship_result.records,
+        citation_dois=citation_dois,
+    )
+    if validation.errors:
+        console.print("[red]Evidence map report failed; map validation failed.[/red]")
+        for error in validation.errors:
+            console.print(f"- {_safe_text(error)}")
+        _print_evidence_map_disclaimer()
+        raise typer.Exit(1)
+
+    citations = {
+        doi: CitationMetadata(
+            title=source.title,
+            authors=source.authors,
+            year=source.year,
+            venue=source.journal,
+            doi=source.doi,
+            source_url=source.source_url,
+            license_type=source.license_type,
+        )
+        for doi, source in metadata.items()
+    }
+    rows = build_comparison_rows(
+        payload,
+        evidence_records=evidence_result.records,
+        relationship_records=relationship_result.records,
+        citations_by_doi=citations,
+    )
+    report = render_evidence_map_report(payload, rows=rows)
+
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(report, encoding="utf-8")
+        console.print(f"[green]Wrote evidence map report:[/green] {output}")
+        console.print(f"Evidence records: {len(rows)}")
+        console.print(f"Selected relationships: {validation.relationship_count}")
+        return
+
+    console.print(report, markup=False)
 
 
 @app.command("relationship-report")
