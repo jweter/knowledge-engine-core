@@ -50,6 +50,11 @@ original prototype narrative, one-off status reports) live in
   no-LLM confidence-scoring formula (Evidence Quality / Evidence
   Consensus / Claim Confidence) both documents above named as their own
   trigger condition. Implementation-ready, unlike its two predecessors.
+- **`glp1_body_weight_golden_evidence_map.md`** -- the reviewed first golden
+  map and its validation and deterministic cross-study reporting contracts.
+- **`glp1_cross_study_comparison_plan.md`** -- the written Goal 4 handoff from
+  the reviewed map to `ke evidence-map-report`, including the boundary before
+  typed statistical inputs and effect recomputation.
 - **`founding_vision.md`** -- the project's original founding proposal,
   preserved verbatim.
 - **`future_ideas.md`** -- promising ideas parked outside the current

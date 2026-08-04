@@ -43,6 +43,23 @@ finding rather than manufacturing a contradiction;
 it is not human domain-expert approval, a benefit-harm assessment, or a
 scientific conclusion.
 
+Render the reviewed map as a deterministic, source-linked cross-study
+comparison:
+
+```bash
+ke evidence-map-report \
+  data/corpora/glp1_weight_loss/golden_evidence_map.json \
+  --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl \
+  --relationships data/corpora/glp1_weight_loss/relationship_records.jsonl \
+  --sources data/corpora/glp1_weight_loss/sources.csv \
+  --output glp1-comparison.md
+```
+
+The report compares stored PICO fields, reported results, limitations,
+citations, and reviewed relationships. It does not parse statistics from prose,
+recompute or pool effects, calculate consensus or confidence, or perform
+scientific synthesis.
+
 Phase 1 completed capabilities include:
 
 - PDF ingestion with PyMuPDF

@@ -293,9 +293,16 @@ survive to production unchanged):
   and display deterministic Evidence Quality, Consensus, Claim Confidence, and
   Coverage. AI reads those values. Sparse reviewed relationships still make
   most claims honestly not assessable at the claim-confidence level.
-- **Stages 4 and 5 are not started.** Current Project Path goals 2 and 3 -- a
-  golden retrieval benchmark and one complete GLP-1 evidence map -- are the
-  prerequisites for beginning Analytical Intelligence responsibly.
+- **Stage 4 has a bounded core-side foundation.** The reviewed GLP-1 evidence
+  map now feeds `ke evidence-map-report`, a deterministic cross-study display of
+  stored PICO fields, reported results, limitations, citations, and reviewed
+  relationships. It deliberately does not parse statistical values from prose
+  or recompute an effect. The next step is a typed statistical-input contract
+  for a small set of direct randomized body-weight records, then one
+  independently reproducible calculation. Broader sensitivity analysis,
+  meta-analysis, and LLM narration remain unstarted.
+- **Stage 5 is not started.** Discovery Intelligence remains gated by adequate
+  analytical inputs and relationship coverage.
 
 Autonomous hypothesis generation and experiment design -- the most
 exciting and least-grounded items on the founding vision's original

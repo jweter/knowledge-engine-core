@@ -399,5 +399,9 @@ rather than separate bots, plus a three-way Evidence Quality/Consensus/
 Claim Confidence split and domain-specific confidence profiles.
 `knowledge-engine-ai` has since shipped Retrieval Intelligence,
 core-provided Evidence Intelligence display, and opt-in local grounded
-synthesis. Analytical and Discovery Intelligence remain gated by
-`docs/roadmap.md`'s Current Project Path.
+synthesis. Core's `ke evidence-map-report` now supplies the first deterministic
+cross-study comparison foundation for Analytical Intelligence, while typed
+statistical inputs, independent recomputation, broader analysis, and AI
+narration remain gated by `docs/roadmap.md`'s Current Project Path. Discovery
+Intelligence remains gated by those analytical prerequisites and adequate
+relationship coverage.

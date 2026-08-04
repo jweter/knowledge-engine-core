@@ -62,7 +62,13 @@ temporary detour:
    strong enough to evaluate, build structured cross-study comparison and
    deterministic statistical checks before broader LLM narration. Evidence
    Quality, Evidence Consensus, and Claim Confidence remain separate,
-   inspectable quantities; no model invents a confidence number.
+   inspectable quantities; no model invents a confidence number. The first
+   cross-study slice is now implemented by `ke evidence-map-report`: it renders
+   the reviewed GLP-1 map's PICO, reported results, limitations, citations, and
+   relationship context deterministically. It does not extract statistics from
+   prose. The next bounded milestone is a typed statistical-input contract for
+   the most direct randomized body-weight records, followed by one independently
+   reproducible calculation.
 5. **Operationalize the persistent host when its trigger is met.** Continue
    event-triggered web snapshots and AI subprocess calls until the operator,
    accepted API fixtures, published-data procedure, consumer migration, and

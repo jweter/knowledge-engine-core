@@ -50,6 +50,7 @@ def test_cli_help() -> None:
     assert "Offline scientific paper ingestion and search" in result.output
     assert "corpus-validate" in result.output
     assert "corpus-import" in result.output
+    assert "evidence-map-report" in result.output
 
 
 def test_safe_text_normalizes_pdf_ligatures() -> None:

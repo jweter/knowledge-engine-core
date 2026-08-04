@@ -40,6 +40,20 @@ liraglutide/post-gastric-banding qualifier. Its ignored local source is
 `PMC10599987.pdf`; it is not represented as a same-PICO contradiction of the
 semaglutide trials.
 
+Render the reviewed selection as a deterministic cross-study comparison:
+
+```bash
+ke evidence-map-report \
+  data/corpora/glp1_weight_loss/golden_evidence_map.json \
+  --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl \
+  --relationships data/corpora/glp1_weight_loss/relationship_records.jsonl \
+  --sources data/corpora/glp1_weight_loss/sources.csv \
+  --output glp1-comparison.md
+```
+
+The generated report is a display of stored, reviewed records. It does not
+perform scientific synthesis or statistical recomputation.
+
 ## Manifest Validation
 
 Validate the committed corpus metadata without checking local PDFs:
