@@ -27,7 +27,7 @@ diabetes, or metabolic syndrome?
 - `license_policy.md`: policy for legal and reproducible use of source
   documents.
 - `evidence_records.jsonl`: traceable evidence records from the GLP-1 vertical
-  slice and later extraction work; the nine golden-map records have completed
+  slice and later extraction work; the eleven golden-map records have completed
   the map's secondary source audit.
 - `relationship_records.jsonl`: reviewer-authored links between selected
   Evidence Records.

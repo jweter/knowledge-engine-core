@@ -7,14 +7,19 @@
   "scope": {
     "population": "Adults with overweight or obesity, with population extensions explicitly separated when diabetes, cardiovascular disease, heart failure, or PMOS changes applicability.",
     "intervention": "GLP-1 receptor agonist treatment, centered on semaglutide; liraglutide and the dual GIP/GLP-1 agonist tirzepatide appear only as explicit endpoint or active-comparator context.",
-    "outcome": "Body-weight or anthropometric change during continued treatment; non-weight outcomes are included only when they delimit what weight-loss evidence does not establish.",
-    "exclusions": "No pediatric, pregnancy, post-discontinuation maintenance, cost-effectiveness, or class-wide safety conclusion is represented by this bounded map. Different primary outcomes are not treated as direct support or contradiction."
+    "outcome": "Body-weight or anthropometric change during continued treatment and after documented treatment withdrawal; safety and non-weight outcomes appear only when they qualify what weight-loss efficacy does not establish.",
+    "exclusions": "No pediatric, pregnancy, cost-effectiveness, or class-wide safety conclusion is represented by this bounded map. Post-withdrawal durability is limited to one exploratory STEP 1 extension, and different primary outcomes are not treated as direct support or contradiction."
   },
   "evidence_nodes": [
     {
       "evidence_record_id": "ev-glp1-step5-body-weight-week104-001",
       "role": "landmark_trial",
       "inclusion_rationale": "Placebo-controlled STEP 5 evidence for semaglutide 2.4 mg at 104 weeks in adults with overweight or obesity without diabetes."
+    },
+    {
+      "evidence_record_id": "ev-glp1-step1-withdrawal-weight-regain-001",
+      "role": "durability_qualifier",
+      "inclusion_rationale": "Exploratory STEP 1 extension directly observing body-weight regain for 52 weeks after semaglutide and lifestyle-intervention withdrawal."
     },
     {
       "evidence_record_id": "ev-glp1-select-trial-weight-loss-208wk-001",
@@ -25,6 +30,11 @@
       "evidence_record_id": "ev-glp1-gao-meta-analysis-body-weight-001",
       "role": "evidence_synthesis",
       "inclusion_rationale": "Systematic review and meta-analysis pooling randomized semaglutide trials while preserving dose, duration, and heterogeneity limitations."
+    },
+    {
+      "evidence_record_id": "ev-glp1-gao-meta-analysis-safety-discontinuation-001",
+      "role": "safety_qualifier",
+      "inclusion_rationale": "Safety analysis from the same randomized-trial synthesis, preserving pooled adverse-event and discontinuation risks separately from body-weight efficacy."
     },
     {
       "evidence_record_id": "ev-glp1-semaglutide-obesity-cardiometabolic-001",
@@ -70,15 +80,20 @@
     "rel-glp1-gao-cardiometabolic-supports-001",
     "rel-glp1-hfref-select-supports-001",
     "rel-glp1-cardiometabolic-hfref-supports-001",
-    "rel-glp1-step5-pmos-contextualizes-001"
+    "rel-glp1-step5-pmos-contextualizes-001",
+    "rel-glp1-step1-withdrawal-step5-contextualizes-001",
+    "rel-glp1-gao-safety-gao-weight-qualifies-001",
+    "rel-glp1-gao-safety-step5-qualifies-001"
   ],
   "population_groups": [
     {
       "label": "Adults without diabetes in randomized semaglutide evidence",
       "evidence_record_ids": [
         "ev-glp1-step5-body-weight-week104-001",
+        "ev-glp1-step1-withdrawal-weight-regain-001",
         "ev-glp1-select-trial-weight-loss-208wk-001",
-        "ev-glp1-gao-meta-analysis-body-weight-001"
+        "ev-glp1-gao-meta-analysis-body-weight-001",
+        "ev-glp1-gao-meta-analysis-safety-discontinuation-001"
       ],
       "interpretation_boundary": "STEP 5 and Gao address general overweight or obesity eligibility; SELECT additionally requires established cardiovascular disease. These populations do not establish effects in adults with diabetes."
     },
@@ -113,9 +128,17 @@
       "evidence_record_ids": [
         "ev-glp1-step5-body-weight-week104-001",
         "ev-glp1-select-trial-weight-loss-208wk-001",
-        "ev-glp1-gao-meta-analysis-body-weight-001"
+        "ev-glp1-gao-meta-analysis-body-weight-001",
+        "ev-glp1-gao-meta-analysis-safety-discontinuation-001"
       ],
       "interpretation_boundary": "The most direct comparative evidence, but behavioral co-intervention, trial eligibility, dose, duration, and pooled heterogeneity remain material."
+    },
+    {
+      "label": "Withdrawal after randomized treatment",
+      "evidence_record_ids": [
+        "ev-glp1-step1-withdrawal-weight-regain-001"
+      ],
+      "interpretation_boundary": "The extension compares trajectories after both randomized study treatment and structured lifestyle intervention ended; it does not isolate medication withdrawal alone or establish every individual's course."
     },
     {
       "label": "Within-subject baseline without a concurrent control",
@@ -163,24 +186,25 @@
     "Secondary review verified record-to-source fidelity but did not independently reanalyze study data, perform a full risk-of-bias assessment, or establish source truth.",
     "The direct randomized evidence is centered on semaglutide and adults without diabetes; it cannot support an undifferentiated class-wide conclusion for every GLP-1 receptor agonist or population.",
     "Three population extensions and the active-comparator record are observational and remain vulnerable to residual confounding.",
-    "The map records evidence during continued treatment and does not establish durability after treatment discontinuation.",
-    "Adverse events, discontinuation, access, cost, and patient preference are not covered comprehensively enough for benefit-harm conclusions.",
+    "Post-withdrawal durability is represented by one exploratory extension of selected STEP 1 completers and requires replication across agents, treatment durations, and longer follow-up.",
+    "The safety qualifier comes from one 2022 semaglutide review with varied doses and durations; it is not a current class-wide safety assessment or a benefit-harm conclusion.",
+    "Access, cost, patient preference, event severity, and individual benefit-harm tradeoffs are not represented.",
     "The graph contains reviewed support and context links, but those links do not compute consensus or truth."
   ],
   "known_gaps": [
     "Human domain-expert adjudication remains available for disputed records or substantive future changes; this completed secondary audit was AI-assisted and is not human review.",
-    "Direct evidence for post-discontinuation weight maintenance or regain.",
+    "Longer and independently replicated post-discontinuation trajectories across semaglutide and other agents.",
     "Broader agent-level coverage beyond semaglutide, with drug, dose, formulation, and duration kept separate.",
-    "Systematic adverse-event and discontinuation evidence linked to the same populations and treatment windows.",
+    "Newer agent-specific and class-wide safety syntheses that preserve event severity, dose, duration, and population differences.",
     "Pediatric, pregnancy, frailty, and geographically diverse population coverage where scientifically and ethically appropriate.",
     "A reviewed same-PICO contradictory result, if one exists; none was identified in the bounded current selection."
   ],
   "review": {
-    "method": "Independent source audit of every selected Evidence Record and Relationship Record against legally usable local PDFs, with explicit PICO, comparator, endpoint, numerical result, limitation, relationship-rationale, and contradiction-boundary checks.",
+    "method": "Independent source audit of every selected Evidence Record and Relationship Record against legally usable local PDFs, including the durability and safety qualifiers, with explicit PICO, comparator, time-window, endpoint, numerical result, limitation, relationship-rationale, and contradiction-boundary checks.",
     "status": "reviewed",
     "reviewed_by": "OpenAI Codex",
     "reviewer_type": "ai_assisted_independent_source_audit",
     "review_date": "2026-08-03",
-    "notes": "The audit corrected two Evidence Records and two relationship rationales. Reviewed means accepted for record-to-source fidelity under the map contract. It does not mean human domain-expert approval, independent statistical reanalysis, scientific synthesis, consensus, confidence, or truth determination."
+    "notes": "The initial audit corrected two Evidence Records and two relationship rationales; the durability/safety follow-up added two source-audited Evidence Records and three reviewed qualifier relationships. Reviewed means accepted for record-to-source fidelity under the map contract. It does not mean human domain-expert approval, independent statistical reanalysis, scientific synthesis, benefit-harm assessment, consensus, confidence, or truth determination."
   }
 }

@@ -23,7 +23,8 @@ records untouched.
 
 - Use the independently source-audited
   [reviewed GLP-1/body-weight evidence map](../glp1_body_weight_golden_evidence_map.md)
-  to address its explicit post-discontinuation, safety, population, agent, and
+  and its first direct withdrawal and pooled safety qualifiers to address
+  longer-term durability, newer safety, population, agent, and
   contradictory-evidence gaps without weakening its scope boundaries.
 - Evaluate retrieval and cross-study behavior against golden questions.
 - Preserve the no-synthesis boundary in core while exposing deterministic,

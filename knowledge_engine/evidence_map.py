@@ -24,7 +24,9 @@ ALLOWED_EVIDENCE_ROLES = {
     "evidence_synthesis",
     "population_extension",
     "active_comparator_context",
+    "durability_qualifier",
     "endpoint_qualifier",
+    "safety_qualifier",
 }
 ALLOWED_CONTRADICTION_STATUSES = {
     "identified",

@@ -33,10 +33,11 @@ web-alpha, and first AI retrieval/synthesis foundations already exist. See
 
 The first bounded GLP-1/body-weight map is now available as a
 [reviewed golden evidence map](docs/glp1_body_weight_golden_evidence_map.md).
-It links nine cited Evidence Records through thirteen reviewer-authored
+It links eleven cited Evidence Records through sixteen reviewer-authored
 relationships while keeping population, comparator, endpoint, and review
 boundaries explicit. An AI-assisted independent source audit verified
-record-to-source fidelity; it is not human domain-expert approval or a
+record-to-source fidelity, including bounded withdrawal and safety qualifiers;
+it is not human domain-expert approval, a benefit-harm assessment, or a
 scientific conclusion.
 
 Phase 1 completed capabilities include:
@@ -516,8 +517,9 @@ The first three tasks are therefore:
    failures before adding more narration.
 3. Complete the GLP-1/body-weight evidence map across key sources,
    populations, limitations, citations, and conservatively reviewed
-   relationships. The version 1 map and its source-fidelity review are
-   implemented; identified coverage gaps remain.
+   relationships. The version 1 map, source-fidelity review, and first bounded
+   durability/safety qualifiers are implemented; identified coverage gaps
+   remain.
 
 ## Known Issues
 
