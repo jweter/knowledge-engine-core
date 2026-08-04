@@ -34,6 +34,8 @@ diabetes, or metabolic syndrome?
 - `golden_evidence_map.json`: source-audited, reviewed version 1 map for the
   bounded GLP-1 and body-weight question; see
   `docs/glp1_body_weight_golden_evidence_map.md` for its scope and limitations.
+- `statistical_inputs.jsonl`: version 1 explicitly curated statistical inputs;
+  currently one source-verified STEP 5 week-104 treatment-difference identity.
 
 The current map includes one legally reusable GLIDE pilot record as an explicit
 liraglutide/post-gastric-banding qualifier. Its ignored local source is
@@ -53,6 +55,21 @@ ke evidence-map-report \
 
 The generated report is a display of stored, reviewed records. It does not
 perform scientific synthesis or statistical recomputation.
+
+Verify the committed STEP 5 arithmetic identity:
+
+```bash
+ke statistical-verify \
+  data/corpora/glp1_weight_loss/statistical_inputs.jsonl \
+  --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl \
+  --output glp1-statistical-verification.md
+```
+
+The check reproduces `-12.6` percentage points from the explicitly transcribed
+arm means `-15.2` and `-2.6`. It does not extract numbers from prose, recompute
+the reported confidence interval, open a PDF, access SQLite, pool studies, or
+perform scientific synthesis. `consistent` means arithmetic agreement within
+the declared tolerance only.
 
 ## Manifest Validation
 

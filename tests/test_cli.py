@@ -51,6 +51,7 @@ def test_cli_help() -> None:
     assert "corpus-validate" in result.output
     assert "corpus-import" in result.output
     assert "evidence-map-report" in result.output
+    assert "statistical-verify" in result.output
 
 
 def test_safe_text_normalizes_pdf_ligatures() -> None:

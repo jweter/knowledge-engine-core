@@ -26,10 +26,10 @@ public-service maturity.
 
 Current version: `0.2.0a1`
 
-Current strategic cycle: **measured retrieval and one complete GLP-1 evidence
-map**. The ingestion, Evidence Record, semantic retrieval, relationship-graph,
-web-alpha, and first AI retrieval/synthesis foundations already exist. See
-[Current Project Path](docs/roadmap.md#current-project-path).
+Current strategic cycle: **one complete GLP-1 evidence map and bounded
+analytical verification**. The ingestion, Evidence Record, semantic retrieval,
+relationship-graph, web-alpha, and first AI retrieval/synthesis foundations
+already exist. See [Current Project Path](docs/roadmap.md#current-project-path).
 
 The first bounded GLP-1/body-weight map is now available as a
 [reviewed golden evidence map](docs/glp1_body_weight_golden_evidence_map.md).
@@ -59,6 +59,22 @@ The report compares stored PICO fields, reported results, limitations,
 citations, and reviewed relationships. It does not parse statistics from prose,
 recompute or pool effects, calculate consensus or confidence, or perform
 scientific synthesis.
+
+Verify the first explicitly curated STEP 5 statistical identity:
+
+```bash
+ke statistical-verify \
+  data/corpora/glp1_weight_loss/statistical_inputs.jsonl \
+  --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl \
+  --output glp1-statistical-verification.md
+```
+
+The version 1 contract recomputes one supported effect form from manually
+transcribed, source-located values. STEP 5 reproduces its reported week-104
+treatment difference exactly: `-15.2 - (-2.6) = -12.6` percentage points.
+This is an arithmetic consistency check, not independent replication,
+statistical synthesis, confidence scoring, or a judgment that the source
+analysis is scientifically correct.
 
 Phase 1 completed capabilities include:
 
@@ -483,6 +499,8 @@ Knowledge Engine Core uses a small layered architecture:
 - `knowledge_engine.duplicate_resolution` evaluates duplicate evidence before any
   paper persistence.
 - `knowledge_engine.search` provides SQLite FTS5 keyword and phrase search.
+- `knowledge_engine.statistical_verification` validates curated numerical
+  inputs and performs bounded deterministic arithmetic without prose parsing.
 - `knowledge_engine.cli` adapts user commands to application services.
 
 Expected document-level parser failures and explicitly expected duplicate-resolution
@@ -529,17 +547,14 @@ The project now prefers retrieval quality and one coherent scientific evidence
 map over further corpus growth, cosmetic polish in isolation, or more
 autonomous AI.
 
-The first three tasks are therefore:
+Current handoff:
 
-1. Align the showcase, live alpha, and repository READMEs into one truthful
-   guided public journey, with visible snapshot freshness and trust boundaries.
-2. Establish a golden-question retrieval benchmark and fix measured ranking
-   failures before adding more narration.
-3. Complete the GLP-1/body-weight evidence map across key sources,
-   populations, limitations, citations, and conservatively reviewed
-   relationships. The version 1 map, source-fidelity review, and first bounded
-   durability/safety qualifiers are implemented; identified coverage gaps
-   remain.
+1. The public-journey alignment, golden retrieval benchmark, and reviewed
+   GLP-1/body-weight evidence-map foundations are implemented.
+2. Goal 4 is active. The cross-study report and first source-audited STEP 5
+   arithmetic verification are implemented without statistical synthesis.
+3. Next, add a source-audited SELECT input, then design confidence-interval
+   recomputation only when every required uncertainty input is explicit.
 
 ## Known Issues
 

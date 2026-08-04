@@ -40,6 +40,11 @@ from knowledge_engine.import_runs.linked_ingestion import LinkedCorpusIngestionS
 from knowledge_engine.models import ImportRun
 from knowledge_engine.parser import PyMuPDFParser
 from knowledge_engine.search import SearchResult, SearchService, build_natural_language_fts_query
+from knowledge_engine.statistical_verification import (
+    render_statistical_verification_report,
+    validate_statistical_inputs,
+    verify_statistical_inputs,
+)
 from knowledge_engine.utils import normalize_doi
 
 app = typer.Typer(help="Offline scientific paper ingestion and search.")
@@ -63,6 +68,15 @@ EvidenceMapArgument = Annotated[
     Path,
     typer.Argument(
         help="Version 1 JSON evidence map.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+StatisticalInputsArgument = Annotated[
+    Path,
+    typer.Argument(
+        help="Version 1 typed statistical inputs JSONL file.",
         exists=True,
         dir_okay=False,
         readable=True,
@@ -817,6 +831,66 @@ def evidence_map_report(
         return
 
     console.print(report, markup=False)
+
+
+@app.command("statistical-verify")
+def statistical_verify(
+    inputs_path: StatisticalInputsArgument,
+    evidence: RequiredEvidenceRecordsOption,
+    output: OutputMarkdownOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Verify explicitly curated reported-effect arithmetic.
+
+    Version 1 checks intervention-minus-comparator mean body-weight change.
+    It never extracts numbers from prose, opens source PDFs, or performs
+    scientific synthesis.
+    """
+
+    if output and output.resolve() in {inputs_path.resolve(), evidence.resolve()}:
+        raise typer.BadParameter("Output must not overwrite an input file.")
+    if output and output.exists() and not force:
+        raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
+
+    evidence_result = _validate_evidence_records(evidence, require_review_fields=True)
+    if evidence_result.errors:
+        console.print(
+            f"[red]Statistical verification failed; evidence is invalid:[/red] {evidence.name}"
+        )
+        for error in evidence_result.errors:
+            console.print(f"- {_safe_text(error)}")
+        raise typer.Exit(1)
+
+    validation = validate_statistical_inputs(
+        inputs_path,
+        evidence_records=evidence_result.records,
+    )
+    if validation.errors:
+        console.print("[red]Statistical input validation failed.[/red]")
+        for error in validation.errors:
+            console.print(f"- {_safe_text(error)}")
+        console.print("No statistical calculation was accepted.")
+        console.print("No scientific synthesis was performed.")
+        raise typer.Exit(1)
+
+    results = verify_statistical_inputs(validation.records)
+    report = render_statistical_verification_report(results)
+    consistent_count = sum(result.status == "consistent" for result in results)
+    discrepant_count = len(results) - consistent_count
+
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(report, encoding="utf-8")
+        console.print(f"[green]Wrote statistical verification report:[/green] {output}")
+        console.print(f"Typed inputs: {len(results)}")
+        console.print(f"Consistent arithmetic checks: {consistent_count}")
+        console.print(f"Discrepancies: {discrepant_count}")
+        console.print("No scientific synthesis was performed.")
+    else:
+        typer.echo(report, nl=False)
+
+    if discrepant_count:
+        raise typer.Exit(1)
 
 
 @app.command("relationship-report")

@@ -66,9 +66,16 @@ temporary detour:
    cross-study slice is now implemented by `ke evidence-map-report`: it renders
    the reviewed GLP-1 map's PICO, reported results, limitations, citations, and
    relationship context deterministically. It does not extract statistics from
-   prose. The next bounded milestone is a typed statistical-input contract for
-   the most direct randomized body-weight records, followed by one independently
-   reproducible calculation.
+   prose. The first typed statistical-input slice is now implemented by
+   `ke statistical-verify`: a source-audited STEP 5 record explicitly declares
+   its week-104 randomized-arm means, treatment-policy estimand, unit, time
+   point, reported difference, confidence interval, formula, tolerance, and
+   provenance. Decimal arithmetic independently reproduces the reported
+   `-12.6` percentage-point treatment difference exactly. This is arithmetic
+   consistency only; the confidence interval is displayed but not recomputed.
+   The next bounded step is to add a source-audited SELECT input, then design
+   confidence-interval recomputation only where all required uncertainty inputs
+   are explicit.
 5. **Operationalize the persistent host when its trigger is met.** Continue
    event-triggered web snapshots and AI subprocess calls until the operator,
    accepted API fixtures, published-data procedure, consumer migration, and

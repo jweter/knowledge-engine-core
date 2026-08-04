@@ -9,13 +9,24 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **First typed GLP-1 statistical verification.** Added
+  `ke statistical-verify` and a version 1 source-linked JSONL contract for one
+  supported effect form. The source-audited STEP 5 week-104 input independently
+  reproduces the reported `-12.6` percentage-point treatment difference from
+  explicit randomized-arm means using Decimal arithmetic. Validation enforces
+  reviewed Evidence Record identity, DOI, outcome, source span, estimand,
+  units, time point, formula, tolerance, and provenance. The command does not
+  parse prose, open PDFs or SQLite, recompute confidence intervals, pool
+  effects, score confidence, or perform scientific synthesis.
+
 - **GLP-1 deterministic cross-study comparison foundation.** Added
   `ke evidence-map-report` to render a validated evidence map as a stable,
   source-linked Markdown comparison of study design, PICO, reported results,
   limitations, citations, grouping boundaries, and reviewed relationships.
-  The report explicitly identifies the missing typed statistical-input
-  contract and does not parse prose, recompute or pool effects, rank studies,
-  calculate consensus or confidence, or perform scientific synthesis.
+  The report explicitly identifies the typed statistical-input prerequisite
+  delivered by the next bounded milestone and does not parse prose, recompute
+  or pool effects, rank studies, calculate consensus or confidence, or perform
+  scientific synthesis.
 
 - **Reproducible GLP-1 same-PICO contradiction audit.** Added a written search
   plan and completed audit across committed evidence, source metadata,
