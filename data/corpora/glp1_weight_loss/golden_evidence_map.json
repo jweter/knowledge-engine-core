@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "map_id": "glp1-body-weight-golden-map-v1",
+  "title": "GLP-1 and Body-Weight Golden Evidence Map",
+  "research_question": "Do GLP-1 receptor agonists reduce body weight in adults with overweight or obesity?",
+  "map_status": "provisional",
+  "scope": {
+    "population": "Adults with overweight or obesity, with population extensions explicitly separated when diabetes, cardiovascular disease, heart failure, or PMOS changes applicability.",
+    "intervention": "GLP-1 receptor agonist treatment, centered on semaglutide; liraglutide and the dual GIP/GLP-1 agonist tirzepatide appear only as explicit endpoint or active-comparator context.",
+    "outcome": "Body-weight or anthropometric change during continued treatment; non-weight outcomes are included only when they delimit what weight-loss evidence does not establish.",
+    "exclusions": "No pediatric, pregnancy, post-discontinuation maintenance, cost-effectiveness, or class-wide safety conclusion is represented by this bounded map. Different primary outcomes are not treated as direct support or contradiction."
+  },
+  "evidence_nodes": [
+    {
+      "evidence_record_id": "ev-glp1-step5-body-weight-week104-001",
+      "role": "landmark_trial",
+      "inclusion_rationale": "Placebo-controlled STEP 5 evidence for semaglutide 2.4 mg at 104 weeks in adults with overweight or obesity without diabetes."
+    },
+    {
+      "evidence_record_id": "ev-glp1-select-trial-weight-loss-208wk-001",
+      "role": "landmark_trial",
+      "inclusion_rationale": "Large placebo-controlled SELECT analysis extending semaglutide weight and anthropometric outcomes to 208 weeks in adults with established cardiovascular disease without diabetes."
+    },
+    {
+      "evidence_record_id": "ev-glp1-gao-meta-analysis-body-weight-001",
+      "role": "evidence_synthesis",
+      "inclusion_rationale": "Systematic review and meta-analysis pooling randomized semaglutide trials while preserving dose, duration, and heterogeneity limitations."
+    },
+    {
+      "evidence_record_id": "ev-glp1-semaglutide-obesity-cardiometabolic-001",
+      "role": "population_extension",
+      "inclusion_rationale": "Uncontrolled real-world semaglutide cohort extending observation to adults with obesity both with and without type 2 diabetes."
+    },
+    {
+      "evidence_record_id": "ev-glp1-semaglutide-hfref-outcomes-001",
+      "role": "population_extension",
+      "inclusion_rationale": "Propensity-matched oral-semaglutide cohort in adults with HFrEF, type 2 diabetes, and obesity, using no GLP-1 receptor agonist as comparator."
+    },
+    {
+      "evidence_record_id": "ev-semaglutide-pmos-menstrual-function-001",
+      "role": "population_extension",
+      "inclusion_rationale": "Short, uncontrolled PMOS cohort showing a distinct female reproductive population in which body weight is measured alongside ovulatory outcomes."
+    },
+    {
+      "evidence_record_id": "ev-tirzepatide-vs-semaglutide-weightloss-001",
+      "role": "active_comparator_context",
+      "inclusion_rationale": "Large propensity-matched real-world comparison placing semaglutide weight-loss magnitude beside tirzepatide without reclassifying an active-comparator result as placebo-controlled support or contradiction."
+    },
+    {
+      "evidence_record_id": "ev-glp1-waist-circumference-meta-001",
+      "role": "evidence_synthesis",
+      "inclusion_rationale": "Systematic review and meta-analysis comparing GLP-1RA-based and lifestyle intervention categories on waist circumference, an anthropometric outcome distinct from body weight."
+    },
+    {
+      "evidence_record_id": "ev-liraglutide-alone-physical-fitness-001",
+      "role": "endpoint_qualifier",
+      "inclusion_rationale": "Randomized secondary analysis showing that liraglutide's role in weight maintenance does not by itself establish improved physical fitness; exercise arms produced the fitness improvements."
+    }
+  ],
+  "relationship_ids": [
+    "rel-glp1-step5-gao-supports-001",
+    "rel-glp1-step5-select-supports-001",
+    "rel-glp1-gao-select-supports-001",
+    "rel-glp1-obesity-cardiometabolic-supports-001",
+    "rel-glp1-hfref-supports-001",
+    "rel-glp1-pmos-supports-001",
+    "rel-glp1-tirzepatide-comparison-contextualizes-001",
+    "rel-glp1-cardiometabolic-select-supports-001",
+    "rel-glp1-tirzepatide-vs-semaglutide-select-contextualizes-001",
+    "rel-glp1-gao-cardiometabolic-supports-001",
+    "rel-glp1-hfref-select-supports-001",
+    "rel-glp1-cardiometabolic-hfref-supports-001",
+    "rel-glp1-step5-pmos-contextualizes-001"
+  ],
+  "population_groups": [
+    {
+      "label": "Adults without diabetes in randomized semaglutide evidence",
+      "evidence_record_ids": [
+        "ev-glp1-step5-body-weight-week104-001",
+        "ev-glp1-select-trial-weight-loss-208wk-001",
+        "ev-glp1-gao-meta-analysis-body-weight-001"
+      ],
+      "interpretation_boundary": "STEP 5 and Gao address general overweight or obesity eligibility; SELECT additionally requires established cardiovascular disease. These populations do not establish effects in adults with diabetes."
+    },
+    {
+      "label": "Adults with obesity and type 2 diabetes or heart failure",
+      "evidence_record_ids": [
+        "ev-glp1-semaglutide-obesity-cardiometabolic-001",
+        "ev-glp1-semaglutide-hfref-outcomes-001",
+        "ev-tirzepatide-vs-semaglutide-weightloss-001"
+      ],
+      "interpretation_boundary": "These are observational extensions with different indications, formulations, and comparators; they do not erase the eligibility limits of the randomized semaglutide trials."
+    },
+    {
+      "label": "Women with PMOS and elevated BMI",
+      "evidence_record_ids": [
+        "ev-semaglutide-pmos-menstrual-function-001"
+      ],
+      "interpretation_boundary": "The PMOS cohort is uncontrolled and its distinguishing question concerns ovulatory function. Its body-weight finding is contextual, not evidence that STEP 5 or SELECT tested PMOS outcomes."
+    },
+    {
+      "label": "Broader adult synthesis or post-diet weight-maintenance populations",
+      "evidence_record_ids": [
+        "ev-glp1-waist-circumference-meta-001",
+        "ev-liraglutide-alone-physical-fitness-001"
+      ],
+      "interpretation_boundary": "The waist-circumference synthesis pools heterogeneous adult interventions, while the liraglutide analysis begins after diet-induced weight loss and evaluates fitness rather than primary weight reduction."
+    }
+  ],
+  "comparator_groups": [
+    {
+      "label": "Placebo or randomized control",
+      "evidence_record_ids": [
+        "ev-glp1-step5-body-weight-week104-001",
+        "ev-glp1-select-trial-weight-loss-208wk-001",
+        "ev-glp1-gao-meta-analysis-body-weight-001"
+      ],
+      "interpretation_boundary": "The most direct comparative evidence, but behavioral co-intervention, trial eligibility, dose, duration, and pooled heterogeneity remain material."
+    },
+    {
+      "label": "Within-subject baseline without a concurrent control",
+      "evidence_record_ids": [
+        "ev-glp1-semaglutide-obesity-cardiometabolic-001",
+        "ev-semaglutide-pmos-menstrual-function-001"
+      ],
+      "interpretation_boundary": "Observed change cannot isolate treatment effects from concurrent care, selection, regression to the mean, or other time-varying factors."
+    },
+    {
+      "label": "No GLP-1 receptor agonist active-care comparator",
+      "evidence_record_ids": [
+        "ev-glp1-semaglutide-hfref-outcomes-001"
+      ],
+      "interpretation_boundary": "Propensity matching improves comparability but does not remove residual confounding or turn the cohort into a randomized placebo-controlled trial."
+    },
+    {
+      "label": "Tirzepatide active comparator",
+      "evidence_record_ids": [
+        "ev-tirzepatide-vs-semaglutide-weightloss-001"
+      ],
+      "interpretation_boundary": "A relative-effect comparison between two active therapies contextualizes magnitude; it does not refute semaglutide-versus-placebo evidence."
+    },
+    {
+      "label": "Heterogeneous intervention categories",
+      "evidence_record_ids": [
+        "ev-glp1-waist-circumference-meta-001"
+      ],
+      "interpretation_boundary": "Subgroup categories do not provide one uniform drug-versus-placebo estimate, and between-category differences were not statistically significant."
+    },
+    {
+      "label": "Exercise and placebo factorial arms",
+      "evidence_record_ids": [
+        "ev-liraglutide-alone-physical-fitness-001"
+      ],
+      "interpretation_boundary": "The finding qualifies fitness expectations during weight maintenance and must not be read as a null body-weight result."
+    }
+  ],
+  "contradiction_assessment": {
+    "status": "none_identified_in_bounded_map",
+    "statement": "No reviewed record in this bounded selection directly contradicts the semaglutide-versus-placebo body-weight direction under a sufficiently aligned population, intervention, comparator, and outcome. Tirzepatide's larger active-comparator estimate and liraglutide's null fitness result are contextual or endpoint-specific qualifiers, not same-question contradictions. Absence of an identified contradiction is not evidence that contradictory literature does not exist.",
+    "evidence_record_ids": []
+  },
+  "limitations": [
+    "All nine selected Evidence Records remain draft and require independent secondary review before the map can become reviewed.",
+    "The direct randomized evidence is centered on semaglutide and adults without diabetes; it cannot support an undifferentiated class-wide conclusion for every GLP-1 receptor agonist or population.",
+    "Three population extensions and the active-comparator record are observational and remain vulnerable to residual confounding.",
+    "The map records evidence during continued treatment and does not establish durability after treatment discontinuation.",
+    "Adverse events, discontinuation, access, cost, and patient preference are not covered comprehensively enough for benefit-harm conclusions.",
+    "The graph contains reviewed support and context links, but those links do not compute consensus or truth."
+  ],
+  "known_gaps": [
+    "Independent secondary review of every selected Evidence Record and this map's inclusion judgments.",
+    "Direct evidence for post-discontinuation weight maintenance or regain.",
+    "Broader agent-level coverage beyond semaglutide, with drug, dose, formulation, and duration kept separate.",
+    "Systematic adverse-event and discontinuation evidence linked to the same populations and treatment windows.",
+    "Pediatric, pregnancy, frailty, and geographically diverse population coverage where scientifically and ethically appropriate.",
+    "A reviewed same-PICO contradictory result, if one exists; none was identified in the bounded current selection."
+  ],
+  "review": {
+    "method": "Curated selection from structurally validated Evidence Records and reviewer-authored Relationship Records, with explicit PICO, comparator, endpoint, limitation, and contradiction-boundary checks.",
+    "status": "secondary_review_required",
+    "notes": "The artifact is a provisional map of traceable records, not a scientific conclusion. Validation checks structure and references only; it does not endorse the scientific judgments recorded here."
+  }
+}

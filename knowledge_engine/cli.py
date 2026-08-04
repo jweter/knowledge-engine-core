@@ -23,6 +23,11 @@ from rich.table import Table
 from knowledge_engine.config import build_settings
 from knowledge_engine.corpus import CorpusValidationResult, Issue, validate_corpus_manifest
 from knowledge_engine.database import Database, PaperRepository
+from knowledge_engine.evidence_map import (
+    EvidenceMapError,
+    load_evidence_map,
+    validate_evidence_map,
+)
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.cli_modes import resolve_corpus_import_mode
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService, ImportedCorpusRun
@@ -49,6 +54,15 @@ RelationshipRecordsArgument = Annotated[
     Path,
     typer.Argument(help="JSONL file containing evidence relationship records."),
 ]
+EvidenceMapArgument = Annotated[
+    Path,
+    typer.Argument(
+        help="Version 1 JSON evidence map.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
 RelationshipEvidenceOption = Annotated[
     Path | None,
     typer.Option(
@@ -64,6 +78,16 @@ RequiredRelationshipEvidenceOption = Annotated[
     typer.Option(
         "--evidence",
         help="Evidence records JSONL file the relationships reference.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+RequiredRelationshipRecordsOption = Annotated[
+    Path,
+    typer.Option(
+        "--relationships",
+        help="Validated Relationship Record JSONL file referenced by the map.",
         exists=True,
         dir_okay=False,
         readable=True,
@@ -588,6 +612,93 @@ def relationship_validate(
             "[yellow]No --evidence file given: relationship references were not checked "
             "against real evidence records.[/yellow]"
         )
+
+
+@app.command("evidence-map-validate")
+def evidence_map_validate(
+    map_path: EvidenceMapArgument,
+    evidence: RequiredEvidenceRecordsOption,
+    relationships: RequiredRelationshipRecordsOption,
+    sources: RequiredSourcesCsvOption,
+) -> None:
+    """Validate a curated evidence map's structure and record references.
+
+    This command validates only the map contract, citations, and references to
+    existing Evidence and Relationship Records. It never infers inclusion,
+    relationships, contradiction, consensus, or scientific truth.
+    """
+
+    evidence_result = _validate_evidence_records(evidence, require_review_fields=True)
+    if evidence_result.errors:
+        console.print(f"[red]Referenced evidence file is invalid:[/red] {evidence.name}")
+        for error in evidence_result.errors:
+            console.print(f"- {_safe_text(error)}")
+        raise typer.Exit(1)
+    evidence_ids = {record["evidence_record_id"] for record in evidence_result.records}
+
+    relationship_result = _validate_relationship_records(
+        relationships, known_evidence_ids=evidence_ids
+    )
+    if relationship_result.errors:
+        console.print(f"[red]Referenced relationship file is invalid:[/red] {relationships.name}")
+        for error in relationship_result.errors:
+            console.print(f"- {_safe_text(error)}")
+        raise typer.Exit(1)
+
+    metadata = _load_sources_overlay(sources)
+    citation_dois = {
+        doi
+        for doi, source in metadata.items()
+        if all(
+            (
+                source.title,
+                source.authors,
+                source.year,
+                source.journal,
+                source.source_url,
+                source.license_type,
+            )
+        )
+    }
+    try:
+        payload = load_evidence_map(map_path)
+    except EvidenceMapError as exc:
+        console.print(f"[red]Evidence map validation failed:[/red] {_safe_text(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    result = validate_evidence_map(
+        payload,
+        evidence_records=evidence_result.records,
+        relationship_records=relationship_result.records,
+        citation_dois=citation_dois,
+    )
+    if result.errors:
+        console.print("[red]Evidence map validation failed.[/red]")
+        for error in result.errors:
+            console.print(f"- {_safe_text(error)}")
+        _print_evidence_map_disclaimer()
+        raise typer.Exit(1)
+
+    console.print("[green]Evidence map validation passed.[/green]")
+    console.print(f"Map ID: {_safe_text(result.map_id or 'Unknown')}")
+    console.print(f"Map status: {_safe_text(result.map_status or 'Unknown')}")
+    console.print(f"Evidence nodes: {result.evidence_node_count}")
+    console.print(f"Relationship records: {result.relationship_count}")
+    console.print(f"Complete citations: {result.citation_count}/{result.evidence_node_count}")
+    console.print(
+        "Evidence roles: "
+        + ", ".join(f"{role}={count}" for role, count in result.role_counts.items())
+    )
+    console.print(
+        "Relationship types: "
+        + ", ".join(
+            f"{relationship_type}={count}"
+            for relationship_type, count in result.relationship_type_counts.items()
+        )
+    )
+    for warning in result.warnings:
+        console.print(f"[yellow]Warning:[/yellow] {_safe_text(warning)}")
+    _print_evidence_map_disclaimer()
 
 
 @app.command("relationship-report")
@@ -2072,6 +2183,14 @@ def _print_retrieval_disclaimer() -> None:
     console.print()
     console.print("[bold]This is retrieval only.[/bold]")
     console.print("[bold]No scientific synthesis has been performed.[/bold]")
+
+
+def _print_evidence_map_disclaimer() -> None:
+    console.print("[bold]No evidence, relationship, or scientific conclusion was inferred.[/bold]")
+    console.print(
+        "[bold]Validation does not constitute legal approval, scientific review, "
+        "consensus, or truth determination.[/bold]"
+    )
 
 
 @app.command()

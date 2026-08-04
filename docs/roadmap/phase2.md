@@ -21,8 +21,10 @@ records untouched.
 
 ## Current Direction
 
-- Complete one defensible GLP-1/body-weight evidence map with reviewed
-  relationships, limitations, contradictions, qualifiers, and citations.
+- Independently review the implemented
+  [provisional GLP-1/body-weight evidence map](../glp1_body_weight_golden_evidence_map.md),
+  then address its explicit post-discontinuation, safety, population, agent,
+  and contradictory-evidence gaps before marking it reviewed.
 - Evaluate retrieval and cross-study behavior against golden questions.
 - Preserve the no-synthesis boundary in core while exposing deterministic,
   inspectable inputs to the web and AI layers.
