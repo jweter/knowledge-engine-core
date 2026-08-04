@@ -11,8 +11,14 @@ question:
 
 The machine-readable artifact is
 `data/corpora/glp1_weight_loss/golden_evidence_map.json`. Its status is
-`provisional`, not `reviewed`, because every selected Evidence Record still has
-`review_status: draft` and requires independent secondary review.
+`reviewed`. An AI-assisted independent source audit checked all nine selected
+Evidence Records and all thirteen selected Relationship Records against the
+legally usable local PDFs. The audit is documented in
+`docs/glp1_golden_map_secondary_review.md`.
+
+Reviewed means accepted for record-to-source fidelity under this map's
+contract. It does not mean human domain-expert approval, independent
+statistical reanalysis, scientific synthesis, consensus, confidence, or truth.
 
 This map organizes traceable evidence. It does not calculate consensus,
 confidence, benefit-harm balance, or scientific truth.
@@ -39,10 +45,10 @@ as support for or contradiction of body-weight reduction.
 | `ev-glp1-gao-meta-analysis-body-weight-001` | Evidence synthesis | Systematic review and meta-analysis of semaglutide RCTs | Pooled relative change favored semaglutide by -10.09 percentage points | Dose, duration, population, and statistical heterogeneity vary across trials |
 | `ev-glp1-semaglutide-obesity-cardiometabolic-001` | Population extension | Retrospective single-arm cohort, with and without type 2 diabetes | Within-subject body-weight reduction of 9 kg reported | No concurrent control; residual effects of concurrent care and selection remain |
 | `ev-glp1-semaglutide-hfref-outcomes-001` | Population extension | Propensity-matched cohort; oral semaglutide vs no GLP-1RA | Mean change: -8.0 kg vs -1.9 kg at 24 months | HFrEF, type 2 diabetes, and obesity; residual confounding remains |
-| `ev-semaglutide-pmos-menstrual-function-001` | Population extension | Prospective single-arm PMOS cohort | Six-month mean change of -11.3% reported | No concurrent control; subgroup findings are exploratory |
+| `ev-semaglutide-pmos-menstrual-function-001` | Population extension | Uncontrolled before-after PMOS treatment study | Six-month mean change of -11.3% among 96 completers | No concurrent control; nine of 105 selected participants discontinued before completion |
 | `ev-tirzepatide-vs-semaglutide-weightloss-001` | Active-comparator context | Propensity-matched EHR cohort; tirzepatide vs semaglutide | Mean reduction: 14.7% vs 10.8% | Comparative effectiveness, not a randomized head-to-head or placebo trial |
 | `ev-glp1-waist-circumference-meta-001` | Evidence synthesis | Meta-analysis of heterogeneous intervention categories | GLP-1RA subgroup waist change: -5.93 cm | Waist circumference is not body weight; between-category differences were not significant |
-| `ev-liraglutide-alone-physical-fitness-001` | Endpoint qualifier | Randomized secondary analysis after diet-induced weight loss | Liraglutide alone did not improve physical fitness | A null fitness result does not contradict body-weight reduction |
+| `ev-liraglutide-alone-physical-fitness-001` | Endpoint qualifier | Randomized secondary analysis after diet-induced weight loss | Liraglutide alone did not improve physical fitness | The primary sample-size calculation was for body weight; specified fitness differences had estimated secondary-analysis power |
 
 ## Population and Comparator Boundaries
 
@@ -117,18 +123,20 @@ URLs, or alter any source record.
 
 ## Remaining Work
 
-Before the map can become `reviewed`:
+The initial record-to-source and relationship review is complete. The bounded
+map still needs broader scientific coverage before it can support the next
+analytical milestone:
 
-1. Independently verify each selected Evidence Record against its cited source
-   and advance only records that meet the repository's review contract.
-2. Review the map's inclusion, role, grouping, and relationship judgments.
-3. Add direct post-discontinuation evidence and a systematic safety and
+1. Add direct post-discontinuation evidence and a systematic safety and
    discontinuation view.
-4. Expand agent and population coverage without collapsing drug, dose,
+2. Expand agent and population coverage without collapsing drug, dose,
    formulation, duration, or eligibility differences.
-5. Search explicitly for same-PICO contradictory or qualifying evidence and
+3. Search explicitly for same-PICO contradictory or qualifying evidence and
    preserve a negative search outcome honestly when none is found.
+4. Route disputed records and substantive future changes through another
+   traceable review; human domain-expert adjudication remains available where
+   the scientific stakes or disagreement warrant it.
 
-Once those checks are complete, this map becomes the evaluated foundation for
-the roadmap's structured cross-study comparison work and a traceable public
-demonstration. It still will not be a declaration of scientific truth.
+The reviewed map is now an evaluated foundation for closing those coverage
+gaps, structured cross-study comparison, and a traceable public demonstration.
+It still is not a declaration of scientific truth.

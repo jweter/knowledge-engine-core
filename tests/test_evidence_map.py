@@ -147,11 +147,41 @@ def test_reviewed_map_rejects_draft_evidence() -> None:
 def test_reviewed_map_accepts_reviewed_evidence() -> None:
     payload = _map_payload()
     payload["map_status"] = "reviewed"
+    payload["review"] = {
+        "method": "Independent source audit.",
+        "status": "reviewed",
+        "reviewed_by": "Independent reviewer",
+        "reviewer_type": "source_audit",
+        "review_date": "2026-08-03",
+        "notes": "Source fidelity only; not scientific truth.",
+    }
 
     result = _validate(payload, evidence_records=_evidence_records(review_status="reviewed"))
 
     assert result.valid
     assert result.warnings == ()
+
+
+def test_reviewed_map_requires_matching_review_provenance() -> None:
+    payload = _map_payload()
+    payload["map_status"] = "reviewed"
+    evidence_records = _evidence_records(review_status="reviewed")
+
+    result = _validate(payload, evidence_records=evidence_records)
+
+    assert not result.valid
+    assert "A reviewed map must have review.status set to 'reviewed'." in result.errors
+
+    payload["review"] = {
+        "method": "Independent source audit.",
+        "status": "reviewed",
+        "notes": "Source fidelity only.",
+    }
+    result = _validate(payload, evidence_records=evidence_records)
+
+    assert "review.reviewed_by must be non-empty text." in result.errors
+    assert "review.reviewer_type must be non-empty text." in result.errors
+    assert "review.review_date must be non-empty text." in result.errors
 
 
 def test_unknown_evidence_and_incomplete_citation_are_rejected() -> None:
@@ -249,14 +279,53 @@ def test_committed_glp1_golden_map_passes_cli_validation() -> None:
 
     assert result.exit_code == 0, result.output
     assert "Evidence map validation passed" in result.output
-    assert "Map status: provisional" in result.output
+    assert "Map status: reviewed" in result.output
     assert "Evidence nodes: 9" in result.output
     assert "Relationship records: 13" in result.output
     assert "Complete citations: 9/9" in result.output
     normalized_output = " ".join(result.output.split())
-    assert "secondary review is required" in normalized_output
+    assert "secondary review is required" not in normalized_output
     assert "No evidence, relationship, or scientific conclusion was inferred" in result.output
     assert "does not constitute legal approval, scientific review" in normalized_output
+
+
+def test_committed_glp1_golden_map_preserves_secondary_review_provenance() -> None:
+    root = Path(__file__).parents[1]
+    corpus = root / "data" / "corpora" / "glp1_weight_loss"
+    map_payload = json.loads((corpus / "golden_evidence_map.json").read_text(encoding="utf-8"))
+    selected_evidence_ids = {node["evidence_record_id"] for node in map_payload["evidence_nodes"]}
+    selected_relationship_ids = set(map_payload["relationship_ids"])
+    evidence_records = [
+        json.loads(line)
+        for line in (corpus / "evidence_records.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    relationship_records = [
+        json.loads(line)
+        for line in (corpus / "relationship_records.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+
+    selected_evidence = [
+        record
+        for record in evidence_records
+        if record["evidence_record_id"] in selected_evidence_ids
+    ]
+    selected_relationships = [
+        record
+        for record in relationship_records
+        if record["relationship_id"] in selected_relationship_ids
+    ]
+
+    assert len(selected_evidence) == 9
+    assert len(selected_relationships) == 13
+    for record in selected_evidence:
+        assert record["review_status"] == "reviewed"
+        assert record["review_checklist"]["secondary_review_completed"] is True
+        assert "human_reviewed" not in record
+        review = record["provenance"]["secondary_review"]
+        assert review["reviewer_type"] == "ai_assisted_independent_source_audit"
+    for relationship in selected_relationships:
+        review = relationship["provenance"]["secondary_review"]
+        assert review["reviewer_type"] == "ai_assisted_independent_source_audit"
 
 
 def test_cli_rejects_invalid_map_without_inference(tmp_path: Path) -> None:

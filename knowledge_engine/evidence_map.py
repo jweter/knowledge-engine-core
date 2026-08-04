@@ -18,6 +18,7 @@ from knowledge_engine.utils import normalize_doi
 
 EVIDENCE_MAP_SCHEMA_VERSION = 1
 ALLOWED_MAP_STATUSES = {"provisional", "reviewed"}
+ALLOWED_REVIEW_STATUSES = {"secondary_review_required", "reviewed"}
 ALLOWED_EVIDENCE_ROLES = {
     "landmark_trial",
     "evidence_synthesis",
@@ -251,12 +252,26 @@ def validate_evidence_map(
     _text_list(payload.get("limitations"), "limitations", errors)
     _text_list(payload.get("known_gaps"), "known_gaps", errors)
     review = payload.get("review")
+    review_status: str | None = None
     if not isinstance(review, dict):
         errors.append("review must be an object.")
     else:
         _required_text(review, "method", "review", errors)
-        _required_text(review, "status", "review", errors)
+        review_status = _required_text(review, "status", "review", errors)
         _required_text(review, "notes", "review", errors)
+        if review_status and review_status not in ALLOWED_REVIEW_STATUSES:
+            errors.append(
+                f"review.status must be one of: {', '.join(sorted(ALLOWED_REVIEW_STATUSES))}."
+            )
+        if review_status == "reviewed":
+            _required_text(review, "reviewed_by", "review", errors)
+            _required_text(review, "reviewer_type", "review", errors)
+            _required_text(review, "review_date", "review", errors)
+
+    if map_status == "reviewed" and review_status != "reviewed":
+        errors.append("A reviewed map must have review.status set to 'reviewed'.")
+    if map_status == "provisional" and review_status == "reviewed":
+        errors.append("A provisional map cannot have review.status set to 'reviewed'.")
 
     draft_ids = sorted(
         evidence_id

@@ -9,13 +9,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **GLP-1 golden-map secondary source audit.** Reviewed all 9 selected Evidence
+  Records and 13 selected Relationship Records against legally usable local
+  PDFs, corrected two evidence descriptions and two relationship rationales,
+  and advanced the bounded map to `reviewed`. Review provenance explicitly
+  identifies the AI-assisted audit and does not claim human domain-expert
+  approval, scientific synthesis, consensus, confidence, or truth.
+
 - **Provisional GLP-1/body-weight golden evidence map.** Added a versioned map
   selecting 9 cited Evidence Records and 13 reviewer-authored relationships,
   with explicit population, comparator, endpoint, limitation, and
   contradiction boundaries. Added `ke evidence-map-validate` to check map
   structure, references, citation completeness, grouping coverage, and review
   status without inferring evidence, consensus, confidence, or scientific
-  truth. The map remains provisional pending independent secondary review.
+  truth. The map was introduced as provisional so review could be completed as
+  a separate, auditable change.
 
 - **Persistent host architecture decision.** Added
   `docs/persistent_host_design.md`, defining a read-only, localhost-first HTTP

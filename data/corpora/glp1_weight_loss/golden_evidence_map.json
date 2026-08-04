@@ -3,7 +3,7 @@
   "map_id": "glp1-body-weight-golden-map-v1",
   "title": "GLP-1 and Body-Weight Golden Evidence Map",
   "research_question": "Do GLP-1 receptor agonists reduce body weight in adults with overweight or obesity?",
-  "map_status": "provisional",
+  "map_status": "reviewed",
   "scope": {
     "population": "Adults with overweight or obesity, with population extensions explicitly separated when diabetes, cardiovascular disease, heart failure, or PMOS changes applicability.",
     "intervention": "GLP-1 receptor agonist treatment, centered on semaglutide; liraglutide and the dual GIP/GLP-1 agonist tirzepatide appear only as explicit endpoint or active-comparator context.",
@@ -160,7 +160,7 @@
     "evidence_record_ids": []
   },
   "limitations": [
-    "All nine selected Evidence Records remain draft and require independent secondary review before the map can become reviewed.",
+    "Secondary review verified record-to-source fidelity but did not independently reanalyze study data, perform a full risk-of-bias assessment, or establish source truth.",
     "The direct randomized evidence is centered on semaglutide and adults without diabetes; it cannot support an undifferentiated class-wide conclusion for every GLP-1 receptor agonist or population.",
     "Three population extensions and the active-comparator record are observational and remain vulnerable to residual confounding.",
     "The map records evidence during continued treatment and does not establish durability after treatment discontinuation.",
@@ -168,7 +168,7 @@
     "The graph contains reviewed support and context links, but those links do not compute consensus or truth."
   ],
   "known_gaps": [
-    "Independent secondary review of every selected Evidence Record and this map's inclusion judgments.",
+    "Human domain-expert adjudication remains available for disputed records or substantive future changes; this completed secondary audit was AI-assisted and is not human review.",
     "Direct evidence for post-discontinuation weight maintenance or regain.",
     "Broader agent-level coverage beyond semaglutide, with drug, dose, formulation, and duration kept separate.",
     "Systematic adverse-event and discontinuation evidence linked to the same populations and treatment windows.",
@@ -176,8 +176,11 @@
     "A reviewed same-PICO contradictory result, if one exists; none was identified in the bounded current selection."
   ],
   "review": {
-    "method": "Curated selection from structurally validated Evidence Records and reviewer-authored Relationship Records, with explicit PICO, comparator, endpoint, limitation, and contradiction-boundary checks.",
-    "status": "secondary_review_required",
-    "notes": "The artifact is a provisional map of traceable records, not a scientific conclusion. Validation checks structure and references only; it does not endorse the scientific judgments recorded here."
+    "method": "Independent source audit of every selected Evidence Record and Relationship Record against legally usable local PDFs, with explicit PICO, comparator, endpoint, numerical result, limitation, relationship-rationale, and contradiction-boundary checks.",
+    "status": "reviewed",
+    "reviewed_by": "OpenAI Codex",
+    "reviewer_type": "ai_assisted_independent_source_audit",
+    "review_date": "2026-08-03",
+    "notes": "The audit corrected two Evidence Records and two relationship rationales. Reviewed means accepted for record-to-source fidelity under the map contract. It does not mean human domain-expert approval, independent statistical reanalysis, scientific synthesis, consensus, confidence, or truth determination."
   }
 }
