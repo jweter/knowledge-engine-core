@@ -9,6 +9,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Provisional GLP-1/body-weight golden evidence map.** Added a versioned map
+  selecting 9 cited Evidence Records and 13 reviewer-authored relationships,
+  with explicit population, comparator, endpoint, limitation, and
+  contradiction boundaries. Added `ke evidence-map-validate` to check map
+  structure, references, citation completeness, grouping coverage, and review
+  status without inferring evidence, consensus, confidence, or scientific
+  truth. The map remains provisional pending independent secondary review.
+
 - **Persistent host architecture decision.** Added
   `docs/persistent_host_design.md`, defining a read-only, localhost-first HTTP
   host over core's existing readers as the eventual replacement for web

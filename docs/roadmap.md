@@ -45,6 +45,11 @@ temporary detour:
    comparator differences, limitations, contradictory or qualifying evidence,
    citations, and conservatively reviewed relationships. Prefer depth and
    coherence here over expanding the corpus beyond its current bounded scope.
+   A [version 1 provisional map](glp1_body_weight_golden_evidence_map.md) now
+   selects nine cited Evidence Records and thirteen reviewer-authored
+   relationships with explicit population, comparator, endpoint, limitation,
+   and contradiction boundaries. It remains provisional until independent
+   secondary review and the documented coverage gaps are addressed.
 4. **Advance Evidence and Analytical Intelligence.** Once the golden map is
    strong enough to evaluate, build structured cross-study comparison and
    deterministic statistical checks before broader LLM narration. Evidence

@@ -28,6 +28,11 @@ diabetes, or metabolic syndrome?
   documents.
 - `evidence_records.jsonl`: historical draft evidence records from the original
   GLP-1 vertical slice.
+- `relationship_records.jsonl`: reviewer-authored links between selected
+  Evidence Records.
+- `golden_evidence_map.json`: provisional version 1 map for the bounded GLP-1
+  and body-weight question; see
+  `docs/glp1_body_weight_golden_evidence_map.md` for its scope and limitations.
 
 ## Manifest Validation
 
@@ -62,8 +67,8 @@ documents.
 
 ## Current Status
 
-The committed manifest holds 951 sources (see the `retstart=3250` batch
-below for the most recent addition). It began as 943 sources: the small
+The committed manifest holds 951 sources (see the `retstart=3550` cycle
+below for the latest discovery checkpoint). It began as 943 sources: the small
 historical GLP-1
 prototype set (3 rows) plus 940 accepted records from thirteen small
 (`--limit 250`) automated discovery batches (`retstart` 0 through 3000) of
