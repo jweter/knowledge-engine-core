@@ -9,6 +9,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **GLP-1 golden-map durability and safety qualifiers.** Added a reviewed STEP
+  1 withdrawal-extension Evidence Record and a reviewed semaglutide RCT
+  safety/discontinuation Evidence Record, linked through three bounded
+  `contextualizes`/`qualifies` relationships. The reviewed map now contains 11
+  cited records and 16 relationships while explicitly avoiding class-wide
+  safety, individual benefit-harm, synthesis, consensus, confidence, or truth
+  claims.
+
 - **GLP-1 golden-map secondary source audit.** Reviewed all 9 selected Evidence
   Records and 13 selected Relationship Records against legally usable local
   PDFs, corrected two evidence descriptions and two relationship rationales,

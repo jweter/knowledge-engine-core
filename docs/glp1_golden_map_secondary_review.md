@@ -75,6 +75,10 @@ changes can still be routed to human domain-expert adjudication.
 
 ## Remaining Gaps
 
+The initial audit identified the gaps below. The direct post-discontinuation
+and first pooled safety/discontinuation gaps were subsequently addressed in
+`docs/glp1_map_durability_safety.md`; the broader forms of those gaps remain.
+
 The audit did not close the map's scientific coverage gaps:
 
 - direct post-discontinuation weight maintenance or regain;

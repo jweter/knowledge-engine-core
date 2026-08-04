@@ -11,10 +11,11 @@ question:
 
 The machine-readable artifact is
 `data/corpora/glp1_weight_loss/golden_evidence_map.json`. Its status is
-`reviewed`. An AI-assisted independent source audit checked all nine selected
-Evidence Records and all thirteen selected Relationship Records against the
-legally usable local PDFs. The audit is documented in
-`docs/glp1_golden_map_secondary_review.md`.
+`reviewed`. AI-assisted independent source audits checked all eleven selected
+Evidence Records and all sixteen selected Relationship Records against the
+legally usable local PDFs. The initial audit is documented in
+`docs/glp1_golden_map_secondary_review.md`; the durability and safety follow-up
+is documented in `docs/glp1_map_durability_safety.md`.
 
 Reviewed means accepted for record-to-source fidelity under this map's
 contract. It does not mean human domain-expert approval, independent
@@ -25,24 +26,29 @@ confidence, benefit-harm balance, or scientific truth.
 
 ## Scope
 
-The direct evidence is centered on semaglutide treatment during continued use
-in adults with overweight or obesity. Population extensions are kept separate
-when diabetes, cardiovascular disease, heart failure, or PMOS changes
-applicability. Liraglutide and tirzepatide appear only as explicit endpoint or
-active-comparator context.
+The direct efficacy evidence is centered on semaglutide treatment during
+continued use in adults with overweight or obesity. One exploratory STEP 1
+extension separately represents the first year after withdrawal, and one RCT
+meta-analysis record separately represents adverse events and discontinuation.
+Population extensions remain separate when diabetes, cardiovascular disease,
+heart failure, or PMOS changes applicability. Liraglutide and tirzepatide
+appear only as explicit endpoint or active-comparator context.
 
 The bounded map excludes class-wide conclusions, pediatric and pregnancy
-populations, post-discontinuation maintenance, cost-effectiveness, and a
-comprehensive safety analysis. A result for a different outcome is not treated
-as support for or contradiction of body-weight reduction.
+populations, cost-effectiveness, and a comprehensive current safety analysis.
+The single post-withdrawal extension does not establish every agent's or every
+person's trajectory. A result for a different outcome is not treated as support
+for or contradiction of body-weight reduction.
 
 ## Selected Evidence
 
 | Evidence Record | Role | Design and comparison | Result represented | Principal boundary |
 | --- | --- | --- | --- | --- |
 | `ev-glp1-step5-body-weight-week104-001` | Landmark trial | RCT; semaglutide 2.4 mg plus behavioral intervention vs placebo plus behavioral intervention | Week-104 mean change: -15.2% vs -2.6% | Adults without diabetes; adverse events and discontinuation are not represented in this record |
+| `ev-glp1-step1-withdrawal-weight-regain-001` | Durability qualifier | Exploratory off-treatment STEP 1 extension | Regain from week 68 to 120: 11.6 vs 1.9 percentage points | Selected completers; both treatment and structured lifestyle intervention ended; no formal significance testing |
 | `ev-glp1-select-trial-weight-loss-208wk-001` | Landmark trial | RCT; semaglutide 2.4 mg vs placebo | Week-208 mean change: -10.2% vs -1.5% | Cardiovascular-disease population; secondary analysis with higher treatment discontinuation |
 | `ev-glp1-gao-meta-analysis-body-weight-001` | Evidence synthesis | Systematic review and meta-analysis of semaglutide RCTs | Pooled relative change favored semaglutide by -10.09 percentage points | Dose, duration, population, and statistical heterogeneity vary across trials |
+| `ev-glp1-gao-meta-analysis-safety-discontinuation-001` | Safety qualifier | Safety outcomes from semaglutide RCT meta-analysis | AE RR 1.10; SAE RR 1.34; discontinuation-due-to-AE RR 2.29 | Varied doses and durations; high heterogeneity for any adverse event; not a current class-wide safety assessment |
 | `ev-glp1-semaglutide-obesity-cardiometabolic-001` | Population extension | Retrospective single-arm cohort, with and without type 2 diabetes | Within-subject body-weight reduction of 9 kg reported | No concurrent control; residual effects of concurrent care and selection remain |
 | `ev-glp1-semaglutide-hfref-outcomes-001` | Population extension | Propensity-matched cohort; oral semaglutide vs no GLP-1RA | Mean change: -8.0 kg vs -1.9 kg at 24 months | HFrEF, type 2 diabetes, and obesity; residual confounding remains |
 | `ev-semaglutide-pmos-menstrual-function-001` | Population extension | Uncontrolled before-after PMOS treatment study | Six-month mean change of -11.3% among 96 completers | No concurrent control; nine of 105 selected participants discontinued before completion |
@@ -67,12 +73,13 @@ comparison:
 
 ## Relationship Review
 
-The map references 13 existing reviewer-authored relationships whose endpoints
-are both selected: 10 `supports` and 3 `contextualizes`. It does not infer new
-edges. Support links preserve aligned direction while their rationales retain
-study-design and population differences. Context links prevent active
-comparators, PMOS evidence, and other population extensions from being
-misrepresented as direct replication.
+The map references 16 reviewer-authored relationships whose endpoints are both
+selected: 10 `supports`, 4 `contextualizes`, and 2 `qualifies`. It does not
+infer edges. Support links preserve aligned direction while their rationales
+retain study-design and population differences. Context and qualifier links
+prevent active comparators, withdrawal trajectories, safety outcomes, PMOS
+evidence, and other population extensions from being misrepresented as direct
+replication or as a computed benefit-harm conclusion.
 
 No reviewed same-PICO `contradicts` relationship was identified in this bounded
 selection. Tirzepatide's larger active-comparator estimate and liraglutide's
@@ -86,6 +93,7 @@ Each selected Evidence Record resolves by normalized DOI to a complete curated
 row in `sources.csv`:
 
 - STEP 5: `10.1038/s41591-022-02026-4`
+- STEP 1 withdrawal extension: `10.1111/dom.14725`
 - Gao et al. meta-analysis: `10.3389/fphar.2022.935823`
 - SELECT weight analysis: `10.1038/s41591-024-02996-7`
 - Obesity cardiometabolic cohort: `10.3390/jcm15124421`
@@ -123,17 +131,19 @@ URLs, or alter any source record.
 
 ## Remaining Work
 
-The initial record-to-source and relationship review is complete. The bounded
-map still needs broader scientific coverage before it can support the next
-analytical milestone:
+The initial record-to-source review and the first durability/safety follow-up
+are complete. The bounded map still has explicit work before broader
+analytical intelligence:
 
-1. Add direct post-discontinuation evidence and a systematic safety and
-   discontinuation view.
-2. Expand agent and population coverage without collapsing drug, dose,
+1. Replicate and extend post-discontinuation trajectories across agents,
+   treatment durations, and longer follow-up.
+2. Add newer safety syntheses while preserving event severity, dose, duration,
+   and population differences.
+3. Expand agent and population coverage without collapsing drug, dose,
    formulation, duration, or eligibility differences.
-3. Search explicitly for same-PICO contradictory or qualifying evidence and
+4. Search explicitly for same-PICO contradictory or qualifying evidence and
    preserve a negative search outcome honestly when none is found.
-4. Route disputed records and substantive future changes through another
+5. Route disputed records and substantive future changes through another
    traceable review; human domain-expert adjudication remains available where
    the scientific stakes or disagreement warrant it.
 
