@@ -5,8 +5,8 @@
   "research_question": "Do GLP-1 receptor agonists reduce body weight in adults with overweight or obesity?",
   "map_status": "reviewed",
   "scope": {
-    "population": "Adults with overweight or obesity, with population extensions explicitly separated when diabetes, cardiovascular disease, heart failure, or PMOS changes applicability.",
-    "intervention": "GLP-1 receptor agonist treatment, centered on semaglutide; liraglutide and the dual GIP/GLP-1 agonist tirzepatide appear only as explicit endpoint or active-comparator context.",
+    "population": "Adults with overweight or obesity, with population extensions explicitly separated when diabetes, cardiovascular disease, heart failure, PMOS, or prior metabolic surgery changes applicability.",
+    "intervention": "GLP-1 receptor agonist treatment, centered on semaglutide; liraglutide and the dual GIP/GLP-1 agonist tirzepatide appear only as explicit endpoint, agent/population, or active-comparator context.",
     "outcome": "Body-weight or anthropometric change during continued treatment and after documented treatment withdrawal; safety and non-weight outcomes appear only when they qualify what weight-loss efficacy does not establish.",
     "exclusions": "No pediatric, pregnancy, cost-effectiveness, or class-wide safety conclusion is represented by this bounded map. Post-withdrawal durability is limited to one exploratory STEP 1 extension, and different primary outcomes are not treated as direct support or contradiction."
   },
@@ -65,6 +65,11 @@
       "evidence_record_id": "ev-liraglutide-alone-physical-fitness-001",
       "role": "endpoint_qualifier",
       "inclusion_rationale": "Randomized secondary analysis showing that liraglutide's role in weight maintenance does not by itself establish improved physical fitness; exercise arms produced the fitness improvements."
+    },
+    {
+      "evidence_record_id": "ev-glp1-glide-liraglutide-post-lagb-weight-001",
+      "role": "agent_population_qualifier",
+      "inclusion_rationale": "Underpowered pilot RCT showing no additional six-month body-weight benefit from liraglutide 1.8 mg after gastric banding in adults with obesity and type 2 diabetes; retained as an agent, population, dose, and surgical-context boundary rather than a same-PICO contradiction."
     }
   ],
   "relationship_ids": [
@@ -83,7 +88,8 @@
     "rel-glp1-step5-pmos-contextualizes-001",
     "rel-glp1-step1-withdrawal-step5-contextualizes-001",
     "rel-glp1-gao-safety-gao-weight-qualifies-001",
-    "rel-glp1-gao-safety-step5-qualifies-001"
+    "rel-glp1-gao-safety-step5-qualifies-001",
+    "rel-glp1-glide-step5-qualifies-001"
   ],
   "population_groups": [
     {
@@ -120,6 +126,13 @@
         "ev-liraglutide-alone-physical-fitness-001"
       ],
       "interpretation_boundary": "The waist-circumference synthesis pools heterogeneous adult interventions, while the liraglutide analysis begins after diet-induced weight loss and evaluates fitness rather than primary weight reduction."
+    },
+    {
+      "label": "Adults with obesity and type 2 diabetes after gastric banding",
+      "evidence_record_ids": [
+        "ev-glp1-glide-liraglutide-post-lagb-weight-001"
+      ],
+      "interpretation_boundary": "The small GLIDE pilot studied liraglutide 1.8 mg after laparoscopic adjustable gastric banding, with body weight as a secondary outcome. It cannot be substituted for semaglutide 2.4 mg evidence in non-surgical adults without diabetes."
     }
   ],
   "comparator_groups": [
@@ -175,16 +188,23 @@
         "ev-liraglutide-alone-physical-fitness-001"
       ],
       "interpretation_boundary": "The finding qualifies fitness expectations during weight maintenance and must not be read as a null body-weight result."
+    },
+    {
+      "label": "Post-gastric-banding placebo",
+      "evidence_record_ids": [
+        "ev-glp1-glide-liraglutide-post-lagb-weight-001"
+      ],
+      "interpretation_boundary": "GLIDE's placebo comparison occurs after laparoscopic adjustable gastric banding and against liraglutide 1.8 mg, not semaglutide 2.4 mg. Its underpowered null six-month body-weight result is an agent and population qualifier."
     }
   ],
   "contradiction_assessment": {
     "status": "none_identified_in_bounded_map",
-    "statement": "No reviewed record in this bounded selection directly contradicts the semaglutide-versus-placebo body-weight direction under a sufficiently aligned population, intervention, comparator, and outcome. Tirzepatide's larger active-comparator estimate and liraglutide's null fitness result are contextual or endpoint-specific qualifiers, not same-question contradictions. Absence of an identified contradiction is not evidence that contradictory literature does not exist.",
+    "statement": "A reproducible search completed on 2026-08-04 found no reviewed result that directly contradicts the semaglutide-versus-placebo body-weight direction under a sufficiently aligned population, intervention, comparator, outcome, and treatment window. GLIDE's underpowered null six-month result used liraglutide 1.8 mg after gastric banding in adults with type 2 diabetes and is an agent/population qualifier, not a same-PICO contradiction. Absence of an identified contradiction in this bounded search is not evidence that contradictory literature does not exist.",
     "evidence_record_ids": []
   },
   "limitations": [
     "Secondary review verified record-to-source fidelity but did not independently reanalyze study data, perform a full risk-of-bias assessment, or establish source truth.",
-    "The direct randomized evidence is centered on semaglutide and adults without diabetes; it cannot support an undifferentiated class-wide conclusion for every GLP-1 receptor agonist or population.",
+    "The direct randomized evidence is centered on semaglutide and adults without diabetes; one small liraglutide trial after gastric banding supplies a boundary but cannot support an undifferentiated class-wide conclusion for every GLP-1 receptor agonist or population.",
     "Three population extensions and the active-comparator record are observational and remain vulnerable to residual confounding.",
     "Post-withdrawal durability is represented by one exploratory extension of selected STEP 1 completers and requires replication across agents, treatment durations, and longer follow-up.",
     "The safety qualifier comes from one 2022 semaglutide review with varied doses and durations; it is not a current class-wide safety assessment or a benefit-harm conclusion.",
@@ -197,14 +217,14 @@
     "Broader agent-level coverage beyond semaglutide, with drug, dose, formulation, and duration kept separate.",
     "Newer agent-specific and class-wide safety syntheses that preserve event severity, dose, duration, and population differences.",
     "Pediatric, pregnancy, frailty, and geographically diverse population coverage where scientifically and ethically appropriate.",
-    "A reviewed same-PICO contradictory result, if one exists; none was identified in the bounded current selection."
+    "Periodic reruns of the same-PICO contradiction search as new trials mature or the direct map PICO changes; the 2026-08-04 bounded search identified none."
   ],
   "review": {
-    "method": "Independent source audit of every selected Evidence Record and Relationship Record against legally usable local PDFs, including the durability and safety qualifiers, with explicit PICO, comparator, time-window, endpoint, numerical result, limitation, relationship-rationale, and contradiction-boundary checks.",
+    "method": "Independent source audit of every selected Evidence Record and Relationship Record against legally usable local PDFs, including durability, safety, and agent/population qualifiers, with explicit PICO, comparator, time-window, endpoint, numerical result, limitation, relationship-rationale, and contradiction-boundary checks.",
     "status": "reviewed",
     "reviewed_by": "OpenAI Codex",
     "reviewer_type": "ai_assisted_independent_source_audit",
-    "review_date": "2026-08-03",
-    "notes": "The initial audit corrected two Evidence Records and two relationship rationales; the durability/safety follow-up added two source-audited Evidence Records and three reviewed qualifier relationships. Reviewed means accepted for record-to-source fidelity under the map contract. It does not mean human domain-expert approval, independent statistical reanalysis, scientific synthesis, benefit-harm assessment, consensus, confidence, or truth determination."
+    "review_date": "2026-08-04",
+    "notes": "The initial audit corrected two Evidence Records and two relationship rationales; the durability/safety follow-up added two source-audited Evidence Records and three reviewed qualifier relationships; the same-PICO contradiction audit added one source-audited agent/population qualifier and one reviewed relationship while preserving an honest negative search result. Reviewed means accepted for record-to-source fidelity under the map contract. It does not mean human domain-expert approval, independent statistical reanalysis, scientific synthesis, benefit-harm assessment, consensus, confidence, or truth determination."
   }
 }

@@ -27,13 +27,18 @@ diabetes, or metabolic syndrome?
 - `license_policy.md`: policy for legal and reproducible use of source
   documents.
 - `evidence_records.jsonl`: traceable evidence records from the GLP-1 vertical
-  slice and later extraction work; the eleven golden-map records have completed
+  slice and later extraction work; the twelve golden-map records have completed
   the map's secondary source audit.
 - `relationship_records.jsonl`: reviewer-authored links between selected
   Evidence Records.
 - `golden_evidence_map.json`: source-audited, reviewed version 1 map for the
   bounded GLP-1 and body-weight question; see
   `docs/glp1_body_weight_golden_evidence_map.md` for its scope and limitations.
+
+The current map includes one legally reusable GLIDE pilot record as an explicit
+liraglutide/post-gastric-banding qualifier. Its ignored local source is
+`PMC10599987.pdf`; it is not represented as a same-PICO contradiction of the
+semaglutide trials.
 
 ## Manifest Validation
 
