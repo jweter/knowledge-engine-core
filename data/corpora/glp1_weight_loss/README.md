@@ -38,6 +38,9 @@ diabetes, or metabolic syndrome?
   preserving version 1 compatibility; currently source-verified STEP 5
   week-104 and SELECT week-208 treatment-difference identities plus STEP 5's
   bounded interval-approximation inputs.
+- `binary_statistical_inputs.jsonl`: separate version 1 source-audited count
+  contract for STEP 5's observed week-104 responder result, including the
+  explicit crude-risk-ratio method and no-correction policy.
 
 The current map includes one legally reusable GLIDE pilot record as an explicit
 liraglutide/post-gastric-banding qualifier. Its ignored local source is
@@ -64,6 +67,7 @@ Verify the committed STEP 5 and SELECT arithmetic identities:
 ke statistical-verify \
   data/corpora/glp1_weight_loss/statistical_inputs.jsonl \
   --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl \
+  --binary-inputs data/corpora/glp1_weight_loss/binary_statistical_inputs.jsonl \
   --output glp1-statistical-verification.md
 ```
 
@@ -78,6 +82,14 @@ point to a different page from its Evidence Record's claim locator when that is
 where the complete arithmetic identity is reported. The command does not
 extract numbers from prose, open PDFs, access SQLite, pool studies, or perform
 scientific synthesis.
+
+The optional binary file contains one independently source-audited STEP 5
+co-primary responder result. Its observed `111/144` versus `44/128` counts
+reproduce the reported `77.1%` versus `34.4%` within `0.05` percentage points
+and produce a crude risk ratio of `2.242424...` with a no-correction log-Wald
+95% interval of `1.737001...` to `2.894913...`. The paper's adjusted OR `5.0`
+is displayed but never compared with the crude ratio because the adjusted
+logistic-regression and multiple-imputation model is a different estimand.
 
 ## Manifest Validation
 

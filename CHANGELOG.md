@@ -9,6 +9,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **First source-audited binary-outcome verification.** Extended
+  `ke statistical-verify` with an optional, separately versioned binary-input
+  contract. STEP 5's observed week-104 responder counts (`111/144` versus
+  `44/128`) reproduce the reported arm percentages within a declared `0.05`
+  percentage-point tolerance and yield a deterministic crude risk ratio of
+  `2.242424...` with a no-correction log-Wald 95% interval of `1.737001...` to
+  `2.894913...`. The source's adjusted OR `5.0` (95% CI `3.0` to `8.4`) remains
+  display-only because its logistic-regression, baseline-covariate, and
+  multiple-imputation model is not reconstructible from the observed counts.
+  No PDF, SQLite, pooling, confidence scoring, AI, or scientific synthesis is
+  involved at command runtime.
+
 - **First source-audited confidence-interval approximation.** Extended
   `ke statistical-verify` with statistical-input schema version 2 while
   preserving version 1 compatibility. STEP 5 now uses its explicitly reported

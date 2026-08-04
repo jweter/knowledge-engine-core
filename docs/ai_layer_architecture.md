@@ -304,9 +304,13 @@ survive to production unchanged):
   one STEP 5 interval approximation from explicit arm standard errors, sample
   sizes, and a declared independent-arm normal assumption. It is compatible
   within rounding tolerance, not a reconstruction of the trial's model-based
-  interval; SELECT remains display-only. The command does not parse statistical
-  values from prose or assess source analyses. Binary-outcome checks, broader
-  sensitivity analysis, meta-analysis, and LLM narration remain unstarted.
+  interval; SELECT remains display-only. An optional, separately versioned
+  binary contract now verifies STEP 5's observed responder percentages and
+  derives one crude risk ratio with a no-correction log-Wald interval. It keeps
+  the source's adjusted odds ratio display-only and explicitly non-equivalent.
+  The command does not parse statistical values from prose or assess source
+  analyses. Broader sensitivity analysis, meta-analysis, and LLM narration
+  remain unstarted.
 - **Stage 5 is not started.** Discovery Intelligence remains gated by adequate
   analytical inputs and relationship coverage.
 

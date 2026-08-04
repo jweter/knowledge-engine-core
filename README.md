@@ -66,6 +66,7 @@ Verify the explicitly curated STEP 5 and SELECT statistical identities:
 ke statistical-verify \
   data/corpora/glp1_weight_loss/statistical_inputs.jsonl \
   --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl \
+  --binary-inputs data/corpora/glp1_weight_loss/binary_statistical_inputs.jsonl \
   --output glp1-statistical-verification.md
 ```
 
@@ -78,7 +79,13 @@ reported `-15.3` to `-9.8`. SELECT reproduces its week-208 difference as
 `-10.2 - (-1.5) = -8.7`, but its CI remains display-only because both numerical
 arm standard errors are unavailable. Typed numerical locators may differ from
 Evidence Record claim locators while DOI and reviewed source identity remain
-enforced. These are declared arithmetic and approximation checks, not a
+enforced. The optional binary contract verifies STEP 5's observed week-104
+responder percentages from `111/144` versus `44/128`, then calculates a crude
+risk ratio of `2.242424...` with a declared no-correction log-Wald 95% interval
+of `1.737001...` to `2.894913...`. The paper's adjusted OR `5.0` remains
+display-only because it comes from logistic regression and multiple imputation;
+it is not compared with the crude risk ratio. These are declared arithmetic
+and approximation checks, not a
 reconstruction of the source model, independent replication, statistical
 synthesis, confidence scoring, or a judgment that the analyses are correct.
 
@@ -558,10 +565,13 @@ Current handoff:
 1. The public-journey alignment, golden retrieval benchmark, and reviewed
    GLP-1/body-weight evidence-map foundations are implemented.
 2. Goal 4 is active. The cross-study report, STEP 5 and SELECT arithmetic
-   checks, and the first source-audited STEP 5 interval approximation are
-   implemented without statistical synthesis.
-3. Next, design one source-audited binary-outcome check only where event counts,
-   denominators, estimand, interval method, and correction policy are explicit.
+   checks, the first source-audited STEP 5 interval approximation, and the first
+   source-audited STEP 5 binary responder check are implemented without
+   statistical synthesis.
+3. Next, use the binary contract's observed limitations to select one bounded
+   follow-up, most likely a second reviewed record with a genuinely different
+   edge case such as a prespecified zero-cell correction. Do not begin pooling
+   or broader AI narration from a single worked example.
 
 ## Known Issues
 

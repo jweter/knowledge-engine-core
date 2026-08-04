@@ -210,10 +210,9 @@ The milestone succeeds when:
 
 ## Next Handoff
 
-After this interval approximation is stable, the next bounded statistical task
-is to design a source-audited binary-outcome verification contract for one
-reviewed result with explicit event counts and denominators. That design should
-recompute a risk ratio or odds ratio and its interval only when the estimand,
-continuity-correction policy, confidence method, and source locators are all
-explicit. It must remain separate from cross-study pooling and scientific
-synthesis.
+Completed by `docs/glp1_binary_outcome_verification_plan.md`: the first bounded
+binary contract uses explicit STEP 5 event counts and denominators, a named
+observed-participant population, a no-correction policy, and a declared
+log-Wald method. It derives a crude risk ratio while preserving the paper's
+adjusted odds ratio as non-equivalent display-only context. Cross-study pooling
+and scientific synthesis remain out of scope.

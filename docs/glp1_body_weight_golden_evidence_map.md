@@ -169,7 +169,8 @@ treatment-policy-estimand result and SELECT's week-208 in-trial result. Run:
 ```bash
 ke statistical-verify \
   data/corpora/glp1_weight_loss/statistical_inputs.jsonl \
-  --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl
+  --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl \
+  --binary-inputs data/corpora/glp1_weight_loss/binary_statistical_inputs.jsonl
 ```
 
 The verifier independently reproduces STEP 5's reported `-12.6`
@@ -182,8 +183,13 @@ of the paper's ANCOVA and multiple-imputation analysis. SELECT's interval
 remains display-only because both numerical arm standard errors are not
 reported. Its typed locator points to the complete identity on page 4 rather
 than reusing the page-1 claim locator; both remain bound to the same DOI and
-reviewed Evidence Record. No number is parsed from this map or its Evidence
-Record prose.
+reviewed Evidence Record. The optional binary input verifies STEP 5's observed
+week-104 responder percentages from `111/144` versus `44/128`, then derives a
+crude risk ratio of `2.242424...` and a no-correction log-Wald 95% interval of
+`1.737001...` to `2.894913...`. It does not compare that crude estimate with
+the paper's adjusted OR `5.0`, which used logistic regression and multiple
+imputation and remains display-only. No number is parsed from this map or its
+Evidence Record prose.
 
 ## Remaining Work
 
@@ -204,7 +210,7 @@ analytical intelligence:
    the scientific stakes or disagreement warrant it.
 
 The reviewed map, deterministic comparison report, two typed arithmetic
-checks, and one explicitly assumed interval approximation are now an evaluated
-foundation for closing those coverage gaps and a traceable public
-demonstration. They still are not statistical synthesis,
+checks, one explicitly assumed interval approximation, and one source-audited
+binary count check are now an evaluated foundation for closing those coverage
+gaps and a traceable public demonstration. They still are not statistical synthesis,
 independent replication, or a declaration of scientific truth.

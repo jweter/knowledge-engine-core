@@ -202,7 +202,8 @@ most likely to actually call:
   relationships in deterministic map order. It does not parse numerical prose
   or perform synthesis.
 - `ke statistical-verify <statistical_inputs.jsonl> --evidence
-  <records.jsonl> [--output <path.md>]` -- validate version 1 or 2 source-linked
+  <records.jsonl> [--binary-inputs <binary_inputs.jsonl>] [--output <path.md>]`
+  -- validate version 1 or 2 source-linked
   statistical inputs and verify the supported intervention-minus-comparator
   mean-change identity with Decimal arithmetic. Version 2 may additionally
   approximate a two-sided 95% interval from explicit arm standard errors using
@@ -213,6 +214,12 @@ most likely to actually call:
   A typed numerical locator is independently reviewed and may differ from the
   Evidence Record's claim locator; normalized DOI, reviewed Evidence Record
   identity, outcome, and both source spans remain enforced.
+  `--binary-inputs` adds a separate version 1 count contract: it verifies
+  source-reported arm percentages, then derives a crude risk ratio and
+  log-Wald interval only under an explicit correction policy. A
+  source-reported adjusted measure is retained as display-only context and is
+  never treated as equivalent to the crude result. Omitting the option
+  preserves the continuous-only contract and output.
 - `ke relationship-report` -- read Relationship Records. Console output
   only.
 - `ke graph-report [--evidence-record-id <id> | --paper-id <id>] [--output <path.md>]`

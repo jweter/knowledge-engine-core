@@ -408,6 +408,10 @@ locators. STEP 5 also has the first explicitly assumed, independent-arm normal
 confidence-interval approximation from reported arm standard errors; it is
 compatible within declared rounding tolerance and is not represented as the
 paper's model-based interval reconstruction. SELECT remains display-only.
-Binary-outcome verification, broader analysis, and AI narration remain gated
-by `docs/roadmap.md`'s Current Project Path. Discovery Intelligence remains
-gated by those analytical prerequisites and adequate relationship coverage.
+The first source-audited binary check now verifies STEP 5's observed responder
+percentages and derives a crude risk ratio with an explicit no-correction
+log-Wald interval while preserving the paper's adjusted odds ratio as
+non-equivalent, display-only context. Broader binary analysis, pooling, and AI
+narration remain gated by `docs/roadmap.md`'s Current Project Path. Discovery
+Intelligence remains gated by those analytical prerequisites and adequate
+relationship coverage.
