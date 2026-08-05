@@ -1,154 +1,137 @@
-# Corpus Recovery from Database Inventory
+# Corpus recovery from an existing database
 
-## Status
+## Purpose
 
-Pre-download recovery workflow for the gitignored scientific PDF corpus.
+Recover gitignored corpus PDFs that were previously ingested but are no longer present on the current machine.
 
-## Why this exists
+The recovered SQLite database is the inventory. The recovery process does **not** insert papers into the database, infer new evidence, or treat reacquisition as scientific review.
 
-The repository intentionally does not track corpus PDFs. A recovered Knowledge Engine SQLite database can still preserve the paper inventory, source filename, DOI, expected SHA-256, page count, word count, and stored text/pages.
+## Current recovered corpus
 
-The recovery process therefore starts from the database inventory instead of blindly re-searching the web.
+The August 4 database backup contains 150 rows in `papers`, including the historical DOI, source path, content SHA-256, page count, and word count. The database also contains `paper_texts` and `paper_pages`.
 
-## Current recovered database observation
+This 150-paper backup is the currently recovered corpus inventory. Do not describe it as the previously remembered ~1,000-paper corpus unless a newer database or snapshot is found.
 
-The recovered full database backup inspected on 2026-08-04 contains 150 rows in `papers` and includes `paper_pages`, `paper_texts`, authors, journals, keywords, graph tables, and import/extraction history.
+## Recovery policy
 
-The first recovered records include the Gao semaglutide meta-analysis, STEP 5, SELECT, and PMC-sourced papers. This confirms the database contains real corpus identity and extraction metadata, even though the original PDF files are not present on the current laptop.
+For each database paper:
 
-This 150-paper backup is the currently recovered corpus inventory. Do not describe it as the previously remembered ~1,000-paper corpus unless a newer database/snapshot is found.
+1. Derive the historical filename from `papers.source_path`.
+2. If that file exists locally and its SHA-256 matches `papers.content_hash`, skip it as `already_present_verified`.
+3. If the local path exists but the hash differs, do not overwrite it by default.
+4. Resolve the stored DOI through Europe PMC metadata.
+5. When the exact DOI is in PMC and PMC Article Datasets Cloud marks it open access, use the official PMC OA PDF.
+6. Otherwise accept only a PDF explicitly marked OA and hosted by Europe PMC itself.
+7. Reject unresolved, non-OA, third-party-host-only, non-PDF, over-size, or identity-ambiguous results.
+8. Download to a temporary file and atomically move it into the ignored corpus directory.
+9. Compute the new SHA-256 and compare it with the historical hash.
+10. Append a JSONL receipt for every processed paper.
 
-## Phase A: build a deterministic recovery manifest
+A freshly acquired official OA PDF is not required to be byte-identical to the historical copy. Providers can replace or regenerate PDFs. When the bytes differ, the tool records `reacquired_hash_changed`; those files require later parser/source-identity review before being treated as equivalent to the historical artifact.
 
-Run:
+## Windows quick start
+
+From the repository root, on branch `agent/pdf-corpus-review-queue`:
 
 ```powershell
-python tools/build_corpus_recovery_manifest.py `
-  --database "work\corpus-recovery\knowledge-engine.sqlite" `
-  --target-dir "papers\corpora\glp1_weight_loss" `
-  --output "work\corpus-recovery\recovery_manifest.jsonl"
+# Five-paper source-resolution pilot. No PDF bytes are downloaded.
+.\scripts\reacquire_corpus_pdfs.ps1 -Limit 5 -DryRun
 ```
 
-The builder is standard-library only and does not require Poetry dependencies.
+If the pilot resolves as expected:
 
-For every `papers` row it records:
+```powershell
+# Reacquire the first five selected papers.
+.\scripts\reacquire_corpus_pdfs.ps1 -Limit 5
+```
 
-- paper ID
-- title
-- DOI
-- PMCID when safely recoverable from an existing `PMC########.pdf` source filename
-- original source path
-- expected filename
-- expected SHA-256
-- page/word counts
-- target local path
-- whether the file is already present
-- duplicate-content-hash flag
-- proposed recovery route
-- recovery status
-- review status
+Then run the full inventory:
 
-It also emits `recovery_manifest.summary.json`.
+```powershell
+.\scripts\reacquire_corpus_pdfs.ps1
+```
 
-## Recovery routes
+Defaults:
 
-### `pmc_open_access_candidate`
+- database: `work\corpus-recovery\knowledge-engine.sqlite`
+- target: `papers\corpora\glp1_weight_loss`
+- receipts: `work\corpus-recovery\reacquisition_receipts.jsonl`
 
-The historical filename is an explicit PMCID PDF filename such as `PMC13313273.pdf`.
+The Python tool uses only the standard library, so it does not require `poetry install`.
 
-This is the strongest deterministic re-acquisition route. A later downloader should reuse the repository's existing PMC/Europe PMC acquisition boundary and open-access/license checks rather than constructing an unrestricted URL scraper.
+## Existing hash mismatch
 
-### `doi_open_access_resolution_required`
+The default is fail-closed:
 
-The paper has a DOI but no explicit PMCID in the historical filename.
+```text
+existing_hash_mismatch
+```
 
-A later recovery stage must resolve a legally usable open-access source. DOI presence alone does not authorize downloading or redistribution.
+Review the existing file first. If replacement is intentional:
 
-### `manual_source_resolution_required`
+```powershell
+.\scripts\reacquire_corpus_pdfs.ps1 -ReplaceMismatch
+```
 
-Neither an explicit PMCID filename nor DOI is available.
+The existing file is renamed to a quarantine-style filename containing its current hash before a replacement is attempted.
 
-Do not guess a source.
+## Useful controls
 
-## Phase B: re-acquire in bounded batches
+```powershell
+# Resume from a database paper ID.
+.\scripts\reacquire_corpus_pdfs.ps1 -StartId 75
 
-Do not attempt all records in one opaque run.
+# Process 25 rows starting at paper 75.
+.\scripts\reacquire_corpus_pdfs.ps1 -StartId 75 -Limit 25
 
-Recommended batch size: 20–25 papers.
+# Resolve only, no downloads.
+.\scripts\reacquire_corpus_pdfs.ps1 -StartId 75 -Limit 25 -DryRun
+```
 
-For each pending record:
+## Receipt statuses
 
-1. resolve an allowed source;
-2. verify legal/open-access eligibility under existing acquisition rules;
-3. download to a temporary path;
-4. verify PDF structure;
-5. parse source identity where possible;
-6. compare the downloaded SHA-256 against the historical expected hash;
-7. record whether the content is an exact historical match or a source-equivalent replacement;
-8. move verified content to the ignored corpus target directory;
-9. persist status before proceeding.
+Expected statuses include:
 
-A changed publisher copy with a different SHA-256 is not automatically invalid, but it must not be silently called an exact restoration.
+- `already_present_verified`
+- `existing_hash_mismatch`
+- `dry_run_resolved`
+- `reacquired_verified`
+- `reacquired_hash_changed`
+- `unresolved_no_doi`
+- `open_access_source_unresolved`
+- `resolution_failed`
+- `download_failed`
+- `commit_failed`
+- `blocked_existing_path`
 
-## Suggested recovery statuses
-
-- `pending`
-- `already_present`
-- `downloaded_exact_hash`
-- `downloaded_source_equivalent_hash_changed`
-- `source_identity_mismatch`
-- `not_open_access`
-- `source_unresolved`
-- `download_failed_retryable`
-- `invalid_pdf`
-- `duplicate_content`
-- `needs_manual_source_resolution`
+The receipt log is append-only. Local-file/hash state remains the source of truth on the next run, so interrupted runs are naturally resumable.
 
 ## Review pipeline after recovery
 
-Recovered PDFs feed the separate PDF review-queue builder:
-
 ```text
 recovered database inventory
-        -> recovery manifest
-        -> 20–25 legally reacquired PDFs
+        -> legally reacquired PDFs
         -> PDF review queue builder
         -> mechanical paper packets
         -> scientific review
         -> Paper Record / Evidence candidate / statistical candidate decisions
 ```
 
-Mechanical extraction never changes a paper to scientifically reviewed.
+The database's stored `paper_pages` and `paper_texts` can support corpus-wide triage before every source PDF is recovered, but final source-fidelity review of important numerical claims should use the recovered source PDF whenever possible.
 
-## Stored database text is useful before PDF recovery
+## Boundaries
 
-The recovered database contains `paper_pages` and `paper_texts`. These can support corpus-wide triage and prioritization before every original PDF is restored.
+The recovery tool does not:
 
-However, final source-fidelity review of important numerical claims should use the reacquired source PDF when possible, especially for:
+- mutate SQLite;
+- download non-OA or paywalled content;
+- scrape arbitrary publisher sites;
+- follow third-party repository URLs;
+- bypass access controls;
+- run OCR;
+- create or approve Evidence Records;
+- change review status;
+- perform statistical synthesis;
+- claim a changed provider PDF is historically byte-identical.
 
-- tables
-- figures
-- footnotes
-- denominators
-- analysis populations
-- missing-data methods
-- statistical model details
-- exact page/table/figure locators
-
-## Trust boundaries
-
-Do not:
-
-- bypass paywalls;
-- treat DOI resolution as proof of reusable licensing;
-- infer missing numerical values;
-- call a changed-hash download an exact restoration;
-- overwrite database Evidence Records during recovery;
-- mark papers scientifically reviewed from mechanical extraction alone;
-- pool or synthesize studies as part of corpus recovery.
-
-## Next implementation step
-
-Add a resumable bounded downloader that consumes `recovery_manifest.jsonl` and reuses the existing PMC/Europe PMC acquisition and license-validation seams.
-
-Before doing so, inspect the manifest route counts so implementation targets the dominant real acquisition route rather than guessing.
+After recovery, `tools/build_pdf_review_queue.py` is the next stage for deterministic extraction and scientific-review batching.
