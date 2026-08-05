@@ -287,13 +287,17 @@ def _europepmc_pdf(raw: dict[str, Any]) -> str | None:
 
 def resolve_doi(client: HttpClient, doi: str) -> Resolution | None:
     query = f'DOI:"{doi}"'
-    url = EUROPEPMC_SEARCH_URL + "?" + urlencode(
-        {
-            "query": query,
-            "format": "json",
-            "resultType": "core",
-            "pageSize": 10,
-        }
+    url = (
+        EUROPEPMC_SEARCH_URL
+        + "?"
+        + urlencode(
+            {
+                "query": query,
+                "format": "json",
+                "resultType": "core",
+                "pageSize": 10,
+            }
+        )
     )
     body = _json_get(client, url)
     result_list = body.get("resultList")
@@ -550,7 +554,9 @@ def recover_one(
         current_hash,
         matched,
         len(payload),
-        None if matched else "Official OA provider returned bytes different from the historical PDF; identity requires later parser/source review.",
+        None
+        if matched
+        else "Official OA provider returned bytes different from the historical PDF; identity requires later parser/source review.",
     )
 
 
