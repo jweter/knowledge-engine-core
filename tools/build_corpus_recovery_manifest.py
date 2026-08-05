@@ -120,7 +120,10 @@ def build_manifest(database: Path, target_dir: Path, output: Path) -> dict[str, 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Build a deterministic PDF recovery manifest from a Knowledge Engine SQLite corpus."
+        description=(
+            "Build a deterministic PDF recovery manifest from a"
+            " Knowledge Engine SQLite corpus."
+        )
     )
     parser.add_argument("--database", type=Path, required=True)
     parser.add_argument("--target-dir", type=Path, required=True)

@@ -556,7 +556,10 @@ def recover_one(
         len(payload),
         None
         if matched
-        else "Official OA provider returned bytes different from the historical PDF; identity requires later parser/source review.",
+        else (
+            "Official OA provider returned bytes different from the historical"
+            " PDF; identity requires later parser/source review."
+        ),
     )
 
 
