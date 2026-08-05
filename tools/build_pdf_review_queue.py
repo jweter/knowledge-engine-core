@@ -319,9 +319,7 @@ def build_review_queue(pdf_root: Path, output_root: Path, batch_size: int) -> di
 
     duplicate_hash_groups: dict[str, list[str]] = {}
     for bundle in successes:
-        paths = duplicate_hash_groups.setdefault(
-            str(bundle.metadata["sha256"]), []
-        )
+        paths = duplicate_hash_groups.setdefault(str(bundle.metadata["sha256"]), [])
         paths.append(bundle.relative_pdf_path)
     duplicates = {
         sha256: paths for sha256, paths in duplicate_hash_groups.items() if len(paths) > 1

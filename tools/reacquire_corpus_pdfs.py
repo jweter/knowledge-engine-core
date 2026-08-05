@@ -58,7 +58,9 @@ class RecoveryError(RuntimeError):
 
 
 class _NoRedirectHandler(HTTPRedirectHandler):
-    def redirect_request(self, req: Request, fp: Any, code: int, msg: str, headers: Any, newurl: str) -> None:
+    def redirect_request(
+        self, req: Request, fp: Any, code: int, msg: str, headers: Any, newurl: str
+    ) -> None:
         raise RecoveryError("Provider attempted an unexpected redirect.")
 
 
@@ -563,7 +565,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--limit", type=int, default=None, help="Process at most N database rows.")
     parser.add_argument("--start-id", type=int, default=0, help="Skip paper IDs below this value.")
-    parser.add_argument("--dry-run", action="store_true", help="Resolve sources without downloading PDFs.")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Resolve sources without downloading PDFs."
+    )
     parser.add_argument(
         "--replace-mismatch",
         action="store_true",
@@ -608,7 +612,9 @@ def main() -> int:
         )
         append_receipt(args.receipts, receipt)
         counts[receipt.status] = counts.get(receipt.status, 0) + 1
-        print(f"[{index}/{len(papers)}] paper {paper.paper_id}: {receipt.status} - {receipt.filename}")
+        print(
+            f"[{index}/{len(papers)}] paper {paper.paper_id}: {receipt.status} - {receipt.filename}"
+        )
         if index != len(papers) and args.request_delay:
             time.sleep(args.request_delay)
 
