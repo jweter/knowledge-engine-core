@@ -195,7 +195,8 @@ def _build_review_text(paper: ParsedPaper, relative_pdf_path: str) -> str:
         "",
         f"- Source PDF: `{relative_pdf_path}`",
         f"- DOI: `{paper.doi or 'not detected'}`",
-        f"- Authors from PDF metadata: {', '.join(paper.authors) if paper.authors else 'not detected'}",
+        f"- Authors from PDF metadata: "
+        f"{', '.join(paper.authors) if paper.authors else 'not detected'}",
         f"- Pages: {paper.page_count}",
         f"- Words: {paper.word_count}",
         f"- SHA-256: `{paper.content_hash}`",
