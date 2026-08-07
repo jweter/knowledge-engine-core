@@ -1,12 +1,17 @@
 """Deterministic prompt trust-boundary helpers for model-facing source data.
 
 Knowledge Engine treats retrieved papers, webpages, metadata, and other
-external content as untrusted data.  This module provides a small standard
+external content as untrusted data. This module provides a small standard
 envelope that keeps trusted application instructions structurally separate
 from source text before that source is sent to a model.
 
+It also detects a deliberately narrow set of high-confidence prompt-injection
+phrases. Callers may fail closed rather than send those source strings to a
+model. The detector is intentionally conservative: it is not a general
+classifier and must not be treated as the only prompt-injection control.
+
 This is defense in depth, not a claim that prompt wording can make a model a
-security principal.  Application authorization, tool permissions, network
+security principal. Application authorization, tool permissions, network
 policy, filesystem policy, and scientific acceptance remain deterministic
 controls outside the model.
 """
@@ -14,7 +19,8 @@ controls outside the model.
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+import re
+from collections.abc import Iterable, Mapping
 
 PROMPT_TRUST_BOUNDARY_VERSION = "prompt-trust-boundary-v1"
 
@@ -39,6 +45,33 @@ The application will independently validate and authorize any accepted result. M
 an untrusted proposal and does not itself authorize an action.
 """
 
+_HIGH_CONFIDENCE_INJECTION_PATTERNS = (
+    re.compile(r"\bignore\s+(?:all\s+)?(?:the\s+)?(?:previous|prior)\s+instructions\b", re.I),
+    re.compile(r"\bforget\s+(?:all\s+)?(?:the\s+)?(?:previous|prior)\s+instructions\b", re.I),
+    re.compile(r"\bdisregard\s+(?:all\s+)?(?:the\s+)?(?:previous|prior)\s+instructions\b", re.I),
+    re.compile(r"\breveal\s+(?:the\s+|your\s+)?(?:system|developer)\s+(?:prompt|instructions)\b", re.I),
+    re.compile(r"\b(?:system|developer)\s+message\s*:\s*", re.I),
+)
+
+
+def contains_high_confidence_prompt_injection(values: Iterable[str | None]) -> bool:
+    """Return whether source text contains a narrow high-confidence injection signal.
+
+    The function intentionally targets direct instruction-hijacking language
+    rather than attempting to classify every adversarial prompt. A match means
+    callers should fail closed for model-assisted processing of that bounded
+    source context. It does not mean the source is malicious or scientifically
+    invalid; it means the model path should not be trusted for that context.
+    """
+
+    for value in values:
+        if value is None:
+            continue
+        normalized = " ".join(value.split())
+        if any(pattern.search(normalized) for pattern in _HIGH_CONFIDENCE_INJECTION_PATTERNS):
+            return True
+    return False
+
 
 def build_untrusted_source_prompt(
     *,
@@ -49,8 +82,8 @@ def build_untrusted_source_prompt(
     """Render one model prompt with an explicit trusted/untrusted boundary.
 
     ``trusted_task`` and ``trusted_output_contract`` must be application-owned
-    static instructions.  External/provider/document text belongs only in
-    ``untrusted_source``.  JSON serialization prevents source strings from
+    static instructions. External/provider/document text belongs only in
+    ``untrusted_source``. JSON serialization prevents source strings from
     becoming prompt delimiters or adjacent instruction blocks by interpolation.
     """
 
