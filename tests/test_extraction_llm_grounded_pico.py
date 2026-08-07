@@ -164,7 +164,8 @@ def test_page_one_can_ground_context_missing_from_the_claim_page() -> None:
 
 def test_prompt_labels_are_not_part_of_the_grounding_context() -> None:
     llm = _FakeLLM(
-        '{"population": "UNTRUSTED_SOURCE_JSON", "intervention": "", "comparator": "", "outcome": ""}'
+        '{"population": "UNTRUSTED_SOURCE_JSON", '
+        '"intervention": "", "comparator": "", "outcome": ""}'
     )
 
     result = extract_pico_for_candidate(
