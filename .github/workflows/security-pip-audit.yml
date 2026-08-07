@@ -1,0 +1,33 @@
+name: Security - pip-audit
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  pip-audit:
+    name: Python dependency vulnerability scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install audit tooling
+        run: python -m pip install --disable-pip-version-check poetry poetry-plugin-export pip-audit
+
+      - name: Export locked runtime dependencies
+        run: poetry export --only main --without-hashes --format requirements.txt --output /tmp/requirements-audit.txt
+
+      - name: Audit locked runtime dependencies
+        run: pip-audit --requirement /tmp/requirements-audit.txt --no-deps --disable-pip
