@@ -30,7 +30,7 @@ qdrant-client = "^1.18.0"
 [tool.poetry.group.dev.dependencies]
 mypy = "^2.1.0"
 pytest = "^9.1.1"
-ruff = "0.15.20"
+ruff = "0.16.1"
 
 [[tool.poetry.source]]
 name = "pytorch-cpu"
