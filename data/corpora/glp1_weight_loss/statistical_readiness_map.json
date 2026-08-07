@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "research_question": "Do GLP-1 receptor agonists reduce body weight in adults with overweight or obesity?",
+  "golden_evidence_map": "glp1-body-weight-golden-map-v1",
+  "continuous_inputs": [
+    "stat-glp1-step5-week104-treatment-difference-001",
+    "stat-glp1-select-week208-treatment-difference-001"
+  ],
+  "binary_inputs": [
+    "binary-glp1-step5-week104-five-percent-response-001"
+  ],
+  "records": [
+    {
+      "evidence_record_id": "ev-glp1-step5-body-weight-week104-001",
+      "readiness_category": "exactly_verified",
+      "continuous_input_ids": [
+        "stat-glp1-step5-week104-treatment-difference-001"
+      ],
+      "binary_input_ids": [
+        "binary-glp1-step5-week104-five-percent-response-001"
+      ],
+      "compatibility_group": "semaglutide_placebo_percent_body_weight_change",
+      "incompatibility_reasons": [],
+      "review_note": "Primary category reflects exact arithmetic reproduction of the reported continuous treatment difference. The same record also has a bounded CI approximation and a derived crude binary RR that is explicitly not source-model-equivalent."
+    },
+    {
+      "evidence_record_id": "ev-glp1-step1-withdrawal-weight-regain-001",
+      "readiness_category": "not_selected_for_verification",
+      "continuous_input_ids": [],
+      "binary_input_ids": [],
+      "compatibility_group": null,
+      "incompatibility_reasons": [
+        "withdrawal/off-treatment trajectory",
+        "different time window and estimand from continued-treatment trials"
+      ],
+      "review_note": "Reviewed source-audited Evidence Record, but no typed statistical input has been promoted."
+    },
+    {
+      "evidence_record_id": "ev-glp1-select-trial-weight-loss-208wk-001",
+      "readiness_category": "exactly_verified",
+      "continuous_input_ids": [
+        "stat-glp1-select-week208-treatment-difference-001"
+      ],
+      "binary_input_ids": [],
+      "compatibility_group": "semaglutide_placebo_percent_body_weight_change",
+      "incompatibility_reasons": [
+        "week 208 vs STEP 5 week 104",
+        "in-trial ITT analysis vs STEP 5 treatment-policy estimand",
+        "numerical arm standard errors unavailable for independent interval check"
+      ],
+      "review_note": "Reported treatment-difference arithmetic is exactly reproduced. Reported CI remains display-only."
+    },
+    {
+      "evidence_record_id": "ev-glp1-gao-meta-analysis-body-weight-001",
+      "readiness_category": "display_only",
+      "continuous_input_ids": [],
+      "binary_input_ids": [],
+      "compatibility_group": null,
+      "incompatibility_reasons": [
+        "already pooled meta-analytic result",
+        "heterogeneous doses/durations/studies",
+        "not a primary-study input"
+      ],
+      "review_note": "The reviewed source reports pooled body-weight estimates, but the repository has no typed component-level inputs for an independent deterministic meta-analytic reproduction."
+    },
+    {
+      "evidence_record_id": "ev-glp1-gao-meta-analysis-safety-discontinuation-001",
+      "readiness_category": "display_only",
+      "continuous_input_ids": [],
+      "binary_input_ids": [],
+      "compatibility_group": null,
+      "incompatibility_reasons": [
+        "already pooled safety meta-analysis",
+        "multiple adverse-event outcomes",
+        "heterogeneous trials"
+      ],
+      "review_note": "Pooled risk ratios are source-reported and reviewed, but no typed trial-level inputs are present for deterministic reproduction."
+    },
+    {
+      "evidence_record_id": "ev-glp1-semaglutide-obesity-cardiometabolic-001",
+      "readiness_category": "not_selected_for_verification",
+      "continuous_input_ids": [],
+      "binary_input_ids": [],
+      "compatibility_group": null,
+      "incompatibility_reasons": [
+        "uncontrolled retrospective pre/post design",
+        "body weight reported in kg",
+        "mixed diabetes status"
+      ],
+      "review_note": "Reviewed observational population extension; no typed statistical input promoted."
+    },
+    {
+      "evidence_record_id": "ev-glp1-semaglutide-hfref-outcomes-001",
+      "readiness_category": "not_selected_for_verification",
+      "continuous_input_ids": [],
+      "binary_input_ids": [],
+      "compatibility_group": null,
+      "incompatibility_reasons": [
+        "observational propensity-matched design",
+        "oral semaglutide",
+        "HFrEF + T2DM population",
+        "active-care comparator",
+        "body weight in kg"
+      ],
+      "review_note": "Reviewed comparative observational extension; no typed statistical input promoted."
+    },
+    {
+      "evidence_record_id": "ev-semaglutide-pmos-menstrual-function-001",
+      "readiness_category": "not_selected_for_verification",
+      "continuous_input_ids": [],
+      "binary_input_ids": [],
+      "compatibility_group": null,
+      "incompatibility_reasons": [
+        "uncontrolled before-after design",
+        "female PMOS population",
+        "completer analysis",
+        "mixed weight and reproductive outcomes"
+      ],
+      "review_note": "Reviewed contextual population extension; no typed statistical input promoted."
+    },
+    {
+      "evidence_record_id": "ev-tirzepatide-vs-semaglutide-weightloss-001",
+      "readiness_category": "not_selected_for_verification",
+      "continuous_input_ids": [],
+      "binary_input_ids": [],
+      "compatibility_group": null,
+      "incompatibility_reasons": [
+        "active comparator",
+        "retrospective propensity-matched cohort",
+        "tirzepatide vs semaglutide",
+        "maximum weight-loss dynamics rather than same trial endpoint"
+      ],
+      "review_note": "Reviewed active-comparator context; no typed statistical input promoted."
+    },
+    {
+      "evidence_record_id": "ev-glp1-waist-circumference-meta-001",
+      "readiness_category": "display_only",
+      "continuous_input_ids": [],
+      "binary_input_ids": [],
+      "compatibility_group": null,
+      "incompatibility_reasons": [
+        "waist circumference rather than body-weight percentage change",
+        "systematic review/meta-analysis",
+        "heterogeneous intervention categories"
+      ],
+      "review_note": "Reviewed source reports pooled waist-circumference estimates; no typed component-level statistical inputs are present."
+    },
+    {
+      "evidence_record_id": "ev-liraglutide-alone-physical-fitness-001",
+      "readiness_category": "not_applicable",
+      "continuous_input_ids": [],
+      "binary_input_ids": [],
+      "compatibility_group": null,
+      "incompatibility_reasons": [
+        "primary readiness question concerns body-weight statistical verification",
+        "record is an endpoint qualifier for physical fitness"
+      ],
+      "review_note": "Numerical results exist, but this golden-map role is to qualify physical-fitness expectations rather than supply a body-weight pooling candidate."
+    },
+    {
+      "evidence_record_id": "ev-glp1-glide-liraglutide-post-lagb-weight-001",
+      "readiness_category": "not_selected_for_verification",
+      "continuous_input_ids": [],
+      "binary_input_ids": [],
+      "compatibility_group": null,
+      "incompatibility_reasons": [
+        "liraglutide 1.8 mg",
+        "post-gastric-banding population",
+        "T2DM",
+        "underpowered pilot",
+        "body weight secondary outcome",
+        "kg scale"
+      ],
+      "review_note": "Reviewed agent/population qualifier. No typed body-weight statistical input was promoted; the separate nausea zero-cell finding is outside this Evidence Record's reviewed outcome identity."
+    }
+  ],
+  "curation": {
+    "status": "approved_for_implementation",
+    "purpose": "Curated classification map for the Statistical Verification Readiness Gate.",
+    "review_note": "Approved during pre-implementation review. Runtime implementation must still validate every assignment against the current reviewed golden map, Evidence Records, and typed statistical-input identity links before reporting it as valid."
+  }
+}
