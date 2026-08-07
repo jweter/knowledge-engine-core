@@ -24,14 +24,14 @@ got wrong.
 Every field the LLM proposes is checked with
 `knowledge_engine.extraction.grounding.verify_grounding` against that same
 local context before being accepted -- a proposed field that does not
-trace back to the source text is dropped, never guessed. This module never
-judges what a claim *means* (`core`'s "never decide truth" seam is
-unchanged); it only asks the local model to locate PICO-relevant spans
-inside a page it has already been given, the same paper-intrinsic
-extraction M28 already does, with an LLM as a better pattern-matcher and a
-deterministic grounding check as the safety net. The v1 provenance label
-remains recognized for records produced before the bounded page-1 follow-up;
-newly accepted records use v2.
+trace back to the source text is dropped, never guessed. Source context is
+also wrapped by `knowledge_engine.prompt_security` so paper text remains
+explicitly untrusted data even when it contains instruction-like phrases.
+High-confidence prompt-injection language fails closed before any model
+call. This module never judges what a claim *means* (`core`'s "never decide
+truth" seam is unchanged); it only asks the local model to locate
+PICO-relevant spans inside a page it has already been given. Older
+provenance labels remain recognized; newly accepted records use v3.
 """
 
 from __future__ import annotations
@@ -47,40 +47,32 @@ from knowledge_engine.extraction.grounding import (
     verify_grounding,
 )
 from knowledge_engine.llm import LocalLLM, LocalLLMError
+from knowledge_engine.prompt_security import (
+    build_untrusted_source_prompt,
+    contains_high_confidence_prompt_injection,
+)
 
-LLM_GROUNDED_PICO_RULES_VERSION = "m69-llm-grounded-pico-v2"
+LLM_GROUNDED_PICO_RULES_VERSION = "m69-llm-grounded-pico-v3"
 LLM_GROUNDED_PICO_RULES_VERSIONS = frozenset(
-    {"m69-llm-grounded-pico-v1", LLM_GROUNDED_PICO_RULES_VERSION}
+    {
+        "m69-llm-grounded-pico-v1",
+        "m69-llm-grounded-pico-v2",
+        LLM_GROUNDED_PICO_RULES_VERSION,
+    }
 )
 
 _FIELD_NAMES = ("population", "intervention", "comparator", "outcome")
 
-_PROMPT_TEMPLATE = """You are extracting facts from bounded source context \
-from one clinical research paper. You will be shown one specific finding \
-(the "claim sentence"), the full page it came from, and sometimes page 1 \
-of the same paper for title/abstract study framing.
+_TRUSTED_TASK = """Extract facts from the bounded source context for one clinical research paper.
+Find the source wording, if present, that states the Population, Intervention, Comparator, and
+Outcome relevant to the supplied claim sentence. Quote source wording as closely as possible.
+Do not paraphrase, summarize, infer, or invent. If a field is not stated in the supplied source,
+leave it empty."""
 
-Your task: find the sentence(s) in the provided source context, if any, that \
-state the paper's Population, Intervention, Comparator, and Outcome \
-relevant to that claim.
-
-Rules:
-- Quote the provided source pages' own wording as closely as possible. Do not \
-paraphrase, summarize, or invent.
-- If a field is not stated anywhere in the provided source context, use an \
-empty string "" \
-for it. Never guess.
-- Respond with ONLY a JSON object, no other text, in exactly this shape:
-{{"population": "...", "intervention": "...", "comparator": "...", "outcome": "..."}}
-
-Claim sentence: {claim_sentence}
-
-Claim page text:
-{claim_page_text}
-
-{first_page_context}
-
-JSON:"""
+_TRUSTED_OUTPUT_CONTRACT = """Respond with ONLY one JSON object, with no prose or markdown,
+in exactly this shape:
+{"population":"...","intervention":"...","comparator":"...","outcome":"..."}
+Use an empty string for every field not stated in the supplied source context."""
 
 
 @dataclass(frozen=True)
@@ -119,12 +111,10 @@ def extract_pico_for_candidate(
 ) -> LlmGroundedPico:
     """Extract PICO fields from the claim page and, when supplied, page 1.
 
-    Never raises on a malformed or empty LLM response, or on the LLM being
-    unreachable -- every field simply comes back ungrounded
-    (`value=None`), the same "skip, don't invent" outcome as a field the
-    LLM never proposed. Callers decide what to do with an all-ungrounded
-    result (typically: leave the existing record's field alone rather than
-    overwrite it with nothing).
+    Source text is passed through the prompt-security envelope as untrusted
+    data. High-confidence instruction-hijacking text fails closed before the
+    LLM is called. Malformed/empty LLM responses and transport errors also
+    return all fields ungrounded rather than inventing or overwriting data.
     """
 
     additional_first_page = (
@@ -132,15 +122,18 @@ def extract_pico_for_candidate(
         if paper_first_page_text is not None and paper_first_page_text.strip()
         else None
     )
-    first_page_context = (
-        f"Paper page 1 text:\n{additional_first_page}"
-        if additional_first_page is not None
-        else "No additional page 1 context was provided."
-    )
-    prompt = _PROMPT_TEMPLATE.format(
-        claim_sentence=candidate.sentence_text,
-        claim_page_text=page_text,
-        first_page_context=first_page_context,
+    source_values = (candidate.sentence_text, page_text, additional_first_page)
+    if contains_high_confidence_prompt_injection(source_values):
+        return _empty_result(candidate)
+
+    prompt = build_untrusted_source_prompt(
+        trusted_task=_TRUSTED_TASK,
+        trusted_output_contract=_TRUSTED_OUTPUT_CONTRACT,
+        untrusted_source={
+            "claim_sentence": candidate.sentence_text,
+            "claim_page_text": page_text,
+            "paper_first_page_text": additional_first_page,
+        },
     )
     grounding_context = (
         f"{page_text}\n\n{additional_first_page}"
@@ -176,6 +169,18 @@ def extract_pico_for_candidate(
     )
 
 
+def _empty_result(candidate: ClaimCandidate) -> LlmGroundedPico:
+    empty = GroundedField(value=None, grounding=None)
+    return LlmGroundedPico(
+        candidate=candidate,
+        population=empty,
+        intervention=empty,
+        comparator=empty,
+        outcome=empty,
+        rules_version=LLM_GROUNDED_PICO_RULES_VERSION,
+    )
+
+
 _JSON_OBJECT_RE = re.compile(r"\{[^{}]*\}", re.DOTALL)
 
 
@@ -188,6 +193,7 @@ def _parse_proposed_fields(raw_response: str) -> dict[str, str]:
     object with four string keys, never nested), but never tolerates
     malformed JSON itself: a parse failure returns an empty dict, so every
     field ends up ungrounded rather than guessed from a corrupted parse.
+    Unknown keys are discarded and can never become application authority.
     """
 
     match = _JSON_OBJECT_RE.search(raw_response)
