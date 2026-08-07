@@ -49,7 +49,9 @@ _HIGH_CONFIDENCE_INJECTION_PATTERNS = (
     re.compile(r"\bignore\s+(?:all\s+)?(?:the\s+)?(?:previous|prior)\s+instructions\b", re.I),
     re.compile(r"\bforget\s+(?:all\s+)?(?:the\s+)?(?:previous|prior)\s+instructions\b", re.I),
     re.compile(r"\bdisregard\s+(?:all\s+)?(?:the\s+)?(?:previous|prior)\s+instructions\b", re.I),
-    re.compile(r"\breveal\s+(?:the\s+|your\s+)?(?:system|developer)\s+(?:prompt|instructions)\b", re.I),
+    re.compile(
+        r"\breveal\s+(?:the\s+|your\s+)?(?:system|developer)\s+(?:prompt|instructions)\b", re.I
+    ),
     re.compile(r"\b(?:system|developer)\s+message\s*:\s*", re.I),
 )
 
