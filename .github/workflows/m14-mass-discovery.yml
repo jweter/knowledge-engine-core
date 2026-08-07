@@ -285,7 +285,7 @@ jobs:
 
       - name: Upload M14 evidence artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m14-pubmed-candidates
           path: |
@@ -303,7 +303,7 @@ jobs:
 
       - name: Upload approved PDF artifact
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m14-approved-pdfs
           path: work/m14/papers/*.pdf
