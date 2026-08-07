@@ -27,11 +27,10 @@ local context before being accepted -- a proposed field that does not
 trace back to the source text is dropped, never guessed. Source context is
 also wrapped by `knowledge_engine.prompt_security` so paper text remains
 explicitly untrusted data even when it contains instruction-like phrases.
-This module never judges what a claim *means* (`core`'s "never decide
+High-confidence prompt-injection language fails closed before any model
+call. This module never judges what a claim *means* (`core`'s "never decide
 truth" seam is unchanged); it only asks the local model to locate
-PICO-relevant spans inside a page it has already been given, the same
-paper-intrinsic extraction M28 already does, with an LLM as a better
-pattern-matcher and deterministic grounding as the acceptance gate. Older
+PICO-relevant spans inside a page it has already been given. Older
 provenance labels remain recognized; newly accepted records use v3.
 """
 
@@ -48,7 +47,10 @@ from knowledge_engine.extraction.grounding import (
     verify_grounding,
 )
 from knowledge_engine.llm import LocalLLM, LocalLLMError
-from knowledge_engine.prompt_security import build_untrusted_source_prompt
+from knowledge_engine.prompt_security import (
+    build_untrusted_source_prompt,
+    contains_high_confidence_prompt_injection,
+)
 
 LLM_GROUNDED_PICO_RULES_VERSION = "m69-llm-grounded-pico-v3"
 LLM_GROUNDED_PICO_RULES_VERSIONS = frozenset(
@@ -108,11 +110,10 @@ def extract_pico_for_candidate(
 ) -> LlmGroundedPico:
     """Extract PICO fields from the claim page and, when supplied, page 1.
 
-    Source text is always passed through the prompt-security envelope as
-    untrusted data. Never raises on a malformed or empty LLM response, or on
-    the LLM being unreachable -- every field simply comes back ungrounded
-    (`value=None`), the same "skip, don't invent" outcome as a field the LLM
-    never proposed. Callers decide what to do with an all-ungrounded result.
+    Source text is passed through the prompt-security envelope as untrusted
+    data. High-confidence instruction-hijacking text fails closed before the
+    LLM is called. Malformed/empty LLM responses and transport errors also
+    return all fields ungrounded rather than inventing or overwriting data.
     """
 
     additional_first_page = (
@@ -120,6 +121,10 @@ def extract_pico_for_candidate(
         if paper_first_page_text is not None and paper_first_page_text.strip()
         else None
     )
+    source_values = (candidate.sentence_text, page_text, additional_first_page)
+    if contains_high_confidence_prompt_injection(source_values):
+        return _empty_result(candidate)
+
     prompt = build_untrusted_source_prompt(
         trusted_task=_TRUSTED_TASK,
         trusted_output_contract=_TRUSTED_OUTPUT_CONTRACT,
@@ -159,6 +164,18 @@ def extract_pico_for_candidate(
         intervention=grounded_fields["intervention"],
         comparator=grounded_fields["comparator"],
         outcome=grounded_fields["outcome"],
+        rules_version=LLM_GROUNDED_PICO_RULES_VERSION,
+    )
+
+
+def _empty_result(candidate: ClaimCandidate) -> LlmGroundedPico:
+    empty = GroundedField(value=None, grounding=None)
+    return LlmGroundedPico(
+        candidate=candidate,
+        population=empty,
+        intervention=empty,
+        comparator=empty,
+        outcome=empty,
         rules_version=LLM_GROUNDED_PICO_RULES_VERSION,
     )
 
