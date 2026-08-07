@@ -69,7 +69,8 @@ Outcome relevant to the supplied claim sentence. Quote source wording as closely
 Do not paraphrase, summarize, infer, or invent. If a field is not stated in the supplied source,
 leave it empty."""
 
-_TRUSTED_OUTPUT_CONTRACT = """Respond with ONLY one JSON object, with no prose or markdown, in exactly this shape:
+_TRUSTED_OUTPUT_CONTRACT = """Respond with ONLY one JSON object, with no prose or markdown,
+in exactly this shape:
 {"population":"...","intervention":"...","comparator":"...","outcome":"..."}
 Use an empty string for every field not stated in the supplied source context."""
 
