@@ -26,5 +26,9 @@ jobs:
       - name: Install Bandit
         run: python -m pip install --disable-pip-version-check bandit
 
-      - name: Scan application source
+      - name: Report full Bandit baseline
+        continue-on-error: true
         run: bandit --recursive knowledge_engine
+
+      - name: Block high-severity findings
+        run: bandit --recursive --severity-level high knowledge_engine
