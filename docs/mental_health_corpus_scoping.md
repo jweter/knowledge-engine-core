@@ -96,3 +96,51 @@ yet; `sources.csv` is header-only. Seeding this corpus with real papers,
 then individually authoring and reviewing Evidence Records, and eventually
 a golden evidence map for this research question, remain future, separate
 work -- mirroring both prior corpora's own progression.
+
+**2026-08-08: first seeding batch -- low scope-screen yield is a real
+finding, not a bug.** The first `ke discovery-cycle-run` cycle against
+this corpus's PubMed/PMC query scanned 100 raw candidates and produced 54
+deterministically-accepted candidates. A manual title/abstract scope
+screen applying `exclusion_criteria.md` selected only 7 of those 54 (13%)
+-- far below the oncology corpus's 70% (336/478) on its own first-cycle
+screen. Reading the 47 excluded titles shows why: the raw "depression"
+query surfaces a much noisier mix than "NSCLC checkpoint inhibitor" did --
+preclinical/animal mechanism studies (adenosine-receptor and
+psilocin-in-mice papers), biomarker/genetic-association studies with no
+treatment-outcome endpoint, non-pharmacological interventions with no
+SSRI/SNRI arm (TMS, ECT, vagus-nerve stimulation, ketogenic diet, physical
+activity), and single-patient case reports were the majority of the
+accepted pool, none of which this corpus's exclusion criteria admit. This
+is exactly the outcome named as a real risk in `scientific_question.md`'s
+rationale (heterogeneous, less standardized evidence in this field) --
+recorded honestly here rather than loosened criteria to inflate the
+accepted count. The corpus will need substantially more discovery cycles
+than GLP-1 or oncology needed to reach a comparable size. See
+`data/corpora/mental_health_mdd_antidepressants/README.md`'s Status
+section for the acquisition/import receipt details.
+
+**2026-08-08: cycle 2 yield collapsed further (1/64), root-caused to the
+query's bare "antidepressant" term -- query tightened for future cycles.**
+A second discovery cycle (retstart=100) scanned 100 candidates, producing
+64 deterministically-accepted candidates; the manual scope screen passed
+only 1 (1.5%, down from cycle 1's already-low 13%). Reading the 63
+excluded titles found a clear cause: the discovery query's `OR
+antidepressant` term is a bare category word that PubMed matches against
+any paper describing *any* depression-treatment mechanism, not just
+SSRI/SNRI trials -- ketamine/esketamine, psilocybin/LSD, TMS/ECT/tDCS/
+vagus-nerve stimulation, herbal/probiotic/dietary interventions, and
+preclinical animal-model mechanism papers all routinely describe
+themselves as having "antidepressant effects" or being under
+"antidepressant treatment" investigation. `sources.csv`'s existing
+`inclusion_criteria.md` already correctly rejects all of these at the
+manual-screen stage, but the volume of noise makes each cycle's screen
+increasingly expensive for the yield it returns. Fix: future discovery
+cycles use a tightened query that drops the bare `antidepressant` term,
+keeping only `SSRI`, `SNRI`, and the named-agent list already in
+`inclusion_criteria.md`. This does not guarantee zero noise (a ketamine
+paper that happens to mention "SSRI" once would still match), but should
+meaningfully cut the preclinical/novel-agent/neuromodulation volume. Uses
+a new state file (`discovery_state_v2.json`) since
+`load_discovery_cycle_state` deliberately errors on a query change against
+an existing state file -- a fresh PubMed pagination bookmark is correct
+for a genuinely different search.

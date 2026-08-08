@@ -9,6 +9,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Mental health corpus: first real papers acquired and imported; oncology
+  batch 3 (300 more records).** Manually scope-screened the mental-health
+  corpus's first two discovery cycles (54 then 64 deterministically-
+  accepted candidates), selecting 7 then 1 -- a collapsing yield (13% then
+  1.5%) traced to the discovery query's bare `antidepressant` term
+  matching any depression-treatment-mechanism paper. 8 real PMC OA papers
+  acquired and imported (`ke corpus-import`: 0 failed). A tightened query
+  is documented for future cycles in
+  `docs/mental_health_corpus_scoping.md`. Separately, promoted 300 more
+  oncology draft items into `evidence_records.jsonl` (now 600 total) and
+  ran `ke graph-build` (754 claims, 97 concepts, 645 claim-concept edges,
+  up from 454/95/327); 922 further eligible drafts remain.
+
+### Fixed
+
+- **Chunked database growth persisted for the 200-record oncology
+  graph-build.** Re-split and round-trip-verified `data/db_parts/*` after
+  `ke graph-build` processed the second oncology batch (454 claims, 95
+  concepts, 327 claim-concept edges, up from 254/92/199).
+
 - **Oncology corpus: second automated Evidence Record batch (200 more
   records).** `data/corpora/oncology_nsclc_checkpoint_inhibitors/evidence_records.jsonl`
   now holds 300 `draft`/`m52-evidence-classification-v1` records (100 + 200),

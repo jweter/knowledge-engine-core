@@ -67,3 +67,10 @@ still not a reviewed evidence base or a golden map -- both remain future work.
 `m52-evidence-classification-v1` tier and honesty discipline as the first
 batch). Spot-checked `claim_text` across the new batch against real source
 text -- accurate. 1,222 further eligible drafts remain unpromoted.
+
+**Third batch (2026-08-08, same day): 300 more records promoted.**
+`evidence_records.jsonl` now holds 600 draft records (100 + 200 + 300).
+`ke graph-build` processed all 300 new records: graph totals now 754
+claims, 97 concepts (61 mesh, 36 rxnorm), 645 claim-concept edges, up from
+454/95/327. Spot-checked `claim_text` across the new batch against real
+source text -- accurate. 922 further eligible drafts remain unpromoted.
