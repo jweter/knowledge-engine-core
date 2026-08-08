@@ -70,6 +70,16 @@
       "evidence_record_id": "ev-glp1-glide-liraglutide-post-lagb-weight-001",
       "role": "agent_population_qualifier",
       "inclusion_rationale": "Underpowered pilot RCT showing no additional six-month body-weight benefit from liraglutide 1.8 mg after gastric banding in adults with obesity and type 2 diabetes; retained as an agent, population, dose, and surgical-context boundary rather than a same-PICO contradiction."
+    },
+    {
+      "evidence_record_id": "ev-tirzepatide-post-bariatric-weight-regain-001",
+      "role": "agent_population_qualifier",
+      "inclusion_rationale": "Single-arm, uncontrolled cohort of tirzepatide for recurrent weight gain after bariatric surgery or endoscopic bariatric therapy; extends agent and population coverage to a dual GIP/GLP-1 receptor agonist and a post-bariatric population without being directly comparable to STEP 5's randomized semaglutide result."
+    },
+    {
+      "evidence_record_id": "ev-glp1ra-adherence-comorbidity-predictors-001",
+      "role": "safety_qualifier",
+      "inclusion_rationale": "Large real-world retrospective cohort (n=69,049) finding that atherosclerotic cardiovascular disease and digestive-system adverse events predict reduced first-year GLP-1 receptor agonist adherence; qualifies trial-based discontinuation findings with a drug-class-wide, real-world tolerability lens."
     }
   ],
   "relationship_ids": [
@@ -89,7 +99,9 @@
     "rel-glp1-step1-withdrawal-step5-contextualizes-001",
     "rel-glp1-gao-safety-gao-weight-qualifies-001",
     "rel-glp1-gao-safety-step5-qualifies-001",
-    "rel-glp1-glide-step5-qualifies-001"
+    "rel-glp1-glide-step5-qualifies-001",
+    "rel-glp1-tirzepatide-postbariatric-contextualizes-001",
+    "rel-glp1-adherence-comorbidity-safety-qualifies-001"
   ],
   "population_groups": [
     {
@@ -133,6 +145,20 @@
         "ev-glp1-glide-liraglutide-post-lagb-weight-001"
       ],
       "interpretation_boundary": "The small GLIDE pilot studied liraglutide 1.8 mg after laparoscopic adjustable gastric banding, with body weight as a secondary outcome. It cannot be substituted for semaglutide 2.4 mg evidence in non-surgical adults without diabetes."
+    },
+    {
+      "label": "Adults with recurrent weight gain after bariatric surgery or endoscopic bariatric therapy",
+      "evidence_record_ids": [
+        "ev-tirzepatide-post-bariatric-weight-regain-001"
+      ],
+      "interpretation_boundary": "This cohort received tirzepatide, not semaglutide, after a prior bariatric procedure. It extends agent and population coverage but cannot be substituted for STEP 5's non-surgical, treatment-naive population."
+    },
+    {
+      "label": "Broad real-world GLP-1 receptor agonist users across diabetes and obesity indications",
+      "evidence_record_ids": [
+        "ev-glp1ra-adherence-comorbidity-predictors-001"
+      ],
+      "interpretation_boundary": "This adherence cohort spans multiple GLP-1 receptor agonists and both diabetes and obesity indications rather than isolating semaglutide 2.4 mg in adults with overweight or obesity; its outcome is first-year adherence, not weight change."
     }
   ],
   "comparator_groups": [
@@ -157,7 +183,8 @@
       "label": "Within-subject baseline without a concurrent control",
       "evidence_record_ids": [
         "ev-glp1-semaglutide-obesity-cardiometabolic-001",
-        "ev-semaglutide-pmos-menstrual-function-001"
+        "ev-semaglutide-pmos-menstrual-function-001",
+        "ev-tirzepatide-post-bariatric-weight-regain-001"
       ],
       "interpretation_boundary": "Observed change cannot isolate treatment effects from concurrent care, selection, regression to the mean, or other time-varying factors."
     },
@@ -195,6 +222,13 @@
         "ev-glp1-glide-liraglutide-post-lagb-weight-001"
       ],
       "interpretation_boundary": "GLIDE's placebo comparison occurs after laparoscopic adjustable gastric banding and against liraglutide 1.8 mg, not semaglutide 2.4 mg. Its underpowered null six-month body-weight result is an agent and population qualifier."
+    },
+    {
+      "label": "Comorbidity subgroup comparison within one treated cohort",
+      "evidence_record_ids": [
+        "ev-glp1ra-adherence-comorbidity-predictors-001"
+      ],
+      "interpretation_boundary": "The comparator is presence versus absence of a comorbidity (cardiovascular or digestive) within one real-world treated cohort, not a placebo or active-drug arm. It qualifies real-world tolerability, not efficacy or discontinuation rate."
     }
   ],
   "contradiction_assessment": {
@@ -205,7 +239,7 @@
   "limitations": [
     "Secondary review verified record-to-source fidelity but did not independently reanalyze study data, perform a full risk-of-bias assessment, or establish source truth.",
     "The direct randomized evidence is centered on semaglutide and adults without diabetes; one small liraglutide trial after gastric banding supplies a boundary but cannot support an undifferentiated class-wide conclusion for every GLP-1 receptor agonist or population.",
-    "Three population extensions and the active-comparator record are observational and remain vulnerable to residual confounding.",
+    "Three population extensions, the active-comparator record, the post-bariatric tirzepatide qualifier, and the real-world adherence synthesis are observational and remain vulnerable to residual confounding.",
     "Post-withdrawal durability is represented by one exploratory extension of selected STEP 1 completers and requires replication across agents, treatment durations, and longer follow-up.",
     "The safety qualifier comes from one 2022 semaglutide review with varied doses and durations; it is not a current class-wide safety assessment or a benefit-harm conclusion.",
     "Access, cost, patient preference, event severity, and individual benefit-harm tradeoffs are not represented.",
@@ -213,18 +247,18 @@
   ],
   "known_gaps": [
     "Human domain-expert adjudication remains available for disputed records or substantive future changes; this completed secondary audit was AI-assisted and is not human review.",
-    "Longer and independently replicated post-discontinuation trajectories across semaglutide and other agents.",
-    "Broader agent-level coverage beyond semaglutide, with drug, dose, formulation, and duration kept separate.",
-    "Newer agent-specific and class-wide safety syntheses that preserve event severity, dose, duration, and population differences.",
+    "Longer and independently replicated post-discontinuation trajectories across semaglutide and other agents remain open; the 2026-08-08 addition extended agent/population coverage (tirzepatide, post-bariatric) but did not add a second withdrawal-trajectory observation.",
+    "Broader agent-level coverage beyond semaglutide, with drug, dose, formulation, and duration kept separate; partially extended on 2026-08-08 by one tirzepatide post-bariatric cohort, still bounded to a single uncontrolled study.",
+    "Newer agent-specific and class-wide safety syntheses that preserve event severity, dose, duration, and population differences; partially extended on 2026-08-08 by one real-world adherence cohort, which measures adherence as a tolerability proxy rather than adjudicated adverse-event rates.",
     "Pediatric, pregnancy, frailty, and geographically diverse population coverage where scientifically and ethically appropriate.",
-    "Periodic reruns of the same-PICO contradiction search as new trials mature or the direct map PICO changes; the 2026-08-04 bounded search identified none."
+    "Periodic reruns of the same-PICO contradiction search as new trials mature or the direct map PICO changes; the 2026-08-04 bounded search identified none, and the 2026-08-08 addition of two agent/population and safety qualifiers did not surface a same-PICO contradiction either."
   ],
   "review": {
     "method": "Independent source audit of every selected Evidence Record and Relationship Record against legally usable local PDFs, including durability, safety, and agent/population qualifiers, with explicit PICO, comparator, time-window, endpoint, numerical result, limitation, relationship-rationale, and contradiction-boundary checks.",
     "status": "reviewed",
     "reviewed_by": "OpenAI Codex",
     "reviewer_type": "ai_assisted_independent_source_audit",
-    "review_date": "2026-08-04",
-    "notes": "The initial audit corrected two Evidence Records and two relationship rationales; the durability/safety follow-up added two source-audited Evidence Records and three reviewed qualifier relationships; the same-PICO contradiction audit added one source-audited agent/population qualifier and one reviewed relationship while preserving an honest negative search result. Reviewed means accepted for record-to-source fidelity under the map contract. It does not mean human domain-expert approval, independent statistical reanalysis, scientific synthesis, benefit-harm assessment, consensus, confidence, or truth determination."
+    "review_date": "2026-08-08",
+    "notes": "The initial audit corrected two Evidence Records and two relationship rationales; the durability/safety follow-up added two source-audited Evidence Records and three reviewed qualifier relationships; the same-PICO contradiction audit added one source-audited agent/population qualifier and one reviewed relationship while preserving an honest negative search result. The 2026-08-08 gap-closure round added two further source-audited Evidence Records already at manual_human_review extraction tier (a post-bariatric tirzepatide cohort and a real-world GLP-1RA adherence/comorbidity cohort) and two reviewed relationships (contextualizes, qualifies), each independently re-verified against its source PDF this round; it is a bounded partial closure of the durability/agent-coverage/safety-synthesis gaps, not a full resolution of any of them. Reviewed means accepted for record-to-source fidelity under the map contract. It does not mean human domain-expert approval, independent statistical reanalysis, scientific synthesis, benefit-harm assessment, consensus, confidence, or truth determination."
   }
 }

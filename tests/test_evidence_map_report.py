@@ -245,8 +245,8 @@ def test_committed_glp1_map_report_has_expected_counts_and_no_database(
     )
 
     assert result.exit_code == 0, result.output
-    assert "Evidence records: 12" in result.output
-    assert "Selected relationships: 17" in result.output
+    assert "Evidence records: 14" in result.output
+    assert "Selected relationships: 19" in result.output
     report = output.read_text(encoding="utf-8")
     assert report.count("### ") >= 12
     assert "ev-glp1-glide-liraglutide-post-lagb-weight-001" in report
