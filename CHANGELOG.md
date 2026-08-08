@@ -9,6 +9,16 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Mental health corpus: tightened-query cycle 2, 4 more real papers.**
+  A third discovery cycle scanned 100 candidates (50 accepted); 4 passed
+  scope screen (8% yield, up from 3.8%): a desvenlafaxine network
+  meta-analysis, a vortioxetine-vs-sertraline PD-comorbid-depression
+  comparison, a venlafaxine pharmacovigilance analysis, and a
+  bupropion+sertraline precision-medicine trial. Corpus now holds 14
+  real papers. Acquired via a new local batch-runner script
+  (`work/run_paper_batch.sh`) that collapses acquire/import/split/verify
+  into one call.
+
 - **Oncology corpus batch 4 (300 more records); investigated SELECT as a
   second binary statistical input.** Promoted 300 more oncology drafts
   into `evidence_records.jsonl` (now 900 total, 622 eligible drafts

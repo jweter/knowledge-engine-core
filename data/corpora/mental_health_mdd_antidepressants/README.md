@@ -84,7 +84,18 @@ scope screen (~3.8%, versus the untightened query's 1.5% on its second
 cycle) -- a real but modest improvement, not a fix. Both acquired and
 imported: a paroxetine post-marketing pharmacovigilance safety analysis
 and a trazodone-vs-SSRIs comparative-effectiveness study. Corpus now
-holds 10 real papers. More cycles are needed to build a corpus of
-comparable size to GLP-1/oncology, given the still-low per-cycle yield.
-Individually authoring and reviewing Evidence Records remains future,
-separate work.
+holds 10 real papers.
+
+**Tightened-query cycle 2 (2026-08-08, same day): 4 more real papers,
+yield up to 8%.** A third discovery cycle (tightened query, retstart=100)
+scanned 100 candidates, 50 deterministically accepted. 4 passed scope
+screen: a desvenlafaxine (SNRI) network meta-analysis, a
+vortioxetine-vs-sertraline comparison in Parkinson's-disease-comorbid
+depression, a venlafaxine (SNRI) post-marketing pharmacovigilance
+analysis, and a bupropion-plus-sertraline precision-medicine SMART trial.
+Acquired and imported with `work/run_paper_batch.sh` (a local
+batch-runner script collapsing acquire/import/split/verify into one
+call). Corpus now holds 14 real papers. More cycles are needed to build a
+corpus of comparable size to GLP-1/oncology, given the still-low
+per-cycle yield. Individually authoring and reviewing Evidence Records
+remains future, separate work.
