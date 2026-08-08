@@ -12,7 +12,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Oncology corpus fully seeded from the 1,522-item eligible-drafts
   pool; mental health cycle 5 (9 more real papers, best yield yet).**
   Promoted the final 322 oncology drafts -- `evidence_records.jsonl` now
-  holds all 1,521 records the m28-pico-v5 extraction pass produced.
+  holds all 1,521 records the m28-pico-v5 extraction pass produced. Ran
+  `ke graph-build` on the final batch: 1,675 claims, 109 concepts,
+  1,597 claim-concept edges, up from 1,353/104/1,305.
   Mental health's fifth discovery cycle (56 accepted) yielded 9 real
   papers (16%, the best cycle yet): systematic reviews of
   citalopram/escitalopram metabolic effects, SSRI/SNRI post-stroke
