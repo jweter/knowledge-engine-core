@@ -501,7 +501,7 @@ traceability, not for consumers to branch on:
 `CLAIM_FRAMING_RULES_VERSION` (`m18-claim-framing-v1`),
 `DRAFT_EVIDENCE_ITEM_RULES_VERSION` (`m19-draft-evidence-item-v1`),
 `STUDY_DESIGN_RULES_VERSION` (`m26-study-design-v3`),
-`PICO_EXTRACTION_RULES_VERSION` (`m28-pico-v3`),
+`PICO_EXTRACTION_RULES_VERSION` (`m28-pico-v5`),
 `EXTRACTION_REVIEW_ANNOTATE_RULES_VERSION` (`m45-extraction-review-annotate-v2`).
 A future re-run with a bumped ruleset is never automatic (M25) -- a human
 decides when to re-invoke extraction for a given paper.

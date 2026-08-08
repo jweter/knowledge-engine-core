@@ -7,6 +7,28 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **PICO extraction cue patterns matched statistical-result sentences,
+  not comparator/outcome statements, in the oncology corpus.** Found
+  while trial-running `ke extraction-review-batch-generate` +
+  `extraction-review-autoclassify` against the 335 imported
+  `oncology_nsclc_checkpoint_inhibitors` papers (see
+  `docs/oncology_corpus_scoping.md`'s 2026-08-08 status entries for the
+  full finding). `PICO_EXTRACTION_RULES_VERSION` bumped `m28-pico-v4` ->
+  `m28-pico-v5`: a candidate sentence carrying an explicit
+  statistical-result marker (a p-value, a `95% CI`, or an effect-measure
+  abbreviation like `OR:`/`HR:` followed by a number) is now skipped for
+  every PICO field, the same "skip, never guess" precedent
+  `is_table_derived` already established. Re-running the trial batch
+  confirmed zero of the resulting 1,522 eligible draft items retain a
+  statistical-result marker in `comparator`/`outcome` (down from
+  widespread leakage), with no regression to the existing test suite.
+  This is a real, measured, but partial fix -- comparator/outcome still
+  sometimes capture a named statistical-method or tool phrase with no
+  numeric marker (e.g. "assessed using the Wilcoxon rank-sum test"), so
+  no oncology automated Evidence Record was promoted.
+
 ### Added
 
 - **Persistent-host build-trigger status decision and a fresh-clone backup
