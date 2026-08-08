@@ -1,7 +1,7 @@
 {
-  "cycles_run": 2,
+  "cycles_run": 3,
   "limit": 100,
-  "next_retstart": 200,
+  "next_retstart": 300,
   "query": "(\"major depressive disorder\" OR \"major depression\" OR \"depressive disorder\" OR \"depressive symptoms\") AND (SSRI OR SNRI OR fluoxetine OR sertraline OR escitalopram OR paroxetine OR citalopram OR venlafaxine OR duloxetine OR desvenlafaxine OR \"selective serotonin reuptake inhibitor\" OR \"serotonin-norepinephrine reuptake inhibitor\") AND pubmed pmc open access[filter]",
-  "updated_at": "2026-08-08T23:07:46+00:00"
+  "updated_at": "2026-08-08T23:25:39+00:00"
 }

@@ -82,3 +82,12 @@ source text -- accurate. 922 further eligible drafts remain unpromoted.
 up from 754/97/645. Spot-checked `claim_text` across the new batch
 against real source text -- accurate. 622 further eligible drafts remain
 unpromoted.
+
+**Fifth batch (2026-08-08, same day): 299 more records promoted.**
+`evidence_records.jsonl` now holds 1,199 draft records (900 + 299; one
+of the 300-item slice was already promoted and correctly skipped).
+`ke graph-build` processed the 299 new records: graph totals now 1,353
+claims, 104 concepts (64 mesh, 40 rxnorm), 1,305 claim-concept edges, up
+from 1,054/100/932. Spot-checked `claim_text` across the new batch
+against real source text -- accurate. 323 further eligible drafts remain
+unpromoted.

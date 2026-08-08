@@ -95,7 +95,16 @@ depression, a venlafaxine (SNRI) post-marketing pharmacovigilance
 analysis, and a bupropion-plus-sertraline precision-medicine SMART trial.
 Acquired and imported with `work/run_paper_batch.sh` (a local
 batch-runner script collapsing acquire/import/split/verify into one
-call). Corpus now holds 14 real papers. More cycles are needed to build a
-corpus of comparable size to GLP-1/oncology, given the still-low
-per-cycle yield. Individually authoring and reviewing Evidence Records
-remains future, separate work.
+call). Corpus now holds 14 real papers.
+
+**Tightened-query cycle 3 (2026-08-08, same day): 4 more real papers,
+yield holding around 8%.** A fourth discovery cycle (retstart=200)
+scanned 100 candidates, 48 deterministically accepted. 4 passed scope
+screen: the DEPRE'5 RCT (treatment strategies after a failed SSRI trial
+in MDD), a sertraline inflammatory-markers systematic review/
+meta-analysis, a paroxetine-plus-sulpiride sleep/quality-of-life study,
+and a network meta-analysis of antidepressant efficacy/tolerability in
+comorbid physical conditions. Corpus now holds 18 real papers. More
+cycles are needed to build a corpus of comparable size to GLP-1/oncology,
+given the still-low per-cycle yield. Individually authoring and
+reviewing Evidence Records remains future, separate work.

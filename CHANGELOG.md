@@ -9,6 +9,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Oncology corpus batch 5 (299 more records); mental health cycle 4.**
+  Promoted 299 more oncology drafts (1,199 total, 323 eligible remain)
+  and ran `ke graph-build` (1,353 claims, 104 concepts, 1,305
+  claim-concept edges, up from 1,054/100/932). Ran mental health's
+  fourth discovery cycle (48 accepted, 4 passed screen: the DEPRE'5
+  post-SSRI-failure RCT, a sertraline inflammatory-markers meta-analysis,
+  a paroxetine+sulpiride study, and an antidepressant-comorbidity
+  network meta-analysis); corpus now holds 18 real papers.
+
 - **Mental health corpus: tightened-query cycle 2, 4 more real papers.**
   A third discovery cycle scanned 100 candidates (50 accepted); 4 passed
   scope screen (8% yield, up from 3.8%): a desvenlafaxine network
