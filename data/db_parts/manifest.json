@@ -1,10 +1,10 @@
 {
   "backup": {
     "byte_count": 515145728,
-    "created_at": "2026-08-08T23:27:58.278777Z",
+    "created_at": "2026-08-08T23:30:00.946665Z",
     "filename": "knowledge_engine.sqlite3",
     "integrity_check": "ok",
-    "production_commit": "1e670d212c9d42d07f0807668d6738aef148ee14",
+    "production_commit": "36c5dcdc4a7213f27b0137a295bdbf72e3431af1",
     "schema_version": 0,
     "sha256": "75906624b045a486f2d66b145b65487baed43b016e676d4f561233b9e6ed4791",
     "table_counts": {
