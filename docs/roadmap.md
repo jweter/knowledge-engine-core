@@ -109,7 +109,11 @@ temporary detour:
    event-triggered web snapshots and AI subprocess calls until the operator,
    accepted API fixtures, published-data procedure, consumer migration, and
    network-security conditions in `docs/persistent_host_design.md` are ready.
-   Then migrate web and AI one parity-tested, read-only slice at a time.
+   Then migrate web and AI one parity-tested, read-only slice at a time. As of
+   2026-08-08, all five build-trigger conditions are checked and confirmed
+   unmet (`docs/persistent_host_design.md`'s "2026-08-08 Build-Trigger
+   Status" section); the project explicitly commits to the current model for
+   the near term.
 
 The strategic preference behind this order is explicit: retrieval quality and
 one complete scientific evidence map take priority over *further GLP-1-only*
@@ -1397,16 +1401,17 @@ automatically.
   Statistical Pooling Protocol design must not begin until a future
   readiness-gate run reports `ready_for_pooling_design_review`.
 - `v0.5.0-beta`: Current Project Path goal 5's decision is made and written
-  down, whichever way it resolves -- either `docs/persistent_host_design.md`'s
-  five build-trigger conditions (named operator, accepted API fixtures,
-  published-data procedure, tested consumer migration, decided
-  binding/TLS/credentials/rate-limits) are actually met and a first
-  parity-tested read-only slice migrates, or the project explicitly commits
-  to its current event-triggered-snapshot-plus-subprocess model for the
-  near term and documents why. A tested backup/restore runbook already
-  exists (`docs/corpus_database_chunked_versioning.md`); this tag requires
-  it to have been exercised at least once from a genuinely fresh clone, not
-  merely written.
+  down -- live. `docs/persistent_host_design.md`'s "2026-08-08 Build-Trigger
+  Status" section checks all five build-trigger conditions (named operator,
+  accepted API fixtures, published-data procedure, tested consumer
+  migration, decided binding/TLS/credentials/rate-limits) against the
+  project's actual state and confirms none are met; the project explicitly
+  commits to its current event-triggered-snapshot-plus-subprocess model for
+  the near term. The backup/restore runbook
+  (`docs/corpus_database_chunked_versioning.md`) has now been exercised from
+  a genuinely fresh, network `git clone` of `main` (not a working directory
+  with leftover state) and independently hash-verified -- see its
+  "2026-08-08 fresh-clone verification" section.
 - `v1.0.0`: all of the above are simultaneously true, no known
   data-loss/corruption risk exists in the actual deployed path, every
   corpus's license/attribution basis has been reviewed (not just gated at

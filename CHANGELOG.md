@@ -9,6 +9,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Persistent-host build-trigger status decision and a fresh-clone backup
+  restore verification.** `docs/persistent_host_design.md`'s five build
+  trigger conditions (named operator, approved consumer migration, accepted
+  fixtures, tested restart procedure, decided network security) are each
+  checked against the project's actual current state and confirmed unmet;
+  the project explicitly commits to the current event-triggered-snapshot-
+  plus-subprocess model for the near term (see its new "2026-08-08
+  Build-Trigger Status" section). Separately, exercised the chunked-database
+  backup/restore runbook from a genuinely fresh, network `git clone` of
+  `main` for the first time (not this working directory): reassembled a
+  507,453,440-byte database from the committed `data/db_parts/`, verified
+  every part hash, `PRAGMA integrity_check = ok`, and 1,295-row `papers`
+  count, then independently confirmed the output file's SHA-256 with
+  `sha256sum`. Both satisfy `docs/roadmap.md`'s `v0.5.0-beta` tag
+  prerequisites. See `docs/corpus_database_chunked_versioning.md`'s
+  "2026-08-08 fresh-clone verification" section.
+
 - **Statistical Verification Readiness Gate.** New `ke
   statistical-readiness-report` command and
   `knowledge_engine/statistical_readiness.py` module implement the
