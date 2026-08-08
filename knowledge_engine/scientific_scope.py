@@ -103,9 +103,44 @@ ONCOLOGY_NSCLC_CHECKPOINT_SCOPE = ScopeVocabulary(
 "immunotherapy" in general -- narrow enough to be evidence-map-defensible
 the same way the GLP-1 corpus is."""
 
+MENTAL_HEALTH_MDD_ANTIDEPRESSANT_SCOPE = ScopeVocabulary(
+    corpus_id="mental_health_mdd_antidepressants",
+    disease_terms=(
+        "major depressive disorder",
+        "major depression",
+        "depressive disorder",
+        "depressive symptoms",
+        "depression",
+    ),
+    intervention_terms=(
+        "treatment",
+        "therapy",
+        "therapeutic",
+        "antidepressant",
+        "ssri",
+        "snri",
+        "selective serotonin reuptake inhibitor",
+        "serotonin-norepinephrine reuptake inhibitor",
+        "fluoxetine",
+        "sertraline",
+        "escitalopram",
+        "paroxetine",
+        "citalopram",
+        "venlafaxine",
+        "duloxetine",
+        "desvenlafaxine",
+    ),
+)
+"""See `docs/mental_health_corpus_scoping.md` for the full rationale. Mirrors
+`GLP1_METABOLIC_SCOPE` and `ONCOLOGY_NSCLC_CHECKPOINT_SCOPE`'s shape: one
+bounded population/intervention pair (adult MDD / SSRIs and SNRIs), not
+"mental health" or "psychiatry" in general -- narrow enough to be
+evidence-map-defensible the same way the other two corpora are."""
+
 _SCOPE_VOCABULARIES_BY_CORPUS_ID: dict[str, ScopeVocabulary] = {
     GLP1_METABOLIC_SCOPE.corpus_id: GLP1_METABOLIC_SCOPE,
     ONCOLOGY_NSCLC_CHECKPOINT_SCOPE.corpus_id: ONCOLOGY_NSCLC_CHECKPOINT_SCOPE,
+    MENTAL_HEALTH_MDD_ANTIDEPRESSANT_SCOPE.corpus_id: MENTAL_HEALTH_MDD_ANTIDEPRESSANT_SCOPE,
 }
 
 

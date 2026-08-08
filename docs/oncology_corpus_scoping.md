@@ -134,3 +134,22 @@ markers with a trailing number to named statistical-method/tool phrases,
 or reconsidering the cue-pattern approach for this corpus's outcome
 field specifically) remains the next step before any oncology automated
 record is promoted at scale.
+
+**2026-08-08 (later same day): first 100-record automated batch promoted,
+plus a first M69 grounding trial.** Per `docs/roadmap.md`'s "Decision: the
+extraction and discovery framework must be domain-general" (recorded the
+same day), promoted the first 100 v5-extracted, structurally-eligible
+draft items into real, honestly-labeled `draft`/`m52-evidence-classification-v1`
+Evidence Records (`data/corpora/oncology_nsclc_checkpoint_inhibitors/evidence_records.jsonl`).
+Ran `ke evidence-review-automate` (M69's grounding-verified LLM path,
+`qwen2.5:1.5b`) against the first 25 as a trial: only 2 records had a field
+accepted (grounding verification rejected the rest rather than guessing),
+confirming the LLM path is a genuine, low-yield-but-trustworthy safety net,
+not a fast complete fix. `claim_text`/`result_summary` were spot-checked
+against real source text and are accurate; `research_question` (templated
+from PICO fields) remains known-unreliable for many records -- this is
+disclosed, not hidden, and matches the same `draft`/pre-review tier the
+GLP-1 corpus's own automated records went through before individual
+secondary review. See `data/corpora/oncology_nsclc_checkpoint_inhibitors/README.md`'s
+Status section for the full account. 1,422 further eligible drafts and
+graph population remain future work.

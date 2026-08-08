@@ -177,6 +177,21 @@ LLM path trustworthy for an unfamiliar field. Retrieval itself (embedding
 the gap in extraction and corpus-selection, the two places domain-specific
 hand-tuning had crept in.
 
+Acted on the same day: the oncology corpus's PICO-extraction pattern
+collision was partially fixed (`m28-pico-v5`; skips statistical-result
+sentences), and its first 100 records were promoted as honestly-labeled
+automated Evidence Records, then partially refined through the M69
+grounding-verified LLM path (2 of a 25-record trial batch improved; the
+rest correctly rejected rather than guessed) -- see
+`docs/oncology_corpus_scoping.md`. The corpus library's third domain,
+**mental health -- SSRIs/SNRIs in adult major depressive disorder** -- is
+now scoped (`docs/mental_health_corpus_scoping.md`,
+`data/corpora/mental_health_mdd_antidepressants/`,
+`knowledge_engine/scientific_scope.py`'s
+`MENTAL_HEALTH_MDD_ANTIDEPRESSANT_SCOPE`), chosen by the project owner over
+cardiovascular disease and infectious disease/vaccines as alternatives.
+Seeding it with real papers remains future work.
+
 ### Decision: corpus database versioning via chunked git commits
 
 The corpus SQLite database (`data/knowledge_engine.sqlite3`, gitignored

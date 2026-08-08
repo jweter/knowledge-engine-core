@@ -44,3 +44,21 @@ authoring and review later, for a much smaller subset). Continue discovery
 with `--corpus oncology_nsclc_checkpoint_inhibitors` and
 `data/corpora/oncology_nsclc_checkpoint_inhibitors/discovery_state.json` as
 `--state` to resume from `retstart=950`.
+
+**First automated Evidence Record batch (2026-08-08).** After the PICO
+extraction-accuracy fix (`m28-pico-v5`; see `docs/oncology_corpus_scoping.md`),
+a first batch of 100 records was promoted into `evidence_records.jsonl`,
+honestly labeled `m52-evidence-classification-v1` and `review_status: draft`
+-- the same automated tier the GLP-1 corpus used before individual review,
+never claiming human confirmation. A trial run of `ke evidence-review-automate`
+(M69's grounding-verified LLM refinement) against the first 25 of those
+records improved 2 (`population`/`outcome`/`intervention` fields regrounded
+against source text; every other proposed correction was rejected by
+grounding verification rather than guessed). `claim_text`/`result_summary`
+-- the actual scientific claim quotes -- were spot-checked against real
+paper text and are accurate; the `research_question` field (templated from
+still-imperfect PICO fields) remains known-unreliable for many records
+pending further extraction work or individual secondary review, exactly the
+same limitation `docs/oncology_corpus_scoping.md` already documents. This is
+still not a reviewed evidence base or a golden map -- both remain future work.
+1,422 further eligible drafts remain unpromoted.
