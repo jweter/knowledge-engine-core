@@ -9,6 +9,17 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Oncology corpus: second automated Evidence Record batch (200 more
+  records).** `data/corpora/oncology_nsclc_checkpoint_inhibitors/evidence_records.jsonl`
+  now holds 300 `draft`/`m52-evidence-classification-v1` records (100 + 200),
+  same honesty discipline as the first batch. Spot-checked `claim_text`
+  across the new batch against real source text -- accurate. 1,222 further
+  eligible drafts remain unpromoted. Also ran the mental-health corpus's
+  first live discovery cycle (`ke discovery-cycle-run --corpus
+  mental_health_mdd_antidepressants`): 100 PubMed candidates scanned, 54
+  deterministically accepted, ready for the same human/AI title-and-abstract
+  scope screen this project has always required before acquisition.
+
 - **Mental health corpus scoped (third research domain) and oncology's
   first automated Evidence Record batch.** Per `docs/roadmap.md`'s
   "Decision: the extraction and discovery framework must be domain-general,
