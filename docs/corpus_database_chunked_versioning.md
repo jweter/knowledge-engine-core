@@ -115,6 +115,21 @@ Run against this environment's real corpus database (382,287,872 bytes,
 - Direct content comparison against the live original confirmed identical
   row counts (960) and an identical title for `papers.id = 1`.
 
+### 2026-08-08 fresh-clone verification
+
+Re-ran the restore half of the runbook from a genuinely fresh, network
+`git clone` of `main` (not this working directory) against the corpus as it
+stood after the oncology bulk-seeding batch: `data/db_parts/` present with 6
+parts, no `data/knowledge_engine.sqlite3` present (confirming it is not
+committed). `reassemble_corpus_database.py --parts-dir data/db_parts --output
+data/knowledge_engine.sqlite3` produced a 507,453,440-byte file, verified
+every part's SHA-256, the whole-file SHA-256
+(`d30120040977608c92bce1ae3f59163a331ac25b06508d5a7239e7e83694a258`),
+`PRAGMA integrity_check = ok`, and `papers` row count = 1,295, matching
+`manifest.json`. Independently confirmed via `sha256sum` on the reassembled
+file outside the tool's own reported output. The clone was deleted after
+verification; nothing from it was committed.
+
 ## Status
 
 Tooling built, tested (17 unit tests plus the live round trip above), and
