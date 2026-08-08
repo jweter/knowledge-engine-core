@@ -82,6 +82,52 @@ def test_cli_refuses_existing_output_without_force(tmp_path: Path) -> None:
     assert output.read_text(encoding="utf-8") == "existing"
 
 
+def test_cli_corpus_flag_selects_a_different_scope_vocabulary(tmp_path: Path) -> None:
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates)
+    output = tmp_path / "review.json"
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "core-candidate-review-prepare",
+            "--candidates",
+            str(candidates),
+            "--output",
+            str(output),
+            "--corpus",
+            "oncology_nsclc_checkpoint_inhibitors",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["items"][0]["inclusion_rule_result"] == "insufficient_title_abstract_evidence"
+
+
+def test_cli_rejects_an_unknown_corpus(tmp_path: Path) -> None:
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates)
+    output = tmp_path / "review.json"
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "core-candidate-review-prepare",
+            "--candidates",
+            str(candidates),
+            "--output",
+            str(output),
+            "--corpus",
+            "not_a_real_corpus",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Unknown corpus id" in result.output
+    assert not output.exists()
+
+
 def test_cli_reports_a_clean_error_on_malformed_input(tmp_path: Path) -> None:
     candidates = tmp_path / "candidates.json"
     candidates.write_text("not json", encoding="utf-8")

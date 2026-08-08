@@ -115,8 +115,8 @@ growth is no longer categorically deprioritized project-wide -- a bounded,
 well-scoped second corpus, mirroring `glp1_weight_loss`'s existing shape
 (`corpus.json`, inclusion/exclusion criteria, a single defensible research
 question), is now an active, parallel workstream. See
-`docs/oncology_corpus_scoping.md` (once written) for the specific research
-question and inclusion boundaries.
+`docs/oncology_corpus_scoping.md` for the specific research question and
+inclusion boundaries.
 
 ### Decision: corpus database versioning via chunked git commits
 

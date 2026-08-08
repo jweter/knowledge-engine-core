@@ -154,6 +154,7 @@ from knowledge_engine.rxnorm_lookup import (
     RxNormLookupError,
     RxNormLookupService,
 )
+from knowledge_engine.scientific_scope import GLP1_METABOLIC_SCOPE, resolve_scope_vocabulary
 from knowledge_engine.search import SearchService
 from knowledge_engine.search_fusion import fuse_rankings
 from knowledge_engine.unpaywall_http import UrllibUnpaywallTransport
@@ -210,6 +211,16 @@ CandidateLimitOption = Annotated[
 CandidateRetstartOption = Annotated[
     int,
     typer.Option("--retstart", min=0, help="Zero-based PubMed page offset."),
+]
+CorpusScopeOption = Annotated[
+    str,
+    typer.Option(
+        "--corpus",
+        help=(
+            "Which corpus's scope vocabulary to adjudicate candidates against. "
+            "See knowledge_engine.scientific_scope for known corpus ids."
+        ),
+    ),
 ]
 DiscoveryCycleStateOption = Annotated[
     Path,
@@ -981,6 +992,7 @@ def discovery_cycle_run(
     output: DiscoveryCycleOutputOption,
     limit: CandidateLimitOption = 25,
     force: ForceOutputOption = False,
+    corpus: CorpusScopeOption = GLP1_METABOLIC_SCOPE.corpus_id,
 ) -> None:
     """Run one cycle of automated discovery: discover, adjudicate, ledger-check (M55).
 
@@ -1010,6 +1022,11 @@ def discovery_cycle_run(
     before running `ke pmc-oa-acquire`.
     """
 
+    try:
+        vocabulary = resolve_scope_vocabulary(corpus)
+    except KeyError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
     _validate_output(output, force=force)
     try:
         cycle_state = load_discovery_cycle_state(state, query=query, limit=limit)
@@ -1034,7 +1051,7 @@ def discovery_cycle_run(
         discovery_path = Path(tmpdir) / "discovery.json"
         discovery_path.write_text(discovery_result.to_json(), encoding="utf-8")
         try:
-            worksheet = prepare_candidate_review(discovery_path)
+            worksheet = prepare_candidate_review(discovery_path, vocabulary=vocabulary)
         except CandidateReviewError as exc:
             console.print(f"[red]Candidate adjudication failed:[/red] {escape(str(exc))}")
             raise typer.Exit(1) from exc
@@ -1133,6 +1150,7 @@ def europepmc_candidate_review_prepare(
     candidates: EuropePmcReviewCandidatesOption,
     output: CandidateOutputOption,
     force: ForceOutputOption = False,
+    corpus: CorpusScopeOption = GLP1_METABOLIC_SCOPE.corpus_id,
 ) -> None:
     """Create a deterministic Europe PMC adjudication worksheet.
 
@@ -1141,9 +1159,14 @@ def europepmc_candidate_review_prepare(
     but as a `ke` subcommand for discoverability.
     """
 
+    try:
+        vocabulary = resolve_scope_vocabulary(corpus)
+    except KeyError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
     _validate_output(output, force=force)
     try:
-        worksheet = prepare_europepmc_candidate_review(candidates)
+        worksheet = prepare_europepmc_candidate_review(candidates, vocabulary=vocabulary)
     except EuropePmcCandidateReviewError as exc:
         console.print(
             f"[red]Europe PMC candidate review preparation failed:[/red] {escape(str(exc))}"
@@ -1206,6 +1229,7 @@ def core_candidate_review_prepare(
     candidates: CoreReviewCandidatesOption,
     output: CandidateOutputOption,
     force: ForceOutputOption = False,
+    corpus: CorpusScopeOption = GLP1_METABOLIC_SCOPE.corpus_id,
 ) -> None:
     """Create a deterministic CORE adjudication worksheet.
 
@@ -1215,9 +1239,14 @@ def core_candidate_review_prepare(
     see `core_candidate_review.py`'s module docstring.
     """
 
+    try:
+        vocabulary = resolve_scope_vocabulary(corpus)
+    except KeyError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
     _validate_output(output, force=force)
     try:
-        worksheet = prepare_core_candidate_review(candidates)
+        worksheet = prepare_core_candidate_review(candidates, vocabulary=vocabulary)
     except CoreCandidateReviewError as exc:
         console.print(f"[red]CORE candidate review preparation failed:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc

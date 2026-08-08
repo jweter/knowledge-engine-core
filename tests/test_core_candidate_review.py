@@ -11,6 +11,7 @@ from knowledge_engine.core_candidate_review import (
     CoreCandidateReviewError,
     prepare_core_candidate_review,
 )
+from knowledge_engine.scientific_scope import ONCOLOGY_NSCLC_CHECKPOINT_SCOPE
 
 
 def _write_candidates(
@@ -53,6 +54,28 @@ def _candidate(**overrides: object) -> dict[str, object]:
     }
     base.update(overrides)
     return base
+
+
+def test_oncology_vocabulary_changes_the_inclusion_outcome(tmp_path: Path) -> None:
+    glp1_candidates = tmp_path / "glp1.json"
+    _write_candidates(glp1_candidates, [_candidate()])
+    oncology_candidates = tmp_path / "oncology.json"
+    _write_candidates(
+        oncology_candidates,
+        [_candidate(title="Pembrolizumab therapy for adults with non-small-cell lung cancer")],
+    )
+
+    glp1_under_oncology = prepare_core_candidate_review(
+        glp1_candidates, vocabulary=ONCOLOGY_NSCLC_CHECKPOINT_SCOPE
+    )
+    oncology_under_oncology = prepare_core_candidate_review(
+        oncology_candidates, vocabulary=ONCOLOGY_NSCLC_CHECKPOINT_SCOPE
+    )
+
+    assert (
+        glp1_under_oncology.items[0].inclusion_rule_result == "insufficient_title_abstract_evidence"
+    )
+    assert oncology_under_oncology.items[0].inclusion_rule_result == "passed"
 
 
 def test_complete_candidate_is_still_held_on_missing_license(tmp_path: Path) -> None:
