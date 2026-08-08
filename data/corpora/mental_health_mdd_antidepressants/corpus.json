@@ -1,0 +1,17 @@
+{
+  "manifest_version": 1,
+  "corpus_id": "mental_health_mdd_antidepressants",
+  "name": "Mental Health: Antidepressants in Major Depressive Disorder Corpus",
+  "description": "Third research domain, added per docs/roadmap.md's 'Decision: the extraction and discovery framework must be domain-general, not per-field-patched'. Mirrors glp1_weight_loss's and oncology_nsclc_checkpoint_inhibitors's shape: one bounded population/intervention pair, not mental health in general.",
+  "scientific_domain": "psychiatry -- SSRIs/SNRIs in adult major depressive disorder",
+  "research_question": {
+    "question_id": "q_mental_health_mdd_antidepressant_response",
+    "text": "Do selective serotonin reuptake inhibitors (SSRIs) and serotonin-norepinephrine reuptake inhibitors (SNRIs) reduce depressive symptom severity in adults with major depressive disorder (MDD)?"
+  },
+  "created_at": "2026-08-08",
+  "updated_at": "2026-08-08",
+  "license_policy": "license_policy.md",
+  "source_manifest": "sources.csv",
+  "default_local_papers_directory": "papers/corpora/mental_health_mdd_antidepressants",
+  "notes": "2026-08-08: corpus definition created, not yet seeded. No discovery cycles have been run and sources.csv is header-only. See docs/mental_health_corpus_scoping.md for the scoping rationale."
+}

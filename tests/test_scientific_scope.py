@@ -4,6 +4,7 @@ import pytest
 
 from knowledge_engine.scientific_scope import (
     GLP1_METABOLIC_SCOPE,
+    MENTAL_HEALTH_MDD_ANTIDEPRESSANT_SCOPE,
     ONCOLOGY_NSCLC_CHECKPOINT_SCOPE,
     ScopeVocabulary,
     evaluate_scientific_scope,
@@ -91,10 +92,49 @@ def test_oncology_vocabulary_pediatric_title_without_adult_term_is_flagged() -> 
     assert result == "pediatric_population_title_evidence"
 
 
+def test_mental_health_vocabulary_passes_a_matching_mental_health_title() -> None:
+    result = evaluate_scientific_scope(
+        "Sertraline therapy for adults with major depressive disorder",
+        None,
+        vocabulary=MENTAL_HEALTH_MDD_ANTIDEPRESSANT_SCOPE,
+    )
+    assert result == "passed"
+
+
+def test_mental_health_vocabulary_rejects_a_glp1_title() -> None:
+    result = evaluate_scientific_scope(
+        "Semaglutide therapy for adults with obesity",
+        None,
+        vocabulary=MENTAL_HEALTH_MDD_ANTIDEPRESSANT_SCOPE,
+    )
+    assert result == "insufficient_title_abstract_evidence"
+
+
+def test_glp1_vocabulary_rejects_a_mental_health_title() -> None:
+    result = evaluate_scientific_scope(
+        "Sertraline therapy for adults with major depressive disorder",
+        None,
+        vocabulary=GLP1_METABOLIC_SCOPE,
+    )
+    assert result == "insufficient_title_abstract_evidence"
+
+
+def test_mental_health_vocabulary_pediatric_title_without_adult_term_is_flagged() -> None:
+    result = evaluate_scientific_scope(
+        "Sertraline therapy for major depressive disorder in adolescents",
+        None,
+        vocabulary=MENTAL_HEALTH_MDD_ANTIDEPRESSANT_SCOPE,
+    )
+    assert result == "pediatric_population_title_evidence"
+
+
 def test_resolve_scope_vocabulary_returns_the_matching_vocabulary() -> None:
     assert resolve_scope_vocabulary("glp1_weight_loss") is GLP1_METABOLIC_SCOPE
     assert resolve_scope_vocabulary("oncology_nsclc_checkpoint_inhibitors") is (
         ONCOLOGY_NSCLC_CHECKPOINT_SCOPE
+    )
+    assert resolve_scope_vocabulary("mental_health_mdd_antidepressants") is (
+        MENTAL_HEALTH_MDD_ANTIDEPRESSANT_SCOPE
     )
 
 

@@ -7,6 +7,32 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Mental health corpus scoped (third research domain) and oncology's
+  first automated Evidence Record batch.** Per `docs/roadmap.md`'s
+  "Decision: the extraction and discovery framework must be domain-general,
+  not per-field-patched," scoped a third corpus --
+  `mental_health_mdd_antidepressants` (SSRIs/SNRIs in adult major
+  depressive disorder), chosen by the project owner over cardiovascular
+  disease and infectious disease/vaccines -- with the same file shape as
+  the GLP-1 and oncology corpora (`corpus.json`, inclusion/exclusion
+  criteria, `license_policy.md`) and a new
+  `MENTAL_HEALTH_MDD_ANTIDEPRESSANT_SCOPE` vocabulary in
+  `knowledge_engine/scientific_scope.py`. No discovery has run yet;
+  `sources.csv` is header-only. Separately, promoted the oncology corpus's
+  first 100 `m28-pico-v5`-extracted draft items into real, honestly-labeled
+  `draft`/`m52-evidence-classification-v1` Evidence Records, ran the
+  graph-population pipeline (100 claims, 42 claim-concept links, 92
+  concepts resolved against RxNorm/MeSH), and ran a first `ke
+  evidence-review-automate` (M69) grounding trial (2 of 25 records
+  improved; the rest correctly rejected by grounding verification rather
+  than guessed). `claim_text`/`result_summary` were spot-checked against
+  real source text and are accurate; `research_question` (templated from
+  still-imperfect PICO fields) remains known-unreliable for many records,
+  disclosed rather than hidden -- see `docs/oncology_corpus_scoping.md`
+  and `docs/mental_health_corpus_scoping.md`.
+
 ### Fixed
 
 - **PICO extraction cue patterns matched statistical-result sentences,
