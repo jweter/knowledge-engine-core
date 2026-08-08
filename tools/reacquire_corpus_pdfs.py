@@ -49,6 +49,7 @@ EUROPEPMC_SEARCH_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 EUROPEPMC_PDF_HOST = "europepmc.org"
 PMC_CLOUD_HOST = "pmc-oa-opendata.s3.amazonaws.com"
 PMC_CLOUD_BASE_URL = f"https://{PMC_CLOUD_HOST}"
+PMC_CLOUD_BUCKET = "pmc-oa-opendata"
 S3_NS = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
 SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._() -]*\.pdf$", re.IGNORECASE)
 
@@ -241,6 +242,26 @@ def _pmc_latest_version(client: HttpClient, pmcid: str) -> int | None:
     return max(versions) if versions else None
 
 
+def _pmc_cloud_pdf_url(raw_pdf_url: str) -> str:
+    """Convert the Article Datasets Cloud Service's ``s3://`` pdf_url into HTTPS.
+
+    PMC's metadata JSON records ``pdf_url``/``text_url``/``xml_url`` as
+    ``s3://pmc-oa-opendata/<key>`` URIs, not HTTPS URLs. Only the
+    ``pmc-oa-opendata`` bucket is ever accepted; anything else is rejected
+    rather than silently fetched.
+    """
+    parsed = urlsplit(raw_pdf_url)
+    if parsed.scheme != "s3" or parsed.netloc != PMC_CLOUD_BUCKET:
+        raise RecoveryError("PMC metadata returned a non-allowlisted PDF URL.")
+    key = parsed.path.lstrip("/")
+    if not key:
+        raise RecoveryError("PMC metadata returned an empty PDF object key.")
+    https_url = f"{PMC_CLOUD_BASE_URL}/{key}"
+    if parsed.query:
+        https_url = f"{https_url}?{parsed.query}"
+    return https_url
+
+
 def _pmc_resolution(client: HttpClient, *, doi: str, pmcid: str) -> Resolution | None:
     version = _pmc_latest_version(client, pmcid)
     if version is None:
@@ -250,12 +271,10 @@ def _pmc_resolution(client: HttpClient, *, doi: str, pmcid: str) -> Resolution |
         raise RecoveryError("PMC metadata identity did not reconcile.")
     if metadata.get("is_pmc_openaccess") is not True:
         return None
-    pdf_url = metadata.get("pdf_url")
-    if not isinstance(pdf_url, str) or not pdf_url:
+    raw_pdf_url = metadata.get("pdf_url")
+    if not isinstance(raw_pdf_url, str) or not raw_pdf_url:
         return None
-    parsed = urlsplit(pdf_url)
-    if parsed.scheme != "https" or parsed.hostname != PMC_CLOUD_HOST:
-        raise RecoveryError("PMC metadata returned a non-allowlisted PDF URL.")
+    pdf_url = _pmc_cloud_pdf_url(raw_pdf_url)
     license_value = metadata.get("license_code")
     license_name = license_value if isinstance(license_value, str) else None
     return Resolution(
