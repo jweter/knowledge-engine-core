@@ -21,7 +21,7 @@ def _section(
 
 
 def test_pico_extraction_rules_version_is_stable() -> None:
-    assert PICO_EXTRACTION_RULES_VERSION == "m28-pico-v4"
+    assert PICO_EXTRACTION_RULES_VERSION == "m28-pico-v5"
 
 
 def test_extract_pico_detects_population_from_cohort_size_clause() -> None:
@@ -159,6 +159,79 @@ def test_extract_pico_excludes_a_table_derived_candidate() -> None:
     fields = extract_pico(pages, sections)
 
     assert fields.intervention == real_sentence
+
+
+def test_extract_pico_excludes_a_p_value_result_from_comparator() -> None:
+    """A subgroup-comparison result carrying an explicit p-value is a
+    measured finding, not the study's comparator arm -- v5 (oncology corpus
+    finding)."""
+
+    text = (
+        "Methods\n\n"
+        "Compared with the non-irH group, the irH group had significantly "
+        "lower baseline log2-SII (P < 0.001). The control group was given "
+        "a placebo tablet."
+    )
+    sections = [_section("methods", text, "Methods")]
+
+    fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
+
+    assert fields.comparator == "The control group was given a placebo tablet."
+
+
+def test_extract_pico_excludes_a_confidence_interval_result_from_comparator() -> None:
+    text = (
+        "Methods\n\n"
+        "The adjusted odds ratio was 5.0 (95% CI: 3.0 to 8.4) compared with "
+        "placebo. The control group was given a placebo tablet."
+    )
+    sections = [_section("methods", text, "Methods")]
+
+    fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
+
+    assert fields.comparator == "The control group was given a placebo tablet."
+
+
+def test_extract_pico_excludes_an_effect_measure_result_from_comparator() -> None:
+    text = (
+        "Methods\n\n"
+        "Age was associated with the outcome (OR: 1.05, 95% CI: 1.00-1.09) "
+        "compared with younger patients. The control group was given a "
+        "placebo tablet."
+    )
+    sections = [_section("methods", text, "Methods")]
+
+    fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
+
+    assert fields.comparator == "The control group was given a placebo tablet."
+
+
+def test_extract_pico_excludes_a_statistical_method_result_from_outcome() -> None:
+    """A model-fit statistical test result is not the study's own clinical
+    outcome definition -- v5 (oncology corpus finding)."""
+
+    text = (
+        "Methods\n\n"
+        "Calibration was assessed using the Hosmer-Lemeshow goodness-of-fit "
+        "test (P = .421). The primary outcome was overall survival."
+    )
+    sections = [_section("methods", text, "Methods")]
+
+    fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
+
+    assert fields.outcome == "The primary outcome was overall survival."
+
+
+def test_extract_pico_returns_none_when_only_a_statistical_result_matches() -> None:
+    """No genuine comparator cue remains after the statistical-result
+    sentence is excluded -- honestly `None`, never a fallback guess."""
+
+    text = "Methods\n\nCompared with controls, cases had a lower rate (P = 0.02)."
+    sections = [_section("methods", text, "Methods")]
+
+    fields = extract_pico([ParsedPage(page_number=1, text=text)], sections)
+
+    assert fields.comparator is None
 
 
 def test_extract_pico_strips_heading_from_matched_sentence() -> None:

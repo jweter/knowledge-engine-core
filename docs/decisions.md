@@ -64,3 +64,18 @@ AWS account or new dependency required. Migrated ahead of the removal date
 rather than patching reactively when it happens.
 
 See: `docs/architecture/adr/0004-migrate-pmc-oa-acquisition-to-cloud-service.md`
+
+### Extraction and discovery must be domain-general, not per-field-patched
+
+A hand-tuned regex extractor that works for one research field (GLP-1) and
+has to be re-tuned for every new field does not scale to the project's real
+goal: search and discover research broadly across many fields, then
+determine at query time what supports or contradicts a specific claim --
+never pre-filter what can even enter the corpus down to one narrow
+question's lens. The domain-agnostic, grounding-verified LLM extraction
+path (M69) is now the default for a new field; the deterministic regex
+path (M28) remains a fast path only for fields it was specifically tuned
+against.
+
+See: `docs/roadmap.md`'s "Decision: the extraction and discovery framework
+must be domain-general, not per-field-patched".

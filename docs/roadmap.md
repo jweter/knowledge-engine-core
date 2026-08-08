@@ -135,7 +135,47 @@ well-scoped second corpus, mirroring `glp1_weight_loss`'s existing shape
 (`corpus.json`, inclusion/exclusion criteria, a single defensible research
 question), is now an active, parallel workstream. See
 `docs/oncology_corpus_scoping.md` for the specific research question and
-inclusion boundaries.
+inclusion boundaries. That corpus's 335 acquired papers were bulk-imported
+2026-08-08, but a trial run of the standard deterministic PICO-extraction
+pipeline against them found `knowledge_engine/extraction/pico.py`'s cue
+patterns -- tuned by reading GLP-1 RCT abstracts -- collide with
+statistical-result and methods sentences far more often in this corpus's
+more heterogeneous observational-study mix; see the scoping doc's
+"2026-08-08" status entry for the measured finding. No automated Evidence
+Records were promoted. Diagnosing and fixing that domain-specific
+extraction gap is the next concrete milestone before this corpus can grow
+a trustworthy evidence base the same way `glp1_weight_loss` did.
+
+### Decision: the extraction and discovery framework must be domain-general, not per-field-patched
+
+The project owner sharpened the domain-diversification decision above
+(2026-08-08, same day): the oncology PICO-extraction finding is not a bug
+to patch once and move on from -- it is proof that hand-tuning regex cue
+patterns by reading one domain's abstracts, then re-tuning them again for
+every new field, does not scale to the project's real goal. The project
+must not filter discovery, extraction, or evidence-matching only through
+a single field's lens (GLP-1's, or any other single field's) "to start
+with." The explicit direction: **search for and discover research broadly
+across many fields, and build the framework so any research already
+discovered can be used to answer any question a researcher brings --
+determining what supports or contradicts a specific claim happens at
+query/analysis time against a broad pool, not by pre-filtering what is
+even eligible to enter the corpus down to one narrow question.** Concretely,
+this means: (1) expand the corpus library across many research fields, not
+just GLP-1 and oncology; and (2) stop treating the deterministic,
+hand-tuned-per-domain regex extractor
+(`knowledge_engine/extraction/pico.py`, M28) as the primary path for a new
+field -- prefer the already-built, domain-agnostic LLM-grounded extraction
+path (`knowledge_engine/extraction/llm_grounded_pico.py`, M69, with
+`knowledge_engine.extraction.grounding.verify_grounding` rejecting any
+proposed field that does not trace back to the source text) as the default
+for corpora the deterministic path was not specifically tuned against.
+This does not relax the project's no-invention discipline -- grounding
+verification, not a wider net of hand-written patterns, is what makes the
+LLM path trustworthy for an unfamiliar field. Retrieval itself (embedding
++ FTS search) was already domain-agnostic; this decision is about closing
+the gap in extraction and corpus-selection, the two places domain-specific
+hand-tuning had crept in.
 
 ### Decision: corpus database versioning via chunked git commits
 
