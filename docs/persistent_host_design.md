@@ -470,3 +470,48 @@ ASGI host in core, localhost-first and systemd-managed, backed by existing
 domain readers and a coherent published data generation. Migrate one concrete
 consumer operation at a time under contract parity tests. Treat remote writes,
 public launch hardening, and broader APIs as separate future designs.
+
+## 2026-08-08 Build-Trigger Status
+
+This is the deployment/release packaging decision the roadmap's `v0.5.0-beta`
+tag requires: either the five build-trigger conditions above are actually met
+and a first parity-tested slice migrates, or the project explicitly commits to
+the current model for the near term and documents why. As of this date, each
+condition is checked against the project's actual state, not aspirational
+state:
+
+1. **Named operator, backup policy, monitoring owner, always-on reachable
+   host.** Not met. Core has no always-on deployment; it runs only as a CLI
+   invoked ad hoc or from scheduled Routines. `knowledge-engine-web`'s Render
+   alpha is the only hosted process in the project, and it has no named
+   backup/monitoring operator role distinct from the project owner. A tested
+   backup/restore runbook exists for the SQLite corpus
+   (`docs/corpus_database_chunked_versioning.md`), but that is corpus backup,
+   not host operations.
+2. **An approved HTTP-reader migration (web) or subprocess-replacement
+   migration (AI), backed by a measured problem.** Not met. Neither
+   `knowledge-engine-web` nor `knowledge-engine-ai` has an approved migration
+   plan against this design, and no freshness, latency, or deployment problem
+   in the current snapshot/subprocess integrations has been measured. The
+   corpus-growth and evidence-extraction Routines already cut web snapshot
+   staleness to "typically same day" (see `## Current State` above), which
+   narrows, not widens, the case for urgency.
+3. **Consumer-accepted `/v1` fixtures and an adapter/fallback plan.** Not met.
+   No `/v1` fixtures exist because no host code exists; nothing to accept yet.
+4. **Tested published-read-generation and restart procedure against real
+   data.** Not met. There is no host process to test a restart procedure
+   against.
+5. **Decided binding, TLS, machine credentials, secret rotation, and request
+   limits for the target network.** Not met. No target network has been
+   selected because no host is being built.
+
+**Decision: none of the five conditions are met. The project explicitly
+commits to the current event-triggered-snapshot-plus-subprocess model
+(Option D) for the near term.** This is not a deferral for lack of will; it
+is the correct application of this document's own `Build Trigger` section,
+which exists precisely to prevent building a network-facing host before a
+named operator and a measured consumer need exist. Re-run this check the next
+time a consumer migration is proposed, an operator role is named, or a
+measured freshness/latency problem is documented -- whichever comes first.
+Until then, this decision satisfies the roadmap's `v0.5.0-beta` tag
+prerequisite via its "explicitly commits and documents why" branch.
