@@ -52,6 +52,7 @@ PMC_CLOUD_BASE_URL = f"https://{PMC_CLOUD_HOST}"
 PMC_CLOUD_BUCKET = "pmc-oa-opendata"
 S3_NS = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
 SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._() -]*\.pdf$", re.IGNORECASE)
+HISTORICAL_PMC_FILENAME = re.compile(r"^(PMC\d+)\.pdf$", re.IGNORECASE)
 
 
 class RecoveryError(RuntimeError):
@@ -262,13 +263,23 @@ def _pmc_cloud_pdf_url(raw_pdf_url: str) -> str:
     return https_url
 
 
-def _pmc_resolution(client: HttpClient, *, doi: str, pmcid: str) -> Resolution | None:
+def _pmc_resolution(
+    client: HttpClient, *, doi: str, pmcid: str, expected_doi: str | None = None
+) -> Resolution | None:
     version = _pmc_latest_version(client, pmcid)
     if version is None:
         return None
     metadata = _json_get(client, f"{PMC_CLOUD_BASE_URL}/metadata/{pmcid}.{version}.json")
     if metadata.get("pmcid") != pmcid or metadata.get("version") != version:
         raise RecoveryError("PMC metadata identity did not reconcile.")
+    if expected_doi is not None:
+        metadata_doi = metadata.get("doi")
+        if (
+            isinstance(metadata_doi, str)
+            and normalize_doi(metadata_doi) is not None
+            and normalize_doi(metadata_doi) != expected_doi
+        ):
+            raise RecoveryError("PMC metadata DOI did not match the expected paper identity.")
     if metadata.get("is_pmc_openaccess") is not True:
         return None
     raw_pdf_url = metadata.get("pdf_url")
@@ -339,7 +350,7 @@ def resolve_doi(client: HttpClient, doi: str) -> Resolution | None:
     for row in exact:
         pmcid = row.get("pmcid")
         if row.get("inPMC") == "Y" and isinstance(pmcid, str) and pmcid.startswith("PMC"):
-            resolved = _pmc_resolution(client, doi=doi, pmcid=pmcid)
+            resolved = _pmc_resolution(client, doi=doi, pmcid=pmcid, expected_doi=doi)
             if resolved is not None:
                 return resolved
 
@@ -358,6 +369,31 @@ def resolve_doi(client: HttpClient, doi: str) -> Resolution | None:
             pdf_url=pdf_url,
         )
     return None
+
+
+def resolve_historical_pmcid(
+    client: HttpClient, *, doi: str | None, filename: str
+) -> Resolution | None:
+    """Try the PMCID already embedded in the historical filename directly.
+
+    Europe PMC's DOI-search index does not reliably report ``inPMC``/
+    ``isOpenAccess`` for every paper that PMC's own Article Datasets Cloud
+    Service actually has -- confirmed live: papers whose historical filename
+    already names a real PMCID sometimes come back with no exact-DOI PMC
+    match in Europe PMC's search response, even though that exact PMCID
+    exists in the Cloud Service bucket. Since the historical filename came
+    from this project's own prior acquisition (not user input), checking it
+    directly first is strictly more reliable than depending on Europe PMC's
+    search index alone. Falls back silently (returns ``None``) for a
+    filename that is not PMC-shaped, or a PMCID that turns out not to be
+    open access -- ``resolve_doi`` still runs afterward either way.
+    """
+
+    match = HISTORICAL_PMC_FILENAME.match(filename)
+    if match is None:
+        return None
+    pmcid = match.group(1).upper()
+    return _pmc_resolution(client, doi=doi or "", pmcid=pmcid, expected_doi=doi)
 
 
 def append_receipt(path: Path, receipt: RecoveryReceipt) -> None:
@@ -447,42 +483,60 @@ def recover_one(
         if not dry_run:
             quarantine_existing(destination)
 
-    if paper.doi is None:
-        return RecoveryReceipt(
-            paper.paper_id,
-            paper.title,
-            None,
-            filename,
-            "unresolved_no_doi",
-            None,
-            None,
-            None,
-            paper.historical_sha256,
-            None,
-            None,
-            None,
-            "Database row has no DOI; manual source resolution is required.",
-        )
-
+    # The historical filename's own PMCID (when present) is tried first: it
+    # came from this project's own prior acquisition, and is confirmed more
+    # reliable than Europe PMC's DOI-search index alone (some PMC-hosted,
+    # open-access papers never come back as an exact-DOI PMC match there). A
+    # hiccup on this fast path (network error, identity mismatch) falls
+    # through to the proven resolve_doi() path rather than failing outright.
+    resolution: Resolution | None = None
     try:
-        resolution = resolve_doi(client, paper.doi)
-    except RecoveryError as exc:
-        return RecoveryReceipt(
-            paper.paper_id,
-            paper.title,
-            paper.doi,
-            filename,
-            "resolution_failed",
-            None,
-            None,
-            None,
-            paper.historical_sha256,
-            None,
-            None,
-            None,
-            str(exc),
-        )
+        resolution = resolve_historical_pmcid(client, doi=paper.doi, filename=filename)
+    except RecoveryError:
+        resolution = None
+
+    resolution_error: RecoveryError | None = None
+    if resolution is None and paper.doi is not None:
+        try:
+            resolution = resolve_doi(client, paper.doi)
+        except RecoveryError as exc:
+            resolution_error = exc
+
     if resolution is None:
+        if resolution_error is not None:
+            return RecoveryReceipt(
+                paper.paper_id,
+                paper.title,
+                paper.doi,
+                filename,
+                "resolution_failed",
+                None,
+                None,
+                None,
+                paper.historical_sha256,
+                None,
+                None,
+                None,
+                str(resolution_error),
+            )
+        if paper.doi is None:
+            return RecoveryReceipt(
+                paper.paper_id,
+                paper.title,
+                None,
+                filename,
+                "unresolved_no_doi",
+                None,
+                None,
+                None,
+                paper.historical_sha256,
+                None,
+                None,
+                None,
+                "Database row has no DOI and the historical filename did not "
+                "resolve to an open-access PMC record; manual source resolution "
+                "is required.",
+            )
         return RecoveryReceipt(
             paper.paper_id,
             paper.title,
