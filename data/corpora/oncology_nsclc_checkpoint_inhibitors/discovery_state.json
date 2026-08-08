@@ -1,0 +1,7 @@
+{
+  "cycles_run": 10,
+  "limit": 100,
+  "next_retstart": 950,
+  "query": "(\"non-small-cell lung cancer\" OR \"non-small cell lung cancer\" OR NSCLC OR \"lung cancer\" OR \"lung carcinoma\" OR \"lung adenocarcinoma\") AND (pembrolizumab OR nivolumab OR atezolizumab OR durvalumab OR cemiplimab OR \"checkpoint inhibitor\" OR \"immune checkpoint inhibitor\" OR \"PD-1\" OR \"PD-L1\") AND pubmed pmc open access[filter]",
+  "updated_at": "2026-08-08T14:18:03+00:00"
+}
