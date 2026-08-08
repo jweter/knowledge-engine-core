@@ -9,6 +9,13 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Mental health corpus: tightened discovery query, 2 more real papers.**
+  A tightened query (drops the noisy bare `antidepressant` term, keeps
+  `SSRI`/`SNRI`/named agents) improved cycle yield from 1.5% to ~3.8%.
+  Acquired and imported a paroxetine pharmacovigilance analysis and a
+  trazodone-vs-SSRIs comparative-effectiveness study; corpus now holds 10
+  real papers.
+
 - **Mental health corpus: first real papers acquired and imported; oncology
   batch 3 (300 more records).** Manually scope-screened the mental-health
   corpus's first two discovery cycles (54 then 64 deterministically-

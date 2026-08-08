@@ -73,7 +73,18 @@ corpus). Future discovery cycles should use
 with a tightened query (drops the bare `antidepressant` term, keeps
 `SSRI`/`SNRI`/the named-agent list) -- see
 `docs/mental_health_corpus_scoping.md`'s 2026-08-08 entry for the full
-query text and reasoning. More cycles are needed to build a corpus of
-comparable size to GLP-1/oncology, given the low per-cycle yield.
+query text and reasoning.
+
+**Tightened-query cycle 1 (2026-08-08, same day): modest yield
+improvement.** The tightened query's first cycle (retstart=0) scanned 100
+candidates, 60 deterministically accepted. 7 were duplicates of papers
+already acquired in earlier cycles (expected overlap, since the tightened
+query is a subset of the original). Of the 53 new candidates, 2 passed
+scope screen (~3.8%, versus the untightened query's 1.5% on its second
+cycle) -- a real but modest improvement, not a fix. Both acquired and
+imported: a paroxetine post-marketing pharmacovigilance safety analysis
+and a trazodone-vs-SSRIs comparative-effectiveness study. Corpus now
+holds 10 real papers. More cycles are needed to build a corpus of
+comparable size to GLP-1/oncology, given the still-low per-cycle yield.
 Individually authoring and reviewing Evidence Records remains future,
 separate work.
