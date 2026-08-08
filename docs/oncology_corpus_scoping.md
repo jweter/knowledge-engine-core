@@ -71,9 +71,17 @@ because it has the closest evidence shape to the GLP-1 corpus:
 Corpus definition files exist
 (`data/corpora/oncology_nsclc_checkpoint_inhibitors/`: `corpus.json`,
 `inclusion_criteria.md`, `exclusion_criteria.md`, `scientific_question.md`,
-`license_policy.md`, an empty-header `sources.csv`). `ke discovery-cycle-run`,
+`license_policy.md`, `sources.csv`). `ke discovery-cycle-run`,
 `europepmc-candidate-review-prepare`, and `core-candidate-review-prepare`
-all now accept `--corpus oncology_nsclc_checkpoint_inhibitors` to adjudicate
+all accept `--corpus oncology_nsclc_checkpoint_inhibitors` to adjudicate
 against this corpus's scope vocabulary instead of the GLP-1 default (see
-`knowledge_engine/scientific_scope.py`). No discovery has been run yet --
-that is the next, separate action, not part of this scoping doc.
+`knowledge_engine/scientific_scope.py`).
+
+**2026-08-08: first bulk seeding batch complete.** See
+`data/corpora/oncology_nsclc_checkpoint_inhibitors/README.md`'s Status
+section for the full account: 335 real, source-audited-license PMC OA
+papers imported after a documented rule-based scope screen. This is bulk
+ingestion metadata, not yet a reviewed evidence base or a golden evidence
+map -- Evidence Record authoring, relationship review, and a golden map for
+this corpus remain future, separate work, mirroring the GLP-1 corpus's own
+progression from bulk acquisition to a reviewed map.
