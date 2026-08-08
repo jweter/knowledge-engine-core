@@ -1316,15 +1316,99 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
 
 ## Release Milestones
 
-The phase-to-version list below was the original release intent, not the
-history that actually occurred. The latest public tag remains
-`v0.2.0-alpha.1`, while main has since shipped capabilities originally placed
-under several later version labels (metadata/citation work, vector retrieval,
-the graph, web, and AI). Do not assign the next tag from this old mapping.
-Perform a dedicated release assessment after Current Project Path goals 1-3
-produce a coherent public journey, measured retrieval, and a defensible golden
-evidence map. Preserve the historical entries below as context until that
-assessment replaces them with a truthful pre-1.0 release plan.
+### 2026-08-08 release assessment
+
+The phase-to-version list further below was the original release intent, not
+the history that actually occurred. This section replaces it with the
+dedicated assessment this document's own gate named: performed after Current
+Project Path goals 1-3 produced a coherent public journey, measured
+retrieval, and a defensible golden evidence map. Each claim below traces to
+an actual shipped artifact, not an aspiration.
+
+- **Goal 1, coherent public journey:** `knowledge-engine-web` ships a stable
+  `/demo` route anchored to a real, source-linked SELECT trial claim, shared
+  trust-boundary language between the showcase and the alpha, visible
+  snapshot-revision metadata, and (2026-08-08) a card-styled `/ask` and
+  `/graph` experience matching `/demo`'s visual system rather than a plain
+  text list. See `knowledge-engine-web`'s `docs/public_journey_design.md`.
+- **Goal 2, measured retrieval:** a golden-question retrieval benchmark with
+  a committed baseline exists (`docs/retrieval_benchmark_design.md`,
+  `knowledge_engine_web/retrieval_benchmark.py`), and the measured failure it
+  found was corrected: FTS5 still generates candidates, then stored
+  source-linked evidence text deterministically reranks them. This is one
+  bounded correction, not a claim that retrieval is solved.
+- **Goal 3, defensible golden evidence map:** the GLP-1/body-weight map
+  (`docs/glp1_body_weight_golden_evidence_map.md`) carries `map_status:
+  reviewed`, selects fourteen Evidence Records and nineteen
+  reviewer-authored relationships, documents a reproducible same-PICO
+  contradiction search that found none, and names its own remaining gaps in
+  writing (longer post-discontinuation trajectories, a current class-wide
+  safety synthesis, and broader agent/population coverage) rather than
+  presenting itself as finished. "Defensible" is the bar this gate set, not
+  "complete" -- `founding_vision.md`'s "Knowledge Is Never Final" principle
+  applies to this map as much as to any other claim in the system.
+
+None of this makes the project "feature-complete" or "stable" in the sense
+the historical version ladder below once implied for `v0.9.0`/`v1.0.0`. It is
+a coherent, source-linked, honestly bounded public demonstration of the
+project's actual working parts, sufficient to stop treating the release
+question as blocked and start treating it as a tracked sequence.
+
+### What each pre-1.0 tag means from here
+
+This ladder describes `knowledge-engine-core`'s own tags. `knowledge-engine-web`
+and `knowledge-engine-ai` version independently against
+`docs/core_interface_contract.md`, not in lockstep with these numbers.
+Creating and pushing an actual git tag or GitHub Release is a separate,
+deliberate action from writing this plan -- nothing below tags itself
+automatically.
+
+- `v0.2.0-alpha.2`: today's actual state -- goals 1-3 above, live. Supersedes
+  the stale `v0.2.0-alpha.1` tag, which predates the graph, web, and AI work
+  main has already shipped.
+- `v0.3.0-alpha`: a second, unrelated research domain (oncology; see
+  `docs/oncology_corpus_scoping.md`) is seeded with real, source-audited
+  papers and passes the same `corpus-validate`/`evidence-validate` gates as
+  `glp1_weight_loss` -- proof this is general-purpose scientific
+  infrastructure, not single-drug-class tooling. Current Project Path goal
+  3's remaining GLP-1-specific gaps (durability, safety synthesis, agent
+  coverage) do not block this tag; they remain independently tracked.
+- `v0.4.0-alpha`: Current Project Path goal 4's next concrete step ships --
+  one bounded Evidence/Analytical Intelligence extension (e.g. a
+  prespecified zero-cell correction) exercised before any pooling or AI
+  narration is added, per `docs/glp1_second_binary_edge_case_plan.md`.
+- `v0.5.0-beta`: Current Project Path goal 5's decision is made and written
+  down, whichever way it resolves -- either `docs/persistent_host_design.md`'s
+  five build-trigger conditions (named operator, accepted API fixtures,
+  published-data procedure, tested consumer migration, decided
+  binding/TLS/credentials/rate-limits) are actually met and a first
+  parity-tested read-only slice migrates, or the project explicitly commits
+  to its current event-triggered-snapshot-plus-subprocess model for the
+  near term and documents why. A tested backup/restore runbook already
+  exists (`docs/corpus_database_chunked_versioning.md`); this tag requires
+  it to have been exercised at least once from a genuinely fresh clone, not
+  merely written.
+- `v1.0.0`: all of the above are simultaneously true, no known
+  data-loss/corruption risk exists in the actual deployed path, every
+  corpus's license/attribution basis has been reviewed (not just gated at
+  ingestion time), and the project owner explicitly confirms that public
+  `v1.0.0` messaging matches actual capability. `v1.0.0` is a claim about
+  honesty and operational stability, not a claim that the science is
+  finished -- `founding_vision.md` is explicit that no claim the system
+  produces is ever permanently true, and that discipline extends to the
+  project's own release messaging about itself.
+- Post-`v1.0.0`: `docs/roadmap/long_term_vision.md`'s Discovery Metrics
+  (Time to Discovery, Knowledge Coverage, Contradiction Resolution Rate,
+  and related measures) become meaningful only once the Discovery and
+  Decision layers they measure exist -- named here so they are not
+  forgotten, not because they are actionable before then.
+
+### Historical intent (superseded, kept for context only)
+
+The list below was the original phase-to-version mapping before any of Phase
+2-5 actually shipped. It undercounted what main would eventually deliver
+(graph, web, AI) and should not be used to assign version numbers going
+forward -- the ladder above supersedes it.
 
 - `v0.1.0`: Phase 0 local source vault, CLI, tests, docs, and repository hygiene.
 - `v0.1.1`: Bug fixes and setup improvements.
@@ -1346,11 +1430,6 @@ assessment replaces them with a truthful pre-1.0 release plan.
   ships.
 - `v0.9.0`: Feature-complete beta.
 - `v1.0.0`: Stable public release.
-- Post-`v1.0.0`: `docs/roadmap/long_term_vision.md`'s Discovery Metrics
-  (Time to Discovery, Knowledge Coverage, Contradiction Resolution Rate,
-  and related measures) become meaningful only once the Discovery and
-  Decision layers they measure exist -- named here so they are not
-  forgotten, not because they are actionable before then.
 
 ## Detailed Roadmaps
 

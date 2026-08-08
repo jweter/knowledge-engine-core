@@ -9,6 +9,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Dedicated release assessment and truthful pre-1.0 tag ladder.**
+  `docs/roadmap.md`'s Release Milestones section replaces its stale
+  `v0.1.0`-`v1.0.0` version ladder with a 2026-08-08 assessment confirming
+  Current Project Path goals 1-3 (coherent public journey, measured
+  retrieval, defensible golden evidence map) are met, and a new
+  `v0.2.0-alpha.2`-`v1.0.0` ladder tying each future tag to a concrete,
+  checkable artifact instead of an aspirational phase label. The original
+  ladder is preserved below it, marked superseded, for historical context.
+
 - **GLP-1 golden map gap closure: post-bariatric agent coverage and
   real-world adherence.** Promoted two previously `draft` Evidence Records
   (`ev-tirzepatide-post-bariatric-weight-regain-001`,
