@@ -280,9 +280,9 @@ def test_committed_glp1_golden_map_passes_cli_validation() -> None:
     assert result.exit_code == 0, result.output
     assert "Evidence map validation passed" in result.output
     assert "Map status: reviewed" in result.output
-    assert "Evidence nodes: 12" in result.output
-    assert "Relationship records: 17" in result.output
-    assert "Complete citations: 12/12" in result.output
+    assert "Evidence nodes: 14" in result.output
+    assert "Relationship records: 19" in result.output
+    assert "Complete citations: 14/14" in result.output
     normalized_output = " ".join(result.output.split())
     assert "secondary review is required" not in normalized_output
     assert "No evidence, relationship, or scientific conclusion was inferred" in result.output
@@ -315,8 +315,8 @@ def test_committed_glp1_golden_map_preserves_secondary_review_provenance() -> No
         if record["relationship_id"] in selected_relationship_ids
     ]
 
-    assert len(selected_evidence) == 12
-    assert len(selected_relationships) == 17
+    assert len(selected_evidence) == 14
+    assert len(selected_relationships) == 19
     for record in selected_evidence:
         assert record["review_status"] == "reviewed"
         assert record["review_checklist"]["secondary_review_completed"] is True

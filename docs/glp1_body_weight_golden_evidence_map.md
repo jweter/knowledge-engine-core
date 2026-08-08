@@ -11,13 +11,15 @@ question:
 
 The machine-readable artifact is
 `data/corpora/glp1_weight_loss/golden_evidence_map.json`. Its status is
-`reviewed`. AI-assisted independent source audits checked all twelve selected
-Evidence Records and all seventeen selected Relationship Records against the
+`reviewed`. AI-assisted independent source audits checked all fourteen selected
+Evidence Records and all nineteen selected Relationship Records against the
 legally usable local PDFs. The initial audit is documented in
 `docs/glp1_golden_map_secondary_review.md`; the durability and safety follow-up
-is documented in `docs/glp1_map_durability_safety.md`; and the bounded
+is documented in `docs/glp1_map_durability_safety.md`; the bounded
 same-PICO search is documented in
-`docs/glp1_same_pico_contradiction_search_audit.md`.
+`docs/glp1_same_pico_contradiction_search_audit.md`; and the
+post-bariatric-agent and real-world-adherence gap closure is documented in
+`docs/glp1_map_gap_closure_2026_08_08.md`.
 
 Reviewed means accepted for record-to-source fidelity under this map's
 contract. It does not mean human domain-expert approval, independent
@@ -59,6 +61,8 @@ for or contradiction of body-weight reduction.
 | `ev-glp1-waist-circumference-meta-001` | Evidence synthesis | Meta-analysis of heterogeneous intervention categories | GLP-1RA subgroup waist change: -5.93 cm | Waist circumference is not body weight; between-category differences were not significant |
 | `ev-liraglutide-alone-physical-fitness-001` | Endpoint qualifier | Randomized secondary analysis after diet-induced weight loss | Liraglutide alone did not improve physical fitness | The primary sample-size calculation was for body weight; specified fitness differences had estimated secondary-analysis power |
 | `ev-glp1-glide-liraglutide-post-lagb-weight-001` | Agent/population qualifier | Underpowered pilot RCT; liraglutide 1.8 mg vs placebo after gastric banding | Six-month adjusted difference 2.0 kg (95% CI -4.2 to 8.1); p=0.50 | Adults with obesity and T2D after LAGB; different agent, dose, population, surgical context, and outcome priority from STEP 5 |
+| `ev-tirzepatide-post-bariatric-weight-regain-001` | Agent/population qualifier | Single-arm, uncontrolled cohort; tirzepatide 2.5-10 mg/week after bariatric surgery or endoscopic bariatric therapy | 24-week mean %TBWL: 18.1 +/- 5.6% (p<0.0001) | Different agent (dual GIP/GLP-1), no concurrent control, post-bariatric population, 24-week window |
+| `ev-glp1ra-adherence-comorbidity-predictors-001` | Safety qualifier | Large real-world retrospective cohort (n=69,049); comorbidity subgroups within one treated population | ASCVD OR 0.90 (95% CI 0.86-0.95); digestive-system AE OR 0.94 (95% CI 0.90-0.98) for first-year adherence | Drug-class-wide, real-world adherence proxy, not a placebo/active comparator or adjudicated adverse-event rate |
 
 ## Population and Comparator Boundaries
 
@@ -77,16 +81,26 @@ comparison:
 - GLIDE's post-gastric-banding liraglutide comparison is an explicit
   agent/population boundary and cannot be substituted for semaglutide evidence
   in non-surgical adults without diabetes.
+- The tirzepatide post-bariatric cohort extends agent and population coverage
+  but is single-arm, uncontrolled, and studies a different drug class than
+  semaglutide.
+- The real-world adherence cohort spans multiple GLP-1 receptor agonists and
+  both diabetes and obesity indications; its comparator is comorbidity
+  presence versus absence within one treated cohort, and its outcome is
+  adherence, not weight change or an adjudicated adverse-event rate.
 
 ## Relationship Review
 
-The map references 17 reviewer-authored relationships whose endpoints are both
-selected: 10 `supports`, 4 `contextualizes`, and 3 `qualifies`. It does not
+The map references 19 reviewer-authored relationships whose endpoints are both
+selected: 10 `supports`, 5 `contextualizes`, and 4 `qualifies`. It does not
 infer edges. Support links preserve aligned direction while their rationales
 retain study-design and population differences. Context and qualifier links
 prevent active comparators, withdrawal trajectories, safety outcomes, PMOS
 evidence, and other population extensions from being misrepresented as direct
-replication or as a computed benefit-harm conclusion.
+replication or as a computed benefit-harm conclusion. The 2026-08-08 addition
+contextualizes a tirzepatide post-bariatric cohort against STEP 5 and
+qualifies the Gao safety record with a real-world adherence finding; see
+`docs/glp1_map_gap_closure_2026_08_08.md`.
 
 No reviewed same-PICO `contradicts` relationship was identified. The
 2026-08-04 audit screened 156 Evidence Records, 952 source rows, 261
@@ -113,6 +127,8 @@ row in `sources.csv`:
 - Waist-circumference synthesis: `10.1016/j.obpill.2026.100281`
 - Liraglutide fitness analysis: `10.1007/s40279-025-02386-0`
 - GLIDE pilot: `10.1038/s41366-023-01368-4`
+- Tirzepatide post-bariatric cohort: `10.1007/s11695-026-08754-7`
+- GLP-1RA adherence and comorbidity cohort: `10.1177/10600280251384637`
 
 The source manifest remains authoritative for title, authors, year, venue,
 source URL, and declared license provenance. Structural validation confirms
@@ -193,18 +209,28 @@ Evidence Record prose.
 
 ## Remaining Work
 
-The initial record-to-source review and the first durability/safety follow-up
-are complete. The bounded map still has explicit work before broader
-analytical intelligence:
+The initial record-to-source review, the durability/safety follow-up, and the
+2026-08-08 post-bariatric-agent/adherence gap closure are complete. The
+bounded map still has explicit work before broader analytical intelligence:
 
 1. Replicate and extend post-discontinuation trajectories across agents,
-   treatment durations, and longer follow-up.
+   treatment durations, and longer follow-up. Still open: the map has only
+   one exploratory STEP 1 withdrawal observation; the 2026-08-08 addition
+   extended agent/population coverage but did not add a second withdrawal
+   trajectory.
 2. Add newer safety syntheses while preserving event severity, dose, duration,
-   and population differences.
+   and population differences. Partially addressed on 2026-08-08 by one
+   real-world adherence cohort, which measures adherence as a tolerability
+   proxy rather than adjudicated adverse-event rates; a current class-wide
+   safety synthesis is still needed.
 3. Expand agent and population coverage without collapsing drug, dose,
-   formulation, duration, or eligibility differences.
+   formulation, duration, or eligibility differences. Partially addressed on
+   2026-08-08 by one uncontrolled tirzepatide post-bariatric cohort; broader
+   randomized or placebo-controlled agent coverage remains open.
 4. Rerun the documented same-PICO contradiction search as new trials mature or
    the map's direct PICO changes; preserve future negative results honestly.
+   The 2026-08-08 addition did not surface a same-PICO contradiction, but did
+   not rerun the full bounded search either.
 5. Route disputed records and substantive future changes through another
    traceable review; human domain-expert adjudication remains available where
    the scientific stakes or disagreement warrant it.

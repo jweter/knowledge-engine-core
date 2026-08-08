@@ -9,6 +9,17 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **GLP-1 golden map gap closure: post-bariatric agent coverage and
+  real-world adherence.** Promoted two previously `draft` Evidence Records
+  (`ev-tirzepatide-post-bariatric-weight-regain-001`,
+  `ev-glp1ra-adherence-comorbidity-predictors-001`) to `reviewed` after an
+  independent source audit against their local PDFs, and added two reviewed
+  Relationship Records connecting them into
+  `data/corpora/glp1_weight_loss/golden_evidence_map.json`
+  (`contextualizes` and `qualifies`). The map now selects fourteen Evidence
+  Records and nineteen Relationship Records. See
+  `docs/glp1_map_gap_closure_2026_08_08.md`.
+
 - **First source-audited binary-outcome verification.** Extended
   `ke statistical-verify` with an optional, separately versioned binary-input
   contract. STEP 5's observed week-104 responder counts (`111/144` versus
