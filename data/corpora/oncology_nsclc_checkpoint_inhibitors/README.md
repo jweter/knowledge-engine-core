@@ -61,4 +61,9 @@ still-imperfect PICO fields) remains known-unreliable for many records
 pending further extraction work or individual secondary review, exactly the
 same limitation `docs/oncology_corpus_scoping.md` already documents. This is
 still not a reviewed evidence base or a golden map -- both remain future work.
-1,422 further eligible drafts remain unpromoted.
+
+**Second batch (2026-08-08, same day): 200 more records promoted.**
+`evidence_records.jsonl` now holds 300 draft records (100 + 200, same
+`m52-evidence-classification-v1` tier and honesty discipline as the first
+batch). Spot-checked `claim_text` across the new batch against real source
+text -- accurate. 1,222 further eligible drafts remain unpromoted.
