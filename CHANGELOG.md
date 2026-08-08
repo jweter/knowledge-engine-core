@@ -162,6 +162,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **PDF corpus recovery rejected every PMC-hosted resolution.** `tools/
+  reacquire_corpus_pdfs.py` had never been run against real data. Live
+  testing against this environment's 951-paper corpus found that PMC's
+  Article Datasets Cloud Service now returns `pdf_url` as an `s3://` URI,
+  not the `https://` URL the tool's allowlist check expected -- every
+  PMC-hosted resolution failed regardless of actual open-access status.
+  Added a conversion step that validates the bucket and reconstructs the
+  HTTPS URL, plus the test file this tool never had. See
+  `docs/error_resolution_ledger.md` (2026-08-08 entry) for the full
+  root-cause writeup. Confirmed live: a full 960-row dry run went from
+  systemic resolution failures to zero, and the 9 papers genuinely
+  missing a local file were recovered and hash-verified.
+
 - **Roadmap truth alignment.** Added one ordered five-goal Current Project
   Path and corrected stale future-facing documentation that still described
   `knowledge-engine-ai`, local synthesis, Evidence Intelligence, relationship
