@@ -133,6 +133,33 @@
       "review_note": "Reviewed active-comparator context; no typed statistical input promoted."
     },
     {
+      "evidence_record_id": "ev-tirzepatide-post-bariatric-weight-regain-001",
+      "readiness_category": "not_selected_for_verification",
+      "continuous_input_ids": [],
+      "binary_input_ids": [],
+      "compatibility_group": null,
+      "incompatibility_reasons": [
+        "tirzepatide (dual GIP/GLP-1) rather than semaglutide",
+        "post-bariatric weight-regain population",
+        "single-arm uncontrolled design",
+        "24-week short observation window"
+      ],
+      "review_note": "Reviewed agent/population qualifier added 2026-08-08; no typed body-weight statistical input has been promoted."
+    },
+    {
+      "evidence_record_id": "ev-glp1ra-adherence-comorbidity-predictors-001",
+      "readiness_category": "not_applicable",
+      "continuous_input_ids": [],
+      "binary_input_ids": [],
+      "compatibility_group": null,
+      "incompatibility_reasons": [
+        "primary readiness question concerns body-weight statistical verification",
+        "record reports first-year medication adherence, not body weight",
+        "drug-class-wide real-world cohort rather than a single-agent trial"
+      ],
+      "review_note": "Reviewed safety qualifier added 2026-08-08 (real-world adherence/comorbidity predictors); outcome is adherence, not a body-weight pooling candidate."
+    },
+    {
       "evidence_record_id": "ev-glp1-waist-circumference-meta-001",
       "readiness_category": "display_only",
       "continuous_input_ids": [],

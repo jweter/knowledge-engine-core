@@ -89,6 +89,28 @@ and approximation checks, not a
 reconstruction of the source model, independent replication, statistical
 synthesis, confidence scoring, or a judgment that the analyses are correct.
 
+Check whether the golden map's typed statistical inputs are ready for a
+future pooling design:
+
+```bash
+ke statistical-readiness-report \
+  data/corpora/glp1_weight_loss/statistical_readiness_map.json \
+  --evidence-map data/corpora/glp1_weight_loss/golden_evidence_map.json \
+  --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl \
+  --inputs data/corpora/glp1_weight_loss/statistical_inputs.jsonl \
+  --binary-inputs data/corpora/glp1_weight_loss/binary_statistical_inputs.jsonl \
+  --output glp1-statistical-readiness.md
+```
+
+It validates a curated readiness classification against the reviewed golden
+map, already-verified typed inputs, and each record's declared pooling-
+compatibility group, then reports a deterministic verdict. Run against the
+current 14-record golden map it reports `not_ready_for_pooling_design`: one
+compatibility group exists (STEP 5 vs SELECT), but it is blocked by
+incompatible estimands, and only one production binary statistical input
+exists. It never pools studies, performs meta-analysis, infers a missing
+classification, or determines scientific truth.
+
 Phase 1 completed capabilities include:
 
 - PDF ingestion with PyMuPDF
@@ -567,11 +589,15 @@ Current handoff:
 2. Goal 4 is active. The cross-study report, STEP 5 and SELECT arithmetic
    checks, the first source-audited STEP 5 interval approximation, and the first
    source-audited STEP 5 binary responder check are implemented without
-   statistical synthesis.
-3. Next, use the binary contract's observed limitations to select one bounded
-   follow-up, most likely a second reviewed record with a genuinely different
-   edge case such as a prespecified zero-cell correction. Do not begin pooling
-   or broader AI narration from a single worked example.
+   statistical synthesis. A prespecified zero-cell correction was audited
+   (`docs/glp1_second_binary_edge_case_plan.md`) and closed with no
+   defensible second production result. The Statistical Verification
+   Readiness Gate that audit's handoff named next is implemented
+   (`ke statistical-readiness-report`) and, run against the current
+   14-record golden map, reports `not_ready_for_pooling_design`.
+3. Next, per that verdict, the GLP-1 Statistical Pooling Protocol design
+   must not begin yet. Do not begin pooling or broader AI narration from a
+   single worked example.
 
 ## Known Issues
 

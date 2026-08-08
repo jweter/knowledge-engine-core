@@ -2,7 +2,18 @@
 
 ## Status
 
-Approved pre-implementation plan for the Statistical Verification Readiness Gate.
+Implemented. `knowledge_engine/statistical_readiness.py` and the `ke
+statistical-readiness-report` CLI command implement this plan. Run against
+the golden map as it stood after the 2026-08-08 gap-closure round (14
+selected Evidence Records; see `docs/glp1_map_gap_closure_2026_08_08.md`),
+`data/corpora/glp1_weight_loss/statistical_readiness_map.json` classifies
+all 14 records (2 `exactly_verified`, 3 `display_only`, 7
+`not_selected_for_verification`, 2 `not_applicable`), one compatibility
+group (STEP 5 vs SELECT, status `no`), and a computed readiness verdict of
+`not_ready_for_pooling_design` -- matching the pre-implementation
+expectation in `docs/reviews/glp1_statistical_readiness_gate/compatibility_analysis.md`.
+Per that verdict, the GLP-1 Statistical Pooling Protocol design must not
+begin yet.
 
 The preceding second binary edge-case milestone completed under its documented stop rule: a genuine zero-cell source example was identified, but no matching reviewed Evidence Record existed for that outcome, so no binary schema extension or synthetic production record was added. This readiness milestone therefore inventories the actual verified state rather than assuming a second production binary input exists.
 

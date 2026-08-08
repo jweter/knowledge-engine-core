@@ -45,6 +45,12 @@ from knowledge_engine.import_runs.linked_ingestion import LinkedCorpusIngestionS
 from knowledge_engine.models import ImportRun
 from knowledge_engine.parser import PyMuPDFParser
 from knowledge_engine.search import SearchResult, SearchService, build_natural_language_fts_query
+from knowledge_engine.statistical_readiness import (
+    StatisticalReadinessError,
+    load_statistical_readiness_map,
+    render_statistical_readiness_report,
+    validate_statistical_readiness,
+)
 from knowledge_engine.statistical_verification import (
     render_statistical_verification_report,
     validate_statistical_inputs,
@@ -92,6 +98,35 @@ BinaryStatisticalInputsOption = Annotated[
     typer.Option(
         "--binary-inputs",
         help="Optional version 1 source-audited binary statistical inputs JSONL file.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+ReadinessMapArgument = Annotated[
+    Path,
+    typer.Argument(
+        help="Version 1 JSON statistical verification readiness map.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+RequiredEvidenceMapOption = Annotated[
+    Path,
+    typer.Option(
+        "--evidence-map",
+        help="Reviewed golden evidence map JSON file that defines required coverage.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+RequiredStatisticalInputsOption = Annotated[
+    Path,
+    typer.Option(
+        "--inputs",
+        help="Version 1 or 2 continuous statistical inputs JSONL file.",
         exists=True,
         dir_okay=False,
         readable=True,
@@ -949,6 +984,149 @@ def statistical_verify(
 
     if arithmetic_discrepancy_count or interval_discrepancy_count or binary_discrepancy_count:
         raise typer.Exit(1)
+
+
+@app.command("statistical-readiness-report")
+def statistical_readiness_report(
+    readiness_map_path: ReadinessMapArgument,
+    evidence_map: RequiredEvidenceMapOption,
+    evidence: RequiredEvidenceRecordsOption,
+    inputs_path: RequiredStatisticalInputsOption,
+    binary_inputs: BinaryStatisticalInputsOption = None,
+    output: OutputMarkdownOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Validate a curated readiness classification and report the pooling verdict.
+
+    Checks that every reviewed golden-map Evidence Record has exactly one
+    readiness classification, that every referenced statistical input id is a
+    real validated input, and computes a deterministic pooling-compatibility
+    verdict from the curated compatibility groups. It never pools studies,
+    performs meta-analysis, infers a missing classification, or determines
+    scientific truth.
+    """
+
+    input_paths = {
+        readiness_map_path.resolve(),
+        evidence_map.resolve(),
+        evidence.resolve(),
+        inputs_path.resolve(),
+    }
+    if binary_inputs is not None:
+        input_paths.add(binary_inputs.resolve())
+    if output and output.resolve() in input_paths:
+        raise typer.BadParameter("Output must not overwrite an input file.")
+    if output and output.exists() and not force:
+        raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
+
+    evidence_result = _validate_evidence_records(evidence, require_review_fields=True)
+    if evidence_result.errors:
+        console.print(
+            f"[red]Statistical readiness report failed; evidence is invalid:[/red] {evidence.name}"
+        )
+        for error in evidence_result.errors:
+            console.print(f"- {_safe_text(error)}")
+        raise typer.Exit(1)
+    evidence_records_by_id = {
+        record["evidence_record_id"]: record for record in evidence_result.records
+    }
+
+    try:
+        map_payload = load_evidence_map(evidence_map)
+    except EvidenceMapError as exc:
+        console.print(
+            f"[red]Statistical readiness report failed; evidence map is invalid:[/red] "
+            f"{_safe_text(str(exc))}"
+        )
+        raise typer.Exit(1) from exc
+    raw_nodes = map_payload.get("evidence_nodes")
+    if not isinstance(raw_nodes, list) or not raw_nodes:
+        console.print(
+            "[red]Statistical readiness report failed:[/red] "
+            f"evidence map has no evidence_nodes: {evidence_map.name}"
+        )
+        raise typer.Exit(1)
+    golden_map_evidence_record_ids = {
+        node["evidence_record_id"]
+        for node in raw_nodes
+        if isinstance(node, dict) and isinstance(node.get("evidence_record_id"), str)
+    }
+    if len(golden_map_evidence_record_ids) != len(raw_nodes):
+        console.print(
+            "[red]Statistical readiness report failed:[/red] "
+            f"evidence map has a malformed or duplicate evidence_record_id: {evidence_map.name}. "
+            "Run `ke evidence-map-validate` first."
+        )
+        raise typer.Exit(1)
+
+    continuous_validation = validate_statistical_inputs(
+        inputs_path,
+        evidence_records=evidence_result.records,
+    )
+    if continuous_validation.errors:
+        console.print("[red]Statistical input validation failed.[/red]")
+        for error in continuous_validation.errors:
+            console.print(f"- {_safe_text(error)}")
+        raise typer.Exit(1)
+    continuous_input_ids = {record.statistical_input_id for record in continuous_validation.records}
+    continuous_verifications = verify_statistical_inputs(continuous_validation.records)
+
+    binary_input_ids: set[str] = set()
+    binary_verifications: tuple[BinaryStatisticalVerification, ...] = ()
+    if binary_inputs is not None:
+        binary_validation = validate_binary_statistical_inputs(
+            binary_inputs,
+            evidence_records=evidence_result.records,
+        )
+        if binary_validation.errors:
+            console.print("[red]Binary statistical input validation failed.[/red]")
+            for error in binary_validation.errors:
+                console.print(f"- {_safe_text(error)}")
+            raise typer.Exit(1)
+        binary_input_ids = {record.binary_input_id for record in binary_validation.records}
+        binary_verifications = verify_binary_statistical_inputs(binary_validation.records)
+
+    try:
+        readiness_payload = load_statistical_readiness_map(readiness_map_path)
+    except StatisticalReadinessError as exc:
+        console.print(f"[red]Statistical readiness report failed:[/red] {_safe_text(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    result = validate_statistical_readiness(
+        readiness_payload,
+        golden_map_evidence_record_ids=golden_map_evidence_record_ids,
+        evidence_records_by_id=evidence_records_by_id,
+        continuous_input_ids=continuous_input_ids,
+        binary_input_ids=binary_input_ids,
+    )
+    if result.errors:
+        console.print("[red]Statistical readiness validation failed.[/red]")
+        for error in result.errors:
+            console.print(f"- {_safe_text(error)}")
+        console.print("No pooling-readiness verdict was computed.")
+        raise typer.Exit(1)
+
+    report = render_statistical_readiness_report(
+        result,
+        continuous_verifications=continuous_verifications,
+        binary_verifications=binary_verifications,
+    )
+
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(report, encoding="utf-8")
+        console.print(f"[green]Wrote statistical readiness report:[/green] {output}")
+        console.print(f"Golden-map records classified: {len(result.records)}")
+        console.print(
+            "Category counts: "
+            + ", ".join(
+                f"{category}={count}" for category, count in sorted(result.category_counts.items())
+            )
+        )
+        console.print(f"Readiness verdict: {result.readiness_verdict}")
+        console.print("No studies were pooled. No scientific synthesis was performed.")
+    else:
+        typer.echo(report, nl=False)
 
 
 @app.command("relationship-report")
