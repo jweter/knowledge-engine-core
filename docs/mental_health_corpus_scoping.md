@@ -96,3 +96,25 @@ yet; `sources.csv` is header-only. Seeding this corpus with real papers,
 then individually authoring and reviewing Evidence Records, and eventually
 a golden evidence map for this research question, remain future, separate
 work -- mirroring both prior corpora's own progression.
+
+**2026-08-08: first seeding batch -- low scope-screen yield is a real
+finding, not a bug.** The first `ke discovery-cycle-run` cycle against
+this corpus's PubMed/PMC query scanned 100 raw candidates and produced 54
+deterministically-accepted candidates. A manual title/abstract scope
+screen applying `exclusion_criteria.md` selected only 7 of those 54 (13%)
+-- far below the oncology corpus's 70% (336/478) on its own first-cycle
+screen. Reading the 47 excluded titles shows why: the raw "depression"
+query surfaces a much noisier mix than "NSCLC checkpoint inhibitor" did --
+preclinical/animal mechanism studies (adenosine-receptor and
+psilocin-in-mice papers), biomarker/genetic-association studies with no
+treatment-outcome endpoint, non-pharmacological interventions with no
+SSRI/SNRI arm (TMS, ECT, vagus-nerve stimulation, ketogenic diet, physical
+activity), and single-patient case reports were the majority of the
+accepted pool, none of which this corpus's exclusion criteria admit. This
+is exactly the outcome named as a real risk in `scientific_question.md`'s
+rationale (heterogeneous, less standardized evidence in this field) --
+recorded honestly here rather than loosened criteria to inflate the
+accepted count. The corpus will need substantially more discovery cycles
+than GLP-1 or oncology needed to reach a comparable size. See
+`data/corpora/mental_health_mdd_antidepressants/README.md`'s Status
+section for the acquisition/import receipt details.
