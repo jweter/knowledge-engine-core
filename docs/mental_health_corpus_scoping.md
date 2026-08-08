@@ -118,3 +118,29 @@ accepted count. The corpus will need substantially more discovery cycles
 than GLP-1 or oncology needed to reach a comparable size. See
 `data/corpora/mental_health_mdd_antidepressants/README.md`'s Status
 section for the acquisition/import receipt details.
+
+**2026-08-08: cycle 2 yield collapsed further (1/64), root-caused to the
+query's bare "antidepressant" term -- query tightened for future cycles.**
+A second discovery cycle (retstart=100) scanned 100 candidates, producing
+64 deterministically-accepted candidates; the manual scope screen passed
+only 1 (1.5%, down from cycle 1's already-low 13%). Reading the 63
+excluded titles found a clear cause: the discovery query's `OR
+antidepressant` term is a bare category word that PubMed matches against
+any paper describing *any* depression-treatment mechanism, not just
+SSRI/SNRI trials -- ketamine/esketamine, psilocybin/LSD, TMS/ECT/tDCS/
+vagus-nerve stimulation, herbal/probiotic/dietary interventions, and
+preclinical animal-model mechanism papers all routinely describe
+themselves as having "antidepressant effects" or being under
+"antidepressant treatment" investigation. `sources.csv`'s existing
+`inclusion_criteria.md` already correctly rejects all of these at the
+manual-screen stage, but the volume of noise makes each cycle's screen
+increasingly expensive for the yield it returns. Fix: future discovery
+cycles use a tightened query that drops the bare `antidepressant` term,
+keeping only `SSRI`, `SNRI`, and the named-agent list already in
+`inclusion_criteria.md`. This does not guarantee zero noise (a ketamine
+paper that happens to mention "SSRI" once would still match), but should
+meaningfully cut the preclinical/novel-agent/neuromodulation volume. Uses
+a new state file (`discovery_state_v2.json`) since
+`load_discovery_cycle_state` deliberately errors on a query change against
+an existing state file -- a fresh PubMed pagination bookmark is correct
+for a genuinely different search.

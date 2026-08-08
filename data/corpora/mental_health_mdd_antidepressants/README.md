@@ -58,10 +58,22 @@ All 7 approved candidates were acquired as real PMC OA PDFs
 ingestion, not a reviewed evidence base: `sources.csv`'s
 `study_type`/`population`/`intervention`/`comparator` fields are
 intentionally blank, matching the same two-stage discipline already used
-for the GLP-1 and oncology corpora. Continue discovery with
-`--corpus mental_health_mdd_antidepressants` and
-`data/corpora/mental_health_mdd_antidepressants/discovery_state.json` as
-`--state` to resume from `retstart=100` -- more cycles are needed to build
-a corpus of comparable size to GLP-1/oncology, given the low per-cycle
-yield. Individually authoring and reviewing Evidence Records remains
-future, separate work.
+for the GLP-1 and oncology corpora.
+
+**Second discovery cycle (2026-08-08, same day): yield collapsed further,
+query tightened.** A second cycle (retstart=100) scanned 100 candidates,
+64 deterministically accepted; the manual scope screen passed only 1
+(1.5%, down from cycle 1's 13%). Root cause: the query's bare
+`OR antidepressant` term matches any depression-treatment-mechanism paper
+(ketamine, psilocybin, TMS/ECT/tDCS, herbal/probiotic interventions,
+preclinical animal studies), not just SSRI/SNRI trials. That one
+additional paper was acquired and imported (8 total papers now in the
+corpus). Future discovery cycles should use
+`data/corpora/mental_health_mdd_antidepressants/discovery_state_v2.json`
+with a tightened query (drops the bare `antidepressant` term, keeps
+`SSRI`/`SNRI`/the named-agent list) -- see
+`docs/mental_health_corpus_scoping.md`'s 2026-08-08 entry for the full
+query text and reasoning. More cycles are needed to build a corpus of
+comparable size to GLP-1/oncology, given the low per-cycle yield.
+Individually authoring and reviewing Evidence Records remains future,
+separate work.

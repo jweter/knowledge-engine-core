@@ -9,15 +9,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **Mental health corpus: first real papers acquired and imported.**
-  Manually scope-screened the mental-health corpus's 54 deterministically-
-  accepted cycle-1 discovery candidates against
-  `exclusion_criteria.md`, selecting 7 -- a much lower yield (13%) than
-  the oncology corpus's first-cycle 70%, an honest finding about how much
-  broader and noisier the general "depression" search space is (see
-  `docs/mental_health_corpus_scoping.md`'s new status entry). All 7 were
-  acquired as real PMC OA PDFs (`ke pmc-oa-acquire`) and imported into the
-  corpus database (`ke corpus-import`: 7 imported, 0 failed, 0 skipped).
+- **Mental health corpus: first real papers acquired and imported; oncology
+  batch 3 (300 more records).** Manually scope-screened the mental-health
+  corpus's first two discovery cycles (54 then 64 deterministically-
+  accepted candidates), selecting 7 then 1 -- a collapsing yield (13% then
+  1.5%) traced to the discovery query's bare `antidepressant` term
+  matching any depression-treatment-mechanism paper. 8 real PMC OA papers
+  acquired and imported (`ke corpus-import`: 0 failed). A tightened query
+  is documented for future cycles in
+  `docs/mental_health_corpus_scoping.md`. Separately, promoted 300 more
+  oncology draft items into `evidence_records.jsonl` (now 600 total) and
+  ran `ke graph-build` (754 claims, 97 concepts, 645 claim-concept edges,
+  up from 454/95/327); 922 further eligible drafts remain.
 
 ### Fixed
 
