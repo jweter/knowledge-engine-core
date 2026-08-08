@@ -9,6 +9,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Oncology corpus batch 4 (300 more records); investigated SELECT as a
+  second binary statistical input.** Promoted 300 more oncology drafts
+  into `evidence_records.jsonl` (now 900 total, 622 eligible drafts
+  remain) and ran `ke graph-build` (1,054 claims, 100 concepts, 932
+  claim-concept edges, up from 754/97/645). Separately, investigated
+  whether the SELECT trial paper already in the corpus could supply a
+  second production binary statistical input to unblock GLP-1 pooling
+  readiness -- confirmed via the paper's own body text that its
+  categorical weight-loss percentages are multiple-imputation-model
+  results over the full ITT population with no reported raw observed
+  count, so no compatible integer event/total pair can be derived
+  without fabricating one. Documented as a negative finding in
+  `docs/glp1_statistical_readiness_gate_plan.md` rather than forcing a
+  non-source-audited entry.
+
 - **Mental health corpus: tightened discovery query, 2 more real papers.**
   A tightened query (drops the noisy bare `antidepressant` term, keeps
   `SSRI`/`SNRI`/named agents) improved cycle yield from 1.5% to ~3.8%.

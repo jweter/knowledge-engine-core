@@ -17,6 +17,32 @@ begin yet.
 
 The preceding second binary edge-case milestone completed under its documented stop rule: a genuine zero-cell source example was identified, but no matching reviewed Evidence Record existed for that outcome, so no binary schema extension or synthetic production record was added. This readiness milestone therefore inventories the actual verified state rather than assuming a second production binary input exists.
 
+**2026-08-08: investigated SELECT as a second binary input; blocked by the
+same estimand mismatch as the continuous comparison.** The SELECT
+secondary-analysis paper already in the corpus
+(`glp1-ryan-2024-select-weight`) reports categorical weight-loss response
+at week 104 -- 67.8%/44.2%/22.9%/11.0%/4.9% of semaglutide patients versus
+21.3%/6.9%/1.7%/0.6%/0.1% of placebo patients achieved >=5%/10%/15%/20%/25%
+weight loss, confirmed by the paper's own body text (not read off the
+bar-chart figure, which is not a reliable text-extraction source on its
+own). The paper's Methods section states these binary/categorical
+endpoints were computed by logistic regression on a multiple-imputation
+model (500 imputed datasets, Rubin's rules) over the full ITT population
+(n=8,803 semaglutide, n=8,801 placebo) -- there is no reported raw
+observed-count numerator for any threshold. The existing STEP 5 binary
+input (`binary-glp1-step5-week104-five-percent-response-001`) deliberately
+uses an *observed*, non-imputed completer count (144/128) specifically so
+a real integer event/total pair exists to compute a crude risk ratio from.
+Back-calculating an "event count" as percentage x 8,803 would not
+correspond to any real reported number -- exactly the fabrication this
+project's statistical-input discipline forbids. No supplementary table
+with observed-case counts is included in this PMC OA PDF. Conclusion: this
+paper cannot supply a second binary input compatible with the existing
+one's methodology. A second binary input still requires either a
+different source paper that reports raw observed completer counts at a
+matching population/agent/timepoint, or acquiring SELECT's supplementary
+materials (not in the PMC OA subset) to check for an observed-case table.
+
 ## Objective
 
 Create a deterministic readiness report over the reviewed GLP-1/body-weight golden evidence map.
