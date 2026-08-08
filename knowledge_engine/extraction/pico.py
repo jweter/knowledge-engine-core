@@ -37,7 +37,7 @@ from knowledge_engine.extraction.table_filter import is_table_derived
 from knowledge_engine.parser import ParsedPage
 from knowledge_engine.sentence_split import split_sentence_spans
 
-PICO_EXTRACTION_RULES_VERSION = "m28-pico-v4"
+PICO_EXTRACTION_RULES_VERSION = "m28-pico-v5"
 
 # A study-design phrase or heading is usually reused verbatim; PICO values are
 # not, so each field is scoped only to the section types most likely to state
@@ -83,6 +83,30 @@ PICO_EXTRACTION_RULES_VERSION = "m28-pico-v4"
 # A side effect, matching the same accepted precedent M17 already
 # established: a sentence that spans across a page boundary is no longer
 # joined into one continuous sentence for matching purposes.
+#
+# v5 (oncology corpus trial-run finding, 2026-08-08): a trial run of the
+# full extraction pipeline against the oncology_nsclc_checkpoint_inhibitors
+# corpus's 335 papers found the comparator and outcome cue patterns
+# systematically match statistical-result sentences instead of design
+# statements in this corpus's more heterogeneous mix of retrospective and
+# observational studies -- e.g. "Compared with the non-irH group, the irH
+# group had significantly lower baseline log2-SII (P < 0.001)" (a measured
+# subgroup comparison, not the study's comparator arm) and "Calibration was
+# assessed using the Hosmer-Lemeshow goodness-of-fit test (P = .421)" (a
+# statistical-method description, not the clinical outcome definition).
+# Every one of 1,710 structurally-eligible draft items from that trial run
+# had a comparator field 60+ characters long -- none looked like a clean
+# comparator description -- confirming this as a systematic pattern
+# collision, not a rare edge case. A candidate sentence containing an
+# explicit statistical-result marker (a p-value, a confidence interval, or
+# an effect-measure abbreviation followed by a numeric value) is now
+# skipped for every field, the same "skip, never guess" precedent
+# `is_table_derived` already established for table-derived text. This does
+# not fully resolve the oncology corpus's extraction accuracy -- some
+# false positives remain, e.g. a result narrative with no numeric marker
+# ("...had the poorest 2-year OS and PFS...") still matches the
+# intervention "treated with" cue -- and is recorded as a known remaining
+# gap, not a claim of a complete fix.
 _POPULATION_SECTION_TYPES = frozenset({"abstract", "methods", "results"})
 _INTERVENTION_SECTION_TYPES = frozenset({"abstract", "methods", "results"})
 _COMPARATOR_SECTION_TYPES = frozenset({"abstract", "methods", "results", "conclusion"})
@@ -106,6 +130,18 @@ _COMPARATOR_PATTERN = re.compile(
 _OUTCOME_PATTERN = re.compile(
     r"(?i)\b(?:primary outcome|secondary outcome|outcome measure|main outcome|"
     r"endpoint|assessed using|measured using|evaluated using)\b"
+)
+
+# v5: a candidate sentence carrying one of these markers is reporting a
+# measured statistical result (a subgroup comparison, a model-fit test, an
+# adjusted-effect estimate), not describing the study's own comparator arm
+# or outcome definition -- see the v5 changelog note above for the real
+# corpus examples this was tuned against.
+_STATISTICAL_RESULT_PATTERN = re.compile(
+    r"(?i)"
+    r"\bp\s*(?:-?value)?\s*[<>=]\s*\.?\d"  # p < 0.001, P=0.038, P value >.05
+    r"|\b(?:95|99)\s*%\s*ci\b"  # 95% CI
+    r"|\b(?:aor|ahr|arr|or|hr|rr)\s*[:=]\s*\d"  # OR: 1.05, HR: 0.53
 )
 
 
@@ -173,9 +209,10 @@ def _first_matching_sentence(
     Sentences already claimed by an earlier PICO field (for the same paper)
     are skipped in favor of the next distinct cue-matching sentence, so two
     fields never end up holding the exact same sentence. A sentence that is
-    very likely table content (`is_table_derived`) is skipped the same way.
-    The returned sentence is added to `claimed_sentences` before returning,
-    so later fields see it as claimed too.
+    very likely table content (`is_table_derived`) or a statistical-result
+    statement (`_STATISTICAL_RESULT_PATTERN`) is skipped the same way. The
+    returned sentence is added to `claimed_sentences` before returning, so
+    later fields see it as claimed too.
     """
 
     pages_by_number = {page.page_number: page for page in pages}
@@ -203,6 +240,8 @@ def _first_matching_sentence(
                 if sentence in claimed_sentences:
                     continue
                 if is_table_derived(sentence, page.table_text):
+                    continue
+                if _STATISTICAL_RESULT_PATTERN.search(sentence):
                     continue
                 if pattern.search(sentence):
                     claimed_sentences.add(sentence)

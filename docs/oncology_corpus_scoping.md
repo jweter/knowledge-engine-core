@@ -110,3 +110,27 @@ case needing a spot check. No records were promoted; `evidence_records.jsonl`
 for this corpus still does not exist. The corpus-specific extraction-accuracy
 diagnosis and targeted fix this implies is tracked as the next milestone
 for this corpus -- see `docs/roadmap.md`.
+
+**2026-08-08 (later same day): first targeted fix landed, but the gap is
+only partly closed -- still do not promote at scale.**
+`PICO_EXTRACTION_RULES_VERSION` bumped to `m28-pico-v5`
+(`knowledge_engine/extraction/pico.py`): a candidate sentence carrying an
+explicit statistical-result marker (a p-value, a `95% CI`, or an
+effect-measure abbreviation like `OR:`/`HR:` followed by a number) is now
+skipped for every PICO field, the same "skip, never guess" precedent
+`is_table_derived` already established. Re-running the same trial batch
+confirmed the fix works as intended: zero of the resulting 1,522
+structurally-eligible draft items retain a statistical-result marker in
+`comparator` or `outcome` (down from widespread marker leakage in the
+prior run), with no regression to the existing 265-file test suite.
+**This is a real, measured, but partial improvement, not a fix of the
+whole gap.** Spot-checking the new batch still finds `comparator`/`outcome`
+frequently capturing a statistical-*method* or quality-assessment-*tool*
+name with no numeric marker attached -- e.g. "assessed using the Wilcoxon
+rank-sum test," "evaluated using the JBI Critical Appraisal Checklist,"
+a "Statistical analysis" section-heading remnant leaking into
+`comparator`. Closing that remaining gap (broadening the exclusion beyond
+markers with a trailing number to named statistical-method/tool phrases,
+or reconsidering the cue-pattern approach for this corpus's outcome
+field specifically) remains the next step before any oncology automated
+record is promoted at scale.
