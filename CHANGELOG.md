@@ -9,6 +9,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Oncology corpus fully seeded from the 1,522-item eligible-drafts
+  pool; mental health cycle 5 (9 more real papers, best yield yet).**
+  Promoted the final 322 oncology drafts -- `evidence_records.jsonl` now
+  holds all 1,521 records the m28-pico-v5 extraction pass produced.
+  Mental health's fifth discovery cycle (56 accepted) yielded 9 real
+  papers (16%, the best cycle yet): systematic reviews of
+  citalopram/escitalopram metabolic effects, SSRI/SNRI post-stroke
+  depression, and fluoxetine oral side effects; a paroxetine-olanzapine
+  interaction PK study; an escitalopram combined-treatment analysis; a
+  fluoxetine+probiotics RCT; an agomelatine+SSRI/SNRI RCT; a
+  pharmacological-interventions meta-analysis; and a
+  vortioxetine-vs-escitalopram comparative study. Corpus now holds 27
+  real papers.
+
 - **Oncology corpus batch 5 (299 more records); mental health cycle 4.**
   Promoted 299 more oncology drafts (1,199 total, 323 eligible remain)
   and ran `ke graph-build` (1,353 claims, 104 concepts, 1,305
