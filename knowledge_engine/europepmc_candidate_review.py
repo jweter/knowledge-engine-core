@@ -22,7 +22,11 @@ from urllib.parse import urlparse
 
 from knowledge_engine.europepmc_http import EUROPEPMC_PDF_HOST
 from knowledge_engine.license_rules import evaluate_license
-from knowledge_engine.scientific_scope import evaluate_scientific_scope
+from knowledge_engine.scientific_scope import (
+    GLP1_METABOLIC_SCOPE,
+    ScopeVocabulary,
+    evaluate_scientific_scope,
+)
 from knowledge_engine.utils import normalize_doi
 
 EUROPEPMC_ADJUDICATION_RULES_VERSION = "m34-europepmc-candidate-adjudication-v1"
@@ -83,8 +87,17 @@ class EuropePmcCandidateReviewWorksheet:
         return json.dumps(asdict(self), indent=2, sort_keys=True) + "\n"
 
 
-def prepare_europepmc_candidate_review(candidates_path: Path) -> EuropePmcCandidateReviewWorksheet:
-    """Validate discovery output and create explicit adjudication records."""
+def prepare_europepmc_candidate_review(
+    candidates_path: Path,
+    *,
+    vocabulary: ScopeVocabulary = GLP1_METABOLIC_SCOPE,
+) -> EuropePmcCandidateReviewWorksheet:
+    """Validate discovery output and create explicit adjudication records.
+
+    `vocabulary` defaults to the original GLP-1/metabolic-disease scope
+    terms -- pass a different `ScopeVocabulary` (see
+    `knowledge_engine.scientific_scope`) to adjudicate a different corpus.
+    """
 
     if candidates_path.is_symlink():
         raise EuropePmcCandidateReviewError("Candidate input must not be a symbolic link.")
@@ -143,6 +156,7 @@ def prepare_europepmc_candidate_review(candidates_path: Path) -> EuropePmcCandid
             reported_license=reported_license,
             pdf_url=pdf_url,
             pdf_host=pdf_host,
+            vocabulary=vocabulary,
         )
         items.append(
             EuropePmcCandidateReviewItem(
@@ -201,8 +215,9 @@ def _adjudicate(
     reported_license: str | None,
     pdf_url: str | None,
     pdf_host: str | None,
+    vocabulary: ScopeVocabulary = GLP1_METABOLIC_SCOPE,
 ) -> _AdjudicationDecision:
-    inclusion = evaluate_scientific_scope(title, abstract)
+    inclusion = evaluate_scientific_scope(title, abstract, vocabulary=vocabulary)
     identity = "passed" if doi is not None else "incomplete_missing_doi"
     license_result = evaluate_license(reported_license)
     full_text = _full_text_result(pdf_url, pdf_host)

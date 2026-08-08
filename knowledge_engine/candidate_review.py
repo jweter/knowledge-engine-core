@@ -12,7 +12,11 @@ from urllib.parse import urlparse
 from knowledge_engine.license_rules import evaluate_license
 from knowledge_engine.license_rules import license_deed_url as license_deed_url
 from knowledge_engine.ncbi_http import PMC_CLOUD_PDF_HOST
-from knowledge_engine.scientific_scope import evaluate_scientific_scope
+from knowledge_engine.scientific_scope import (
+    GLP1_METABOLIC_SCOPE,
+    ScopeVocabulary,
+    evaluate_scientific_scope,
+)
 
 ADJUDICATION_RULES_VERSION = "m14-candidate-adjudication-v9"
 
@@ -68,8 +72,17 @@ class CandidateReviewWorksheet:
         return json.dumps(asdict(self), indent=2, sort_keys=True) + "\n"
 
 
-def prepare_candidate_review(candidates_path: Path) -> CandidateReviewWorksheet:
-    """Validate discovery output and create explicit adjudication records."""
+def prepare_candidate_review(
+    candidates_path: Path,
+    *,
+    vocabulary: ScopeVocabulary = GLP1_METABOLIC_SCOPE,
+) -> CandidateReviewWorksheet:
+    """Validate discovery output and create explicit adjudication records.
+
+    `vocabulary` defaults to the original GLP-1/metabolic-disease scope
+    terms -- pass a different `ScopeVocabulary` (see
+    `knowledge_engine.scientific_scope`) to adjudicate a different corpus.
+    """
 
     if candidates_path.is_symlink():
         raise CandidateReviewError("Candidate input must not be a symbolic link.")
@@ -125,6 +138,7 @@ def prepare_candidate_review(candidates_path: Path) -> CandidateReviewWorksheet:
             status=status,
             reported_license=reported_license,
             pdf_url=pdf_url,
+            vocabulary=vocabulary,
         )
         items.append(
             CandidateReviewItem(
@@ -177,8 +191,9 @@ def _adjudicate(
     status: str,
     reported_license: str | None,
     pdf_url: str | None,
+    vocabulary: ScopeVocabulary = GLP1_METABOLIC_SCOPE,
 ) -> _AdjudicationDecision:
-    inclusion = evaluate_scientific_scope(title, abstract)
+    inclusion = evaluate_scientific_scope(title, abstract, vocabulary=vocabulary)
     identity = "passed" if pmcid is not None else "incomplete_missing_pmcid"
     license_result = evaluate_license(reported_license)
     full_text = _full_text_result(pdf_url)

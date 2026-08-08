@@ -38,7 +38,11 @@ from urllib.parse import urlparse
 
 from knowledge_engine.core_discovery import CORE_PDF_HOST
 from knowledge_engine.license_rules import evaluate_license
-from knowledge_engine.scientific_scope import evaluate_scientific_scope
+from knowledge_engine.scientific_scope import (
+    GLP1_METABOLIC_SCOPE,
+    ScopeVocabulary,
+    evaluate_scientific_scope,
+)
 from knowledge_engine.utils import normalize_doi
 
 CORE_ADJUDICATION_RULES_VERSION = "m35-core-candidate-adjudication-v1"
@@ -94,8 +98,17 @@ class CoreCandidateReviewWorksheet:
         return json.dumps(asdict(self), indent=2, sort_keys=True) + "\n"
 
 
-def prepare_core_candidate_review(candidates_path: Path) -> CoreCandidateReviewWorksheet:
-    """Validate discovery output and create explicit adjudication records."""
+def prepare_core_candidate_review(
+    candidates_path: Path,
+    *,
+    vocabulary: ScopeVocabulary = GLP1_METABOLIC_SCOPE,
+) -> CoreCandidateReviewWorksheet:
+    """Validate discovery output and create explicit adjudication records.
+
+    `vocabulary` defaults to the original GLP-1/metabolic-disease scope
+    terms -- pass a different `ScopeVocabulary` (see
+    `knowledge_engine.scientific_scope`) to adjudicate a different corpus.
+    """
 
     if candidates_path.is_symlink():
         raise CoreCandidateReviewError("Candidate input must not be a symbolic link.")
@@ -143,6 +156,7 @@ def prepare_core_candidate_review(candidates_path: Path) -> CoreCandidateReviewW
             doi=doi,
             pdf_url=pdf_url,
             pdf_host=pdf_host,
+            vocabulary=vocabulary,
         )
         items.append(
             CoreCandidateReviewItem(
@@ -193,8 +207,9 @@ def _adjudicate(
     doi: str | None,
     pdf_url: str | None,
     pdf_host: str | None,
+    vocabulary: ScopeVocabulary = GLP1_METABOLIC_SCOPE,
 ) -> _AdjudicationDecision:
-    inclusion = evaluate_scientific_scope(title, abstract)
+    inclusion = evaluate_scientific_scope(title, abstract, vocabulary=vocabulary)
     identity = "passed" if doi is not None else "incomplete_missing_doi"
     license_result = evaluate_license(None)
     full_text = _full_text_result(pdf_url, pdf_host)

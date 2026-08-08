@@ -44,7 +44,9 @@ temporary detour:
    question defensible end to end: landmark trials and reviews, population and
    comparator differences, limitations, contradictory or qualifying evidence,
    citations, and conservatively reviewed relationships. Prefer depth and
-   coherence here over expanding the corpus beyond its current bounded scope.
+   coherence here over further *deepening* the GLP-1 corpus specifically --
+   see the domain-diversification decision below for why corpus growth itself
+   is no longer scoped-out project-wide.
    A [reviewed version 1 map](glp1_body_weight_golden_evidence_map.md) now
    selects twelve cited Evidence Records and seventeen reviewer-authored
    relationships with explicit population, comparator, endpoint, limitation,
@@ -95,9 +97,43 @@ temporary detour:
    Then migrate web and AI one parity-tested, read-only slice at a time.
 
 The strategic preference behind this order is explicit: retrieval quality and
-one complete scientific evidence map take priority over more corpus growth,
-cosmetic polish in isolation, or more autonomous AI. These are attainable
-product milestones, not replacements for the longer founding vision below.
+one complete scientific evidence map take priority over *further GLP-1-only*
+corpus growth, cosmetic polish in isolation, or more autonomous AI. These are
+attainable product milestones, not replacements for the longer founding
+vision below.
+
+### Decision: domain diversification beyond GLP-1
+
+A single-domain corpus risks looking like a project built to promote one
+drug class rather than general-purpose scientific infrastructure. The
+project owner decided (2026-08-08) to add a second, unrelated research
+domain -- **oncology** -- alongside continued GLP-1 depth work, not instead
+of it. This does not reopen goals 2-4 above for the GLP-1 map itself;
+finishing that map's stated remaining gaps (withdrawal follow-up, safety
+synthesis, population/agent coverage) stays in scope. It does mean corpus
+growth is no longer categorically deprioritized project-wide -- a bounded,
+well-scoped second corpus, mirroring `glp1_weight_loss`'s existing shape
+(`corpus.json`, inclusion/exclusion criteria, a single defensible research
+question), is now an active, parallel workstream. See
+`docs/oncology_corpus_scoping.md` for the specific research question and
+inclusion boundaries.
+
+### Decision: corpus database versioning via chunked git commits
+
+The corpus SQLite database (`data/knowledge_engine.sqlite3`, gitignored
+today) has repeatedly proven hard to reconstruct in a fresh environment --
+the PDF corpus-recovery tooling above exists specifically because a prior
+database's source PDFs could not be re-located or re-verified. The project
+owner decided (2026-08-08) that the actual ingestion pipeline (PDF download,
+extraction, evidence linking, database population) runs locally on an
+operator machine, and the resulting database is then version-controlled
+directly in this repository -- committed as `<100MB chunked binary parts
+(GitHub rejects any single git-pushed file over 100MB), reassembled by a
+checkout-time script. This was chosen over Git LFS (avoids ongoing
+bandwidth/storage quota cost and an extra tooling dependency) and over
+GitHub Release assets (keeps `git clone` alone sufficient -- no separate
+fetch step for a new session or contributor), accepting that git history
+size grows unboundedly as the database is re-committed over time.
 
 ## Phase 0: Local Source Vault
 

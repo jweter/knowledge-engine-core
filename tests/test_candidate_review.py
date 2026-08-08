@@ -12,6 +12,7 @@ from knowledge_engine.candidate_review import (
     license_deed_url,
     prepare_candidate_review,
 )
+from knowledge_engine.scientific_scope import ONCOLOGY_NSCLC_CHECKPOINT_SCOPE
 
 
 def _write_candidates(
@@ -74,6 +75,39 @@ def test_complete_oa_candidate_is_accepted(tmp_path: Path) -> None:
     assert item.unresolved_ambiguities == ()
     assert datetime.fromisoformat(item.adjudicated_at).tzinfo is not None
     assert "approvals" not in worksheet.to_json()
+
+
+def test_a_glp1_titled_candidate_is_held_under_the_oncology_vocabulary(
+    tmp_path: Path,
+) -> None:
+    """`vocabulary` actually changes the adjudication outcome, not just the
+    scope-result label -- an otherwise-identical candidate that would be
+    accepted under the default GLP-1 vocabulary is held (not silently
+    accepted) when adjudicated against a different corpus's terms."""
+
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [_candidate()])
+
+    worksheet = prepare_candidate_review(candidates, vocabulary=ONCOLOGY_NSCLC_CHECKPOINT_SCOPE)
+
+    item = worksheet.items[0]
+    assert item.inclusion_rule_result == "insufficient_title_abstract_evidence"
+    assert item.decision != "accepted"
+
+
+def test_an_oncology_titled_candidate_is_accepted_under_the_oncology_vocabulary(
+    tmp_path: Path,
+) -> None:
+    candidate = _candidate()
+    candidate["title"] = "Pembrolizumab therapy for adults with non-small-cell lung cancer"
+    candidates = tmp_path / "candidates.json"
+    _write_candidates(candidates, [candidate])
+
+    worksheet = prepare_candidate_review(candidates, vocabulary=ONCOLOGY_NSCLC_CHECKPOINT_SCOPE)
+
+    item = worksheet.items[0]
+    assert item.inclusion_rule_result == "passed"
+    assert item.decision == "accepted"
 
 
 def test_non_glp1_metabolic_therapy_candidate_is_accepted(tmp_path: Path) -> None:
