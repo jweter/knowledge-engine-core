@@ -135,7 +135,16 @@ well-scoped second corpus, mirroring `glp1_weight_loss`'s existing shape
 (`corpus.json`, inclusion/exclusion criteria, a single defensible research
 question), is now an active, parallel workstream. See
 `docs/oncology_corpus_scoping.md` for the specific research question and
-inclusion boundaries.
+inclusion boundaries. That corpus's 335 acquired papers were bulk-imported
+2026-08-08, but a trial run of the standard deterministic PICO-extraction
+pipeline against them found `knowledge_engine/extraction/pico.py`'s cue
+patterns -- tuned by reading GLP-1 RCT abstracts -- collide with
+statistical-result and methods sentences far more often in this corpus's
+more heterogeneous observational-study mix; see the scoping doc's
+"2026-08-08" status entry for the measured finding. No automated Evidence
+Records were promoted. Diagnosing and fixing that domain-specific
+extraction gap is the next concrete milestone before this corpus can grow
+a trustworthy evidence base the same way `glp1_weight_loss` did.
 
 ### Decision: corpus database versioning via chunked git commits
 
