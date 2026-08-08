@@ -144,3 +144,20 @@ a new state file (`discovery_state_v2.json`) since
 `load_discovery_cycle_state` deliberately errors on a query change against
 an existing state file -- a fresh PubMed pagination bookmark is correct
 for a genuinely different search.
+
+**2026-08-08: tightened query's first cycle -- real but modest
+improvement.** Ran the tightened query's first cycle (retstart=0): 100
+candidates scanned, 60 deterministically accepted. 7 overlapped with
+already-acquired papers from the earlier (untightened) cycles -- expected,
+since the tightened query is a strict subset of the original's candidate
+space. Of the 53 genuinely new candidates, 2 passed the manual scope
+screen (~3.8%), versus 1.5% on the untightened query's second cycle. Real
+improvement, not a fix: the tightened query still surfaces plenty of
+preclinical/mechanism, case-report, and off-topic-comorbidity noise
+(reviewed all 53 individually; the two that passed were a paroxetine
+post-marketing pharmacovigilance analysis and a trazodone-vs-SSRIs
+comparative-effectiveness study, both acquired and imported). Diminishing
+returns from further query tuning alone are likely -- the honest
+conclusion is that this field's discovery space is genuinely noisier than
+oncology's, not that the query needs one more fix to reach oncology-level
+yield.

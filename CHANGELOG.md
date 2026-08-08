@@ -9,6 +9,63 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Oncology corpus fully seeded from the 1,522-item eligible-drafts
+  pool; mental health cycle 5 (9 more real papers, best yield yet).**
+  Promoted the final 322 oncology drafts -- `evidence_records.jsonl` now
+  holds all 1,521 records the m28-pico-v5 extraction pass produced. Ran
+  `ke graph-build` on the final batch: 1,675 claims, 109 concepts,
+  1,597 claim-concept edges, up from 1,353/104/1,305.
+  Mental health's fifth discovery cycle (56 accepted) yielded 9 real
+  papers (16%, the best cycle yet): systematic reviews of
+  citalopram/escitalopram metabolic effects, SSRI/SNRI post-stroke
+  depression, and fluoxetine oral side effects; a paroxetine-olanzapine
+  interaction PK study; an escitalopram combined-treatment analysis; a
+  fluoxetine+probiotics RCT; an agomelatine+SSRI/SNRI RCT; a
+  pharmacological-interventions meta-analysis; and a
+  vortioxetine-vs-escitalopram comparative study. Corpus now holds 27
+  real papers.
+
+- **Oncology corpus batch 5 (299 more records); mental health cycle 4.**
+  Promoted 299 more oncology drafts (1,199 total, 323 eligible remain)
+  and ran `ke graph-build` (1,353 claims, 104 concepts, 1,305
+  claim-concept edges, up from 1,054/100/932). Ran mental health's
+  fourth discovery cycle (48 accepted, 4 passed screen: the DEPRE'5
+  post-SSRI-failure RCT, a sertraline inflammatory-markers meta-analysis,
+  a paroxetine+sulpiride study, and an antidepressant-comorbidity
+  network meta-analysis); corpus now holds 18 real papers.
+
+- **Mental health corpus: tightened-query cycle 2, 4 more real papers.**
+  A third discovery cycle scanned 100 candidates (50 accepted); 4 passed
+  scope screen (8% yield, up from 3.8%): a desvenlafaxine network
+  meta-analysis, a vortioxetine-vs-sertraline PD-comorbid-depression
+  comparison, a venlafaxine pharmacovigilance analysis, and a
+  bupropion+sertraline precision-medicine trial. Corpus now holds 14
+  real papers. Acquired via a new local batch-runner script
+  (`work/run_paper_batch.sh`) that collapses acquire/import/split/verify
+  into one call.
+
+- **Oncology corpus batch 4 (300 more records); investigated SELECT as a
+  second binary statistical input.** Promoted 300 more oncology drafts
+  into `evidence_records.jsonl` (now 900 total, 622 eligible drafts
+  remain) and ran `ke graph-build` (1,054 claims, 100 concepts, 932
+  claim-concept edges, up from 754/97/645). Separately, investigated
+  whether the SELECT trial paper already in the corpus could supply a
+  second production binary statistical input to unblock GLP-1 pooling
+  readiness -- confirmed via the paper's own body text that its
+  categorical weight-loss percentages are multiple-imputation-model
+  results over the full ITT population with no reported raw observed
+  count, so no compatible integer event/total pair can be derived
+  without fabricating one. Documented as a negative finding in
+  `docs/glp1_statistical_readiness_gate_plan.md` rather than forcing a
+  non-source-audited entry.
+
+- **Mental health corpus: tightened discovery query, 2 more real papers.**
+  A tightened query (drops the noisy bare `antidepressant` term, keeps
+  `SSRI`/`SNRI`/named agents) improved cycle yield from 1.5% to ~3.8%.
+  Acquired and imported a paroxetine pharmacovigilance analysis and a
+  trazodone-vs-SSRIs comparative-effectiveness study; corpus now holds 10
+  real papers.
+
 - **Mental health corpus: first real papers acquired and imported; oncology
   batch 3 (300 more records).** Manually scope-screened the mental-health
   corpus's first two discovery cycles (54 then 64 deterministically-

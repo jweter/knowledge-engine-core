@@ -74,3 +74,32 @@ text -- accurate. 1,222 further eligible drafts remain unpromoted.
 claims, 97 concepts (61 mesh, 36 rxnorm), 645 claim-concept edges, up from
 454/95/327. Spot-checked `claim_text` across the new batch against real
 source text -- accurate. 922 further eligible drafts remain unpromoted.
+
+**Fourth batch (2026-08-08, same day): 300 more records promoted.**
+`evidence_records.jsonl` now holds 900 draft records (100 + 200 + 300 +
+300). `ke graph-build` processed all 300 new records: graph totals now
+1,054 claims, 100 concepts (63 mesh, 37 rxnorm), 932 claim-concept edges,
+up from 754/97/645. Spot-checked `claim_text` across the new batch
+against real source text -- accurate. 622 further eligible drafts remain
+unpromoted.
+
+**Fifth batch (2026-08-08, same day): 299 more records promoted.**
+`evidence_records.jsonl` now holds 1,199 draft records (900 + 299; one
+of the 300-item slice was already promoted and correctly skipped).
+`ke graph-build` processed the 299 new records: graph totals now 1,353
+claims, 104 concepts (64 mesh, 40 rxnorm), 1,305 claim-concept edges, up
+from 1,054/100/932. Spot-checked `claim_text` across the new batch
+against real source text -- accurate. 323 further eligible drafts remain
+unpromoted.
+
+**Sixth and final batch (2026-08-08, same day): 322 more records
+promoted -- the full 1,522-item m28-pico-v5 eligible pool is now
+promoted.** `evidence_records.jsonl` holds 1,521 draft records (1,199 +
+322). `ke graph-build` processed the final 322 records: graph totals now
+1,675 claims, 109 concepts (66 mesh, 43 rxnorm), 1,597 claim-concept
+edges, up from 1,353/104/1,305. Spot-checked `claim_text` across the
+final batch against real source text -- accurate. This is still bulk
+draft-tier evidence (`m52-evidence-classification-v1`, `review_status:
+draft`), not a reviewed evidence base or golden map -- individual review
+and a golden evidence map for this corpus remain future, separate work,
+mirroring GLP-1's own progression.

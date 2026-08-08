@@ -73,7 +73,52 @@ corpus). Future discovery cycles should use
 with a tightened query (drops the bare `antidepressant` term, keeps
 `SSRI`/`SNRI`/the named-agent list) -- see
 `docs/mental_health_corpus_scoping.md`'s 2026-08-08 entry for the full
-query text and reasoning. More cycles are needed to build a corpus of
-comparable size to GLP-1/oncology, given the low per-cycle yield.
-Individually authoring and reviewing Evidence Records remains future,
-separate work.
+query text and reasoning.
+
+**Tightened-query cycle 1 (2026-08-08, same day): modest yield
+improvement.** The tightened query's first cycle (retstart=0) scanned 100
+candidates, 60 deterministically accepted. 7 were duplicates of papers
+already acquired in earlier cycles (expected overlap, since the tightened
+query is a subset of the original). Of the 53 new candidates, 2 passed
+scope screen (~3.8%, versus the untightened query's 1.5% on its second
+cycle) -- a real but modest improvement, not a fix. Both acquired and
+imported: a paroxetine post-marketing pharmacovigilance safety analysis
+and a trazodone-vs-SSRIs comparative-effectiveness study. Corpus now
+holds 10 real papers.
+
+**Tightened-query cycle 2 (2026-08-08, same day): 4 more real papers,
+yield up to 8%.** A third discovery cycle (tightened query, retstart=100)
+scanned 100 candidates, 50 deterministically accepted. 4 passed scope
+screen: a desvenlafaxine (SNRI) network meta-analysis, a
+vortioxetine-vs-sertraline comparison in Parkinson's-disease-comorbid
+depression, a venlafaxine (SNRI) post-marketing pharmacovigilance
+analysis, and a bupropion-plus-sertraline precision-medicine SMART trial.
+Acquired and imported with `work/run_paper_batch.sh` (a local
+batch-runner script collapsing acquire/import/split/verify into one
+call). Corpus now holds 14 real papers.
+
+**Tightened-query cycle 3 (2026-08-08, same day): 4 more real papers,
+yield holding around 8%.** A fourth discovery cycle (retstart=200)
+scanned 100 candidates, 48 deterministically accepted. 4 passed scope
+screen: the DEPRE'5 RCT (treatment strategies after a failed SSRI trial
+in MDD), a sertraline inflammatory-markers systematic review/
+meta-analysis, a paroxetine-plus-sulpiride sleep/quality-of-life study,
+and a network meta-analysis of antidepressant efficacy/tolerability in
+comorbid physical conditions. Corpus now holds 18 real papers.
+
+**Tightened-query cycle 4 (2026-08-08, same day): 9 more real papers,
+yield up to 16%.** A fifth discovery cycle (retstart=300) scanned 100
+candidates, 56 deterministically accepted. 9 passed scope screen -- the
+best yield yet: a citalopram/escitalopram glucolipid-metabolism
+systematic review, an SSRI/SNRI post-stroke-depression systematic
+review, a paroxetine-olanzapine drug-interaction pharmacokinetics study,
+a fluoxetine oral-side-effects systematic review, an escitalopram
+combined-treatment retrospective analysis, a fluoxetine-plus-probiotics
+RCT, an agomelatine-plus-SSRI/SNRI RCT, a pharmacological-interventions-
+in-milder-depression systematic review/meta-analysis, and a
+vortioxetine-vs-escitalopram cognitive-profile comparative study.
+Acquired and imported with `work/run_paper_batch.sh`. Corpus now holds
+27 real papers. More cycles are needed to build a corpus of comparable
+size to GLP-1/oncology, given the still-below-oncology per-cycle yield,
+though it continues improving cycle over cycle. Individually authoring
+and reviewing Evidence Records remains future, separate work.
