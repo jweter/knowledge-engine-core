@@ -1,12 +1,12 @@
 {
   "backup": {
     "byte_count": 512487424,
-    "created_at": "2026-08-08T22:51:10.937152Z",
+    "created_at": "2026-08-08T23:13:42.924675Z",
     "filename": "knowledge_engine.sqlite3",
     "integrity_check": "ok",
-    "production_commit": "845643e9064cf4c724bb8a878d017fa8a18094d7",
+    "production_commit": "0a710bfc2e6e9700e7d7d7e17a561eb39af7bd9d",
     "schema_version": 0,
-    "sha256": "08eea961e2e13fe688fb2279a80fe70bacbf9242040e47e5b25f8f245b432381",
+    "sha256": "e6ea63e56b441b3e60c71f068e02edf7c2850b10e0771cbaa38b25ec5b9cbd9e",
     "table_counts": {
       "import_runs": 6,
       "papers": 1305
@@ -18,7 +18,7 @@
     {
       "byte_count": 90000000,
       "filename": "knowledge_engine.sqlite3.part0000",
-      "sha256": "bcd89951d6b14652702909048c20985159263c98e261b2617d69d6d320c65377"
+      "sha256": "c9cad1ad38c67e4b62147542712411724e19dbe3c92375d1eacec4edec9b853b"
     },
     {
       "byte_count": 90000000,
@@ -33,21 +33,21 @@
     {
       "byte_count": 90000000,
       "filename": "knowledge_engine.sqlite3.part0003",
-      "sha256": "48ac4944ff2bb53d48d2239b3c0f04b65ce2548514e500c8730aa2b80f368c9c"
+      "sha256": "cf9f9cf7ae1733a185751c3a901e799c162e0358e3e64f98ec39a59544e6f723"
     },
     {
       "byte_count": 90000000,
       "filename": "knowledge_engine.sqlite3.part0004",
-      "sha256": "bb557844e2aa7012eac2830d49c4bd738d3dfc4bb4c5eaa487ddbb3d8835150c"
+      "sha256": "fe6e3d56e2ceb0d3bf741e8118fb47db3b6956e4bc78bc606def316538634045"
     },
     {
       "byte_count": 62487424,
       "filename": "knowledge_engine.sqlite3.part0005",
-      "sha256": "ef1e71d09523ff1fb30bd0b0dc62ccbfb0af0a3ddc2f6e8b23e10a7fdad30273"
+      "sha256": "eb8e96427d204c398380e8e6643b49829513b5167053d18ddfc94f967efcd686"
     }
   ],
   "schema_version": 1,
   "source_filename": "knowledge_engine.sqlite3",
   "total_byte_count": 512487424,
-  "total_sha256": "08eea961e2e13fe688fb2279a80fe70bacbf9242040e47e5b25f8f245b432381"
+  "total_sha256": "e6ea63e56b441b3e60c71f068e02edf7c2850b10e0771cbaa38b25ec5b9cbd9e"
 }
