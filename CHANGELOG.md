@@ -9,6 +9,29 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Statistical Verification Readiness Gate.** New `ke
+  statistical-readiness-report` command and
+  `knowledge_engine/statistical_readiness.py` module implement the
+  pre-approved design in `docs/glp1_statistical_readiness_gate_plan.md`.
+  Validates a curated readiness classification
+  (`data/corpora/glp1_weight_loss/statistical_readiness_map.json`) against
+  the reviewed golden evidence map's actual coverage and already-validated
+  typed statistical inputs, computes each declared pooling-compatibility
+  group's `candidate`/`no`/`undetermined` status, and renders a
+  deterministic Markdown report with an overall readiness verdict. Run
+  against the current 14-record golden map: 2 `exactly_verified`, 3
+  `display_only`, 7 `not_selected_for_verification`, 2 `not_applicable`;
+  one compatibility group (STEP 5 vs SELECT) blocked by incompatible
+  estimands; verdict `not_ready_for_pooling_design`, matching the
+  pre-implementation expectation in
+  `docs/reviews/glp1_statistical_readiness_gate/compatibility_analysis.md`.
+  This is the milestone named by the prespecified zero-cell correction
+  audit's own handoff (`docs/glp1_second_binary_edge_case_plan.md`, Decision
+  Rule C: no defensible second production result). It never pools studies,
+  performs meta-analysis, infers a missing classification, or determines
+  scientific truth. The GLP-1 Statistical Pooling Protocol design must not
+  begin until a future run reports `ready_for_pooling_design_review`.
+
 - **Oncology corpus first bulk seeding batch (335 papers).** 10
   `ke discovery-cycle-run` cycles against PubMed/PMC OA for the
   `oncology_nsclc_checkpoint_inhibitors` corpus scanned ~1000 raw

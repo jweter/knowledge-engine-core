@@ -220,6 +220,22 @@ most likely to actually call:
   source-reported adjusted measure is retained as display-only context and is
   never treated as equivalent to the crude result. Omitting the option
   preserves the continuous-only contract and output.
+- `ke statistical-readiness-report <readiness_map.json> --evidence-map
+  <golden_map.json> --evidence <records.jsonl> --inputs
+  <statistical_inputs.jsonl> [--binary-inputs <binary_inputs.jsonl>]
+  [--output <path.md>]` -- validate a curated readiness-map classification
+  (`knowledge_engine/statistical_readiness.py`) against the reviewed golden
+  evidence map's actual evidence-node coverage and the already-validated
+  typed statistical inputs, then render a deterministic Markdown report:
+  per-record readiness category and verification facets, declared
+  pooling-compatibility groups and their computed `candidate`/`no`/
+  `undetermined` status, and an overall
+  `ready_for_pooling_design_review`/`not_ready_for_pooling_design` verdict
+  with blockers. Exit `1` on any validation failure, including a golden-map
+  Evidence Record with no readiness classification or a classification
+  referencing an unknown/unreviewed record or input id. It never pools
+  studies, performs meta-analysis, infers a missing classification, or
+  determines scientific truth.
 - `ke relationship-report` -- read Relationship Records. Console output
   only.
 - `ke graph-report [--evidence-record-id <id> | --paper-id <id>] [--output <path.md>]`

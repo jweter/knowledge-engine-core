@@ -27,7 +27,7 @@ diabetes, or metabolic syndrome?
 - `license_policy.md`: policy for legal and reproducible use of source
   documents.
 - `evidence_records.jsonl`: traceable evidence records from the GLP-1 vertical
-  slice and later extraction work; the twelve golden-map records have completed
+  slice and later extraction work; the fourteen golden-map records have completed
   the map's secondary source audit.
 - `relationship_records.jsonl`: reviewer-authored links between selected
   Evidence Records.
@@ -41,6 +41,10 @@ diabetes, or metabolic syndrome?
 - `binary_statistical_inputs.jsonl`: separate version 1 source-audited count
   contract for STEP 5's observed week-104 responder result, including the
   explicit crude-risk-ratio method and no-correction policy.
+- `statistical_readiness_map.json`: curated readiness classification for
+  every golden-map Evidence Record (primary readiness category,
+  pooling-compatibility group, and incompatibility reasons), validated by
+  `ke statistical-readiness-report`.
 
 The current map includes one legally reusable GLIDE pilot record as an explicit
 liraglutide/post-gastric-banding qualifier. Its ignored local source is
@@ -81,6 +85,27 @@ numerical arm standard errors are unavailable. A typed numerical locator may
 point to a different page from its Evidence Record's claim locator when that is
 where the complete arithmetic identity is reported. The command does not
 extract numbers from prose, open PDFs, access SQLite, pool studies, or perform
+scientific synthesis.
+
+Check whether the golden map's typed inputs are ready for a future pooling
+design:
+
+```bash
+ke statistical-readiness-report \
+  data/corpora/glp1_weight_loss/statistical_readiness_map.json \
+  --evidence-map data/corpora/glp1_weight_loss/golden_evidence_map.json \
+  --evidence data/corpora/glp1_weight_loss/evidence_records.jsonl \
+  --inputs data/corpora/glp1_weight_loss/statistical_inputs.jsonl \
+  --binary-inputs data/corpora/glp1_weight_loss/binary_statistical_inputs.jsonl \
+  --output glp1-statistical-readiness.md
+```
+
+All 14 golden-map records are classified (2 `exactly_verified`, 3
+`display_only`, 7 `not_selected_for_verification`, 2 `not_applicable`). The
+one declared compatibility group (STEP 5 vs SELECT) is blocked by
+incompatible estimands, and only one production binary statistical input
+exists, so the computed verdict is `not_ready_for_pooling_design`. The
+command never pools studies, infers a missing classification, or performs
 scientific synthesis.
 
 The optional binary file contains one independently source-audited STEP 5

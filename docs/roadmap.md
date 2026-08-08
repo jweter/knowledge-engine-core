@@ -88,8 +88,23 @@ temporary detour:
    ratio with a declared no-correction log-Wald interval. The source-adjusted
    OR remains display-only because its logistic-regression and
    multiple-imputation estimand is not equivalent to the crude count contrast.
-   The next bounded analytical step should exercise one observed limitation,
-   such as a prespecified zero-cell correction, before pooling or AI narration.
+   A prespecified zero-cell correction was subsequently audited
+   (`docs/glp1_second_binary_edge_case_plan.md`): a genuine zero-cell binary
+   edge case exists (GLIDE liraglutide nausea, 6/13 vs 0/14), but it has no
+   matching reviewed body-weight Evidence Record, so Decision Rule C applied
+   -- no defensible second production statistical-verification result, and
+   the binary schema was left unchanged. That audit's own handoff named the
+   Statistical Verification Readiness Gate as the next milestone, and it is
+   now implemented (`ke statistical-readiness-report`,
+   `knowledge_engine/statistical_readiness.py`). Run against the current
+   14-record golden map it reports 2 `exactly_verified`, 3 `display_only`, 7
+   `not_selected_for_verification`, and 2 `not_applicable` records, one
+   `no`-status compatibility group (STEP 5 vs SELECT, incompatible
+   estimands), and a computed verdict of `not_ready_for_pooling_design` --
+   confirming the documented pre-implementation expectation in
+   `docs/reviews/glp1_statistical_readiness_gate/compatibility_analysis.md`.
+   Per that verdict, the GLP-1 Statistical Pooling Protocol design must not
+   begin yet.
 5. **Operationalize the persistent host when its trigger is met.** Continue
    event-triggered web snapshots and AI subprocess calls until the operator,
    accepted API fixtures, published-data procedure, consumer migration, and
@@ -1374,9 +1389,13 @@ automatically.
   3's remaining GLP-1-specific gaps (durability, safety synthesis, agent
   coverage) do not block this tag; they remain independently tracked.
 - `v0.4.0-alpha`: Current Project Path goal 4's next concrete step ships --
-  one bounded Evidence/Analytical Intelligence extension (e.g. a
-  prespecified zero-cell correction) exercised before any pooling or AI
-  narration is added, per `docs/glp1_second_binary_edge_case_plan.md`.
+  live. The prespecified zero-cell correction was audited and closed with
+  no defensible second production result (`docs/glp1_second_binary_edge_case_plan.md`,
+  Decision Rule C), and the Statistical Verification Readiness Gate that
+  audit's handoff named next is implemented and run against the real
+  14-record golden map, reporting `not_ready_for_pooling_design`. The GLP-1
+  Statistical Pooling Protocol design must not begin until a future
+  readiness-gate run reports `ready_for_pooling_design_review`.
 - `v0.5.0-beta`: Current Project Path goal 5's decision is made and written
   down, whichever way it resolves -- either `docs/persistent_host_design.md`'s
   five build-trigger conditions (named operator, accepted API fixtures,

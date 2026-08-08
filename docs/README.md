@@ -68,6 +68,16 @@ original prototype narrative, one-off status reports) live in
   version 1 count contract, explicit no-correction policy, crude risk-ratio
   formula, and adjusted-versus-crude non-equivalence boundary for STEP 5's
   week-104 responder result.
+- **`glp1_second_binary_edge_case_plan.md`** -- the closed prespecified
+  zero-cell correction audit: a genuine edge case was found (GLIDE
+  liraglutide nausea) but had no matching reviewed body-weight Evidence
+  Record, so Decision Rule C applied and no second production result was
+  added.
+- **`glp1_statistical_readiness_gate_plan.md`** -- the approved design,
+  now implemented, for `ke statistical-readiness-report`: readiness
+  categories, compatibility-group logic, and the computed
+  `not_ready_for_pooling_design` verdict. See also
+  `docs/reviews/glp1_statistical_readiness_gate/`.
 - **`founding_vision.md`** -- the project's original founding proposal,
   preserved verbatim.
 - **`future_ideas.md`** -- promising ideas parked outside the current
