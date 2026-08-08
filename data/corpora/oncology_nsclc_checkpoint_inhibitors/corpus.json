@@ -13,5 +13,5 @@
   "license_policy": "license_policy.md",
   "source_manifest": "sources.csv",
   "default_local_papers_directory": "papers/corpora/oncology_nsclc_checkpoint_inhibitors",
-  "notes": "No discovery has run against this corpus yet. sources.csv contains only the header row. This corpus metadata is committed for reproducibility. Local PDFs remain ignored and are not part of the repository."
+  "notes": "2026-08-08: first bulk seeding batch. 10 discovery-cycle-run cycles scanned ~1000 raw PubMed candidates, yielding 478 unique deterministically-accepted candidates; a documented rule-based title scope screen (see docs/oncology_corpus_scoping.md) selected 336, all of which were acquired as real PMC OA PDFs and imported (335 imported, 1 skipped as a duplicate). sources.csv now has 336 rows, all approved_open_access/included. study_type/population/intervention/comparator fields are intentionally blank pending evidence-record-level review -- this is bulk ingestion metadata, not yet a reviewed evidence base. Local PDFs remain ignored and are not part of the repository; the working database growth is committed via data/db_parts/ (see docs/corpus_database_chunked_versioning.md)."
 }

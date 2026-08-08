@@ -15,8 +15,8 @@ in adults with advanced non-small-cell lung cancer?
 ## Files
 
 - `corpus.json`: version 1 corpus definition.
-- `sources.csv`: source manifest (header row only -- no discovery has run
-  yet).
+- `sources.csv`: source manifest, 336 rows (see Status below).
+- `discovery_state.json`: `ke discovery-cycle-run` pagination bookmark.
 - `scientific_question.md`: human-readable question definition and
   rationale.
 - `inclusion_criteria.md`: deterministic criteria for adding papers.
@@ -27,10 +27,20 @@ in adults with advanced non-small-cell lung cancer?
 
 ## Status
 
-Not yet populated. Run discovery with `--corpus
-oncology_nsclc_checkpoint_inhibitors` (e.g. `ke discovery-cycle-run --query
-"..." --corpus oncology_nsclc_checkpoint_inhibitors ...`) to begin
-populating this corpus with the same M14/M34/M35 discovery-and-adjudication
-pipeline the GLP-1 corpus uses, scoped to
-`knowledge_engine.scientific_scope.ONCOLOGY_NSCLC_CHECKPOINT_SCOPE` instead
-of the default GLP-1 vocabulary.
+**Seeded (2026-08-08).** 10 `ke discovery-cycle-run` cycles scanned ~1000
+raw PubMed candidates and produced 478 unique deterministically-accepted
+candidates (identity/license/full-text/scope rules passed). A documented,
+rule-based title scope screen -- excluding wrong cancer types (e.g. SCLC,
+gastric, renal), preclinical/mechanism-only studies, off-topic diagnostic or
+surgical-technique papers, and single-patient case reports -- selected 336.
+All 336 were acquired as real PMC OA PDFs and imported into the corpus
+database (`ke corpus-import`: 335 imported, 1 skipped as a duplicate).
+
+This is bulk ingestion, not a reviewed evidence base: `sources.csv`'s
+`study_type`/`population`/`intervention`/`comparator` fields are
+intentionally blank, matching the same two-stage discipline already used
+for the GLP-1 corpus (bulk acquisition first, individual Evidence Record
+authoring and review later, for a much smaller subset). Continue discovery
+with `--corpus oncology_nsclc_checkpoint_inhibitors` and
+`data/corpora/oncology_nsclc_checkpoint_inhibitors/discovery_state.json` as
+`--state` to resume from `retstart=950`.

@@ -9,6 +9,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Oncology corpus first bulk seeding batch (335 papers).** 10
+  `ke discovery-cycle-run` cycles against PubMed/PMC OA for the
+  `oncology_nsclc_checkpoint_inhibitors` corpus scanned ~1000 raw
+  candidates, yielding 478 unique deterministically-accepted candidates. A
+  documented, rule-based title scope screen (excluding wrong cancer types,
+  preclinical/mechanism-only studies, off-topic diagnostic/surgical papers,
+  and single-patient case reports) selected 336, all acquired as real PMC
+  OA PDFs and imported (335 imported, 1 skipped as a duplicate; corpus
+  database now 1,295 total papers, up from 960). `sources.csv` populated
+  for all 336 rows; `data/db_parts/` re-split and committed to persist the
+  database growth. This is bulk ingestion metadata, not yet a reviewed
+  evidence base -- see `data/corpora/oncology_nsclc_checkpoint_inhibitors/README.md`.
+
 - **Dedicated release assessment and truthful pre-1.0 tag ladder.**
   `docs/roadmap.md`'s Release Milestones section replaces its stale
   `v0.1.0`-`v1.0.0` version ladder with a 2026-08-08 assessment confirming

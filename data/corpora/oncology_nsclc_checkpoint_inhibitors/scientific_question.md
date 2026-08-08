@@ -60,8 +60,10 @@ should apply here with no new architecture, only a new `ScopeVocabulary` (see
 
 ## Status
 
-No discovery has run against this corpus yet. `sources.csv` contains only
-the header row; `evidence_records.jsonl` and `relationship_records.jsonl` do
-not exist yet. Run discovery with `--corpus oncology_nsclc_checkpoint_inhibitors`
-(see `knowledge_engine/scientific_scope.py`'s `ONCOLOGY_NSCLC_CHECKPOINT_SCOPE`)
-to begin populating this corpus.
+`sources.csv` now has 336 rows (335 imported into the corpus database, 1
+skipped as a duplicate) after the 2026-08-08 bulk seeding batch -- see
+`README.md`'s Status section for the full account. `evidence_records.jsonl`
+and `relationship_records.jsonl` do not exist yet: authoring individually
+source-audited Evidence Records and reviewer relationships for a subset of
+this corpus, and eventually a golden evidence map for this research
+question, remain future, separate work.
