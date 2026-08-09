@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import pytest
 
@@ -24,11 +25,11 @@ prescreen = _load_module()
 
 
 @pytest.fixture()
-def mh_rules():
+def mh_rules() -> Any:
     return prescreen.CORPUS_RULE_SETS["mental_health_mdd_antidepressants"]
 
 
-def test_off_topic_title_is_likely_exclude(mh_rules) -> None:
+def test_off_topic_title_is_likely_exclude(mh_rules: Any) -> None:
     verdict, matched_rules, _ = prescreen.prescreen_candidate(
         "FDG-PET/CT based small volume accelerated immuno chemoradiotherapy in NSCLC", mh_rules
     )
@@ -36,7 +37,7 @@ def test_off_topic_title_is_likely_exclude(mh_rules) -> None:
     assert matched_rules == ["off_topic"]
 
 
-def test_generic_antidepressant_term_needs_manual_review(mh_rules) -> None:
+def test_generic_antidepressant_term_needs_manual_review(mh_rules: Any) -> None:
     verdict, matched_rules, _ = prescreen.prescreen_candidate(
         "Effects of Anxious Depression on Antidepressant Treatment Response.", mh_rules
     )
@@ -44,7 +45,7 @@ def test_generic_antidepressant_term_needs_manual_review(mh_rules) -> None:
     assert matched_rules == ["no_named_agent"]
 
 
-def test_case_report_naming_an_agent_but_not_depression_needs_manual_review(mh_rules) -> None:
+def test_case_report_naming_an_agent_but_not_depression_needs_manual_review(mh_rules: Any) -> None:
     # Real title from mental-health cycle 8 (PMID 38347994): a genuine case
     # report about desvenlafaxine's own side effect, matched by the discovery
     # query via abstract-level co-occurrence with "depression" -- the title
@@ -58,7 +59,7 @@ def test_case_report_naming_an_agent_but_not_depression_needs_manual_review(mh_r
     assert matched_rules == ["agent_named_topic_unstated"]
 
 
-def test_case_report_naming_both_depression_and_agent_is_likely_exclude(mh_rules) -> None:
+def test_case_report_naming_both_depression_and_agent_is_likely_exclude(mh_rules: Any) -> None:
     verdict, matched_rules, _ = prescreen.prescreen_candidate(
         "Sertraline-Induced Sleep Paralysis in Major Depressive Disorder: A Case Report.", mh_rules
     )
@@ -66,7 +67,7 @@ def test_case_report_naming_both_depression_and_agent_is_likely_exclude(mh_rules
     assert "case_report" in matched_rules
 
 
-def test_preclinical_animal_study_naming_depression_is_likely_exclude(mh_rules) -> None:
+def test_preclinical_animal_study_naming_depression_is_likely_exclude(mh_rules: Any) -> None:
     verdict, matched_rules, _ = prescreen.prescreen_candidate(
         "Developmental fluoxetine exposure affects depressive-like behavior in adult mice.",
         mh_rules,
@@ -75,7 +76,7 @@ def test_preclinical_animal_study_naming_depression_is_likely_exclude(mh_rules) 
     assert "preclinical_animal" in matched_rules
 
 
-def test_bipolar_population_is_likely_exclude(mh_rules) -> None:
+def test_bipolar_population_is_likely_exclude(mh_rules: Any) -> None:
     verdict, matched_rules, _ = prescreen.prescreen_candidate(
         "Sertraline augmentation in bipolar depression: a randomized trial.", mh_rules
     )
@@ -83,7 +84,7 @@ def test_bipolar_population_is_likely_exclude(mh_rules) -> None:
     assert "bipolar" in matched_rules
 
 
-def test_clean_named_agent_rct_is_likely_include(mh_rules) -> None:
+def test_clean_named_agent_rct_is_likely_include(mh_rules: Any) -> None:
     verdict, matched_rules, _ = prescreen.prescreen_candidate(
         "Escitalopram versus other antidepressive agents for major depressive disorder: "
         "a systematic review and meta-analysis.",
@@ -93,7 +94,7 @@ def test_clean_named_agent_rct_is_likely_include(mh_rules) -> None:
     assert matched_rules == ["on_topic", "named_agent_present"]
 
 
-def test_prescreen_worksheet_counts_match_individual_verdicts(mh_rules) -> None:
+def test_prescreen_worksheet_counts_match_individual_verdicts(mh_rules: Any) -> None:
     worksheet = {
         "ready_for_scope_review": [
             {"pmid": 1, "title": "Escitalopram for major depressive disorder: an RCT."},

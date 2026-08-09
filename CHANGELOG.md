@@ -26,6 +26,27 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`docs/roadmap/future_ai_orchestration_plan.md`: contract-first
+  orchestration design, refining the multi-agent proposal below.**
+  Relays a project-owner-authored orchestration plan (the source
+  download link was inaccessible; drafted from the owner's detailed
+  written relay, with an explicit provenance note and an honest gap
+  flag for content not described). Proposes four durable domain
+  contracts -- `ResearchPlan`, `ResearchSession`, `ResearchTask`,
+  `ResearchEvent` -- executed by pluggable engines (deterministic code,
+  local Ollama models, external providers, or any future agent
+  framework), so no framework becomes Knowledge Engine's architecture.
+  Documents 14 named design risks with mitigations (agent error
+  compounding, prompt injection, context-window scaling, corpus bias
+  vs. consensus, circular AI graph reasoning, canonical evidence
+  mutation, evaluation drift, cost explosion, memory poisoning,
+  pseudo-replication, publication bias, framework lock-in, and two
+  others), an 11-milestone `AI-O1`-`AI-O11` build order, and the
+  Skeptic worker's exact evidentiary-honesty reporting requirement
+  ("no aligned contradictory evidence found within the searched
+  scope," never "there is no contradictory evidence"). Cross-linked
+  from `docs/ai_layer_architecture.md`'s Orchestration section and
+  `docs/roadmap.md`'s doc index.
 - **`docs/ai_layer_architecture.md`: multi-agent orchestration design
   addition.** Documents a project-owner architecture review's proposed
   worker-role taxonomy (Orchestrator, Query Planner, Discovery/Retrieval
