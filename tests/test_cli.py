@@ -1208,6 +1208,33 @@ def test_evidence_validate_accepts_known_extraction_statuses(
     assert result.exit_code == 0
 
 
+def test_evidence_validate_fails_for_invalid_evidence_direction(tmp_path: Path) -> None:
+    # "refutes" is not a real evidence_direction value -- "contradicts" is the
+    # correct term for a negative-result record. Real near-miss this session:
+    # a genuine null-result RCT was almost written with evidence_direction
+    # "refutes" and would have passed unnoticed, since this field previously
+    # had no enum check at all (only extraction_status did).
+    records_path = write_evidence_records(tmp_path, [{"evidence_direction": "refutes"}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "invalid evidence_direction 'refutes'" in result.output
+
+
+@pytest.mark.parametrize(
+    "evidence_direction", ["supports", "contradicts", "qualifies", "contextualizes"]
+)
+def test_evidence_validate_accepts_known_evidence_directions(
+    tmp_path: Path, evidence_direction: str
+) -> None:
+    records_path = write_evidence_records(tmp_path, [{"evidence_direction": evidence_direction}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code == 0
+
+
 def test_evidence_validate_fails_for_non_integer_source_span_offset(tmp_path: Path) -> None:
     records_path = write_evidence_records(
         tmp_path, [{"source_span": {"start_offset": "0", "end_offset": 10}}]

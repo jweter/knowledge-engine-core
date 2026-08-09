@@ -239,6 +239,7 @@ PromotionOutputOption = Annotated[
 ]
 ALLOWED_REVIEW_STATUSES = {"draft", "reviewed", "needs_revision", "rejected"}
 ALLOWED_EXTRACTION_STATUSES = {"draft_review_required", "draft_manual_prototype"}
+ALLOWED_EVIDENCE_DIRECTIONS = {"supports", "contradicts", "qualifies", "contextualizes"}
 ALLOWED_RELATIONSHIP_TYPES = {
     "supports",
     "contradicts",
@@ -1522,6 +1523,18 @@ def _validate_evidence_record(
         allowed = ", ".join(sorted(ALLOWED_EXTRACTION_STATUSES))
         errors.append(
             f"Line {line_number}: invalid extraction_status '{extraction_status}'. "
+            f"Allowed values: {allowed}."
+        )
+
+    evidence_direction = record.get("evidence_direction")
+    if (
+        isinstance(evidence_direction, str)
+        and evidence_direction
+        and evidence_direction not in ALLOWED_EVIDENCE_DIRECTIONS
+    ):
+        allowed = ", ".join(sorted(ALLOWED_EVIDENCE_DIRECTIONS))
+        errors.append(
+            f"Line {line_number}: invalid evidence_direction '{evidence_direction}'. "
             f"Allowed values: {allowed}."
         )
 
