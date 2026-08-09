@@ -102,6 +102,31 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`classify_study_type`: fixed a real precedence false-positive and
+  narrowed a real coverage gap, both measured against the live
+  1,357-paper corpus.** `meta_analysis`/`systematic_review` (checked
+  first, deliberately) had no guard against a paper merely *citing*
+  another paper's meta-analysis or *explicitly denying* it performed
+  one -- real examples: paper 151 ("no quantitative synthesis,
+  meta-analysis... was performed"), paper 220 ("Rather than aiming to
+  perform an exhaustive systematic review or meta-analysis, we sought
+  to..."), paper 409 (a narrative review citing a different paper's
+  meta-analysis), and paper 141 (explicitly denies a meta-analysis but
+  is a genuine systematic review) were all misclassified before this
+  fix. A new `_describes_own_design` guard rejects a pattern's first
+  match when preceded by an explicit negation or prior/other-work cue,
+  letting classification correctly fall through to the true design or
+  to `None`. Separately, `retrospective_study`'s pattern was widened
+  to match the common real phrasing "retrospective chart review"
+  (papers 51, 959), narrowing the has-Abstract/Methods-but-no-match
+  count from 627 to 619 of 1,357 papers. `STUDY_DESIGN_RULES_VERSION`
+  bumped to `m26-study-design-v5`. 6 new regression tests in
+  `tests/test_extraction_study_design.py`, each reproducing a real
+  paper's exact phrasing. A known, documented residual gap (a citation
+  with no negation/prior-work cue word at all nearby) is left for a
+  future pass rather than guessed at. See `docs/roadmap.md`'s
+  2026-08-09 addendum to the M65 section.
+
 - **PDF author-metadata parsing: degree credentials no longer produce
   duplicate-author `IntegrityError`s.** Some publishers' embedded PDF
   "Author" metadata lists each name followed by its own degree credential
