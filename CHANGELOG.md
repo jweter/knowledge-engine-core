@@ -7,7 +7,48 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **PDF author-metadata parsing: degree credentials no longer produce
+  duplicate-author `IntegrityError`s.** Some publishers' embedded PDF
+  "Author" metadata lists each name followed by its own degree credential
+  ("Jane Doe, PhD, John Smith, PhD, ..."), indistinguishable from a name
+  boundary by `_extract_authors`'s comma-only split. When the same
+  credential (e.g. "PhD") repeats for multiple co-authors, the resulting
+  pseudo-author got linked to the paper twice, violating
+  `paper_authors`' `(paper_id, author_id)` uniqueness and aborting the
+  entire multi-paper import batch -- found live against a real CAN-BIND
+  consortium paper. `knowledge_engine/parser.py` now filters exact-match
+  degree/credential tokens out of the split author list.
+  `knowledge_engine/database.py`'s `_build_paper` also gained a
+  defense-in-depth guard: a repeated author for the same paper (any
+  cause) is now linked once, not raised as a fatal `IntegrityError`.
+
 ### Added
+
+- **Mental health corpus: cycle 7, 10 more real papers (47 total),
+  including the CAN-BIND paper that surfaced the degree-credential
+  parser bug.** New papers include an escitalopram-CABG RCT, an
+  escitalopram+sertraline post-stroke-depression RCT, a sertraline-PANDA
+  predictors-of-response analysis, a CBASP-vs-escitalopram subgroup
+  study, the VESPA vortioxetine-vs-SSRIs tolerability RCT, an
+  antidepressants-in-Japan systematic review/meta-analysis, the CAN-BIND
+  CYP2C19/CYP2D6/ABCB1 sexual-dysfunction study, an
+  empagliflozin-adjunctive-to-citalopram RCT, an antidepressant
+  side-effects/adherence systematic review, and a
+  vortioxetine-vs-fluoxetine metabolic-parameters RCT.
+
+- **Mental health corpus: cycle 6, 10 more real papers (18% yield, best
+  yet).** Corpus now holds 37 real papers, up from 27. New papers
+  include a trazodone-vs-SSRIs study, a comparative-effectiveness study
+  of antidepressants and rehospitalization, a sertraline-in-dialysis
+  meta-analysis, a TMS+paroxetine post-stroke-depression study, a
+  mirtazapine/SSRIs/amitriptyline patient-level meta-analysis, a
+  venlafaxine adverse-events meta-analysis with Trial Sequential
+  Analysis, an insulin-resistance/SSRI-SNRI-resistance study, a
+  vilazodone/escitalopram/vortioxetine metabolic-parameters RCT, an
+  aticaprant-adjunctive-to-SSRI/SNRI phase 2 RCT, and the ASCERTAIN-TRD
+  comparative-effectiveness RCT.
 
 - **Oncology corpus fully seeded from the 1,522-item eligible-drafts
   pool; mental health cycle 5 (9 more real papers, best yield yet).**

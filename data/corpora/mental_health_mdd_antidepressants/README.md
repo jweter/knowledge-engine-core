@@ -118,7 +118,47 @@ RCT, an agomelatine-plus-SSRI/SNRI RCT, a pharmacological-interventions-
 in-milder-depression systematic review/meta-analysis, and a
 vortioxetine-vs-escitalopram cognitive-profile comparative study.
 Acquired and imported with `work/run_paper_batch.sh`. Corpus now holds
-27 real papers. More cycles are needed to build a corpus of comparable
-size to GLP-1/oncology, given the still-below-oncology per-cycle yield,
-though it continues improving cycle over cycle. Individually authoring
-and reviewing Evidence Records remains future, separate work.
+27 real papers.
+
+**Tightened-query cycle 5 (2026-08-09): 10 more real papers,
+yield up to 18%.** A sixth discovery cycle (retstart=400) scanned 100
+candidates, 56 deterministically accepted. 10 passed scope screen -- the
+best yield yet: a trazodone-vs-SSRIs effectiveness study, a comparative-
+effectiveness study of different antidepressants preventing psychiatric
+rehospitalization, a sertraline-in-dialysis systematic review/
+meta-analysis, a TMS-plus-paroxetine post-stroke-depression study, a
+patient-level meta-analysis of mirtazapine/SSRIs/amitriptyline sedative
+and appetite properties, a venlafaxine adverse-events systematic
+review/meta-analysis with Trial Sequential Analysis, an insulin-
+resistance/SSRI-SNRI-resistance study, a vilazodone/escitalopram/
+vortioxetine metabolic-parameters RCT, an aticaprant-adjunctive-to-SSRI/
+SNRI phase 2 RCT, and the ASCERTAIN-TRD comparative-effectiveness RCT.
+Corpus now holds 37 real papers.
+
+**Tightened-query cycle 6 (2026-08-09): 10 more real papers -- and a
+real parser bug fixed live.** A seventh discovery cycle (retstart=500)
+scanned 100 candidates, 62 deterministically accepted. 10 passed scope
+screen: an escitalopram-CABG depression/quality-of-life RCT, an
+escitalopram+sertraline post-stroke-depression RCT, a sertraline-PANDA
+predictors-of-response secondary analysis, a CBASP-vs-escitalopram
+persistent-depressive-disorder subgroup study, the VESPA
+vortioxetine-vs-SSRIs tolerability RCT, an antidepressants-in-Japan
+systematic review/meta-analysis, the CAN-BIND CYP2C19/CYP2D6/ABCB1
+sexual-dysfunction pharmacogenetic study, an empagliflozin-adjunctive-
+to-citalopram RCT, an antidepressant-side-effects/adherence systematic
+review, and a vortioxetine-vs-fluoxetine metabolic-parameters RCT.
+Importing the CAN-BIND paper hit a real bug: its embedded PDF metadata
+lists each co-author's degree credential comma-separated from their
+name ("Jane Doe, PhD, John Smith, PhD, ..."), and the repeated "PhD"
+token got parsed as a duplicate pseudo-author, violating the database's
+one-link-per-paper-per-author constraint and aborting the whole import
+batch. Fixed in `knowledge_engine/parser.py` (filters known degree/
+credential tokens out of the split author list) and
+`knowledge_engine/database.py` (a defense-in-depth guard against any
+repeated-author cause); see `CHANGELOG.md`. Corpus now holds 47 real
+papers. More cycles are needed to build a corpus of comparable size to
+GLP-1/oncology, though yield continues improving cycle over cycle (13%
+-> 1.5% -> 3.8% -> 8% -> 8.3% -> 16% -> 18% -> 16%, after the query
+tightening and as later-page candidates skew more
+clinical/pharmacological). Individually authoring and reviewing
+Evidence Records remains future, separate work.

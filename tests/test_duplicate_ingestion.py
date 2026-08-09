@@ -7,6 +7,7 @@ from sqlalchemy import text
 
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService
+from knowledge_engine.models import Paper
 from knowledge_engine.parser import ParsedPaper
 from tests.corpus_fixtures import get_run, make_database
 from tests.test_corpus_import import StubParser, declare_pdf, make_corpus, parsed_paper, source_row
@@ -291,3 +292,38 @@ def test_fresh_rerun_creates_new_run_without_duplicate_persistence(tmp_path: Pat
     assert second_item.duplicate_outcome == "exact_hash_duplicate"
     assert second_item.matched_paper_id == first_run.items[0].matched_paper_id
     assert _counts(database) == after_first == (1, 1, 1)
+
+
+def test_repeated_author_name_within_one_paper_links_once_without_raising(
+    tmp_path: Path,
+) -> None:
+    """A paper whose parsed author list contains the same name twice (any
+
+    cause -- a byline artifact the parser's own filtering missed, or a
+    genuine repeated name) must not crash the whole import: `paper_authors`
+    has a `(paper_id, author_id)` uniqueness constraint, so linking the same
+    author twice for one paper is a real `IntegrityError` waiting to abort
+    an entire multi-paper import batch, as found live against a real
+    CAN-BIND consortium paper whose PDF metadata's degree-credential
+    tokens ("PhD" repeated per co-author) weren't yet filtered.
+    """
+
+    database = make_database(tmp_path)
+    parsed = parsed_paper(
+        tmp_path / "paper.pdf",
+        title="Repeated Author Study",
+        doi="10.1/repeated",
+        content_hash="e" * 64,
+    )
+    parsed = parsed.model_copy(update={"authors": ["Jane Doe", "John Smith", "Jane Doe"]})
+
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(parsed)
+        paper_id = paper.id
+
+    with database.session() as session:
+        loaded = session.get(Paper, paper_id)
+        assert loaded is not None
+        linked_names = [link.author.name for link in loaded.author_links]
+
+    assert linked_names == ["Jane Doe", "John Smith"]
