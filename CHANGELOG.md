@@ -9,6 +9,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **First relationship-graph edges for the oncology and mental-health
+  corpora.** Both previously had zero `relationship_records.jsonl`
+  entries -- only GLP-1 had a relationship graph. Read each corpus's
+  manually-reviewed evidence records directly (13 for oncology, 9 for
+  mental health) and authored 5 real `supports`/`qualifies`/
+  `contextualizes` relationships per corpus by hand, the same
+  discipline used for GLP-1's graph, rather than relying on the
+  automated candidate list (which is dominated by noise from
+  same-paper automated-tier fragment pairs at this corpus's scale).
+  All 10 pass `ke relationship-validate`. Graph totals: oncology 17 ->
+  22 relationship edges, mental health 22 -> 27. Documented in each
+  corpus's `README.md`.
+
 - **License/attribution review across all three corpora, closing the
   final `v1.0.0` release gate.** `ke corpus-validate` now re-checks
   every `approved_open_access` row's `license_type` against
