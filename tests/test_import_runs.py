@@ -79,7 +79,7 @@ def source_row(**overrides: str) -> dict[str, str]:
         "source_url": "https://example.test/persist",
         "access_date": "2026-07-11",
         "inclusion_reason": "Relevant.",
-        "license_type": "CC-BY",
+        "license_type": "CC BY",
         "license_url": "https://creativecommons.org/licenses/by/4.0/",
         "local_path": "paper.pdf",
     }
@@ -404,7 +404,7 @@ def test_legacy_year_warning_is_persisted(tmp_path: Path) -> None:
         "source_id,title,year,doi,usage_status,inclusion_status,source_url,access_date,"
         "inclusion_reason,license_type,license_url,local_path\n"
         "source-1,Legacy,2024,10.1234/legacy,approved_open_access,included,"
-        "https://example.test,2026-07-11,Relevant,CC-BY,"
+        "https://example.test,2026-07-11,Relevant,CC BY,"
         "https://creativecommons.org/licenses/by/4.0/,paper.pdf\n",
         encoding="utf-8",
     )

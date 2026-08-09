@@ -56,7 +56,7 @@ def source_row(**overrides: str) -> dict[str, str]:
         "source_url": "https://example.test/source-1",
         "access_date": "2026-07-11",
         "inclusion_reason": "Relevant.",
-        "license_type": "CC-BY",
+        "license_type": "CC BY",
         "license_url": "https://creativecommons.org/licenses/by/4.0/",
         "local_path": "paper.pdf",
     }

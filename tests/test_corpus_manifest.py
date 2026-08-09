@@ -81,7 +81,7 @@ def valid_row(**overrides: str) -> dict[str, str]:
         "source_url": "https://example.test/paper",
         "local_path": "paper.pdf",
         "access_date": "2026-07-11",
-        "license_type": "CC-BY",
+        "license_type": "CC BY",
         "license_url": "https://creativecommons.org/licenses/by/4.0/",
         "usage_status": "approved_open_access",
         "inclusion_status": "included",
@@ -361,6 +361,8 @@ def test_symlink_escape_is_structural_error(tmp_path: Path) -> None:
         (valid_row(usage_status="needs_legal_review"), "usage_status_not_importable"),
         (valid_row(license_url=""), "missing_license_url"),
         (valid_row(license_type=""), "missing_license_type"),
+        (valid_row(license_type="CC BY-NC"), "unsupported_license_basis"),
+        (valid_row(license_type="CC-BY"), "unsupported_license_basis"),
     ],
 )
 def test_import_readiness_blockers(tmp_path: Path, row: dict[str, str], expected_code: str) -> None:

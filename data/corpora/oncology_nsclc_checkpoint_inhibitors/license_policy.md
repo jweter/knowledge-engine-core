@@ -15,15 +15,33 @@ the repository, matching `glp1_weight_loss/license_policy.md` exactly.
 
 ## Acceptable Source Usage Notes
 
-Each source row in `sources.csv` should include one of the following usage
-notes:
+Each source row in `sources.csv` must set `usage_status` to one of the
+following values, enforced by `knowledge_engine.corpus.validation`
+(`USAGE_STATUSES`):
 
-- Open access with license named.
-- Public domain.
-- Preprint available for research use.
-- Institutional access, local use only.
-- Metadata-only until legal use is confirmed.
-- Excluded because usage rights are unclear.
+- `approved_open_access` -- open access with license named.
+- `approved_public_domain` -- public domain.
+- `approved_author_manuscript` -- preprint or author manuscript available
+  for research use.
+- `approved_local_only` -- institutional access, local use only.
+- `metadata_only` -- metadata-only until legal use is confirmed.
+- `needs_legal_review` -- usage rights not yet confirmed.
+- `excluded_legal` -- excluded because usage rights are unclear.
+
+For `approved_open_access` rows, `license_type` must additionally pass
+`knowledge_engine.license_rules.evaluate_license` -- only unrestricted
+`CC BY` (any real published version) or `CC0` bases are accepted;
+`CC BY-NC`, `CC BY-ND`, and `CC BY-SA` variants are rejected because they
+restrict commercial use and/or derivative works, which conflicts with
+this project's extraction and redistribution of derived Evidence
+Records. `ke corpus-validate` re-checks every row's `license_type`
+against this rule on every run, not just at initial ingestion.
+
+(This section previously described a six-item prose vocabulary that
+predated the machine-checked `usage_status`/`license_type` enum values
+above; it never matched the enforced schema. Corrected 2026-08-09 during
+a license/attribution review across all three corpora -- see
+`docs/roadmap.md`'s v1.0.0 release-gate section.)
 
 ## Local Files
 
