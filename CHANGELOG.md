@@ -37,6 +37,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   empagliflozin-adjunctive-to-citalopram RCT, an antidepressant
   side-effects/adherence systematic review, and a
   vortioxetine-vs-fluoxetine metabolic-parameters RCT.
+- **Mental health corpus: cycle 8, 13 more real papers (60 total),
+  best yield yet at 20%.** New papers include a probiotic-adjunct-to-
+  SSRIs sexual-function RCT, a TMS-plus-escitalopram efficacy/safety
+  meta-analysis, a psilocybin-vs-escitalopram personality-change trial,
+  an SSRIs-in-multiple-sclerosis systematic review/meta-analysis, a
+  CYP2C19-pharmacogenetic-testing citalopram/escitalopram
+  tolerability-and-efficacy cohort study, an escitalopram-vs-other-
+  antidepressants systematic review/meta-analysis, the TED-trazodone-
+  vs-SSRIs naturalistic effectiveness study, an rTMS-plus-sertraline
+  somatic-pain study, a psilocybin-for-treatment-resistant-depression
+  trial in patients on a concomitant SSRI, two CAN-BIND-1 secondary
+  analyses, a CYP2D6/CYP1A2-polymorphism duloxetine-response study, and
+  an EMBARC-trial secondary analysis.
 
 - **Mental health corpus: cycle 6, 10 more real papers (18% yield, best
   yet).** Corpus now holds 37 real papers, up from 27. New papers

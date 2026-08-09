@@ -162,3 +162,21 @@ GLP-1/oncology, though yield continues improving cycle over cycle (13%
 tightening and as later-page candidates skew more
 clinical/pharmacological). Individually authoring and reviewing
 Evidence Records remains future, separate work.
+
+**Tightened-query cycle 7 (2026-08-09): 13 more real papers, best yield
+yet at 20%.** An eighth discovery cycle (retstart=600) scanned 100
+candidates, 65 deterministically accepted. 13 passed scope screen: a
+probiotic-adjunct-to-SSRIs sexual-function RCT, a TMS-plus-escitalopram
+efficacy/safety meta-analysis, a psilocybin-vs-escitalopram
+personality-change trial, an SSRIs-in-multiple-sclerosis systematic
+review/meta-analysis, a CYP2C19-pharmacogenetic-testing
+citalopram/escitalopram tolerability-and-efficacy cohort study, an
+escitalopram-vs-other-antidepressants systematic review/meta-analysis,
+the TED-trazodone-vs-SSRIs naturalistic effectiveness study, an
+rTMS-plus-sertraline somatic-pain study, a psilocybin-for-treatment-
+resistant-depression trial in patients on a concomitant SSRI, two
+CAN-BIND-1 secondary analyses (multimodal treatment-outcome prediction;
+abuse-history/anhedonia-persistence), a CYP2D6/CYP1A2-polymorphism
+duloxetine-response study, and an EMBARC-trial secondary analysis of
+reward-behavior disengagement. Corpus now holds 60 real papers. Yield
+trend: 13% -> 1.5% -> 3.8% -> 8% -> 8.3% -> 16% -> 18% -> 16% -> 20%.
