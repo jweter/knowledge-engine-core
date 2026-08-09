@@ -26,6 +26,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Mental health corpus: reviewed-evidence layer bootstrapped, 0 -> 3
+  records.** First hand-authored, `manual_source_audit`-discipline
+  Evidence Records for this corpus (previously 0 despite 62 real draft
+  papers), using the same page-cited, same-session-self-audited
+  approach established for the oncology corpus:
+  `ev-mh-perez-2025-depre5-second-line-strategies-001` (DEPRE'5, a
+  5-arm registered RCT of second-line strategies after SSRI
+  non-response, n=257: response 28.2% pooled alternative arms vs 14.3%
+  continued/optimized SSRI, OR 2.36 [1.0,5.6] p=0.05; HDRS-17 mean
+  difference -2.6 [-4.9,-0.4] p=0.021);
+  `ev-mh-yin-2023-escitalopram-vs-other-antidepressants-meta-001` (a
+  30-RCT meta-analysis: escitalopram beats citalopram on response, RR
+  0.67 [0.50,0.87], and remission, RR 0.53 [0.30,0.93]; no significant
+  difference vs. other comparator antidepressants);
+  `ev-mh-santi-2024-vilazodone-escitalopram-vortioxetine-rct-001` (a
+  3-arm open-label RCT, n=96 per-protocol: comparable baseline severity
+  across arms, p=0.964, no statistically significant between-group
+  16-week HDRS difference across vilazodone/escitalopram/vortioxetine).
+  Graph totals after this batch: 114 concepts (68 mesh, 46 rxnorm),
+  1,688 claims, 1,612 claim-concept edges.
 - **`docs/roadmap/future_ai_orchestration_plan.md` reconciled against
   the real canonical document.** The full team-authored plan (1,056
   lines) is now available in `knowledge-engine-ai`'s own
