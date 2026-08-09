@@ -9,6 +9,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Mental health corpus: cycle 6, 10 more real papers (18% yield, best
+  yet).** Corpus now holds 37 real papers, up from 27. New papers
+  include a trazodone-vs-SSRIs study, a comparative-effectiveness study
+  of antidepressants and rehospitalization, a sertraline-in-dialysis
+  meta-analysis, a TMS+paroxetine post-stroke-depression study, a
+  mirtazapine/SSRIs/amitriptyline patient-level meta-analysis, a
+  venlafaxine adverse-events meta-analysis with Trial Sequential
+  Analysis, an insulin-resistance/SSRI-SNRI-resistance study, a
+  vilazodone/escitalopram/vortioxetine metabolic-parameters RCT, an
+  aticaprant-adjunctive-to-SSRI/SNRI phase 2 RCT, and the ASCERTAIN-TRD
+  comparative-effectiveness RCT.
+
 - **Oncology corpus fully seeded from the 1,522-item eligible-drafts
   pool; mental health cycle 5 (9 more real papers, best yield yet).**
   Promoted the final 322 oncology drafts -- `evidence_records.jsonl` now
