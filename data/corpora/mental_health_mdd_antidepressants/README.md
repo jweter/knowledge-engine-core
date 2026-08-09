@@ -237,3 +237,27 @@ between-group difference in 16-week HDRS reduction across vilazodone,
 escitalopram, and vortioxetine). Corpus graph totals after this batch:
 114 concepts (68 mesh, 46 rxnorm), 1,688 claims, 1,612 claim-concept
 edges, 3 reviewed records.
+
+**Reviewed-evidence-layer growth (2026-08-09, same day): 3 more
+hand-authored records (6 total), including a deliberate null result.**
+`ev-mh-ju-2025-agomelatine-adjunctive-ssri-snri-rct-001` (an 8-week,
+double-blind, placebo-controlled RCT of agomelatine augmentation added
+to ongoing SSRI/SNRI treatment in 123 non-responders: no significant
+benefit on the HAMD-17 primary endpoint, adjusted difference -0.12
+[-3.94,3.70] p=0.90, nor on remission [50.0% vs 52.3%, OR 0.88] or
+response [60.0% vs 65.2%, OR 0.85] -- included deliberately as a
+genuine negative result, not only positive findings);
+`ev-mh-yan-2024-escitalopram-vs-sertraline-poststroke-rct-001` (a
+head-to-head RCT in 60 post-stroke depression patients: escitalopram
+outperformed sertraline on HAMD-24 reduction, F=4.068 p<0.05, with
+faster onset and significantly fewer adverse effects, chi-squared=9.097
+p<0.05, though overall response rate did not differ significantly);
+`ev-mh-kishi-2024-japan-older-adults-meta-001` (a 9-trial,
+n=2,145 systematic review/meta-analysis of antidepressants available
+in Japan for older adults with MDD: significantly higher response
+than placebo, RR 1.38 [1.04,1.83] p=0.02, and greater symptom
+improvement, SMD -0.62 [-0.92,-0.33] p<0.0001, but also significantly
+higher discontinuation due to adverse events, RR 1.94 [1.30,2.88]
+p=0.001 -- a real efficacy-tolerability trade-off in this population).
+Corpus graph totals after this batch: 115 concepts (68 mesh, 47
+rxnorm), 1,691 claims, 1,617 claim-concept edges, 6 reviewed records.

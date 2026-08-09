@@ -26,6 +26,25 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Mental health corpus: reviewed-evidence layer grown, 3 -> 6
+  records, including a deliberate null result.**
+  `ev-mh-ju-2025-agomelatine-adjunctive-ssri-snri-rct-001` (8-week
+  double-blind placebo-controlled RCT of agomelatine augmentation added
+  to ongoing SSRI/SNRI treatment, n=123 non-responders: no significant
+  benefit on HAMD-17, remission, or response -- a genuine negative
+  result, included deliberately so the reviewed layer isn't
+  positive-only); `ev-mh-yan-2024-escitalopram-vs-sertraline-poststroke-rct-001`
+  (head-to-head RCT, n=60 post-stroke depression patients: escitalopram
+  outperformed sertraline on HAMD-24 reduction, F=4.068 p<0.05, with
+  faster onset and fewer adverse effects, though response rate did not
+  differ significantly); `ev-mh-kishi-2024-japan-older-adults-meta-001`
+  (9-trial, n=2,145 systematic review/meta-analysis of antidepressants
+  in older adults with MDD: significantly higher response than
+  placebo, RR 1.38 [1.04,1.83], and symptom improvement, SMD -0.62
+  [-0.92,-0.33], but also significantly higher discontinuation due to
+  adverse events, RR 1.94 [1.30,2.88]). Graph totals after this batch:
+  115 concepts (68 mesh, 47 rxnorm), 1,691 claims, 1,617 claim-concept
+  edges.
 - **Mental health corpus: reviewed-evidence layer bootstrapped, 0 -> 3
   records.** First hand-authored, `manual_source_audit`-discipline
   Evidence Records for this corpus (previously 0 despite 62 real draft
