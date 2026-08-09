@@ -26,6 +26,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Mental health corpus: reviewed-evidence layer grown, 6 -> 9
+  records.** `ev-mh-schmidt-2024-aticaprant-adjunctive-ssri-snri-rct-001`
+  (phase 2 double-blind RCT of aticaprant, a kappa receptor antagonist,
+  added to ongoing SSRI/SNRI treatment: significant MADRS improvement
+  versus placebo, full-ITT -3.1 [2.21] 1-sided p=0.002 -- a positive
+  augmentation result complementing this corpus's existing null
+  agomelatine-augmentation record);
+  `ev-mh-zandifar-2024-empagliflozin-adjunctive-citalopram-rct-001`
+  (8-week RCT of empagliflozin added to citalopram, n=90: significantly
+  greater HDRS improvement over time versus placebo+citalopram,
+  p=0.0001); `ev-mh-baradaran-2024-escitalopram-cabg-quality-of-life-rct-001`
+  (double-blind RCT of escitalopram vs placebo in 50 coronary-artery-
+  bypass-grafting patients with comorbid depression: significantly
+  reduced depression scores and improved SF-36 quality of life at 8
+  weeks, p<0.001). Graph totals after this batch: 115 concepts (68
+  mesh, 47 rxnorm), 1,694 claims, 1,622 claim-concept edges.
 - **Mental health corpus: reviewed-evidence layer grown, 3 -> 6
   records, including a deliberate null result.**
   `ev-mh-ju-2025-agomelatine-adjunctive-ssri-snri-rct-001` (8-week

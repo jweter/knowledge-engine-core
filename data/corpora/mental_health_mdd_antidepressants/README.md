@@ -261,3 +261,25 @@ higher discontinuation due to adverse events, RR 1.94 [1.30,2.88]
 p=0.001 -- a real efficacy-tolerability trade-off in this population).
 Corpus graph totals after this batch: 115 concepts (68 mesh, 47
 rxnorm), 1,691 claims, 1,617 claim-concept edges, 6 reviewed records.
+
+**Reviewed-evidence-layer growth (2026-08-09, same day): 3 more
+hand-authored records (9 total).**
+`ev-mh-schmidt-2024-aticaprant-adjunctive-ssri-snri-rct-001` (a phase
+2 double-blind RCT of aticaprant, a kappa receptor antagonist, added
+to ongoing SSRI/SNRI treatment in 166-184 inadequate responders:
+significant MADRS improvement versus placebo in both enriched-ITT,
+-2.1 [-1.09] 1-sided p=0.044, and full-ITT, -3.1 [2.21] 1-sided
+p=0.002, analyses -- a positive augmentation result that complements
+this corpus's null agomelatine-augmentation record);
+`ev-mh-zandifar-2024-empagliflozin-adjunctive-citalopram-rct-001` (an
+8-week RCT of empagliflozin added to citalopram in 90 outpatients:
+significantly greater HDRS improvement over time versus placebo+
+citalopram, p=0.0001, with per-week HDRS trajectories reported to two
+decimal places); `ev-mh-baradaran-2024-escitalopram-cabg-quality-of-life-rct-001`
+(a double-blind RCT of escitalopram vs placebo in 50 coronary-artery-
+bypass-grafting patients with comorbid mild-to-moderate depression:
+significantly reduced depression scores and significantly improved
+SF-36 quality of life at 8 weeks, p<0.001, diversifying the layer's
+population and outcome-type coverage). Corpus graph totals after this
+batch: 115 concepts (68 mesh, 47 rxnorm), 1,694 claims, 1,622
+claim-concept edges, 9 reviewed records.

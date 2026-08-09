@@ -1,12 +1,12 @@
 {
   "backup": {
-    "byte_count": 529125376,
-    "created_at": "2026-08-09T03:12:51.078966Z",
+    "byte_count": 529129472,
+    "created_at": "2026-08-09T03:22:45.338948Z",
     "filename": "knowledge_engine.sqlite3",
     "integrity_check": "ok",
-    "production_commit": "57c17e474272d920583c7c597d2f6122cfe2a8ce",
+    "production_commit": "1e7aac2c174c20220afdf748a04081298ee4311b",
     "schema_version": 0,
-    "sha256": "a7070f4707b50293ddaa6f5866e2ec631e2b5fce26a92dc2225e50e0e36ea85d",
+    "sha256": "9c6ee69db7c4f351ee914d2b0976f23ea278f5ef4bcd97868d6c77a4f7e43c2f",
     "table_counts": {
       "import_runs": 13,
       "papers": 1357
@@ -18,7 +18,7 @@
     {
       "byte_count": 90000000,
       "filename": "knowledge_engine.sqlite3.part0000",
-      "sha256": "7cd2071f68527ed3f0ecdc613603ec8bcff56ab6b773a7165355049bf3a781d2"
+      "sha256": "c18bf13d76345dfba88466b3c92b5b0b024adf26286510fffffd8244fdb6ebbc"
     },
     {
       "byte_count": 90000000,
@@ -33,7 +33,7 @@
     {
       "byte_count": 90000000,
       "filename": "knowledge_engine.sqlite3.part0003",
-      "sha256": "2ce90d702cd484693358553635845a41a3341d73379aa4f5f6f7e60fde1115d0"
+      "sha256": "dacf76e81c08fb49b344e1dd68ec8f6133a1b73aff6fa3d4618ca62c07860bfa"
     },
     {
       "byte_count": 90000000,
@@ -41,13 +41,13 @@
       "sha256": "fdedf1fcd7fb364f0a779d1f853a13bc076ebff1b5a821e98eb6ab4612e00edd"
     },
     {
-      "byte_count": 79125376,
+      "byte_count": 79129472,
       "filename": "knowledge_engine.sqlite3.part0005",
-      "sha256": "6c70e777fa028484013f6c58b5f458ca99ae6145df56ec2ea22925cba8f3820c"
+      "sha256": "0e7a6300fb49e76e3d9da6a2a376201ad7bf6d3ff71b086ce6324ea2452d28fe"
     }
   ],
   "schema_version": 1,
   "source_filename": "knowledge_engine.sqlite3",
-  "total_byte_count": 529125376,
-  "total_sha256": "a7070f4707b50293ddaa6f5866e2ec631e2b5fce26a92dc2225e50e0e36ea85d"
+  "total_byte_count": 529129472,
+  "total_sha256": "9c6ee69db7c4f351ee914d2b0976f23ea278f5ef4bcd97868d6c77a4f7e43c2f"
 }
