@@ -7,6 +7,30 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`tools/detect_non_primary_article.py`: post-acquisition
+  non-primary-article-type detector.** Closes a real gap title-only
+  screening cannot: "PACIFIC-5 Trial: Refining Patient Selection for
+  Consolidation Durvalumab in Unresectable Stage III NSCLC" reads
+  exactly like a primary trial report and carries no title-level
+  marker at all -- it was a commentary/letter, caught only by reading
+  the downloaded PDF's own page-1 "COMMENTARY" label directly. This
+  tool checks that same printed, already-published label
+  deterministically: a standalone ALL-CAPS article-type line
+  (COMMENTARY, EDITORIAL, LETTER, CORRESPONDENCE, PERSPECTIVE,
+  VIEWPOINT, NEWS, ERRATUM, RETRACTION, CORRECTION) within the first
+  15 lines of page 1, or the "To the Editor,"/"Dear Editor," body-text
+  opening convention -- never a guess from prose content, and
+  deliberately excludes ambiguous labels (e.g. "Research Letter") that
+  sometimes carry real primary data. Retroactively run against all 35
+  distinct source PDFs across the three corpora's currently-reviewed
+  Evidence Records (13 GLP-1 + 13 oncology + 9 mental-health): no
+  contamination found. 9 new tests in
+  `tests/tools/test_detect_non_primary_article.py`, including one
+  proving a marker word embedded in ordinary prose (not a standalone
+  label line) is correctly not flagged.
+
 ### Fixed
 
 - **PDF author-metadata parsing: degree credentials no longer produce
