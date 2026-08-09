@@ -26,6 +26,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Mental health corpus: automated draft-evidence layer bootstrapped,
+  0 -> 124 draft records.** Closes a structural gap: unlike GLP-1 and
+  oncology, this corpus had never been run through the M40/M52
+  automated extraction pipeline, so its evidence layer was 100%
+  hand-authored with no bulk draft layer underneath. Ran `ke
+  extraction-review-batch-generate` against all 62 persisted papers
+  (865 candidate items), `ke extraction-review-autoclassify` (M52's
+  deterministic classifier), then `ke extraction-review-promote`: 124
+  items were eligible (14.3%, in line with oncology's own M52
+  eligibility rate), the rest skipped -- never guessed -- for a
+  missing/overlong PICO field or missing claim_text/result_summary.
+  All 124 are `extraction_method: "m52-evidence-classification-v1"`,
+  `review_status: "draft"`, matching the other two corpora's existing
+  draft-layer discipline exactly. Graph totals after this batch: 119
+  concepts (70 mesh, 49 rxnorm), 1,821 claims, 1,779 claim-concept
+  edges.
 - **Oncology corpus: reviewed-evidence layer grown, 10 -> 13
   records.** `ev-oncology-wu-2026-liver-mets-network-meta-pfs-os-001`
   (Bayesian network meta-analysis of 20 RCTs in driver-gene-negative

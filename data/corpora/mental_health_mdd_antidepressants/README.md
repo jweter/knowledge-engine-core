@@ -238,6 +238,26 @@ escitalopram, and vortioxetine). Corpus graph totals after this batch:
 114 concepts (68 mesh, 46 rxnorm), 1,688 claims, 1,612 claim-concept
 edges, 3 reviewed records.
 
+**Automated draft-evidence layer bootstrapped (2026-08-09, same day):
+0 -> 124 draft records.** Unlike GLP-1 and oncology, this corpus had
+never been run through the M40/M52 automated extraction pipeline --
+its evidence layer was 100% hand-authored with nothing underneath.
+Ran `ke extraction-review-batch-generate` against all 62 persisted
+papers (865 draft candidate items), then `ke
+extraction-review-autoclassify` (M52's deterministic
+research_question/evidence_direction classifier), then `ke
+extraction-review-promote`: 124 of the 865 candidate items were
+eligible for automated classification (14.3% -- in line with
+oncology's own M52 eligibility rate), the rest skipped for a missing/
+overlong PICO field or missing claim_text/result_summary, never
+guessed. All 124 are `extraction_method: "m52-evidence-classification-v1"`,
+`review_status: "draft"` -- unreviewed, not yet promotable to the
+reviewed layer without human/self-audit confirmation, exactly like
+GLP-1's and oncology's own M52 draft layers. Corpus graph totals after
+this batch: 119 concepts (70 mesh, 49 rxnorm), 1,821 claims, 1,779
+claim-concept edges, 133 total evidence records (9 reviewed + 124
+draft).
+
 **Reviewed-evidence-layer growth (2026-08-09, same day): 3 more
 hand-authored records (6 total), including a deliberate null result.**
 `ev-mh-ju-2025-agomelatine-adjunctive-ssri-snri-rct-001` (an 8-week,

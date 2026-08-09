@@ -1,12 +1,12 @@
 {
   "backup": {
-    "byte_count": 529129472,
-    "created_at": "2026-08-09T03:35:42.765617Z",
+    "byte_count": 529182720,
+    "created_at": "2026-08-09T13:49:01.189344Z",
     "filename": "knowledge_engine.sqlite3",
     "integrity_check": "ok",
-    "production_commit": "cd2026d92c391477d6955f71ebdf12cd3d15c7a1",
+    "production_commit": "23b1a625ce67dbd403421da53bd54c2e1debc587",
     "schema_version": 0,
-    "sha256": "daae4a2925816cf1607c446d13f4a516fe0cc021369145d8bbb999005f9e8a26",
+    "sha256": "e7e473479d41580202f529b0ee7544cc5d8bc88dca2fb7362f3076642f8dac35",
     "table_counts": {
       "import_runs": 13,
       "papers": 1357
@@ -18,7 +18,7 @@
     {
       "byte_count": 90000000,
       "filename": "knowledge_engine.sqlite3.part0000",
-      "sha256": "c18bf13d76345dfba88466b3c92b5b0b024adf26286510fffffd8244fdb6ebbc"
+      "sha256": "6286c8f45f3bd666667ad15275ba9e348cb402ddddee46ddddbd53b82dc9109b"
     },
     {
       "byte_count": 90000000,
@@ -33,21 +33,21 @@
     {
       "byte_count": 90000000,
       "filename": "knowledge_engine.sqlite3.part0003",
-      "sha256": "dacf76e81c08fb49b344e1dd68ec8f6133a1b73aff6fa3d4618ca62c07860bfa"
+      "sha256": "7c82b5b2108ec22663baa0dde8293d1803bac82fe713bb689a1eeeb8572b4cc8"
     },
     {
       "byte_count": 90000000,
       "filename": "knowledge_engine.sqlite3.part0004",
-      "sha256": "fdedf1fcd7fb364f0a779d1f853a13bc076ebff1b5a821e98eb6ab4612e00edd"
+      "sha256": "fa0b3f674eab3a404036c5e990c4ffdbec045deba9db8a0cd6ea24d30500432a"
     },
     {
-      "byte_count": 79129472,
+      "byte_count": 79182720,
       "filename": "knowledge_engine.sqlite3.part0005",
-      "sha256": "1d68ba6800a1ea35b9317ed7aa2c6dd4a44ba794bb2fd8a16a5bda5d853d6e14"
+      "sha256": "10e44e0887b7d2c88b8707f56ea6ff0cdeb7e5a1743ae88454dd28115d133fe1"
     }
   ],
   "schema_version": 1,
   "source_filename": "knowledge_engine.sqlite3",
-  "total_byte_count": 529129472,
-  "total_sha256": "daae4a2925816cf1607c446d13f4a516fe0cc021369145d8bbb999005f9e8a26"
+  "total_byte_count": 529182720,
+  "total_sha256": "e7e473479d41580202f529b0ee7544cc5d8bc88dca2fb7362f3076642f8dac35"
 }
