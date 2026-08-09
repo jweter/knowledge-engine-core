@@ -326,3 +326,19 @@ meta-analysis by extending it into a comorbid post-cardiac-surgery
 population Kishi's included trials didn't cover. All 5 passed
 `ke relationship-validate` and are now in the graph (27 relationship
 edges corpus-wide, up from 22 before this corpus had any).
+
+**Relationship graph: 2 more edges authored (2026-08-09, same day).**
+Re-read all 9 reviewed records exhaustively for any further genuine
+relationships: found 2 more. Zandifar's empagliflozin-augmentation RCT
+supports Schmidt's aticaprant-augmentation RCT -- two independent,
+unrelated drug classes both significantly improving depression when
+added to ongoing antidepressant treatment, corroborating that
+adjunctive augmentation can genuinely work (real context alongside
+this corpus's negative agomelatine-augmentation finding). Baradaran's
+escitalopram-in-CABG-patients RCT supports Yan's escitalopram-vs-
+sertraline-poststroke RCT -- two independent trials in different
+physically comorbid populations both confirm escitalopram's
+antidepressant efficacy and tolerability generalize beyond
+depression-only populations. Both passed `ke relationship-validate`.
+Corpus relationship graph is now 7 edges (was 5); graph-wide total is
+32 (was 30).
