@@ -80,6 +80,28 @@ binary pooling stays blocked and documenting it as a durable structural
 limitation rather than a to-do. No further STEP/OASIS/SURMOUNT searches
 are queued until one of those becomes true.
 
+**2026-08-09 (later same day): re-ran the readiness report and checked for
+newer OA candidates not covered by the audit above -- verdict and
+structural conclusion both unchanged.** `ke statistical-readiness-report`
+against the current curated map reproduces the same
+`not_ready_for_pooling_design` verdict with the same two blockers (STEP
+5-vs-SELECT estimand/timepoint incompatibility for continuous pooling;
+only 1 of the required 2+ binary inputs). `sources.csv` (953 rows) has no
+not-yet-used named STEP/SELECT/SURMOUNT trial beyond what the corpus
+already contains. A live `ke pubmed-candidate-discover` search for
+`(STEP 2 OR STEP 3 OR STEP 4 OR SURMOUNT-1 OR SURMOUNT-2) AND semaglutide
+AND randomized` (25 results) surfaced two 2026 phase 3b trial reports not
+covered by the prior audit -- "Once-weekly semaglutide 7.2 mg in adults
+with obesity (STEP UP)" (PMID 40961952) and its T2D companion "STEP UP
+T2D" (PMID 40961953), both published in *The Lancet*. Checked the raw
+candidate JSON directly: both have `open_access: false` and no PMCID --
+closed-access, consistent with every other primary STEP-program result
+paper audited above. This confirms the structural blocker (pharma-funded
+phase 3 obesity RCTs publish primary results in closed-access
+high-impact venues) still holds against the newest trials in this drug
+class as of this date; it does not reveal a new gap or open a new lead.
+No further action is queued for this milestone.
+
 ## Objective
 
 Create a deterministic readiness report over the reviewed GLP-1/body-weight golden evidence map.

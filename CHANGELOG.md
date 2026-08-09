@@ -9,6 +9,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **GLP-1 Statistical Verification Readiness Gate: re-run confirms
+  `not_ready_for_pooling_design` is unchanged, and a targeted OA search
+  for newer candidate trials found none.** Re-ran `ke
+  statistical-readiness-report`; the verdict and both blockers (STEP
+  5-vs-SELECT estimand/timepoint mismatch for continuous pooling; only 1
+  of 2+ required binary inputs) are identical to the prior
+  2026-08-09 source audit in `docs/glp1_statistical_readiness_gate_plan.md`.
+  Extended that audit to two 2026 phase 3b trials not previously
+  checked -- STEP UP (PMID 40961952) and STEP UP T2D (PMID 40961953) --
+  via `ke pubmed-candidate-discover`; both are closed-access (`Lancet`,
+  no PMCID), consistent with every other primary STEP-program result
+  paper. Confirms the structural closed-access blocker still holds
+  against the newest trials in this drug class; no new gap, no new
+  lead, no code change needed. Documented as an addendum in
+  `docs/glp1_statistical_readiness_gate_plan.md` rather than a new doc.
+
 - **`ke evidence-validate`: `study_type` now has an enum check.**
   Mirrors the `evidence_direction`/`extraction_status` pattern. Adds
   `ALLOWED_STUDY_TYPES`, the exact set of 19 values verified live in
