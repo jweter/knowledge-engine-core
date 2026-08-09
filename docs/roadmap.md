@@ -850,6 +850,53 @@ with regression tests in `tests/test_extraction_study_design.py`
 reproducing each real paper's phrasing; no other pattern's behavior
 changed.
 
+**2026-08-09 addendum (a third time, same day): the harder
+"no Abstract/Methods section detected at all" gap (114 of 1,357
+papers) was investigated and found not to be a narrow regex-widening
+fix like `retrospective_study`'s was -- documenting the real finding
+rather than forcing a risky one.** Read a random sample of 25 of the
+114 papers' actual page-1 text, then quantified across all 114:
+
+- **90 of 114 (79%) have no "abstract" substring anywhere in their
+  first two pages' extracted text at all.** This is not a heading-
+  wording mismatch `detect_sections`' patterns could be widened to
+  catch -- the signal is simply absent from the extracted text.
+  Reading several of these directly (papers 246, 558, 833, all
+  Frontiers-journal articles) confirmed the actual abstract *paragraph
+  text* is present and readable, but with no "Abstract" heading word
+  anywhere before it -- consistent with Frontiers' real PDF layout
+  rendering "Abstract" as a small styled/graphic label rather than
+  extractable body text, a parser-level (PyMuPDF text extraction)
+  limitation, not a `sections.py` pattern gap.
+- **16 of 114 have "abstract" present but never at the start of a
+  line** -- mostly Cell Press/iScience-style "Graphical abstract"
+  papers (6 confirmed), where "abstract" is the second word of a
+  different, non-equivalent construct (a figure, not the textual
+  Abstract), plus a few genuinely non-headed-but-otherwise-abstract-
+  like paragraphs (e.g. paper 833's abstract uses "Background:"/"Main
+  body:" structured-abstract subheadings with no wrapping "Abstract"
+  heading at all, likely the same graphic-label rendering issue).
+- **3 of 114 are non-Latin-script papers** (e.g. Chinese-language),
+  needing localized heading patterns entirely -- a real but separate,
+  much larger scope (internationalization), not attempted here.
+- **9-13 of 114 are case reports/correspondence/protocols**, where the
+  *absence* of a formal Methods section is often the structurally
+  correct outcome (a case report describes one patient, not a study
+  methodology) -- not a bug this investigation should "fix" by
+  forcing a match.
+
+No fix was made for this larger gap. A position-based heuristic (e.g.
+"treat the first paragraph after the author block as the abstract")
+was considered and rejected: it would abandon this module's own
+explicit, stated design principle -- "missing a section is safe,
+mislabeling one is not" -- for a real risk of mislabeling prose that
+is not actually the abstract. Closing this gap for real would need
+either a parser-level PDF-extraction improvement (recovering styled/
+graphic heading labels Frontiers and similar journals use, well
+outside `knowledge_engine/extraction/sections.py`'s scope) or explicit
+per-journal layout heuristics -- both larger, separately-scoped
+efforts than this investigation, not guessed at here.
+
 All five items on the project owner's original priority list have now
 been started; items 1, 3, and 5 are done, items 2 and 4 have a real,
 ongoing plan in place rather than being fully closed out.
