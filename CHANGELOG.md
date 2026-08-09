@@ -88,6 +88,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   edges). First bootstrap step toward an eventual golden evidence map
   for this corpus, honestly labeled as a same-session self-audit rather
   than an independently-reviewed record -- see the corpus README.
+- **Oncology corpus: 3 more hand-authored reviewed Evidence Records (4
+  total).** `ev-oncology-tsuboi-2026-keynote671-stageii-efs-os-001` (a
+  KEYNOTE-671 stage II NSCLC subgroup analysis: EFS HR 0.50 [0.34-0.74];
+  OS HR 0.69 [0.43-1.11]), `ev-oncology-nodbrant-2026-ecogps-real-world-os-001`
+  (a Swedish registry real-world ICI cohort stratified by ECOG PS: mOS
+  21.5 vs 9.6 vs 4.3 months for PS 0-1/2/3), and
+  `ev-oncology-gandara-2026-cemiplimab-composite-pro-os-001` (EMPOWER-Lung
+  1/3 composite PRO risk prediction for OS: top composite HR 2.52
+  [1.75-3.64] vs top single-scale HR 1.92 [1.43-2.58]) -- each extracted
+  by directly reading its local PDF. `evidence_records.jsonl` now holds
+  1,525 records (1,521 draft + 4 reviewed); `ke graph-build` processed
+  the 3 new records (graph totals: 1,679 claims, 111 concepts, 1,602
+  claim-concept edges).
 
 - **Mental health corpus: cycle 6, 10 more real papers (18% yield, best
   yet).** Corpus now holds 37 real papers, up from 27. New papers

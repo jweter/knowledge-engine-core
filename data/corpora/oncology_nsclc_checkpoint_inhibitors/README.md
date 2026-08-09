@@ -126,3 +126,29 @@ eventual golden evidence map for this corpus (see
 follow), not yet a bounded, externally-audited map of its own -- see
 this record's `provenance.secondary_review.caveat` for the honest
 same-session-self-audit limitation on its current review status.
+
+**Reviewed-evidence-layer growth (2026-08-09): 3 more hand-authored
+records (4 total).** Added three more manually-authored,
+source-audited Evidence Records, each read directly from its local
+PDF: `ev-oncology-tsuboi-2026-keynote671-stageii-efs-os-001` (a
+genuine subgroup analysis of the named landmark phase 3 KEYNOTE-671
+trial, restricted to clinical stage II NSCLC -- EFS HR 0.50
+[0.34-0.74]; OS HR 0.69 [0.43-1.11], directionally favorable but not
+independently significant in this subgroup; MPR/pCR both improved);
+`ev-oncology-nodbrant-2026-ecogps-real-world-os-001` (a large Swedish
+registry-based real-world cohort of ICI-treated lung cancer patients,
+stratified by baseline ECOG performance status -- lung-cancer-specific
+mOS of 21.5 vs 9.6 vs 4.3 months for PS 0-1/2/3, deliberately using the
+paper's NSCLC-specific Table 2 values rather than its pooled
+across-cancer-types abstract figures); and
+`ev-oncology-gandara-2026-cemiplimab-composite-pro-os-001` (a
+secondary analysis of the EMPOWER-Lung 1 and EMPOWER-Lung 3 phase 3
+cemiplimab trials, showing composite patient-reported-outcome burden
+predicts OS more strongly than any single PRO scale -- top composite
+HR 2.52 [1.75-3.64] vs top single-scale HR 1.92 [1.43-2.58]).
+`evidence_records.jsonl` now holds 1,525 records (1,521 draft + 4
+reviewed). `ke graph-build` processed the 3 new records: graph totals
+now 1,679 claims, 111 concepts (67 mesh, 44 rxnorm), 1,602
+claim-concept edges. Same same-session-self-audit caveat applies to
+all four reviewed records; a future independent audit remains
+warranted.
