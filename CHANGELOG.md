@@ -9,6 +9,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Investigated `detect_sections`' 114-of-1,357-paper "no Abstract/
+  Methods section detected at all" gap; found and documented it is not
+  a narrow regex fix.** 79% (90/114) have no "abstract" text anywhere
+  in their extracted first two pages at all -- reading real examples
+  (Frontiers-journal papers) confirmed the abstract paragraph itself
+  is present and readable, but the "Abstract" heading label was never
+  captured by PDF text extraction (a styled/graphic label, not
+  extractable text) -- a parser-level limitation, not a `sections.py`
+  pattern-matching gap. Remainder: Cell Press "Graphical abstract"
+  layouts (6), non-Latin-script papers (3), and case
+  reports/correspondence where a missing Methods section is often the
+  structurally correct outcome (9-13). No fix was made; a position-
+  based heuristic was considered and rejected as violating the
+  module's own explicit "missing is safe, mislabeling is not"
+  principle. See `docs/roadmap.md`'s M65 section's third same-day
+  addendum for the full breakdown.
+
 - **5 more relationship-graph edges across oncology and mental-health,
   from exhaustively re-reading the same reviewed-record sets.**
   Oncology: Gandara contextualizes Liao (composite PRO score vs.
