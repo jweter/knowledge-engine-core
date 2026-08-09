@@ -50,6 +50,13 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   trial in patients on a concomitant SSRI, two CAN-BIND-1 secondary
   analyses, a CYP2D6/CYP1A2-polymorphism duloxetine-response study, and
   an EMBARC-trial secondary analysis.
+- **Mental health corpus: cycle 9, 2 more real papers (62 total).**
+  Yield collapsed to 2% this cycle (most candidates failed deterministic
+  identity/license/full-text/scope rules outright), possibly signaling
+  this query is approaching exhaustion of readily-available PMC-OA
+  results. New papers: a bariatric-surgery SSRI/SNRI plasma-concentration
+  study, and an EMBARC-trial secondary analysis of brain
+  ventricle/choroid plexus morphology as a treatment-response predictor.
 
 - **Mental health corpus: cycle 6, 10 more real papers (18% yield, best
   yet).** Corpus now holds 37 real papers, up from 27. New papers

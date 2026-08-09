@@ -180,3 +180,19 @@ abuse-history/anhedonia-persistence), a CYP2D6/CYP1A2-polymorphism
 duloxetine-response study, and an EMBARC-trial secondary analysis of
 reward-behavior disengagement. Corpus now holds 60 real papers. Yield
 trend: 13% -> 1.5% -> 3.8% -> 8% -> 8.3% -> 16% -> 18% -> 16% -> 20%.
+
+**Tightened-query cycle 8 (2026-08-09): yield collapsed to 2%, likely
+approaching this query's exhaustion point.** A ninth discovery cycle
+(retstart=700) scanned 100 candidates, only 2 deterministically
+accepted (down sharply from 65 the cycle before) -- most of this page's
+candidates failed the deterministic identity/license/full-text/scope
+rules outright, not just the manual screen. Both of the 2 candidates
+passed manual scope screen: a plasma-concentration study of SSRI/SNRI
+after bariatric surgery and its effect on depressive symptoms (a
+comorbid-population trial with directly-named drug classes), and an
+EMBARC-trial secondary analysis of brain ventricle/choroid plexus
+morphology as a treatment-response predictor. Corpus now holds 62 real
+papers. This sharp drop suggests the tightened query's readily-available
+PMC-OA results may be thinning out in this pagination range; a future
+cycle should assess whether continuing at higher `retstart` values
+remains productive or whether the query needs further adjustment.
