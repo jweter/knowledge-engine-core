@@ -26,6 +26,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Mental health corpus: cycle 7, 10 more real papers (47 total),
+  including the CAN-BIND paper that surfaced the degree-credential
+  parser bug.** New papers include an escitalopram-CABG RCT, an
+  escitalopram+sertraline post-stroke-depression RCT, a sertraline-PANDA
+  predictors-of-response analysis, a CBASP-vs-escitalopram subgroup
+  study, the VESPA vortioxetine-vs-SSRIs tolerability RCT, an
+  antidepressants-in-Japan systematic review/meta-analysis, the CAN-BIND
+  CYP2C19/CYP2D6/ABCB1 sexual-dysfunction study, an
+  empagliflozin-adjunctive-to-citalopram RCT, an antidepressant
+  side-effects/adherence systematic review, and a
+  vortioxetine-vs-fluoxetine metabolic-parameters RCT.
+
 - **Mental health corpus: cycle 6, 10 more real papers (18% yield, best
   yet).** Corpus now holds 37 real papers, up from 27. New papers
   include a trazodone-vs-SSRIs study, a comparative-effectiveness study
