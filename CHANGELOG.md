@@ -26,6 +26,39 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`docs/ai_layer_architecture.md`: multi-agent orchestration design
+  addition.** Documents a project-owner architecture review's proposed
+  worker-role taxonomy (Orchestrator, Query Planner, Discovery/Retrieval
+  Workers, Evidence Extractor/Analyst, Contradiction/"Skeptic" Worker,
+  Statistical Worker, Source/Citation Auditor, Composer), a mandatory
+  (not optional) Skeptic step before synthesis, a persistent
+  `ResearchSession` state design, and a local-model cost/latency
+  routing ladder. Explicitly reconciles the proposal against this
+  project's already-decided doctrine ("one assistant, not several
+  bots" stays true -- these are internal workers, never user-facing
+  personas) and names what a reference multi-agent OSS project's
+  pattern was borrowed from (spawn/fan-in concurrency, durable project
+  memory) versus explicitly not adopted (Kubernetes-based agent
+  isolation -- solves a different problem than this project has).
+  States the real sequencing gate: evidence-base thickness, not
+  architecture -- a v0.1 four-component build (Orchestrator/
+  Retriever/Skeptic/Composer-Auditor) belongs in `knowledge-engine-ai`
+  once a second corpus has real reviewed-evidence and relationship
+  density, not before.
+- **`tools/discovery_scope_prescreen.py`: deterministic scope-screen
+  prescreening prototype.** Scores discovery-cycle candidates
+  `likely_include`/`likely_exclude`/`needs_manual_review` against a
+  corpus's hand-authored rule set (topic terms, named in-scope agents,
+  hard-exclude signals), to speed up -- never replace -- the manual
+  title/abstract scope screen this project has always required before
+  `ke pmc-oa-acquire`. Ships with a mental-health corpus rule set and
+  validated against the real cycle-7/8 worksheet already hand-screened
+  this session: 0 dangerous false negatives (nothing actually included
+  got mis-flagged as exclude); 3 residual false `likely_include`s on
+  genuinely hard semantic cases (mechanism/transporter studies,
+  imaging/biomarker focus, herbal-adjunct compounds) that still require
+  an abstract read, which the tool's own framing already demands.
+  10 tests in `tests/tools/test_discovery_scope_prescreen.py`.
 - **Mental health corpus: cycle 7, 10 more real papers (47 total),
   including the CAN-BIND paper that surfaced the degree-credential
   parser bug.** New papers include an escitalopram-CABG RCT, an

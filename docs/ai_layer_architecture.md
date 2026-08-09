@@ -320,6 +320,138 @@ list -- deliberately come after all five stages, not before, matching
 `ai_interface_layer_scoping.md`'s "not attempting the whole thing here"
 posture toward Discovery Engine's most open-ended framing.
 
+## Orchestration: a multi-agent pattern for the Research Copilot
+
+Added 2026-08-09 from a project-owner architecture review (informed by
+a third-party open-source multi-agent orchestration project's
+spawn/fan-in pattern, evaluated and deliberately *not* adopted
+wholesale -- see the "What this borrows, and what it explicitly does
+not" subsection below). This section answers "how is the Research
+Copilot's internal delegation actually implemented," which the "One
+assistant, not several bots" section above named but left as an
+architecture diagram, not a build plan.
+
+**The one thing this does not change:** "one assistant, not several
+bots" still holds. Everything below is internal orchestration behind
+a single Research Copilot the researcher talks to -- if any of these
+roles ever grows a user-facing name, personality, or a mode-picker UI,
+that reopens a question this project already closed. Treat "agent" in
+this section as an implementation-internal worker, never a persona.
+
+### Proposed worker roles
+
+| Component | Job | Maps onto |
+|---|---|---|
+| Orchestrator | Classify research intent, build a typed `ResearchPlan` | New -- thin coordination layer |
+| Query Planner | Turn a question into search/PICO-shaped queries | Retrieval Intelligence's query decomposition (open) |
+| Discovery Worker | Query PubMed/Europe PMC/CORE for new candidates | M34-M36's discovery-provider architecture (built) |
+| Retrieval Worker | Search the existing Evidence Graph/vector index | M32/M39 fused search (built) |
+| Evidence Extractor | Locate and structure candidate evidence | M69 LLM-grounded PICO extraction (built) |
+| Evidence Analyst | Compare studies/PICO/results across records | Evidence Intelligence's contradiction/consensus analysis (open) |
+| Contradiction ("Skeptic") Worker | Deliberately search for opposing evidence | Discovery Intelligence's contradiction explanation (scoped, Stage 5) |
+| Statistical Worker | Recompute reported statistics -- no LLM | The Statistics Auditor (scoped above; deterministic by design) |
+| Source Auditor | Verify claims actually match source spans | `source_span`/provenance discipline `core` already enforces on write; this is a *read-time* re-check |
+| Composer | Produce the human-readable, cited answer | Synthesis/Explanation (M2's `--synthesize`, local, opt-in) |
+| Citation Auditor | Confirm every material claim has provenance before the answer ships | New -- a final gate, not a narration step |
+
+Nearly every row already maps onto a capability this document scoped
+or `core` already built; the genuinely new pieces are the Orchestrator,
+the Skeptic-as-mandatory-step reframing below, and the Citation
+Auditor as an explicit final gate rather than an implicit property of
+"the LLM only narrates cited facts."
+
+### The Skeptic step is mandatory, not optional
+
+"Discovery Intelligence: contradictions and the Unknowns Engine"
+above already scopes contradiction explanation as a capability. This
+section sharpens that into a build requirement: for any answer that
+makes a comparative or directional claim ("does X improve Y"), the
+Contradiction Worker runs *before* the Composer synthesizes an answer,
+not as an optional follow-up a researcher can skip. Its brief is
+adversarial by design -- given an emerging conclusion, it searches the
+Evidence Graph and (bounded) new literature specifically for the
+strongest counterexamples, methodological conflicts, population
+differences, and endpoint differences, and that output is a required
+input to the Composer, not an afterthought appended to a
+already-written answer. A pipeline of Researcher &rarr; Evidence
+Analyst &rarr; Skeptic &rarr; Source Auditor &rarr; Composer is a
+stronger design for scientific synthesis than several agents that only
+ever agree with each other.
+
+### Persistent `ResearchSession` state
+
+Genuinely missing today. Nothing in `core`, `web`, or `ai` currently
+reconstructs "continue my GLP-1 investigation" from anything other
+than raw chat history. A `ResearchSession` record -- question, scope,
+inclusion/exclusion criteria in force, search strategies already run,
+sources considered and rejected, evidence records surfaced,
+contradictions found, calculations performed, unresolved questions,
+and a log of agent actions -- would let a researcher resume an
+investigation days or weeks later from stored state, not from
+re-reading a transcript. This is additive to the Evidence Graph, not a
+replacement for it: the Evidence Graph is what is true and
+source-linked; a `ResearchSession` is what a particular investigation
+has done and still needs to do. Storage location and schema are
+implementation decisions for whichever package builds Stage 1's
+query-decomposition work, not resolved here.
+
+### Local-model routing, as a cost/latency ladder
+
+Reasonable, and consistent with M2's existing opt-in local Ollama
+synthesis path, but a real operational cost (N models to keep pulled,
+consistent, and individually debuggable), not a free optimization.
+The proposed ladder -- can Python solve this deterministically? then
+can a small local model (~1.5B) solve it? then a mid-size local model
+(~4-8B)? then, only as a last resort, an external model? -- should be
+prototyped against one concrete workflow (the Query Planner is the
+obvious first candidate, since it is bounded, has a clear
+success/failure signal, and does not touch write paths) before being
+adopted as a blanket policy across every worker role above.
+
+### What this borrows, and what it explicitly does not
+
+Borrowed: the spawn-workers-then-fan-in concurrency pattern (in this
+project's case, plain `asyncio.TaskGroup` fan-out across
+Discovery/Retrieval/Contradiction workers -- no new infrastructure),
+and the idea of durable, queryable project memory outside the prompt
+window (`ResearchSession` above, playing the same role the reference
+project's SQLite-backed project memory plays for its own agents).
+
+Not borrowed: container/Kubernetes-based agent isolation, persistent
+cloud development environments, or any of the operational machinery a
+reference implementation of this pattern used to let multiple
+heterogeneous coding agents run in parallel isolated workspaces. That
+solves a different problem (isolating untrusted, long-running
+coding-agent processes from each other) than the one this project has
+(orchestrating a handful of read-mostly research-workflow steps over
+an already-trusted local evidence base). Revisit only if Knowledge
+Engine becomes multi-user or needs isolated research workers running
+concurrently against shared state -- not a near-term need.
+
+### Sequencing and the real gate
+
+The real blocker is not architecture, it is evidence-base thickness.
+Stage 5 above is explicitly gated on "adequate analytical inputs and
+relationship coverage," and that gate has not moved: as of this
+entry, GLP-1 has the only externally-audited golden map (14 Evidence
+Records, ~19 Relationship Records); the oncology corpus has a small,
+same-session-self-audited reviewed layer (a handful of records against
+over 1,500 automated drafts); mental-health has none. A Contradiction
+Worker today would have almost nothing real to contradict outside
+GLP-1. Recommended order:
+
+1. Keep growing reviewed-evidence coverage and relationship density
+   across corpora (already in progress -- see each corpus's README).
+2. Build a minimal v0.1 in `knowledge-engine-ai` (not `core`, matching
+   this document's package boundary throughout): Orchestrator,
+   Retriever, Skeptic, Composer/Citation-Auditor -- four components,
+   not the full eleven-row table above.
+3. Split out specialized workers (Statistical Worker, dedicated
+   Evidence Analyst, etc.) once the four-component version is
+   reliable and there is enough reviewed evidence in a second corpus
+   to exercise agreement/disagreement/population-difference cases the
+   way GLP-1's golden map already does.
+
 ## Open questions carried forward (owner decisions, not resolved here)
 
 - **Package split.** One `knowledge-engine-ai` repository for all four
