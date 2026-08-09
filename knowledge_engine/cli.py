@@ -240,6 +240,42 @@ PromotionOutputOption = Annotated[
 ALLOWED_REVIEW_STATUSES = {"draft", "reviewed", "needs_revision", "rejected"}
 ALLOWED_EXTRACTION_STATUSES = {"draft_review_required", "draft_manual_prototype"}
 ALLOWED_EVIDENCE_DIRECTIONS = {"supports", "contradicts", "qualifies", "contextualizes"}
+# The full set of study_type values actually in use across all three
+# corpora's evidence_records.jsonl as of this allowlist's creation (verified
+# by grepping every record, not guessed). docs/roadmap.md's "M65's
+# study_type vocabulary-granularity question is resolved" section already
+# investigated whether near-duplicate-looking pairs in this set (e.g.
+# "meta_analysis" vs "systematic_review_meta_analysis") should be merged --
+# by reading the actual source text behind disagreeing records, not just
+# comparing label strings -- and found the decision is not uniform: the
+# cohort-study naming split is a mostly-mechanical alias, but the
+# meta-analysis split is often a real distinction (a paper *performing* a
+# meta-analysis vs. one that only *discusses* prior ones in its Methods),
+# and `evidence_intelligence.py`'s `_STUDY_DESIGN_WEIGHTS` already treats
+# the known aliases as equal-weight regardless. This allowlist does not
+# reopen that decision -- it only prevents *new* uncontrolled values from
+# being introduced going forward.
+ALLOWED_STUDY_TYPES = {
+    "biomarker_predictive_study",
+    "case_report",
+    "cohort_study",
+    "cross_over_trial",
+    "cross_sectional_study",
+    "meta_analysis",
+    "narrative_review",
+    "observational_study",
+    "observational_trial_extension",
+    "pilot_randomized_controlled_trial",
+    "pilot_study",
+    "post_hoc_analysis",
+    "prospective_observational_cohort",
+    "randomized_controlled_trial",
+    "retrospective_observational_cohort",
+    "retrospective_study",
+    "systematic_review",
+    "systematic_review_meta_analysis",
+    "uncontrolled_before_after_study",
+}
 ALLOWED_RELATIONSHIP_TYPES = {
     "supports",
     "contradicts",
@@ -1536,6 +1572,13 @@ def _validate_evidence_record(
         errors.append(
             f"Line {line_number}: invalid evidence_direction '{evidence_direction}'. "
             f"Allowed values: {allowed}."
+        )
+
+    study_type = record.get("study_type")
+    if isinstance(study_type, str) and study_type and study_type not in ALLOWED_STUDY_TYPES:
+        allowed = ", ".join(sorted(ALLOWED_STUDY_TYPES))
+        errors.append(
+            f"Line {line_number}: invalid study_type '{study_type}'. Allowed values: {allowed}."
         )
 
     provenance = record.get("provenance")

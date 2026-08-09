@@ -9,6 +9,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`ke evidence-validate`: `study_type` now has an enum check.**
+  Mirrors the `evidence_direction`/`extraction_status` pattern. Adds
+  `ALLOWED_STUDY_TYPES`, the exact set of 19 values verified live in
+  use across all three corpora's `evidence_records.jsonl`. Does not
+  reopen `docs/roadmap.md`'s already-settled "M65's `study_type`
+  vocabulary-granularity question is resolved" decision (near-
+  duplicate-looking pairs like `meta_analysis`/
+  `systematic_review_meta_analysis` were investigated by reading real
+  source text, not just comparing labels, and found not to be a
+  uniform naming alias) -- only prevents a *new* typo'd value from
+  being introduced going forward. `study_type: null` continues to
+  validate cleanly, matching all 639 existing records that legitimately
+  carry it. Quantified and cross-referenced that same still-open
+  coverage gap with today's exact numbers in `docs/roadmap.md` (39% of
+  oncology's `m52-evidence-classification-v1` tier, 594/1,521 records,
+  missing `study_type` entirely; every manually-authored record across
+  all three corpora is 100% populated) -- confirmed, not guess-filled,
+  per this project's established never-guess extraction discipline.
+  6 new tests in `test_cli.py`.
+
 - **`tools/detect_non_primary_article.py`: post-acquisition
   non-primary-article-type detector.** Closes a real gap title-only
   screening cannot: "PACIFIC-5 Trial: Refining Patient Selection for
