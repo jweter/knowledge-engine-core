@@ -783,6 +783,27 @@ milestone's own investigation and fix, most likely to
 loop's fixed pattern-precedence order. `classify_study_type` is
 unchanged by this decision.
 
+**2026-08-09 addendum: the coverage-gap item above is confirmed still
+open, now quantified corpus-wide.** A same-day review across all three
+corpora's live `evidence_records.jsonl` found `study_type: null` in
+639 of 1,824 total records; broken out by extraction tier, every
+`manual`/`manual_human_review`/`manual_source_audit` record is 100%
+populated (0% missing), while the automated tiers run 21-45% missing
+(GLP-1's `m69-llm-grounded-pico` tiers) and 39% missing specifically
+in oncology's `m52-evidence-classification-v1` tier (594 of 1,521
+records) -- exactly the coverage-gap pattern this section already
+flagged as real and unresolved, not something to guess-fill; per this
+project's established discipline (`extraction-review-autoclassify`
+skips rather than guesses a missing PICO field, and the same standard
+applies here), no value has been invented for any of these 639
+records. Separately, `ke evidence-validate` gained a `study_type`
+enum check (`ALLOWED_STUDY_TYPES` in `knowledge_engine/cli.py`,
+mirroring the existing `evidence_direction`/`extraction_status`
+pattern) -- this only prevents a *new* typo'd value from being
+introduced going forward and does not reopen the naming-alias decision
+above; `study_type: null` continues to validate cleanly, matching all
+639 existing records.
+
 All five items on the project owner's original priority list have now
 been started; items 1, 3, and 5 are done, items 2 and 4 have a real,
 ongoing plan in place rather than being fully closed out.

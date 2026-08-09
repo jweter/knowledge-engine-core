@@ -1235,6 +1235,45 @@ def test_evidence_validate_accepts_known_evidence_directions(
     assert result.exit_code == 0
 
 
+def test_evidence_validate_fails_for_invalid_study_type(tmp_path: Path) -> None:
+    records_path = write_evidence_records(tmp_path, [{"study_type": "made_up_design"}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code != 0
+    assert "invalid study_type 'made_up_design'" in result.output
+
+
+def test_evidence_validate_accepts_null_study_type(tmp_path: Path) -> None:
+    # study_type is a required key but not a required value -- 639 real
+    # records across the three corpora's automated-extraction tiers
+    # legitimately have study_type: null, and that must keep passing.
+    records_path = write_evidence_records(tmp_path, [{"study_type": None}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code == 0
+
+
+@pytest.mark.parametrize(
+    "study_type",
+    [
+        "randomized_controlled_trial",
+        "systematic_review_meta_analysis",
+        "meta_analysis",
+        "cohort_study",
+        "retrospective_study",
+        "case_report",
+    ],
+)
+def test_evidence_validate_accepts_known_study_types(tmp_path: Path, study_type: str) -> None:
+    records_path = write_evidence_records(tmp_path, [{"study_type": study_type}])
+
+    result = CliRunner().invoke(app, ["evidence-validate", str(records_path)])
+
+    assert result.exit_code == 0
+
+
 def test_evidence_validate_fails_for_non_integer_source_span_offset(tmp_path: Path) -> None:
     records_path = write_evidence_records(
         tmp_path, [{"source_span": {"start_offset": "0", "end_offset": 10}}]
