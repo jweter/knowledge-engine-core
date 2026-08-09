@@ -9,6 +9,39 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **First relationship-graph edges for the oncology and mental-health
+  corpora.** Both previously had zero `relationship_records.jsonl`
+  entries -- only GLP-1 had a relationship graph. Read each corpus's
+  manually-reviewed evidence records directly (13 for oncology, 9 for
+  mental health) and authored 5 real `supports`/`qualifies`/
+  `contextualizes` relationships per corpus by hand, the same
+  discipline used for GLP-1's graph, rather than relying on the
+  automated candidate list (which is dominated by noise from
+  same-paper automated-tier fragment pairs at this corpus's scale).
+  All 10 pass `ke relationship-validate`. Graph totals: oncology 17 ->
+  22 relationship edges, mental health 22 -> 27. Documented in each
+  corpus's `README.md`.
+
+- **License/attribution review across all three corpora, closing the
+  final `v1.0.0` release gate.** `ke corpus-validate` now re-checks
+  every `approved_open_access` row's `license_type` against
+  `knowledge_engine.license_rules.evaluate_license` (only unrestricted
+  `CC BY`/`CC0` bases pass), not just field presence -- this is a
+  permanent, re-run-every-time check, not a one-off manual audit. It
+  caught 4 real rows in `glp1_weight_loss/sources.csv` recorded as
+  `CC-BY` (hyphenated) instead of `CC BY`; confirmed harmless via each
+  row's own notes (real CC BY 4.0 sources, cosmetic typo only) and
+  fixed. Also fixed the same latent typo in four test fixtures' "valid
+  row" defaults. Corrected all three corpora's `license_policy.md`,
+  which described a stale prose usage-note vocabulary that never
+  matched the actual enforced `usage_status`/`license_type` schema.
+  Verified 100% of evidence records' `source_doi` resolves to a real
+  `sources.csv` row across all three corpora (1,824 records total),
+  confirming citation-level attribution is traceable project-wide, not
+  just for manually-reviewed records. 2 new regression tests in
+  `tests/test_corpus_manifest.py`. See `docs/roadmap.md`'s 2026-08-09
+  addendum to the `v1.0.0` release-gate section for full findings.
+
 - **GLP-1 Statistical Verification Readiness Gate: re-run confirms
   `not_ready_for_pooling_design` is unchanged, and a targeted OA search
   for newer candidate trials found none.** Re-ran `ke

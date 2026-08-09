@@ -1910,7 +1910,7 @@ def write_cli_corpus(
         "source_id,title,usage_status,inclusion_status,source_url,access_date,"
         "inclusion_reason,license_type,license_url,local_path\n"
         + "\n".join(
-            f"{row},https://example.test/paper,2026-07-11,Relevant,CC-BY,"
+            f"{row},https://example.test/paper,2026-07-11,Relevant,CC BY,"
             "https://creativecommons.org/licenses/by/4.0/,paper.pdf"
             for row in source_rows
         )

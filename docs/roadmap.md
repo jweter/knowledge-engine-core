@@ -1503,6 +1503,60 @@ automatically.
   Decision layers they measure exist -- named here so they are not
   forgotten, not because they are actionable before then.
 
+**2026-08-09: license/attribution review across every corpus, completed
+-- the `v1.0.0` gate above is closed.** Audited all three corpora
+(`glp1_weight_loss`: 953 sources / 157 evidence records,
+`oncology_nsclc_checkpoint_inhibitors`: 336 sources / 1,534 records,
+`mental_health_mdd_antidepressants`: 62 sources / 133 records) rather
+than trusting the ingestion-time gate alone:
+
+- Every source row across all three corpora is `usage_status:
+  approved_open_access` with `inclusion_status: included` -- no
+  lingering `needs_legal_review` or unresolved rows.
+- Every `license_type` is a real `CC BY` or `CC0` variant with a
+  matching `creativecommons.org` `license_url`; none are
+  attribution-restricted or non-commercial/no-derivative bases. 100% of
+  evidence records' `source_doi` resolves back to a real `sources.csv`
+  row, so citation-level attribution (DOI + title) is traceable for
+  every record, not just the manually-reviewed subset.
+- Found and fixed a real gap: `ke corpus-validate` (via
+  `knowledge_engine.corpus.validation`) checked `usage_status` and
+  field *presence* but never re-validated `license_type` *content*
+  against `knowledge_engine.license_rules.evaluate_license` -- the
+  actual CC BY/CC0 acceptance rule already enforced at discovery-source
+  ingestion time in `candidate_review.py` and its Europe PMC/CORE/
+  Unpaywall counterparts. Added that content check to
+  `_validate_conditional_fields`, so every `corpus-validate` run now
+  re-verifies license content, not just presence -- this is the
+  concrete mechanism that makes the review durable rather than a
+  one-time manual pass. It immediately caught 4 real rows in
+  `glp1_weight_loss/sources.csv` recorded as `CC-BY` (hyphenated)
+  instead of `CC BY` -- a cosmetic data-entry typo confirmed harmless
+  by each row's own `notes` field (all four are the manually-curated
+  STEP 5/SELECT-family golden-map sources with real CC BY 4.0 text
+  already cited), but one that would have silently passed every prior
+  check. Fixed the data and added regression tests
+  (`test_import_readiness_blockers` in `tests/test_corpus_manifest.py`).
+  A latent copy of the same "CC-BY" typo existed in three test
+  fixtures' "valid row" defaults (`tests/test_corpus_manifest.py`,
+  `tests/test_corpus_import.py`, `tests/test_import_runs.py`,
+  `tests/test_cli.py`) -- harmless before this content check existed,
+  fixed alongside it.
+- Corrected each corpus's `license_policy.md`: its "Acceptable Source
+  Usage Notes" section described a six-item human-prose vocabulary
+  ("Open access with license named.", etc.) that predated and never
+  matched the actual machine-checked `usage_status`/`license_type`
+  enums enforced in code. Replaced with the real enum values and an
+  explicit description of the `evaluate_license` rule.
+
+No corpus required any source removal or reclassification -- the
+underlying legal basis was already correct in all three; what was
+missing was a standing, automated re-verification of that basis rather
+than a single ingestion-time check, which is exactly what the `v1.0.0`
+gate asked for. Combined with the already-closed backup/restore and
+API-fixture gates above, `v1.0.0`'s remaining condition is the project
+owner's own confirmation that public messaging matches capability.
+
 ### Historical intent (superseded, kept for context only)
 
 The list below was the original phase-to-version mapping before any of Phase

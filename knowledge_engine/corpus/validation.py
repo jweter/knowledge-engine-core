@@ -23,6 +23,7 @@ from knowledge_engine.corpus.path_safety import (
     looks_absolute,
     resolve_under,
 )
+from knowledge_engine.license_rules import evaluate_license
 from knowledge_engine.utils import normalize_doi
 
 MANIFEST_VERSION = 1
@@ -678,11 +679,22 @@ def _validate_conditional_fields(
             )
 
     if usage_status == "approved_open_access":
-        if not _row_text(row, "license_type"):
+        license_type = _row_text(row, "license_type")
+        if not license_type:
             _add_import_blocker(
                 result,
                 "missing_license_type",
                 "approved_open_access rows must include license_type.",
+                source_id,
+                "license_type",
+                line_number,
+            )
+        elif evaluate_license(license_type) != "passed":
+            _add_import_blocker(
+                result,
+                "unsupported_license_basis",
+                f"license_type '{license_type}' is not an unrestricted CC BY/CC0 basis "
+                "recognized by knowledge_engine.license_rules.evaluate_license.",
                 source_id,
                 "license_type",
                 line_number,

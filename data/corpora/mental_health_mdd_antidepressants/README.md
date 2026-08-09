@@ -303,3 +303,26 @@ SF-36 quality of life at 8 weeks, p<0.001, diversifying the layer's
 population and outcome-type coverage). Corpus graph totals after this
 batch: 115 concepts (68 mesh, 47 rxnorm), 1,694 claims, 1,622
 claim-concept edges, 9 reviewed records.
+
+**Relationship graph: first 5 edges authored (2026-08-09).** This
+corpus previously had no `relationship_records.jsonl` at all -- the 9
+reviewed records were read directly and reasoned about by hand
+(automated candidate-matching over the full graph is dominated by
+noise, so it was not used as the primary source), mirroring the
+discipline already used for the GLP-1 corpus's graph. Authored 5 real
+relationships: Santi's three-arm RCT supports Yin's meta-analytic
+finding of no significant escitalopram-vs-newer-antidepressant
+difference; Yan's post-stroke-depression RCT qualifies Yin's
+escitalopram-superior-to-SSRI finding (holds for symptom trajectory
+and tolerability, not for categorical response rate); Ju's null
+agomelatine-augmentation RCT qualifies Perez's DEPRE'5 pooled-
+alternative-strategies finding by showing not every specific
+alternative strategy succeeds; Schmidt's positive aticaprant-
+augmentation RCT contextualizes Ju's null agomelatine-augmentation
+RCT, since both share the same design template but reach opposite
+results depending on the specific drug; and Baradaran's escitalopram-
+in-CABG-patients RCT contextualizes Kishi's antidepressant-vs-placebo
+meta-analysis by extending it into a comorbid post-cardiac-surgery
+population Kishi's included trials didn't cover. All 5 passed
+`ke relationship-validate` and are now in the graph (27 relationship
+edges corpus-wide, up from 22 before this corpus had any).

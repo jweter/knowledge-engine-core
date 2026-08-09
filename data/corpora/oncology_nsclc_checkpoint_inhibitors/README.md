@@ -229,3 +229,23 @@ the 3 new records: graph totals now 1,697 claims, 115 concepts (68
 mesh, 47 rxnorm), 1,623 claim-concept edges. Same
 same-session-self-audit caveat applies to all thirteen reviewed
 records.
+
+**Relationship graph: first 5 edges authored (2026-08-09).** This
+corpus previously had no `relationship_records.jsonl` at all --
+`ke graph-relationship-candidates` output for the reviewed tier was
+read directly and reasoned about by hand (not via automated matching,
+which is dominated by noise from same-paper automated-tier fragment
+pairs), mirroring the discipline already used for the GLP-1 corpus's
+graph. Authored 5 real relationships among the 13 reviewed records:
+Selke's PD-L1-stratified durvalumab-consolidation cohort qualifies
+Stuschke's whole-population durvalumab-consolidation finding;
+Katsarolis's real-world Greek cohort supports Dang's pooled-RCT
+ICI-plus-chemotherapy-vs-chemotherapy-alone OS finding; Liao's
+ICPscore biomarker analysis qualifies that same Dang finding by
+showing it doesn't hold in the low-ICPscore subgroup; Wu's liver-
+metastasis network meta-analysis contextualizes it by extending the
+same comparison into a harder-to-treat subgroup; and Machado's
+pembrolizumab real-world meta-analysis supports Nodbrant's ECOG-
+performance-status survival finding. All 5 passed
+`ke relationship-validate` and are now in the graph (22 relationship
+edges corpus-wide, up from 17 before this corpus had any).
