@@ -26,6 +26,24 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Oncology corpus: reviewed-evidence layer grown, 10 -> 13
+  records.** `ev-oncology-wu-2026-liver-mets-network-meta-pfs-os-001`
+  (Bayesian network meta-analysis of 20 RCTs in driver-gene-negative
+  NSCLC with liver metastases: PD-1 inhibitor plus chemotherapy
+  improved PFS, HR 0.572 [0.435-0.754], and OS, HR 0.681
+  [0.559-0.830], versus chemotherapy alone);
+  `ev-oncology-mao-2026-pd1-vegf-antibody-meta-pfs-os-001`
+  (meta-analysis of 11 RCTs, 4,426 patients: PD-1/PD-L1-plus-VEGF/
+  VEGFR-antibody regimens improved PFS, HR 0.65 [0.57-0.75], and OS,
+  HR 0.79 [0.71-0.87], versus control regimens);
+  `ev-oncology-esen-2026-induction-chemoimmunotherapy-realworld-001`
+  (34-patient real-world cohort of induction chemoimmunotherapy plus
+  consolidative hypofractionated radiotherapy in unresectable locally
+  advanced NSCLC: 1-/2-year OS 86%/81%, PFS 76%/54%, explicitly
+  flagged as weaker real-world feasibility evidence given its small,
+  uncontrolled, single-arm design). Graph totals after this batch:
+  115 concepts (68 mesh, 47 rxnorm), 1,697 claims, 1,623 claim-concept
+  edges.
 - **Mental health corpus: reviewed-evidence layer grown, 6 -> 9
   records.** `ev-mh-schmidt-2024-aticaprant-adjunctive-ssri-snri-rct-001`
   (phase 2 double-blind RCT of aticaprant, a kappa receptor antagonist,
