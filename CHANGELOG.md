@@ -155,6 +155,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   1,525 records (1,521 draft + 4 reviewed); `ke graph-build` processed
   the 3 new records (graph totals: 1,679 claims, 111 concepts, 1,602
   claim-concept edges).
+- **Oncology corpus: 3 more hand-authored reviewed Evidence Records (7
+  total).** `ev-oncology-stuschke-2026-durvalumab-crisp-realworld-001`
+  (real-world German CRISP registry validation of PACIFIC-regimen
+  durvalumab consolidation: PFS HR 0.52 [0.37-0.73]; OS HR 0.67
+  [0.44-1.02]), `ev-oncology-katsarolis-2026-greek-realworld-os-001`
+  (684-patient real-world Greek cohort: immunotherapy vs chemotherapy
+  alone, OS HR 0.51 [0.42-0.61]), and
+  `ev-oncology-liao-2026-icpscore-predictive-biomarker-001` (a 9-gene
+  predictive biomarker from the phase 3 ORIENT-11 trial: high-score
+  patients benefit substantially from ICI plus chemotherapy -- OS HR
+  0.32 [0.15-0.67] -- while low-score patients show no significant
+  benefit -- OS HR 1.31 [0.81-2.12]). `evidence_records.jsonl` now
+  holds 1,528 records (1,521 draft + 7 reviewed); `ke graph-build`
+  processed the 3 new records (graph totals: 1,682 claims, 111
+  concepts, 1,604 claim-concept edges).
 
 - **Mental health corpus: cycle 6, 10 more real papers (18% yield, best
   yet).** Corpus now holds 37 real papers, up from 27. New papers
