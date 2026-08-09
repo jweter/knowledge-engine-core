@@ -211,3 +211,29 @@ either try a broader or differently-tightened query, or accept 62
 papers as this corpus's current size until a query redesign is
 warranted. `discovery_state_v2.json`'s `next_retstart` is left at 900
 so a future cycle can pick up cleanly if the query is revisited.
+
+**Reviewed-evidence-layer bootstrap (2026-08-09, same day): first 3
+hand-authored records.** This corpus's reviewed-evidence layer had
+stood at 0 records despite 62 real draft papers; this batch starts it,
+using the same `manual_source_audit` discipline established for the
+oncology corpus (real source-span page citations verified against the
+actual PDF, `provenance.secondary_review` with an explicit
+same-session-self-audit caveat, `created_for_milestone:
+"mental-health-golden-map-bootstrap"`). Three records added:
+`ev-mh-perez-2025-depre5-second-line-strategies-001` (DEPRE'5, a
+5-arm registered RCT of second-line strategies after SSRI
+non-response, n=257: response 28.2% on the pooled alternative arms vs
+14.3% on continued/optimized SSRI, OR 2.36 [1.0-5.6] p=0.05; HDRS-17
+mean difference -2.6 [-4.9,-0.4] p=0.021, with venlafaxine and
+SSRI+problem-solving-therapy as the individually-strongest arms);
+`ev-mh-yin-2023-escitalopram-vs-other-antidepressants-meta-001` (a
+30-RCT meta-analysis: escitalopram significantly outperforms
+citalopram on response, RR 0.67 [0.50,0.87], and remission, RR 0.53
+[0.30,0.93], with no significant difference against other comparator
+antidepressants); `ev-mh-santi-2024-vilazodone-escitalopram-vortioxetine-rct-001`
+(a 3-arm open-label RCT, n=96 per-protocol: comparable baseline HDRS
+severity across arms, p=0.964, and no statistically significant
+between-group difference in 16-week HDRS reduction across vilazodone,
+escitalopram, and vortioxetine). Corpus graph totals after this batch:
+114 concepts (68 mesh, 46 rxnorm), 1,688 claims, 1,612 claim-concept
+edges, 3 reviewed records.
