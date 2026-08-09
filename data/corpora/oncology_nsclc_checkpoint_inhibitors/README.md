@@ -200,3 +200,32 @@ records (1,521 draft + 10 reviewed). `ke graph-build` processed the 3
 new records: graph totals now 1,685 claims, 111 concepts (67 mesh, 44
 rxnorm), 1,608 claim-concept edges. Same same-session-self-audit
 caveat applies to all ten reviewed records.
+
+**Reviewed-evidence-layer growth (2026-08-09, same day): 3 more
+hand-authored records (13 total).** Added three more manually-authored,
+source-audited Evidence Records: `ev-oncology-wu-2026-liver-mets-network-meta-pfs-os-001`
+(a Bayesian network meta-analysis of 20 RCTs in driver-gene-negative
+NSCLC with liver metastases: PD-1 inhibitor plus chemotherapy improved
+PFS, HR 0.572 [0.435-0.754], and OS, HR 0.681 [0.559-0.830], versus
+chemotherapy alone, with camrelizumab plus chemotherapy ranking
+highest by SUCRA -- diversifying this corpus's population coverage to
+a poor-prognosis metastatic site);
+`ev-oncology-mao-2026-pd1-vegf-antibody-meta-pfs-os-001` (a
+meta-analysis of 11 RCTs, 4,426 patients: antibody-based regimens
+combining PD-1/PD-L1 inhibition with VEGF/VEGFR-targeting antibodies
+improved PFS, HR 0.65 [0.57-0.75], and OS, HR 0.79 [0.71-0.87], versus
+control regimens, with favorable subgroup estimates in liver
+metastases, high PD-L1 expression, and EGFR-mutant patients); and
+`ev-oncology-esen-2026-induction-chemoimmunotherapy-realworld-001` (a
+small 34-patient real-world cohort of induction chemoimmunotherapy
+followed by consolidative hypofractionated radiotherapy in
+unresectable locally advanced NSCLC: 1- and 2-year OS 86%/81%, PFS
+76%/54%, with favorable locoregional control and acceptable toxicity
+-- included as real-world feasibility evidence, explicitly flagged as
+weaker than this corpus's RCT/meta-analysis records given its small,
+uncontrolled, single-arm design). `evidence_records.jsonl` now holds
+1,534 records (1,521 draft + 13 reviewed). `ke graph-build` processed
+the 3 new records: graph totals now 1,697 claims, 115 concepts (68
+mesh, 47 rxnorm), 1,623 claim-concept edges. Same
+same-session-self-audit caveat applies to all thirteen reviewed
+records.
