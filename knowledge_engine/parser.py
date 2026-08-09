@@ -26,6 +26,47 @@ GENERIC_TITLE_LINES = {
     "review",
     "reviews",
 }
+# Some publishers' embedded PDF "Author" metadata lists each name followed by
+# its own degree credential, comma-separated ("Jane Doe, PhD, John Smith,
+# MSc") -- indistinguishable from a name boundary by a comma-only split.
+# Filtering out exact-match credential tokens keeps genuine names intact
+# without guessing at which commas are name boundaries.
+DEGREE_CREDENTIAL_TOKENS = frozenset(
+    {
+        "phd",
+        "md",
+        "do",
+        "msc",
+        "ms",
+        "ma",
+        "ba",
+        "bs",
+        "bsc",
+        "mph",
+        "mbbs",
+        "mbchb",
+        "rn",
+        "np",
+        "pa",
+        "dnp",
+        "frcp",
+        "facp",
+        "faan",
+        "aprn",
+        "edd",
+        "jd",
+        "mba",
+        "dsc",
+        "dphil",
+        "pharmd",
+        "rph",
+        "mpp",
+        "mpa",
+        "mmed",
+        "frcpc",
+        "facpm",
+    }
+)
 
 
 class DocumentParseError(Exception):
@@ -242,7 +283,15 @@ class PyMuPDFParser(DocumentParser):
         if not author_text:
             return []
         pieces = re.split(r";|,|\band\b", author_text)
-        return [piece.strip() for piece in pieces if piece.strip()]
+        names = []
+        for piece in pieces:
+            cleaned = piece.strip()
+            if not cleaned:
+                continue
+            if cleaned.strip(".").casefold() in DEGREE_CREDENTIAL_TOKENS:
+                continue
+            names.append(cleaned)
+        return names
 
     def _extract_abstract(self, raw_text: str) -> str | None:
         match = re.search(

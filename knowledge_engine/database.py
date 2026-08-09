@@ -526,8 +526,18 @@ class PaperRepository:
         self.session.add(paper)
 
         with self.session.no_autoflush:
+            linked_author_ids: set[int] = set()
             for position, author_name in enumerate(parsed.authors):
                 author = self._get_or_create_author(author_name)
+                if author.id in linked_author_ids:
+                    # Two distinct entries in the parsed author list resolved to
+                    # the same Author row (e.g. a byline artifact the parser's
+                    # own name-splitting heuristic didn't fully filter). Linking
+                    # it twice would violate paper_authors' (paper_id, author_id)
+                    # uniqueness and abort the whole import; keep the first
+                    # (earliest-listed) position rather than guess which is real.
+                    continue
+                linked_author_ids.add(author.id)
                 author_link = PaperAuthor(author=author, position=position)
                 paper.author_links.append(author_link)
                 self.session.add(author_link)

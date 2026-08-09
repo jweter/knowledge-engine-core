@@ -56,6 +56,38 @@ def test_parser_extracts_pdf_metadata(tmp_path: Path) -> None:
     assert "alzheimer biomarkers" in parsed.raw_text.lower()
 
 
+def make_pdf_with_degree_credentials(path: Path) -> None:
+    document = fitz.open()
+    document.new_page()
+    document.set_metadata(
+        {
+            "title": "Credentialed Byline Study",
+            "author": "Jane Doe, PhD, John Smith, PhD, Alice Brown, MSc",
+        }
+    )
+    document.save(path)
+    document.close()
+
+
+def test_parser_filters_degree_credentials_from_author_metadata(tmp_path: Path) -> None:
+    """A publisher's embedded author metadata sometimes lists each name
+
+    followed by its own degree credential, comma-separated the same as a
+    name boundary ("Jane Doe, PhD, John Smith, PhD, ..."). Splitting on
+    every comma without filtering credential tokens produced two "PhD"
+    pseudo-authors here, which downstream import code rejected as a
+    duplicate paper_authors link for the same paper -- a real failure
+    found live against a co-authored CAN-BIND consortium paper.
+    """
+
+    pdf_path = tmp_path / "paper.pdf"
+    make_pdf_with_degree_credentials(pdf_path)
+
+    parsed = PyMuPDFParser().parse(pdf_path)
+
+    assert parsed.authors == ["Jane Doe", "John Smith", "Alice Brown"]
+
+
 def make_multi_page_pdf(path: Path) -> None:
     document = fitz.open()
     page_one = document.new_page()

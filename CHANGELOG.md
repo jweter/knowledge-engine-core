@@ -7,6 +7,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **PDF author-metadata parsing: degree credentials no longer produce
+  duplicate-author `IntegrityError`s.** Some publishers' embedded PDF
+  "Author" metadata lists each name followed by its own degree credential
+  ("Jane Doe, PhD, John Smith, PhD, ..."), indistinguishable from a name
+  boundary by `_extract_authors`'s comma-only split. When the same
+  credential (e.g. "PhD") repeats for multiple co-authors, the resulting
+  pseudo-author got linked to the paper twice, violating
+  `paper_authors`' `(paper_id, author_id)` uniqueness and aborting the
+  entire multi-paper import batch -- found live against a real CAN-BIND
+  consortium paper. `knowledge_engine/parser.py` now filters exact-match
+  degree/credential tokens out of the split author list.
+  `knowledge_engine/database.py`'s `_build_paper` also gained a
+  defense-in-depth guard: a repeated author for the same paper (any
+  cause) is now linked once, not raised as a fatal `IntegrityError`.
+
 ### Added
 
 - **Mental health corpus: cycle 6, 10 more real papers (18% yield, best
