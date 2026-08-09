@@ -178,3 +178,25 @@ excluded elsewhere in this corpus). `evidence_records.jsonl` now holds
 the 3 new records: graph totals now 1,682 claims, 111 concepts (67
 mesh, 44 rxnorm), 1,604 claim-concept edges. Same
 same-session-self-audit caveat applies to all seven reviewed records.
+
+**Reviewed-evidence-layer growth (2026-08-09, same day): 3 more
+hand-authored records (10 total).** Added three more manually-authored,
+source-audited Evidence Records: `ev-oncology-weber-2026-nic-vs-pc-realworld-001`
+(a real-world head-to-head German cohort comparing nivolumab+
+ipilimumab+chemo vs pembrolizumab+chemo -- no significant OS
+difference, 13.6 vs 14.1 months, but differing adverse-event profiles
+by regimen); `ev-oncology-machado-2026-pembrolizumab-realworld-meta-001`
+(a systematic review/meta-analysis of 12 real-world cohorts, 17,506
+patients, first-line pembrolizumab in PD-L1>=50% NSCLC -- pooled mean
+OS 21.0 months, 60-month OS rate 29.0%, durability data not otherwise
+represented in this corpus); and
+`ev-oncology-selke-2026-durvalumab-pdl1-subgroup-001` (a real-world
+PD-L1-stratified cohort showing durvalumab consolidation's benefit is
+concentrated in PD-L1-positive patients -- median OS 27.3 vs 15.1
+months with vs without durvalumab in PD-L1+ patients, p=0.043 --
+complementing the Stuschke CRISP-registry record's pooled,
+non-stratified population). `evidence_records.jsonl` now holds 1,531
+records (1,521 draft + 10 reviewed). `ke graph-build` processed the 3
+new records: graph totals now 1,685 claims, 111 concepts (67 mesh, 44
+rxnorm), 1,608 claim-concept edges. Same same-session-self-audit
+caveat applies to all ten reviewed records.

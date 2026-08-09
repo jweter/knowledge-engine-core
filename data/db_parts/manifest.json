@@ -1,12 +1,12 @@
 {
   "backup": {
     "byte_count": 529125376,
-    "created_at": "2026-08-09T02:27:58.489344Z",
+    "created_at": "2026-08-09T02:43:23.325201Z",
     "filename": "knowledge_engine.sqlite3",
     "integrity_check": "ok",
-    "production_commit": "b2702874943886066f9938ec404b405d31281ca5",
+    "production_commit": "60afcaf15760870f7ea7dfede8824f872a5b49f1",
     "schema_version": 0,
-    "sha256": "15ef8a39a2f93e387d83ab3e8b7a1efb277c4fd3f039565e1b034503f587faa9",
+    "sha256": "465326f991e2999bbdbf8573f7e87c94e88d3c2b38e7e419d46da016780cf2c6",
     "table_counts": {
       "import_runs": 13,
       "papers": 1357
@@ -33,7 +33,7 @@
     {
       "byte_count": 90000000,
       "filename": "knowledge_engine.sqlite3.part0003",
-      "sha256": "403b107cbabcccc658e179763ee8e6c8f023691b2f74b0f0788c518e4ad6cb20"
+      "sha256": "4c1c8c69ef303e1d414c8454ba2fc822ec0ad6b77f9401a2a3d5e57afc7a1979"
     },
     {
       "byte_count": 90000000,
@@ -43,11 +43,11 @@
     {
       "byte_count": 79125376,
       "filename": "knowledge_engine.sqlite3.part0005",
-      "sha256": "42909168c9bb7f6b316571517d4c686759649a821577af2a77ad3c6adc25b916"
+      "sha256": "d2d7999974c98fb3d97e6dec40e1ff27e7b8fceaf611fe6aa7468a993e341458"
     }
   ],
   "schema_version": 1,
   "source_filename": "knowledge_engine.sqlite3",
   "total_byte_count": 529125376,
-  "total_sha256": "15ef8a39a2f93e387d83ab3e8b7a1efb277c4fd3f039565e1b034503f587faa9"
+  "total_sha256": "465326f991e2999bbdbf8573f7e87c94e88d3c2b38e7e419d46da016780cf2c6"
 }

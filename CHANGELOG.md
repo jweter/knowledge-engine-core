@@ -190,6 +190,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   holds 1,528 records (1,521 draft + 7 reviewed); `ke graph-build`
   processed the 3 new records (graph totals: 1,682 claims, 111
   concepts, 1,604 claim-concept edges).
+- **Oncology corpus: 3 more hand-authored reviewed Evidence Records
+  (10 total).** `ev-oncology-weber-2026-nic-vs-pc-realworld-001`
+  (real-world head-to-head German cohort: nivolumab+ipilimumab+chemo
+  vs pembrolizumab+chemo, no significant OS difference, 13.6 vs 14.1
+  months), `ev-oncology-machado-2026-pembrolizumab-realworld-meta-001`
+  (systematic review/meta-analysis of 12 real-world cohorts, 17,506
+  patients: pooled mean OS 21.0 months, 60-month OS rate 29.0% for
+  first-line pembrolizumab in PD-L1>=50% NSCLC), and
+  `ev-oncology-selke-2026-durvalumab-pdl1-subgroup-001` (PD-L1-stratified
+  real-world cohort: durvalumab consolidation benefit concentrated in
+  PD-L1-positive patients, median OS 27.3 vs 15.1 months, p=0.043).
+  `evidence_records.jsonl` now holds 1,531 records (1,521 draft + 10
+  reviewed); `ke graph-build` processed the 3 new records (graph
+  totals: 1,685 claims, 111 concepts, 1,608 claim-concept edges).
 
 - **Mental health corpus: cycle 6, 10 more real papers (18% yield, best
   yet).** Corpus now holds 37 real papers, up from 27. New papers
