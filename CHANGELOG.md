@@ -37,6 +37,34 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `extraction_status` pattern exactly. Two new tests in `test_cli.py`:
   one proving `"refutes"` is now rejected, one parametrized over all
   four real values proving they're still accepted.
+- **`tools/discovery_scope_prescreen.py`: oncology corpus rule set
+  added.** `CORPUS_RULE_SETS` previously had exactly one registered
+  entry (mental-health) -- oncology, where a real commentary/letter
+  near-miss was caught this session, had zero deterministic
+  scope-prescreen coverage. Adds `ONCOLOGY_NSCLC_CHECKPOINT_INHIBITORS`,
+  grounded in the corpus's own `inclusion_criteria.md`/
+  `exclusion_criteria.md` and `knowledge_engine.scientific_scope`'s
+  already-established named-agent vocabulary (pembrolizumab,
+  nivolumab, atezolizumab, durvalumab, cemiplimab). Adds two
+  oncology-specific hard-exclude rules beyond mental-health's set:
+  `pediatric_population` and `mechanism_only`, both directly grounded
+  in `exclusion_criteria.md`'s own language, plus `non_primary_content`
+  for titles that literally say "commentary"/"editorial"/"letter to
+  the editor" -- explicitly documented as *not* sufficient on its own
+  (a real test proves the actual PACIFIC-5 near-miss title, which
+  carries no title-level marker, still scores `likely_include` here;
+  catching that class of case is the separate, post-acquisition
+  article-type check). Fixed a real regex bug found while writing this
+  rule set: `\bpd.1\b`/`\bpd.l1\b` required exactly one separator
+  character and so never matched bare "PD1"/"PDL1" (no hyphen/space);
+  changed to `\bpd.?1\b`/`\bpd.?l1\b`. Validated against all 336 real
+  titles in oncology's `sources.csv`: no regex false positives found
+  (title-level `likely_exclude` verdicts on real included papers all
+  trace to genuine abstract-vs-title co-occurrence gaps, the same
+  documented pattern as mental-health's tool, or to a genuinely
+  different cancer type (SCLC) this corpus's own criteria exclude, not
+  to a rule defect). 11 new tests in
+  `tests/tools/test_discovery_scope_prescreen.py`.
 
 ### Added
 

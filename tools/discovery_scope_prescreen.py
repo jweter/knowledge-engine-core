@@ -169,8 +169,84 @@ MENTAL_HEALTH_MDD_ANTIDEPRESSANTS = ScopeRuleSet(
     ),
 )
 
+ONCOLOGY_NSCLC_CHECKPOINT_INHIBITORS = ScopeRuleSet(
+    corpus_id="oncology_nsclc_checkpoint_inhibitors",
+    topic_terms=(
+        _ci(r"\bnon.small.cell lung cancer\b"),  # non-small-cell / non-small cell
+        _ci(r"\bnsclc\b"),
+        _ci(r"\blung cancer\b"),
+        _ci(r"\blung carcinoma\b"),
+        _ci(r"\blung adenocarcinoma\b"),
+    ),
+    named_agent_terms=(
+        _ci(r"\bpembrolizumab\b"),
+        _ci(r"\bnivolumab\b"),
+        _ci(r"\batezolizumab\b"),
+        _ci(r"\bdurvalumab\b"),
+        _ci(r"\bcemiplimab\b"),
+        _ci(r"\bpd.?1\b"),  # PD-1 / PD 1 / PD1
+        _ci(r"\bpd.?l1\b"),  # PD-L1 / PD L1 / PDL1
+        _ci(r"programmed death.1"),
+        _ci(r"programmed death.ligand 1"),
+        _ci(r"\bimmune checkpoint inhibitor"),
+        _ci(r"\bcheckpoint inhibitor"),
+    ),
+    hard_exclude_rules=(
+        ScopeRule(
+            "case_report",
+            _ci(r"\bcase report(s)?\b|\bcase series\b"),
+            "case report/series (any size)",
+        ),
+        ScopeRule(
+            "preclinical_animal",
+            _ci(r"\b(mice|mouse|rat|rats|murine|rodent|xenograft|zebrafish)\b"),
+            "preclinical/animal study",
+        ),
+        ScopeRule(
+            "protocol_only",
+            _ci(r"\bstudy protocol\b|\bprotocol for a\b|\btrial protocol\b"),
+            "protocol-only paper, no results yet",
+        ),
+        ScopeRule(
+            "pediatric_population",
+            _ci(r"\bpediatric\b|\bpaediatric\b|\bchildhood\b|\binfant(s)?\b"),
+            "pediatric-only population, explicitly excluded in "
+            "exclusion_criteria.md -- note the shared adjudication layer "
+            "(knowledge_engine.scientific_scope) also checks this "
+            "separately pre-acquisition; this rule is a second, "
+            "belt-and-suspenders check at the scope-prescreen stage.",
+        ),
+        ScopeRule(
+            "mechanism_only",
+            _ci(
+                r"\bmechanism of action\b|\bmolecular mechanism(s)?\b|\bin vitro\b|"
+                r"\bcell line(s)?\b"
+            ),
+            "mechanism-only paper without a named clinical intervention/trial, "
+            "explicitly excluded in exclusion_criteria.md",
+        ),
+        ScopeRule(
+            "non_primary_content",
+            _ci(
+                r"\bcommentary\b|\beditorial\b|\bletter to the editor\b|"
+                r"\bcorrespondence\b|\bnews\b|\bperspective\b|\bviewpoint\b"
+            ),
+            "editorial/commentary/letter/news, explicitly excluded in "
+            "exclusion_criteria.md as 'rather than primary or synthesized "
+            "evidence' -- note this only catches titles that carry an "
+            "explicit marker; a commentary whose title reads like a "
+            "primary trial report (e.g. 'PACIFIC-5 Trial: Refining "
+            "Patient Selection...', a real near-miss this session caught "
+            "only by reading the PDF body's own 'COMMENTARY' section-type "
+            "label) will not match here -- see the post-acquisition "
+            "article-type check for that class of case.",
+        ),
+    ),
+)
+
 CORPUS_RULE_SETS: dict[str, ScopeRuleSet] = {
     MENTAL_HEALTH_MDD_ANTIDEPRESSANTS.corpus_id: MENTAL_HEALTH_MDD_ANTIDEPRESSANTS,
+    ONCOLOGY_NSCLC_CHECKPOINT_INHIBITORS.corpus_id: ONCOLOGY_NSCLC_CHECKPOINT_INHIBITORS,
 }
 
 
