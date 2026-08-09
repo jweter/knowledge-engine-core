@@ -152,3 +152,29 @@ now 1,679 claims, 111 concepts (67 mesh, 44 rxnorm), 1,602
 claim-concept edges. Same same-session-self-audit caveat applies to
 all four reviewed records; a future independent audit remains
 warranted.
+
+**Reviewed-evidence-layer growth (2026-08-09, same day): 3 more
+hand-authored records (7 total).** Added three more manually-authored,
+source-audited Evidence Records:
+`ev-oncology-stuschke-2026-durvalumab-crisp-realworld-001` (a
+real-world, propensity-weighted German CRISP registry cohort
+validating durvalumab consolidation after chemoradiotherapy in
+unresectable stage III NSCLC -- PFS HR 0.52 [0.37-0.73]; OS HR 0.67
+[0.44-1.02], directionally favorable but not statistically significant,
+"effect sizes comparable to PACIFIC" per the paper's own framing);
+`ev-oncology-katsarolis-2026-greek-realworld-os-001` (a large
+684-patient real-world Greek cohort: immunotherapy at any line vs
+chemotherapy alone, OS 17.5 vs 8.6 months, HR 0.51 [0.42-0.61]); and
+`ev-oncology-liao-2026-icpscore-predictive-biomarker-001` (a novel
+9-gene predictive biomarker derived from the phase 3 ORIENT-11 trial:
+high-ICPscore patients benefit substantially from ICI plus
+chemotherapy -- PFS HR 0.15 [0.07-0.32], OS HR 0.32 [0.15-0.67] -- while
+low-ICPscore patients show no significant benefit -- PFS HR 0.90
+[0.55-1.46], OS HR 1.31 [0.81-2.12] -- included per this project's
+established precedent of counting biomarker studies with real
+treatment-outcome data, distinct from mechanism-only biomarker studies
+excluded elsewhere in this corpus). `evidence_records.jsonl` now holds
+1,528 records (1,521 draft + 7 reviewed). `ke graph-build` processed
+the 3 new records: graph totals now 1,682 claims, 111 concepts (67
+mesh, 44 rxnorm), 1,604 claim-concept edges. Same
+same-session-self-audit caveat applies to all seven reviewed records.

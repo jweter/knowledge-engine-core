@@ -26,6 +26,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`docs/roadmap/future_ai_orchestration_plan.md` reconciled against
+  the real canonical document.** The full team-authored plan (1,056
+  lines) is now available in `knowledge-engine-ai`'s own
+  `docs/roadmap/future_ai_orchestration_plan.md` (PR #7 there, pending
+  merge at time of writing) -- the earlier download link that this
+  repo's reconstruction was drafted from had not resolved. Read
+  against the real document: no contradictions found; the real
+  document is substantially more complete (full field-level schemas
+  for `ResearchPlan`/`ResearchSession`/`ResearchEvent`/
+  `EvidenceComparison`/`KnowledgeGap`/`HypothesisCandidate`, a Tool
+  Permission Model with 5 consequence levels, a 4-layer verification
+  pipeline, an evaluation framework, explicit success criteria per
+  `AI-O1`-`AI-O11` milestone, and all 16 named design-risk blocks --
+  this repo's earlier reconstruction was missing 2: non-deterministic
+  research continuation, and autonomous hypothesis generation
+  outrunning evidence quality). This repo's copy of the file is now a
+  short pointer to the canonical document rather than a duplicate, to
+  avoid two divergent copies of the same plan. Cross-references in
+  `docs/ai_layer_architecture.md` and `docs/roadmap.md` updated to
+  match.
 - **`docs/roadmap/future_ai_orchestration_plan.md`: contract-first
   orchestration design, refining the multi-agent proposal below.**
   Relays a project-owner-authored orchestration plan (the source
@@ -155,6 +175,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   1,525 records (1,521 draft + 4 reviewed); `ke graph-build` processed
   the 3 new records (graph totals: 1,679 claims, 111 concepts, 1,602
   claim-concept edges).
+- **Oncology corpus: 3 more hand-authored reviewed Evidence Records (7
+  total).** `ev-oncology-stuschke-2026-durvalumab-crisp-realworld-001`
+  (real-world German CRISP registry validation of PACIFIC-regimen
+  durvalumab consolidation: PFS HR 0.52 [0.37-0.73]; OS HR 0.67
+  [0.44-1.02]), `ev-oncology-katsarolis-2026-greek-realworld-os-001`
+  (684-patient real-world Greek cohort: immunotherapy vs chemotherapy
+  alone, OS HR 0.51 [0.42-0.61]), and
+  `ev-oncology-liao-2026-icpscore-predictive-biomarker-001` (a 9-gene
+  predictive biomarker from the phase 3 ORIENT-11 trial: high-score
+  patients benefit substantially from ICI plus chemotherapy -- OS HR
+  0.32 [0.15-0.67] -- while low-score patients show no significant
+  benefit -- OS HR 1.31 [0.81-2.12]). `evidence_records.jsonl` now
+  holds 1,528 records (1,521 draft + 7 reviewed); `ke graph-build`
+  processed the 3 new records (graph totals: 1,682 claims, 111
+  concepts, 1,604 claim-concept edges).
 
 - **Mental health corpus: cycle 6, 10 more real papers (18% yield, best
   yet).** Corpus now holds 37 real papers, up from 27. New papers
