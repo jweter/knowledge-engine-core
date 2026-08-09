@@ -23,6 +23,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `knowledge_engine/database.py`'s `_build_paper` also gained a
   defense-in-depth guard: a repeated author for the same paper (any
   cause) is now linked once, not raised as a fatal `IntegrityError`.
+- **`ke evidence-validate`: `evidence_direction` now has an enum
+  check.** Previously only checked for "is a non-empty string" --
+  `extraction_status` had an `ALLOWED_EXTRACTION_STATUSES` allowlist,
+  `evidence_direction` had no equivalent. Found live this session: a
+  genuine typo (`"refutes"` instead of `"contradicts"`) while authoring
+  a real negative-result Evidence Record would have passed validation
+  silently, caught only by manually grepping the codebase rather than
+  by the tool. Added `ALLOWED_EVIDENCE_DIRECTIONS = {"supports",
+  "contradicts", "qualifies", "contextualizes"}` (the real values in
+  use across all three corpora's evidence_records.jsonl) and a check
+  in `_validate_evidence_record` mirroring the existing
+  `extraction_status` pattern exactly. Two new tests in `test_cli.py`:
+  one proving `"refutes"` is now rejected, one parametrized over all
+  four real values proving they're still accepted.
 
 ### Added
 
