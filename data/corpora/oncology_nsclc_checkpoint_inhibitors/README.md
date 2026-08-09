@@ -103,3 +103,26 @@ draft-tier evidence (`m52-evidence-classification-v1`, `review_status:
 draft`), not a reviewed evidence base or golden map -- individual review
 and a golden evidence map for this corpus remain future, separate work,
 mirroring GLP-1's own progression.
+
+**Reviewed-evidence-layer bootstrap (2026-08-09): first manually-authored
+record.** `ev-oncology-dang-2026-icichemo-vs-chemo-os-001` is the first
+`review_status: reviewed` Evidence Record for this corpus, hand-authored
+(not promoted from the automated draft pool) by reading the local PDF
+for Dang et al. 2026 (PeerJ, PMC13353234), a meta-analysis of 28 RCTs
+(14,758 patients). It records the paper's own vs-chemotherapy-alone
+overall-survival hazard ratios for both checkpoint-inhibitor classes
+(PD-L1 + chemo: HR 0.82 [0.75-0.90]; PD-1 + chemo: HR 0.65 [0.61-0.71]),
+which directly answers this corpus's scientific question, alongside the
+paper's own headline PD-L1-vs-PD-1 class comparison (HR 1.26
+[1.13-1.41]) as secondary context. `evidence_records.jsonl` now holds
+1,522 records (1,521 draft + 1 reviewed). `ke graph-build` processed the
+one new record: graph totals now 1,676 claims, 109 concepts (66 mesh, 43
+rxnorm; the new record's PICO fields did not resolve to a new concept),
+1,597 claim-concept edges, 17 relationship edges, 5 citation edges (all
+carried over from the prior claim -- no relationship/citation record
+exists for this new claim yet). This is a first bootstrap step toward an
+eventual golden evidence map for this corpus (see
+`docs/glp1_body_weight_golden_evidence_map.md` for the model this will
+follow), not yet a bounded, externally-audited map of its own -- see
+this record's `provenance.secondary_review.caveat` for the honest
+same-session-self-audit limitation on its current review status.

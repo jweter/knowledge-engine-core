@@ -57,6 +57,37 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   results. New papers: a bariatric-surgery SSRI/SNRI plasma-concentration
   study, and an EMBARC-trial secondary analysis of brain
   ventricle/choroid plexus morphology as a treatment-response predictor.
+- **Mental health corpus: discovery cycle 10 confirms query exhaustion;
+  paused further cycles.** A tenth cycle (retstart=800) scanned 100
+  candidates and deterministically accepted 0 -- confirming cycle 9's
+  yield collapse was a real signal, not noise. Corpus remains at 62 real
+  papers. Documented in the corpus README; a future session should
+  decide whether to redesign the query or leave the corpus at this size.
+- **GLP-1 binary-pooling blocker: source-audited STEP/OASIS/SURMOUNT as
+  candidates for a second observed-count binary statistical input.**
+  Following up the earlier SELECT investigation (ruled out for using
+  imputed rather than observed data), audited the primary STEP program
+  trials (1, 2, 3, 4, 6, 8), OASIS oral-semaglutide trials, and SURMOUNT
+  tirzepatide trials. Every primary trial paper -- including STEP 1
+  itself -- is published in a closed-access venue (NEJM/JAMA/Lancet)
+  with no PMC OA record; only secondary/post-hoc analyses are open
+  access, and none restate the primary categorical responder counts.
+  Documented in `docs/glp1_statistical_readiness_gate_plan.md` as a
+  structural publisher-access blocker, not a single missing paper, with
+  three explicit paths forward.
+- **Oncology corpus: first manually-authored, reviewed Evidence Record
+  bootstraps the reviewed-evidence layer.**
+  `ev-oncology-dang-2026-icichemo-vs-chemo-os-001`, hand-authored from
+  the local PDF of a 28-RCT meta-analysis (Dang et al. 2026, PeerJ),
+  records the paper's own vs-chemotherapy-alone overall-survival hazard
+  ratios for both checkpoint-inhibitor classes (PD-L1+chemo: HR 0.82
+  [0.75-0.90]; PD-1+chemo: HR 0.65 [0.61-0.71]), directly answering this
+  corpus's scientific question. `evidence_records.jsonl` now holds 1,522
+  records (1,521 draft + 1 reviewed); `ke graph-build` processed the new
+  record (graph totals: 1,676 claims, 109 concepts, 1,597 claim-concept
+  edges). First bootstrap step toward an eventual golden evidence map
+  for this corpus, honestly labeled as a same-session self-audit rather
+  than an independently-reviewed record -- see the corpus README.
 
 - **Mental health corpus: cycle 6, 10 more real papers (18% yield, best
   yet).** Corpus now holds 37 real papers, up from 27. New papers
