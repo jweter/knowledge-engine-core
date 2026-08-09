@@ -1,12 +1,12 @@
 {
   "backup": {
-    "byte_count": 529190912,
-    "created_at": "2026-08-09T20:15:46.701052Z",
+    "byte_count": 529195008,
+    "created_at": "2026-08-09T22:32:03.747095Z",
     "filename": "knowledge_engine.sqlite3",
     "integrity_check": "ok",
-    "production_commit": "d524eaddbd30268318b1ac3349db0ba19475d048",
+    "production_commit": "5a49a881beb23ae994fb3ddb8106d4de5cbc0b78",
     "schema_version": 0,
-    "sha256": "e6b723c5dfb559a4ea065e0b44971cc2a8a7f0496f86f731200eeda26acd3295",
+    "sha256": "693002a80071d62b41908f1fcc4838fe3baa3d7c868db1dca82376402e573e7b",
     "table_counts": {
       "import_runs": 13,
       "papers": 1357
@@ -18,7 +18,7 @@
     {
       "byte_count": 90000000,
       "filename": "knowledge_engine.sqlite3.part0000",
-      "sha256": "6cd90e527a4b5f72f73c022fe3802d2b96e9c0099fe15eac2175d9fde59d5090"
+      "sha256": "e007500d3b673a6b81f46d63acb8df9759ecd95af853b4602dd14483b1486213"
     },
     {
       "byte_count": 90000000,
@@ -33,7 +33,7 @@
     {
       "byte_count": 90000000,
       "filename": "knowledge_engine.sqlite3.part0003",
-      "sha256": "2738a672723269992781bf3a7af6c42863e96eff82155a5f92113fffc3cda0bc"
+      "sha256": "04066524492c6b480cc0cf3bad88178d39851f9b1f1968423a632f6a56b86a82"
     },
     {
       "byte_count": 90000000,
@@ -41,13 +41,13 @@
       "sha256": "784b99077ecc32e4e2f6fa6d9a1349b4056b5ce8f3f08417d8f91bc60cdef446"
     },
     {
-      "byte_count": 79190912,
+      "byte_count": 79195008,
       "filename": "knowledge_engine.sqlite3.part0005",
-      "sha256": "e06550b85a57fefe4083d20edffcb279f3707cc69bebf85a7a309bff4f65b800"
+      "sha256": "6522dbec19c60077bca27bf0a39fd1e724c0fb93e86ce6b2b4a9fda868b2c968"
     }
   ],
   "schema_version": 1,
   "source_filename": "knowledge_engine.sqlite3",
-  "total_byte_count": 529190912,
-  "total_sha256": "e6b723c5dfb559a4ea065e0b44971cc2a8a7f0496f86f731200eeda26acd3295"
+  "total_byte_count": 529195008,
+  "total_sha256": "693002a80071d62b41908f1fcc4838fe3baa3d7c868db1dca82376402e573e7b"
 }

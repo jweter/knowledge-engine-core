@@ -9,6 +9,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **5 more relationship-graph edges across oncology and mental-health,
+  from exhaustively re-reading the same reviewed-record sets.**
+  Oncology: Gandara contextualizes Liao (composite PRO score vs.
+  genomic biomarker, both stratifying OS on ICI therapy); Esen
+  contextualizes Stuschke (alternative induction-before-RT sequencing
+  vs. standard post-CRT consolidation); Mao supports Wu (liver-
+  metastasis subgroup benefit corroborated across two different
+  combination strategies). Oncology graph: 5 -> 8 edges. Mental
+  health: Zandifar supports Schmidt (two independent successful
+  augmentation strategies); Baradaran supports Yan (escitalopram
+  efficacy generalizes across two different comorbid populations).
+  Mental health graph: 5 -> 7 edges. Graph-wide total: 27 -> 32. All
+  pass `ke relationship-validate`; re-split into `data/db_parts` and
+  hash-verified.
+
 - **First relationship-graph edges for the oncology and mental-health
   corpora.** Both previously had zero `relationship_records.jsonl`
   entries -- only GLP-1 had a relationship graph. Read each corpus's

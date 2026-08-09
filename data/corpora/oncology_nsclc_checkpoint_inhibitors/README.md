@@ -249,3 +249,22 @@ pembrolizumab real-world meta-analysis supports Nodbrant's ECOG-
 performance-status survival finding. All 5 passed
 `ke relationship-validate` and are now in the graph (22 relationship
 edges corpus-wide, up from 17 before this corpus had any).
+
+**Relationship graph: 3 more edges authored (2026-08-09, same day).**
+Re-read all 13 reviewed records exhaustively (not just the pairs the
+first pass already used) for any further genuine relationships: found
+3 more. Gandara's composite patient-reported-outcome risk score
+contextualizes Liao's genomic ICPscore -- both show a composite
+baseline score meaningfully stratifies OS on checkpoint-inhibitor
+therapy, in different measurement domains (PRO vs. genomic). Esen's
+induction-chemoimmunotherapy-before-radiotherapy cohort contextualizes
+Stuschke's standard durvalumab-consolidation-after-chemoradiotherapy
+cohort -- an alternative treatment sequencing in a similar
+unresectable/locally-advanced disease-stage population. Mao's PD-1/
+VEGF-antibody meta-analysis supports Wu's dedicated liver-metastasis
+network meta-analysis -- both independently find checkpoint-inhibitor-
+based combination therapy retains real benefit in the liver-metastasis
+subgroup, via different combination partners (VEGF-targeting antibody
+vs. chemotherapy). All 3 passed `ke relationship-validate`. Corpus
+relationship graph is now 8 edges (was 5); graph-wide total is 30 (was
+27).
