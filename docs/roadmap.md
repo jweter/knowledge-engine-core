@@ -804,6 +804,52 @@ introduced going forward and does not reopen the naming-alias decision
 above; `study_type: null` continues to validate cleanly, matching all
 639 existing records.
 
+**2026-08-09 addendum (later same day): the precedence-false-positive
+bug above is now fixed for its diagnosed cases, and the coverage gap
+narrowed, both measured against the live 1,357-paper corpus, not
+guessed.** `classify_study_type` (`knowledge_engine/extraction/
+study_design.py`, now `m26-study-design-v5`) gained two real,
+narrowly-scoped fixes:
+
+- **Precedence false-positive**: `meta_analysis`/`systematic_review`
+  are checked first deliberately (a meta-analysis's own "we pooled N
+  randomized controlled trials" phrasing must win over
+  `randomized_controlled_trial` below), but had no guard against a
+  paper merely *citing* someone else's meta-analysis or *explicitly
+  denying* it performed one. Corpus-measured real examples: paper 151
+  states "no quantitative synthesis, meta-analysis... was performed"
+  yet was classified `meta_analysis`; paper 220 states "Rather than
+  aiming to perform an exhaustive systematic review or meta-analysis,
+  we sought to..." yet was classified `meta_analysis`; paper 409 (a
+  narrative review, per its own title) was classified `meta_analysis`
+  from a sentence citing a *different* paper's meta-analysis; paper
+  141 was classified `meta_analysis` despite explicitly saying none was
+  performed, when it is in fact a genuine systematic review. A new
+  `_describes_own_design` guard rejects a pattern's first match when
+  preceded by an explicit negation or prior/other-work cue within a
+  bounded window, then lets classification correctly fall through to
+  the paper's real design (141 -> `systematic_review`) or to `None`
+  (151, 220, 409) rather than a wrong label. **Known, documented,
+  not-yet-fixed residual**: a citation with no negation/prior-work cue
+  word at all immediately before it (paper 195: "In a meta-analysis of
+  14 studies... [41], the findings revealed...") still passes -- left
+  for a future, separately measured pass rather than guessed at here.
+- **Coverage gap (partial)**: `retrospective_study`'s fixed
+  single-space pattern missed the common real phrasing "retrospective
+  chart review" (papers 51, 959), because an intervening word broke
+  the match. Widened to the same bounded 0-2-intervening-word window
+  `cross_sectional_study` already uses. Measured effect: papers with a
+  detected Abstract/Methods section but no matched `study_type` fell
+  from 627 to 619 (of 1,357 total). The larger, harder coverage
+  question -- papers with no Abstract/Methods section detected at all
+  (114 of 1,357, unchanged by this fix) -- is `detect_sections`'
+  own scope, not touched here.
+
+Both fixes are scoped exactly to the real, measured examples above,
+with regression tests in `tests/test_extraction_study_design.py`
+reproducing each real paper's phrasing; no other pattern's behavior
+changed.
+
 All five items on the project owner's original priority list have now
 been started; items 1, 3, and 5 are done, items 2 and 4 have a real,
 ongoing plan in place rather than being fully closed out.

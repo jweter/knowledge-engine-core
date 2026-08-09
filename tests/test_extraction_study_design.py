@@ -22,7 +22,7 @@ def _section(
 
 
 def test_study_design_rules_version_is_stable() -> None:
-    assert STUDY_DESIGN_RULES_VERSION == "m26-study-design-v4"
+    assert STUDY_DESIGN_RULES_VERSION == "m26-study-design-v5"
 
 
 def test_classify_study_type_detects_randomized_controlled_trial() -> None:
@@ -357,3 +357,79 @@ def test_extract_limitations_spans_multiple_pages() -> None:
     result = extract_limitations(pages, sections)
 
     assert result == ["The sample size was small.\n\nFollow-up was also short."]
+
+
+def test_classify_study_type_detects_retrospective_chart_review_phrasing() -> None:
+    """v5 (M65 follow-up): real corpus papers 51/959 phrase it this way."""
+
+    text = "This was a retrospective chart review of patients with complications."
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == (
+        "retrospective_study"
+    )
+
+
+def test_classify_study_type_rejects_explicitly_negated_meta_analysis() -> None:
+    """v5 (M65 follow-up): real corpus paper 151's own phrasing."""
+
+    text = (
+        "Registries were not systematically searched, and no quantitative synthesis, "
+        "meta-analysis, or formal certainty-of-evidence grading was performed."
+    )
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) is None
+
+
+def test_classify_study_type_falls_through_negated_meta_analysis_to_true_design() -> None:
+    """v5 (M65 follow-up): real corpus paper 141 -- negates meta-analysis but is a genuine
+    systematic review; must fall through to the correct label, not to None."""
+
+    text = (
+        "Given that no meta-analysis was performed, a narrative synthesis was used. "
+        "This systematic review was conducted in accordance with PRISMA guidance."
+    )
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == (
+        "systematic_review"
+    )
+
+
+def test_classify_study_type_rejects_meta_analysis_describing_prior_literature() -> None:
+    """v5 (M65 follow-up): real corpus paper 409's own phrasing (a narrative review)."""
+
+    text = (
+        "Renal complications are common. A subsequent meta-analysis of four cohort "
+        "studies estimated a pooled risk of 1.30."
+    )
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) is None
+
+
+def test_classify_study_type_meta_analysis_still_wins_when_first_mention_is_own_design() -> None:
+    """A paper's own meta-analysis, later citing an external one, is unaffected."""
+
+    text = (
+        "We performed a meta-analysis of randomized controlled trials assessing "
+        "efficacy. A previous meta-analysis reached a similar conclusion."
+    )
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) == (
+        "meta_analysis"
+    )
+
+
+def test_classify_study_type_rejects_systematic_review_denied_via_rather_than() -> None:
+    """v5 (M65 follow-up): real corpus paper 220's own phrasing."""
+
+    text = (
+        "Rather than aiming to perform an exhaustive systematic review or "
+        "meta-analysis, we sought to critically integrate representative evidence."
+    )
+    sections = [_section("methods", text, "Methods")]
+
+    assert classify_study_type([ParsedPage(page_number=1, text=text)], sections) is None
