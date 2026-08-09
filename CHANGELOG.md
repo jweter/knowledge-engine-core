@@ -26,6 +26,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`docs/roadmap/future_ai_orchestration_plan.md` reconciled against
+  the real canonical document.** The full team-authored plan (1,056
+  lines) is now available in `knowledge-engine-ai`'s own
+  `docs/roadmap/future_ai_orchestration_plan.md` (PR #7 there, pending
+  merge at time of writing) -- the earlier download link that this
+  repo's reconstruction was drafted from had not resolved. Read
+  against the real document: no contradictions found; the real
+  document is substantially more complete (full field-level schemas
+  for `ResearchPlan`/`ResearchSession`/`ResearchEvent`/
+  `EvidenceComparison`/`KnowledgeGap`/`HypothesisCandidate`, a Tool
+  Permission Model with 5 consequence levels, a 4-layer verification
+  pipeline, an evaluation framework, explicit success criteria per
+  `AI-O1`-`AI-O11` milestone, and all 16 named design-risk blocks --
+  this repo's earlier reconstruction was missing 2: non-deterministic
+  research continuation, and autonomous hypothesis generation
+  outrunning evidence quality). This repo's copy of the file is now a
+  short pointer to the canonical document rather than a duplicate, to
+  avoid two divergent copies of the same plan. Cross-references in
+  `docs/ai_layer_architecture.md` and `docs/roadmap.md` updated to
+  match.
 - **`docs/roadmap/future_ai_orchestration_plan.md`: contract-first
   orchestration design, refining the multi-agent proposal below.**
   Relays a project-owner-authored orchestration plan (the source

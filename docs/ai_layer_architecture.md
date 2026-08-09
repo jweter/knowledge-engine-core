@@ -452,14 +452,18 @@ GLP-1. Recommended order:
    to exercise agreement/disagreement/population-difference cases the
    way GLP-1's golden map already does.
 
-**Superseded by a more disciplined restatement:** `docs/roadmap/future_ai_orchestration_plan.md`
-refines this three-step sequencing into four durable domain contracts
-(`ResearchPlan`/`ResearchSession`/`ResearchTask`/`ResearchEvent`)
-executed by pluggable engines, plus an eleven-milestone `AI-O1`-`AI-O11`
-build order and a named set of design risks (prompt injection,
-pseudo-replication, framework lock-in, and others) with mitigations.
-Read that document for the current build plan; this subsection remains
-for context on how the thinking evolved.
+**Superseded by a more disciplined restatement:** `knowledge-engine-ai`'s
+`docs/roadmap/future_ai_orchestration_plan.md` (a team-authored, 1,056-line
+plan; see `docs/roadmap/future_ai_orchestration_plan.md` in this repo for
+a short pointer) refines this three-step sequencing into four durable
+domain contracts (`ResearchPlan`/`ResearchSession`/`ResearchTask`/
+`ResearchEvent`, plus `EvidenceBundle`/`VerificationResult`/
+`SynthesisResult`) executed by pluggable engines, an eleven-milestone
+`AI-O1`-`AI-O11` build order with explicit success criteria per
+milestone, all 16 named design-risk blocks with mitigations, a
+four-layer verification pipeline, and an evaluation framework. Read
+that document for the current build plan; this subsection remains for
+context on how the thinking evolved.
 
 ## Open questions carried forward (owner decisions, not resolved here)
 
