@@ -1524,6 +1524,14 @@ forward -- the ladder above supersedes it.
 - `docs/roadmap/long_term_vision.md` -- the multi-package ecosystem and final
   goal these phases build toward, including the active `knowledge-engine-ai`
   layer's present and future role over Phase 2's Evidence Records
+- `docs/ai_layer_architecture.md` and `docs/roadmap/future_ai_orchestration_plan.md`
+  -- the AI repository's Retrieval/Evidence/Analytical/Discovery
+  Intelligence stages and, layered on top, a forward-looking multi-agent
+  orchestration design (four durable contracts -- `ResearchPlan`/
+  `ResearchSession`/`ResearchTask`/`ResearchEvent` -- executed by
+  pluggable engines, an eleven-milestone `AI-O1`-`AI-O11` build order,
+  and named design risks with mitigations). Gated by evidence-base
+  thickness, not started beyond what Stage 1-3 already ship.
 - `docs/reference_knowledge_layer_design.md` -- design sketch for a
   reference knowledge layer giving the extraction pipeline and AI
   Interface Layer the background context a primary-research paper always
