@@ -29,6 +29,11 @@ def mh_rules() -> Any:
     return prescreen.CORPUS_RULE_SETS["mental_health_mdd_antidepressants"]
 
 
+@pytest.fixture()
+def onc_rules() -> Any:
+    return prescreen.CORPUS_RULE_SETS["oncology_nsclc_checkpoint_inhibitors"]
+
+
 def test_off_topic_title_is_likely_exclude(mh_rules: Any) -> None:
     verdict, matched_rules, _ = prescreen.prescreen_candidate(
         "FDG-PET/CT based small volume accelerated immuno chemoradiotherapy in NSCLC", mh_rules
@@ -117,6 +122,106 @@ def test_prescreen_worksheet_counts_match_individual_verdicts(mh_rules: Any) -> 
     verdicts = [result.verdict for result in results]
     assert verdicts == ["likely_include", "likely_exclude", "needs_manual_review"]
     assert [result.pmid for result in results] == [1, 2, 3]
+
+
+def test_onc_off_topic_title_is_likely_exclude(onc_rules: Any) -> None:
+    verdict, matched_rules, _ = prescreen.prescreen_candidate(
+        "Escitalopram for major depressive disorder: a randomized controlled trial.", onc_rules
+    )
+    assert verdict == "likely_exclude"
+    assert matched_rules == ["off_topic"]
+
+
+def test_onc_topic_without_named_agent_needs_manual_review(onc_rules: Any) -> None:
+    verdict, matched_rules, _ = prescreen.prescreen_candidate(
+        "Treatment outcomes in non-small cell lung cancer: a systematic review.", onc_rules
+    )
+    assert verdict == "needs_manual_review"
+    assert matched_rules == ["no_named_agent"]
+
+
+def test_onc_named_agent_without_topic_term_needs_manual_review(onc_rules: Any) -> None:
+    verdict, matched_rules, _ = prescreen.prescreen_candidate(
+        "Pembrolizumab-Induced Myocarditis: A Case Report.", onc_rules
+    )
+    assert verdict == "needs_manual_review"
+    assert matched_rules == ["agent_named_topic_unstated"]
+
+
+def test_onc_case_report_naming_both_topic_and_agent_is_likely_exclude(onc_rules: Any) -> None:
+    verdict, matched_rules, _ = prescreen.prescreen_candidate(
+        "Durvalumab-Induced Pneumonitis in Non-Small Cell Lung Cancer: A Case Report.", onc_rules
+    )
+    assert verdict == "likely_exclude"
+    assert "case_report" in matched_rules
+
+
+def test_onc_preclinical_animal_study_is_likely_exclude(onc_rules: Any) -> None:
+    verdict, matched_rules, _ = prescreen.prescreen_candidate(
+        "Nivolumab efficacy in a murine xenograft model of non-small cell lung cancer.", onc_rules
+    )
+    assert verdict == "likely_exclude"
+    assert "preclinical_animal" in matched_rules
+
+
+def test_onc_pediatric_population_is_likely_exclude(onc_rules: Any) -> None:
+    verdict, matched_rules, _ = prescreen.prescreen_candidate(
+        "Pembrolizumab in pediatric non-small cell lung cancer: a case series.", onc_rules
+    )
+    assert verdict == "likely_exclude"
+    assert "pediatric_population" in matched_rules
+
+
+def test_onc_mechanism_only_is_likely_exclude(onc_rules: Any) -> None:
+    verdict, matched_rules, _ = prescreen.prescreen_candidate(
+        "Molecular mechanism of PD-L1 mediated immune evasion in non-small cell lung cancer "
+        "cell lines.",
+        onc_rules,
+    )
+    assert verdict == "likely_exclude"
+    assert "mechanism_only" in matched_rules
+
+
+def test_onc_non_primary_content_is_likely_exclude(onc_rules: Any) -> None:
+    verdict, matched_rules, _ = prescreen.prescreen_candidate(
+        "Commentary on durvalumab consolidation therapy in unresectable NSCLC.", onc_rules
+    )
+    assert verdict == "likely_exclude"
+    assert "non_primary_content" in matched_rules
+
+
+def test_onc_title_lacking_non_primary_marker_is_not_caught_by_title_rules(onc_rules: Any) -> None:
+    # The real near-miss this session: a genuine commentary/letter whose
+    # title reads exactly like a primary trial report, with no title-level
+    # marker at all. Confirms this class of case is NOT caught by
+    # title-only rules -- that gap is exactly why the post-acquisition
+    # article-type check (checking the PDF body, not the title) exists as
+    # a separate, later pipeline stage.
+    verdict, matched_rules, _ = prescreen.prescreen_candidate(
+        "PACIFIC-5 Trial: Refining Patient Selection for Consolidation "
+        "Durvalumab in Unresectable Stage III NSCLC.",
+        onc_rules,
+    )
+    assert verdict == "likely_include"
+    assert matched_rules == ["on_topic", "named_agent_present"]
+
+
+def test_onc_clean_named_agent_rct_is_likely_include(onc_rules: Any) -> None:
+    verdict, matched_rules, _ = prescreen.prescreen_candidate(
+        "Pembrolizumab plus chemotherapy versus chemotherapy alone in advanced non-small cell "
+        "lung cancer: a randomized controlled trial.",
+        onc_rules,
+    )
+    assert verdict == "likely_include"
+    assert matched_rules == ["on_topic", "named_agent_present"]
+
+
+def test_onc_bare_pd1_agent_term_matches_without_hyphen(onc_rules: Any) -> None:
+    verdict, matched_rules, _ = prescreen.prescreen_candidate(
+        "PD1 blockade outcomes in non-small cell lung cancer: a cohort study.", onc_rules
+    )
+    assert verdict == "likely_include"
+    assert matched_rules == ["on_topic", "named_agent_present"]
 
 
 def test_cli_writes_expected_summary_and_json(
