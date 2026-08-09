@@ -113,6 +113,38 @@ sessions.
 - ~~Explicit evidence quality scoring models.~~ **Built, M57/M58** --
   `docs/evidence_intelligence_design.md`, `knowledge_engine/evidence_intelligence.py`.
 - Study design classification.
+- **Cross-field methodology linking via MeSH Publication Types.** The
+  graph already resolves each Evidence Record's PICO fields against
+  MeSH (M43) and links claims to `graph_concepts` nodes -- that's how a
+  drug/disease concept gets shared across corpora today. MeSH also
+  maintains a separate, standardized branch for study design and
+  methodology (Publication Types like "Randomized Controlled Trial,"
+  "Meta-Analysis," "Network Meta-Analysis," "Double-Blind Method,"
+  "Case-Control Studies"). Mapping each record's `study_type` onto that
+  existing controlled vocabulary, instead of the free-text field it is
+  today, would let the same concept-linking mechanism show which
+  evidence records across *different* corpora/fields share a
+  methodology -- e.g. "these 30 records across oncology, mental-health,
+  and GLP-1 all use Network Meta-Analysis." That's a real link, not a
+  new invention: it reuses the same MeSH-lookup infrastructure and
+  `graph_concepts`/`graph_claim_concepts` tables that drug/disease
+  linking already uses, just pointed at a different MeSH branch. It
+  would also incidentally fix the `study_type` vocabulary fragmentation
+  found live in 2026-08-09's corpus review (`meta_analysis` vs
+  `systematic_review_meta_analysis` as separate, unreconciled string
+  values from different extraction tiers) by giving `study_type` a real
+  controlled vocabulary to normalize against.
+  Caveat: MeSH's methodology vocabulary is coarse -- it would surface
+  broad commonality (RCT design, meta-analysis, propensity-score
+  matching) well, but not finer-grained technique-level transferability
+  (e.g. a specific composite-endpoint construction method used in one
+  field that another field's studies never try). That finer signal
+  would need a second, more bespoke pass extracting specific
+  statistical/methodological techniques as their own concept type, not
+  just MeSH's coarser Publication Type tags -- more invention, but
+  where the actual "this underused method would work here too" insight
+  lives. Not scoped as a milestone yet -- noted here per the project
+  owner's explicit "keep it as a noted idea for now, don't forget it."
 - Methods, results, limitations, and population extraction.
 - Reproducibility indicators and replication tracking.
 - Citation context analysis.
