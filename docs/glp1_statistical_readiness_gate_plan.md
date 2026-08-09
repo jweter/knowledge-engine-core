@@ -43,6 +43,43 @@ different source paper that reports raw observed completer counts at a
 matching population/agent/timepoint, or acquiring SELECT's supplementary
 materials (not in the PMC OA subset) to check for an observed-case table.
 
+**2026-08-09: source-audited the primary STEP-program and adjacent
+weight-loss RCT papers for an OA alternative; blocked by publisher
+access, not methodology.** Searched PMC OA (`ke pubmed-candidate-discover`)
+for the primary results papers of every other STEP trial (1, 2, 3, 4, 6,
+8), the two OASIS oral-semaglutide trials, and the SURMOUNT tirzepatide
+trials -- the natural next candidates for a second observed-count binary
+input, since several of these report the same categorical
+>=5%/10%/15%/20% weight-loss-threshold responder counts as STEP 5's
+existing input. Every one of these primary trial papers is published in a
+closed-access venue (NEJM, JAMA, Lancet, or Lancet Diabetes &
+Endocrinology) with `open_access: false` and no PMC OA record --
+including STEP 1 itself (Wilding et al. 2021, DOI
+10.1056/NEJMoa2032183, PMID 33567185), whose own abstract text reports
+exactly this kind of data (1047/~1212 semaglutide vs 182/~578 placebo at
+>=5% response, 838 vs 69 at >=10%, 612 vs 28 at >=15%) but cannot be
+legally acquired as a full-text PDF through this project's
+license-respecting pipeline (`license_policy.md` requires an open,
+redistributable license; PubMed's public abstract text alone is not
+sufficient to source-audit an exact page-cited event/total pair the way
+the STEP 5 input does). Only *secondary* analyses of these trials (post
+hoc psychiatric-safety, cardiometabolic-risk, quality-of-life, and
+subgroup papers) are PMC OA, and none of the ones checked restate the
+primary categorical responder counts -- they report different endpoints
+entirely. Conclusion: the GLP-1 binary-pooling blocker is not just a
+single-paper gap, it is a structural one -- pharma-sponsored phase 3
+obesity RCTs are near-universally published in closed-access
+high-impact journals, and this project's license discipline correctly
+refuses to source-audit numbers from an abstract or a paywalled PDF.
+Closing this blocker requires either (a) a future OA primary trial
+publication in this drug class (e.g., a newer semaglutide/tirzepatide
+trial published in an open venue), (b) legally obtaining one of these
+papers' PDFs through a channel this project is licensed to use (not
+attempted here -- out of this milestone's scope), or (c) accepting that
+binary pooling stays blocked and documenting it as a durable structural
+limitation rather than a to-do. No further STEP/OASIS/SURMOUNT searches
+are queued until one of those becomes true.
+
 ## Objective
 
 Create a deterministic readiness report over the reviewed GLP-1/body-weight golden evidence map.

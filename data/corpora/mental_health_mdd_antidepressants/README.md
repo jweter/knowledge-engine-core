@@ -196,3 +196,18 @@ papers. This sharp drop suggests the tightened query's readily-available
 PMC-OA results may be thinning out in this pagination range; a future
 cycle should assess whether continuing at higher `retstart` values
 remains productive or whether the query needs further adjustment.
+
+**Tightened-query cycle 9 (2026-08-09): 0 accepted, confirming
+exhaustion at this pagination range.** A tenth discovery cycle
+(retstart=800) scanned 100 candidates and 0 were deterministically
+accepted -- not a scope-screen problem, the page produced zero
+identity/license/full-text/scope-eligible PMC-OA candidates at all.
+Combined with cycle 8's 2% yield (down from cycle 7's 20%), this is a
+real signal, not noise: the tightened query's readily-available PMC-OA
+results are exhausted in the 700-900 `retstart` range. Pausing further
+mental-health discovery cycles at this query/state file rather than
+continuing to grind pages that return nothing; a future session should
+either try a broader or differently-tightened query, or accept 62
+papers as this corpus's current size until a query redesign is
+warranted. `discovery_state_v2.json`'s `next_retstart` is left at 900
+so a future cycle can pick up cleanly if the query is revisited.
