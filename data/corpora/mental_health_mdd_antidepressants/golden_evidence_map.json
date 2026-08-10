@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "map_id": "mdd-ssri-snri-symptom-reduction-provisional-map-v1",
+  "title": "MDD SSRI/SNRI Depressive-Symptom-Reduction Evidence Map (Provisional)",
+  "research_question": "Do selective serotonin reuptake inhibitors (SSRIs) and serotonin-norepinephrine reuptake inhibitors (SNRIs) reduce depressive symptom severity in adults with major depressive disorder (MDD)?",
+  "map_status": "provisional",
+  "scope": {
+    "population": "Adults with major depressive disorder (MDD), including those unresponsive to first-line SSRI/SNRI treatment and those with a co-occurring medical condition (post-stroke depression, post-cardiac-surgery depression), with population extensions explicitly separated by comorbidity, age group, or treatment-resistance status.",
+    "intervention": "Selective serotonin reuptake inhibitors (SSRIs, principally escitalopram) and serotonin-norepinephrine reuptake inhibitors, as monotherapy, active comparator, or as the base treatment for adjunctive/augmentation strategies (lithium, nortriptyline, agomelatine, aticaprant, empagliflozin); agent-specific and augmentation-agent-specific findings are kept separate from class-wide findings.",
+    "outcome": "Depressive-symptom-severity reduction (response and remission on HDRS, HAMD, or MADRS scales) versus placebo, an active-comparator antidepressant, or a dose-optimization comparator. Quality-of-life and safety/tolerability outcomes appear only as qualifying context.",
+    "exclusions": "No pediatric, bipolar-depression, or treatment-resistant-depression-beyond-second-line population is represented. Long-term (beyond ~16 weeks) maintenance-phase outcomes are not represented -- all nine records report acute or short-term outcomes."
+  },
+  "evidence_nodes": [
+    {
+      "evidence_record_id": "ev-mh-yin-2023-escitalopram-vs-other-antidepressants-meta-001",
+      "role": "evidence_synthesis",
+      "inclusion_rationale": "Systematic review and meta-analysis of 30 RCTs finding escitalopram significantly more effective than citalopram for response and remission, with no significant difference against other newer antidepressants -- the corpus's core pooled active-comparator evidence."
+    },
+    {
+      "evidence_record_id": "ev-mh-kishi-2024-japan-older-adults-meta-001",
+      "role": "population_extension",
+      "inclusion_rationale": "Meta-analysis of 9 placebo-controlled trials in older adults with MDD finding antidepressants significantly more effective than placebo on response, symptom-scale improvement, and remission, extending the class-wide placebo-controlled finding to an age-defined subpopulation."
+    },
+    {
+      "evidence_record_id": "ev-mh-santi-2024-vilazodone-escitalopram-vortioxetine-rct-001",
+      "role": "active_comparator_context",
+      "inclusion_rationale": "Three-arm, 16-week RCT (96 completers) using escitalopram as the active-control arm against vilazodone and vortioxetine, with comparable HDRS-17 reductions across all three agents -- direct active-comparator context for escitalopram's own effect size."
+    },
+    {
+      "evidence_record_id": "ev-mh-perez-2025-depre5-second-line-strategies-001",
+      "role": "landmark_trial",
+      "inclusion_rationale": "Pragmatic, five-arm randomized DEPRE'5 trial (257 patients) directly testing four second-line strategies against SSRI dose optimization in SSRI non-responders, finding the pooled alternative strategies achieved significantly higher response (28.2% vs 14.3%) -- the corpus's direct randomized evidence for the treatment-resistance branch."
+    },
+    {
+      "evidence_record_id": "ev-mh-ju-2025-agomelatine-adjunctive-ssri-snri-rct-001",
+      "role": "agent_population_qualifier",
+      "inclusion_rationale": "Randomized, placebo-controlled trial (123 patients) finding agomelatine added to ongoing SSRI/SNRI treatment produced no significant HAMD-17 improvement over placebo at week 8 -- a real null result narrowing which specific augmentation agents show benefit, not a same-PICO contradiction of SSRI/SNRI monotherapy efficacy itself."
+    },
+    {
+      "evidence_record_id": "ev-mh-schmidt-2024-aticaprant-adjunctive-ssri-snri-rct-001",
+      "role": "agent_population_qualifier",
+      "inclusion_rationale": "Randomized, placebo-controlled trial (184 patients) finding aticaprant added to ongoing SSRI/SNRI treatment significantly improved MADRS score versus placebo -- a positive agent-specific augmentation qualifier, distinct from Ju's null agomelatine result."
+    },
+    {
+      "evidence_record_id": "ev-mh-zandifar-2024-empagliflozin-adjunctive-citalopram-rct-001",
+      "role": "agent_population_qualifier",
+      "inclusion_rationale": "Randomized, placebo-controlled trial (90 patients) finding empagliflozin added to citalopram produced greater HDRS reduction than placebo augmentation by week 8 -- a further positive, agent-specific augmentation qualifier for a non-antidepressant-class add-on."
+    },
+    {
+      "evidence_record_id": "ev-mh-yan-2024-escitalopram-vs-sertraline-poststroke-rct-001",
+      "role": "population_extension",
+      "inclusion_rationale": "Randomized trial (60 patients) in post-stroke depression finding escitalopram produced a significantly greater HAMD-24 reduction than sertraline over 8 weeks, extending SSRI comparative evidence to a medically comorbid population."
+    },
+    {
+      "evidence_record_id": "ev-mh-baradaran-2024-escitalopram-cabg-quality-of-life-rct-001",
+      "role": "population_extension",
+      "inclusion_rationale": "Randomized, placebo-controlled trial (50 patients) in post-CABG cardiac-surgery patients with mild-to-moderate depression finding escitalopram significantly reduced depression scores and improved quality of life by week 8, extending placebo-controlled evidence to a cardiac-comorbid population."
+    }
+  ],
+  "relationship_ids": [
+    "rel-mh-santi-supports-yin-other-antidepressants-001",
+    "rel-mh-yan-qualifies-yin-escitalopram-vs-ssri-001",
+    "rel-mh-ju-qualifies-perez-second-line-strategies-001",
+    "rel-mh-schmidt-contextualizes-ju-adjunctive-heterogeneity-001",
+    "rel-mh-baradaran-contextualizes-kishi-antidepressant-vs-placebo-001",
+    "rel-mh-zandifar-supports-schmidt-successful-augmentation-001",
+    "rel-mh-baradaran-supports-yan-escitalopram-comorbid-populations-001"
+  ],
+  "population_groups": [
+    {
+      "label": "General MDD, SSRI/SNRI vs placebo or active comparator (RCT/meta-analytic evidence)",
+      "evidence_record_ids": [
+        "ev-mh-yin-2023-escitalopram-vs-other-antidepressants-meta-001",
+        "ev-mh-kishi-2024-japan-older-adults-meta-001",
+        "ev-mh-santi-2024-vilazodone-escitalopram-vortioxetine-rct-001"
+      ],
+      "interpretation_boundary": "Kishi is restricted to older adults and Japan-available agents; Santi is a smaller open-label active-comparator trial. Neither should be treated as interchangeable with Yin's larger pooled active-comparator meta-analysis."
+    },
+    {
+      "label": "MDD unresponsive to first-line SSRI/SNRI, augmentation/second-line strategies",
+      "evidence_record_ids": [
+        "ev-mh-perez-2025-depre5-second-line-strategies-001",
+        "ev-mh-ju-2025-agomelatine-adjunctive-ssri-snri-rct-001",
+        "ev-mh-schmidt-2024-aticaprant-adjunctive-ssri-snri-rct-001",
+        "ev-mh-zandifar-2024-empagliflozin-adjunctive-citalopram-rct-001"
+      ],
+      "interpretation_boundary": "This is a treatment-resistance population, materially different from first-line MDD; the four augmentation agents tested (lithium/nortriptyline/switch pooled in Perez, agomelatine, aticaprant, empagliflozin) show mixed results (Ju null, Schmidt and Zandifar positive) and must not be pooled into one class-wide augmentation conclusion."
+    },
+    {
+      "label": "MDD with co-occurring medical comorbidity (post-stroke, post-cardiac-surgery)",
+      "evidence_record_ids": [
+        "ev-mh-yan-2024-escitalopram-vs-sertraline-poststroke-rct-001",
+        "ev-mh-baradaran-2024-escitalopram-cabg-quality-of-life-rct-001"
+      ],
+      "interpretation_boundary": "Both are small (n=50-60), single-comorbidity trials; findings should not be generalized to MDD without medical comorbidity or to comorbidities other than stroke/cardiac surgery."
+    }
+  ],
+  "comparator_groups": [
+    {
+      "label": "Placebo-controlled (monotherapy or adjunctive)",
+      "evidence_record_ids": [
+        "ev-mh-kishi-2024-japan-older-adults-meta-001",
+        "ev-mh-ju-2025-agomelatine-adjunctive-ssri-snri-rct-001",
+        "ev-mh-schmidt-2024-aticaprant-adjunctive-ssri-snri-rct-001",
+        "ev-mh-zandifar-2024-empagliflozin-adjunctive-citalopram-rct-001",
+        "ev-mh-baradaran-2024-escitalopram-cabg-quality-of-life-rct-001"
+      ],
+      "interpretation_boundary": "The most direct placebo-controlled comparative evidence, but sample sizes are modest (50-184 patients) except for Kishi's pooled meta-analysis, and results are mixed for the adjunctive-agent subset."
+    },
+    {
+      "label": "Active comparator (antidepressant versus antidepressant)",
+      "evidence_record_ids": [
+        "ev-mh-yin-2023-escitalopram-vs-other-antidepressants-meta-001",
+        "ev-mh-santi-2024-vilazodone-escitalopram-vortioxetine-rct-001",
+        "ev-mh-yan-2024-escitalopram-vs-sertraline-poststroke-rct-001"
+      ],
+      "interpretation_boundary": "These establish comparative, not placebo-controlled, effect sizes; a null or favorable result here does not by itself establish or refute efficacy versus no treatment."
+    },
+    {
+      "label": "Active dose-optimization comparator (augmentation/switch versus SSRI dose increase)",
+      "evidence_record_ids": [
+        "ev-mh-perez-2025-depre5-second-line-strategies-001"
+      ],
+      "interpretation_boundary": "Compares alternative second-line strategies against continuing/increasing the original SSRI's dose, not against placebo -- a pragmatic trial design distinct from the other comparator groups."
+    }
+  ],
+  "contradiction_assessment": {
+    "status": "none_identified_in_bounded_map",
+    "statement": "A bounded review of this corpus's 9 manually-reviewed MDD antidepressant records, completed 2026-08-10, found no result that directly contradicts the SSRI/SNRI-reduces-depressive-symptoms direction under a sufficiently aligned population, intervention, comparator, and outcome. Ju's null result for agomelatine augmentation is a real negative finding, but it tests a specific augmentation agent added to ongoing SSRI/SNRI treatment in non-responders, not SSRI/SNRI monotherapy efficacy itself, so it qualifies the augmentation-strategy question rather than contradicting the corpus's core research question. Absence of an identified contradiction in this bounded, single-corpus search is not evidence that contradictory literature does not exist -- unlike the GLP-1 golden map, this search has not yet been independently re-run or extended beyond this corpus's nine records.",
+    "evidence_record_ids": []
+  },
+  "limitations": [
+    "This map was compiled in a single AI-assisted authoring session from already-manually-reviewed (extraction_tier: manual) Evidence Records and their reviewed Relationship Records; unlike the GLP-1 golden map, it has not yet undergone a second, independent source-by-source re-audit against original PDFs.",
+    "Sample sizes across the nine records are generally modest (50-257 patients per trial, except Yin's and Kishi's meta-analyses); several are single-center studies.",
+    "The augmentation/second-line-strategy branch mixes a positive pooled pragmatic trial (Perez), one null agent-specific result (Ju), and two positive agent-specific results (Schmidt, Zandifar) -- these must not be pooled into a single class-wide augmentation conclusion.",
+    "The two comorbidity-population records (Yan, Baradaran) are both small, single-comorbidity trials and do not establish generalizable comorbid-MDD efficacy beyond post-stroke and post-cardiac-surgery contexts specifically.",
+    "All nine records report acute-phase or short-term (up to 16-week) outcomes; no maintenance-phase or relapse-prevention evidence is represented.",
+    "Access, cost, patient preference, and individual benefit-harm tradeoffs are not represented."
+  ],
+  "known_gaps": [
+    "Independent human or second-pass AI source-by-source audit of every selected record against its original PDF, matching the GLP-1 golden map's review process, has not yet been performed for this corpus.",
+    "A reproducible, periodically-rerun same-PICO contradiction search (matching GLP-1's 2026-08-04 search) has not yet been established for this corpus.",
+    "Longer-term (beyond 16 weeks) maintenance-phase and relapse-prevention evidence is not yet represented.",
+    "Toxicity/adverse-event and discontinuation-syndrome synthesis across the SSRI/SNRI agents represented here is not yet built as its own qualifier layer.",
+    "Broader comorbidity coverage (e.g. diabetes, other cardiovascular disease beyond post-CABG, other neurological conditions beyond post-stroke) remains unrepresented."
+  ],
+  "review": {
+    "method": "Compiled from the corpus's existing manually-reviewed Evidence Records and their reviewed Relationship Records; this map-level synthesis (scope, population/comparator groupings, contradiction assessment) was authored once in a single AI-assisted session and has not yet been independently re-audited against original source PDFs by a second reviewer.",
+    "status": "secondary_review_required",
+    "reviewed_by": "Claude (session compilation, single-pass)",
+    "reviewer_type": "ai_compiled_map_synthesis_pending_independent_audit",
+    "review_date": "2026-08-10",
+    "notes": "Every evidence_record_id and relationship_id referenced here already exists as a manually-reviewed record or edge in the corpus (see evidence_records.jsonl/relationship_records.jsonl); this document adds map-level organization (scope, population/comparator groupings, contradiction assessment) on top of them, not new source claims. Requires the same independent source audit the GLP-1 golden map underwent before map_status can move from provisional to reviewed."
+  }
+}

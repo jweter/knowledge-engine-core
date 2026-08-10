@@ -268,3 +268,15 @@ subgroup, via different combination partners (VEGF-targeting antibody
 vs. chemotherapy). All 3 passed `ke relationship-validate`. Corpus
 relationship graph is now 8 edges (was 5); graph-wide total is 30 (was
 27).
+
+**First golden evidence map: provisional (2026-08-10).**
+`golden_evidence_map.json` now exists, organizing all 13 manually-
+reviewed records and all 8 relationship edges into population/
+comparator groupings and a bounded contradiction assessment (none
+identified). Passes `ke evidence-map-validate`. Unlike the GLP-1
+golden map, this one is honestly `map_status: "provisional"` --
+compiled in a single AI-assisted session from the corpus's own
+already-manually-reviewed records, not independently re-audited
+against source PDFs by a second reviewer the way GLP-1's map was. See
+the map's own `review`/`known_gaps` fields for exactly what independent
+audit work remains before it could move to `"reviewed"`.

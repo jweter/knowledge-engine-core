@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "map_id": "oncology-nsclc-ici-os-provisional-map-v1",
+  "title": "NSCLC Checkpoint Inhibitor Overall-Survival Evidence Map (Provisional)",
+  "research_question": "Do immune checkpoint inhibitors (anti-PD-1/PD-L1) improve overall survival in adults with advanced non-small-cell lung cancer (NSCLC)?",
+  "map_status": "provisional",
+  "scope": {
+    "population": "Adults with advanced/metastatic, resectable stage II, or unresectable stage III NSCLC evaluated for first-line, perioperative, or post-chemoradiotherapy consolidation immune checkpoint inhibitor therapy, with population extensions explicitly separated when line of therapy, PD-L1 expression, liver metastases, or ECOG performance status changes applicability.",
+    "intervention": "PD-1/PD-L1 checkpoint inhibitors (pembrolizumab, nivolumab, durvalumab, cemiplimab, sintilimab, and pooled-class regimens), alone or combined with chemotherapy, VEGF-targeting antibodies, or dual PD-1/CTLA-4 blockade; agent-specific findings are kept separate from pooled-class findings.",
+    "outcome": "Overall survival (OS) and progression-free survival (PFS) versus chemotherapy alone or a non-ICI comparator; perioperative event-free survival, major pathological response, and pathological complete response for the resectable-disease branch. Safety/toxicity and comparisons between two active ICI regimens appear only as qualifying context, not as a primary claim.",
+    "exclusions": "No pediatric, driver-mutation-positive (EGFR/ALK-altered), or small-cell lung cancer population is represented. The PACIFIC trial itself -- the foundational RCT for durvalumab consolidation -- is not in this corpus (closed-access venue, no PMC OA record); real-world validations of it are represented instead. Cost-effectiveness and quality-of-life outcomes are not represented."
+  },
+  "evidence_nodes": [
+    {
+      "evidence_record_id": "ev-oncology-dang-2026-icichemo-vs-chemo-os-001",
+      "role": "evidence_synthesis",
+      "inclusion_rationale": "Systematic review and meta-analysis of 28 randomized controlled trials (14,758 patients) finding PD-1 and PD-L1 inhibitors plus chemotherapy each improve overall survival versus chemotherapy alone in first-line advanced NSCLC -- the corpus's core pooled trial-level evidence."
+    },
+    {
+      "evidence_record_id": "ev-oncology-wu-2026-liver-mets-network-meta-pfs-os-001",
+      "role": "population_extension",
+      "inclusion_rationale": "Bayesian network meta-analysis of 20 RCTs restricted to driver-gene-negative NSCLC with liver metastases, extending the general ICI-plus-chemotherapy-versus-chemotherapy-alone PFS/OS finding to a specific, harder-to-treat subpopulation."
+    },
+    {
+      "evidence_record_id": "ev-oncology-mao-2026-pd1-vegf-antibody-meta-pfs-os-001",
+      "role": "agent_population_qualifier",
+      "inclusion_rationale": "Meta-analysis of 11 RCTs (4,426 patients) isolating regimens that combine PD-1/PD-L1 blockade with VEGF/VEGFR-targeting antibodies -- a distinct intervention definition from single-class PD-1/PD-L1 inhibition, improving PFS and OS versus non-dual-targeting control."
+    },
+    {
+      "evidence_record_id": "ev-oncology-liao-2026-icpscore-predictive-biomarker-001",
+      "role": "agent_population_qualifier",
+      "inclusion_rationale": "Biomarker-stratified subgroup analysis of the ORIENT-11 trial (sintilimab plus chemotherapy) showing markedly larger PFS/OS benefit in ICPscore-high patients -- qualifies which patients within a single trial derive the largest benefit, not a new comparative claim."
+    },
+    {
+      "evidence_record_id": "ev-oncology-tsuboi-2026-keynote671-stageii-efs-os-001",
+      "role": "landmark_trial",
+      "inclusion_rationale": "Randomized, phase 3 KEYNOTE-671 clinical-stage-II subgroup (n=239) establishing the corpus's direct randomized evidence for perioperative pembrolizumab plus chemotherapy in resectable disease, with event-free survival significantly improved though the OS subgroup estimate is not independently significant."
+    },
+    {
+      "evidence_record_id": "ev-oncology-stuschke-2026-durvalumab-crisp-realworld-001",
+      "role": "population_extension",
+      "inclusion_rationale": "Prospective real-world CRISP registry (231 patients) extending durvalumab consolidation's PFS/OS benefit after chemoradiotherapy from PACIFIC's trial population (not itself in this corpus) to routine unresectable stage III practice."
+    },
+    {
+      "evidence_record_id": "ev-oncology-selke-2026-durvalumab-pdl1-subgroup-001",
+      "role": "agent_population_qualifier",
+      "inclusion_rationale": "Retrospective single-center cohort (142 patients) stratifying durvalumab-consolidation OS/PFS benefit by PD-L1 status, qualifying which post-chemoradiotherapy patients the consolidation finding applies to."
+    },
+    {
+      "evidence_record_id": "ev-oncology-esen-2026-induction-chemoimmunotherapy-realworld-001",
+      "role": "active_comparator_context",
+      "inclusion_rationale": "Small (n=34) real-world cohort using induction chemoimmunotherapy before consolidative radiotherapy -- an alternative treatment sequencing to the standard chemoradiotherapy-then-durvalumab-consolidation approach, contextualizing rather than replacing it."
+    },
+    {
+      "evidence_record_id": "ev-oncology-katsarolis-2026-greek-realworld-os-001",
+      "role": "population_extension",
+      "inclusion_rationale": "Real-world cohort (610 evaluable of 684 patients across three Greek centers) finding immunotherapy at any treatment line associated with longer OS than chemotherapy alone, extending trial-level findings to unselected routine practice."
+    },
+    {
+      "evidence_record_id": "ev-oncology-nodbrant-2026-ecogps-real-world-os-001",
+      "role": "population_extension",
+      "inclusion_rationale": "Swedish registry cohort (854 lung-cancer patients) reporting median overall survival on palliative ICI treatment stratified by baseline ECOG performance status, extending real-world context to performance-status subgroups without a concurrent non-ICI comparator."
+    },
+    {
+      "evidence_record_id": "ev-oncology-gandara-2026-cemiplimab-composite-pro-os-001",
+      "role": "endpoint_qualifier",
+      "inclusion_rationale": "Prognostic analysis within cemiplimab-treated patients (EMPOWER-Lung 1/3) showing composite patient-reported-outcome burden predicts OS -- a risk-stratification endpoint qualifier among ICI-treated patients, not a comparison against a non-ICI arm."
+    },
+    {
+      "evidence_record_id": "ev-oncology-weber-2026-nic-vs-pc-realworld-001",
+      "role": "active_comparator_context",
+      "inclusion_rationale": "Retrospective single-center comparison (200 patients) of nivolumab-plus-ipilimumab-plus-chemotherapy against pembrolizumab-plus-chemotherapy finding no significant OS or time-to-discontinuation difference -- an active ICI-regimen-versus-ICI-regimen comparison, not evidence against ICI efficacy itself."
+    },
+    {
+      "evidence_record_id": "ev-oncology-machado-2026-pembrolizumab-realworld-meta-001",
+      "role": "evidence_synthesis",
+      "inclusion_rationale": "Pooled analysis of 12 real-world cohorts (17,506 PD-L1>=50% patients) on first-line pembrolizumab monotherapy reporting durable long-term outcomes (60-month OS rate 29.0%) -- single-arm, but the corpus's largest durability synthesis for high-PD-L1 monotherapy."
+    }
+  ],
+  "relationship_ids": [
+    "rel-onc-selke-qualifies-stuschke-durvalumab-pdl1-001",
+    "rel-onc-katsarolis-supports-dang-ici-vs-chemo-os-001",
+    "rel-onc-liao-qualifies-dang-icpscore-biomarker-001",
+    "rel-onc-wu-contextualizes-dang-liver-mets-subgroup-001",
+    "rel-onc-machado-supports-nodbrant-ecog-survival-001",
+    "rel-onc-gandara-contextualizes-liao-baseline-risk-score-001",
+    "rel-onc-esen-contextualizes-stuschke-alternative-sequencing-001",
+    "rel-onc-mao-supports-wu-liver-metastases-subgroup-001"
+  ],
+  "population_groups": [
+    {
+      "label": "First-line advanced/metastatic NSCLC, ICI(+chemotherapy) vs chemotherapy alone (randomized-trial-level evidence)",
+      "evidence_record_ids": [
+        "ev-oncology-dang-2026-icichemo-vs-chemo-os-001",
+        "ev-oncology-wu-2026-liver-mets-network-meta-pfs-os-001",
+        "ev-oncology-mao-2026-pd1-vegf-antibody-meta-pfs-os-001",
+        "ev-oncology-liao-2026-icpscore-predictive-biomarker-001"
+      ],
+      "interpretation_boundary": "These are meta-analyses and one biomarker-stratified single-trial subgroup; agents, chemotherapy backbones, and captured subpopulations (liver metastases for Wu, PD-1/VEGF dual-targeting for Mao, ICPscore-high responders for Liao) differ and are not interchangeable."
+    },
+    {
+      "label": "Advanced NSCLC, real-world/registry ICI cohorts (any line, unselected by trial eligibility)",
+      "evidence_record_ids": [
+        "ev-oncology-katsarolis-2026-greek-realworld-os-001",
+        "ev-oncology-nodbrant-2026-ecogps-real-world-os-001",
+        "ev-oncology-machado-2026-pembrolizumab-realworld-meta-001",
+        "ev-oncology-gandara-2026-cemiplimab-composite-pro-os-001",
+        "ev-oncology-weber-2026-nic-vs-pc-realworld-001"
+      ],
+      "interpretation_boundary": "Real-world cohorts reflect physician-selected populations, not randomized allocation; confounding by indication is a shared limitation. Machado and Gandara have no non-ICI comparator, and Weber compares two active ICI regimens rather than ICI versus chemotherapy alone."
+    },
+    {
+      "label": "Resectable stage II or unresectable stage III NSCLC, perioperative/consolidation setting",
+      "evidence_record_ids": [
+        "ev-oncology-tsuboi-2026-keynote671-stageii-efs-os-001",
+        "ev-oncology-stuschke-2026-durvalumab-crisp-realworld-001",
+        "ev-oncology-selke-2026-durvalumab-pdl1-subgroup-001",
+        "ev-oncology-esen-2026-induction-chemoimmunotherapy-realworld-001"
+      ],
+      "interpretation_boundary": "This surgical/consolidation-setting population differs materially from the advanced/metastatic population above -- these records establish perioperative and post-chemoradiotherapy findings, not first-line metastatic-disease efficacy."
+    }
+  ],
+  "comparator_groups": [
+    {
+      "label": "Chemotherapy alone or no-ICI comparator (randomized or matched)",
+      "evidence_record_ids": [
+        "ev-oncology-dang-2026-icichemo-vs-chemo-os-001",
+        "ev-oncology-wu-2026-liver-mets-network-meta-pfs-os-001",
+        "ev-oncology-mao-2026-pd1-vegf-antibody-meta-pfs-os-001",
+        "ev-oncology-liao-2026-icpscore-predictive-biomarker-001",
+        "ev-oncology-tsuboi-2026-keynote671-stageii-efs-os-001",
+        "ev-oncology-stuschke-2026-durvalumab-crisp-realworld-001",
+        "ev-oncology-selke-2026-durvalumab-pdl1-subgroup-001",
+        "ev-oncology-katsarolis-2026-greek-realworld-os-001"
+      ],
+      "interpretation_boundary": "The most direct comparative evidence for ICI benefit, but trial/cohort eligibility, dose, duration, and pooling heterogeneity remain material; several of these are real-world cohorts without randomization."
+    },
+    {
+      "label": "No concurrent comparator (single-arm descriptive or within-cohort stratification)",
+      "evidence_record_ids": [
+        "ev-oncology-nodbrant-2026-ecogps-real-world-os-001",
+        "ev-oncology-gandara-2026-cemiplimab-composite-pro-os-001",
+        "ev-oncology-machado-2026-pembrolizumab-realworld-meta-001",
+        "ev-oncology-esen-2026-induction-chemoimmunotherapy-realworld-001"
+      ],
+      "interpretation_boundary": "These records describe outcomes within ICI-treated patients only (stratified by performance status, PRO burden, or treatment sequence) and cannot themselves demonstrate ICI superiority over an alternative."
+    },
+    {
+      "label": "Active comparator (ICI regimen versus a different ICI regimen)",
+      "evidence_record_ids": [
+        "ev-oncology-weber-2026-nic-vs-pc-realworld-001"
+      ],
+      "interpretation_boundary": "Compares two active checkpoint-inhibitor-based regimens against each other, not against chemotherapy alone; a null result here does not contradict ICI-versus-chemotherapy evidence."
+    }
+  ],
+  "contradiction_assessment": {
+    "status": "none_identified_in_bounded_map",
+    "statement": "A bounded review of this corpus's 13 manually-reviewed NSCLC checkpoint-inhibitor records, completed 2026-08-10, found no result that directly contradicts the ICI(+chemotherapy)-versus-chemotherapy-alone or ICI-consolidation-versus-none overall-survival direction under a sufficiently aligned population, intervention, comparator, and outcome. Weber's null OS finding compares two active ICI regimens (nivolumab+ipilimumab+chemotherapy vs pembrolizumab+chemotherapy), not ICI versus a non-ICI comparator, and is an active-comparator qualifier, not a same-PICO contradiction. Stuschke's real-world OS difference did not reach statistical significance in its specific weighted analysis even though PFS did, which is a precision qualifier on a supporting result, not a direction reversal. Absence of an identified contradiction in this bounded, single-corpus search is not evidence that contradictory literature does not exist -- unlike the GLP-1 golden map, this search has not yet been independently re-run or extended to closed-access literature (e.g. the PACIFIC trial itself).",
+    "evidence_record_ids": []
+  },
+  "limitations": [
+    "This map was compiled in a single AI-assisted authoring session from already-manually-reviewed (extraction_tier: manual) Evidence Records and their reviewed Relationship Records; unlike the GLP-1 golden map, it has not yet undergone a second, independent source-by-source re-audit against original PDFs.",
+    "The direct randomized/meta-analytic evidence pools many distinct specific agents, chemotherapy backbones, and NSCLC subpopulations under each PD-1/PD-L1-class heading; agent-level and regimen-level differences are preserved in each record's own limitations but not separately re-verified here.",
+    "Five of thirteen records (Katsarolis, Nodbrant, Machado, Gandara, Esen) are real-world or single-arm observational cohorts vulnerable to confounding by indication and selection bias.",
+    "The PACIFIC trial itself, the foundational RCT establishing durvalumab consolidation after chemoradiotherapy, is not present in this corpus (closed-access venue); the perioperative/consolidation branch instead rests on real-world validations of it (Stuschke, Selke) and one alternative-sequencing cohort (Esen).",
+    "Two of the thirteen manually-reviewed records (Tsuboi's stage II EFS/OS subgroup, Weber's active-comparator study) are not yet connected to any other record by a reviewed relationship edge; they stand as independent context, not yet cross-referenced.",
+    "Access, cost, quality of life, and individual benefit-harm tradeoffs are not represented."
+  ],
+  "known_gaps": [
+    "Independent human or second-pass AI source-by-source audit of every selected record against its original PDF, matching the GLP-1 golden map's review process, has not yet been performed for this corpus.",
+    "The PACIFIC trial itself remains outside this corpus; acquiring it (or an equivalent open-access primary RCT for durvalumab consolidation) would let the perioperative/consolidation branch rest on randomized rather than only real-world evidence.",
+    "A reproducible, periodically-rerun same-PICO contradiction search (matching GLP-1's 2026-08-04 search) has not yet been established for this corpus.",
+    "Toxicity/adverse-event synthesis across the ICI regimens represented here is not yet built as its own qualifier layer.",
+    "Broader driver-mutation-positive (EGFR/ALK-altered) and small-cell lung cancer coverage remains out of scope for this corpus by design (see scope.exclusions) but is a real gap relative to the full clinical NSCLC/lung-cancer question."
+  ],
+  "review": {
+    "method": "Compiled from the corpus's existing manually-reviewed Evidence Records and their reviewed Relationship Records; this map-level synthesis (scope, population/comparator groupings, contradiction assessment) was authored once in a single AI-assisted session and has not yet been independently re-audited against original source PDFs by a second reviewer.",
+    "status": "secondary_review_required",
+    "reviewed_by": "Claude (session compilation, single-pass)",
+    "reviewer_type": "ai_compiled_map_synthesis_pending_independent_audit",
+    "review_date": "2026-08-10",
+    "notes": "Every evidence_record_id and relationship_id referenced here already exists as a manually-reviewed record or edge in the corpus (see evidence_records.jsonl/relationship_records.jsonl); this document adds map-level organization (scope, population/comparator groupings, contradiction assessment) on top of them, not new source claims. Requires the same independent source audit the GLP-1 golden map underwent before map_status can move from provisional to reviewed."
+  }
+}
