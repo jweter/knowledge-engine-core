@@ -30,6 +30,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Record-to-source fidelity check for the mental-health golden
+  evidence map (9 records, 7 relationships).** Same methodology as
+  the oncology check below, performed the same day. Cross-checked
+  every record's key numerical figures (effect sizes, confidence
+  intervals, p-values, sample sizes) against the extracted source-PDF
+  page text and read all 7 relationship rationales for scientific
+  coherence. Result: all 9 records faithfully represent their
+  sources with no discrepancies (no PDF-internal typos or
+  non-machine-readable tables encountered, unlike the oncology
+  audit), all 7 relationships are scientifically sound and
+  conservatively typed, and a connectivity check confirmed every
+  evidence node already touches at least one relationship edge (no
+  isolated node, unlike oncology's Tsuboi/Weber gap). Performed by
+  the same AI system that compiled the map, not a genuinely
+  independent reviewer -- `map_status` stays `"provisional"` pending
+  that independent pass, same reasoning as the oncology entry below.
+  See `data/corpora/mental_health_mdd_antidepressants/golden_evidence_map.json`'s
+  `review`/`limitations`/`known_gaps` fields and that corpus's README
+  for full detail.
+
 - **Record-to-source fidelity check for the oncology golden evidence
   map (13 records, 9 relationships).** Cross-checked every record's
   key numerical figures (hazard ratios, confidence intervals,

@@ -356,3 +356,27 @@ already-manually-reviewed records, not independently re-audited
 against source PDFs by a second reviewer the way GLP-1's map was. See
 the map's own `review`/`known_gaps` fields for exactly what independent
 audit work remains before it could move to `"reviewed"`.
+
+**Record-fidelity check against source PDFs (2026-08-10, same day).**
+Performed the record-to-source half of the audit the map's own
+`known_gaps` named as its next step (mirroring the equivalent
+oncology golden map check performed the same day): read the extracted
+source-PDF page text at each of the 9 records' own
+`source_span.page_number` and cross-checked every `claim_text`/
+`result_summary` numerical figure (effect sizes, confidence intervals,
+p-values, sample sizes) against it, and read all 7 relationship
+rationales for scientific coherence. Result: all 9 records faithfully
+represent their sources with no discrepancies found (no PDF-internal
+typos or non-machine-readable tables encountered, unlike the oncology
+audit), and all 7 relationships are scientifically sound and
+conservatively typed. A connectivity check also confirmed all 9
+evidence nodes are already touched by at least one relationship edge
+-- no isolated node, unlike oncology's Tsuboi/Weber gap. This check
+was performed by the same AI system (Claude) that compiled the map,
+not a genuinely independent reviewer the way GLP-1's audit used a
+different AI system (OpenAI Codex) -- so `map_status` stays
+`"provisional"` and `review.status` stays `"secondary_review_required"`.
+A genuinely independent (human or different-AI-system) pass remains
+the one thing standing between this map and GLP-1's `"reviewed"` bar.
+See the map's `review`/`limitations`/`known_gaps` fields for the full
+detail.
