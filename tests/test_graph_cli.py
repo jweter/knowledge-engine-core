@@ -131,6 +131,89 @@ def test_graph_build_cli_populates_claims_and_concepts(
         assert {c.label for c in concepts} == {"semaglutide", "Obesity"}
 
 
+def test_graph_build_cli_corpus_flag_sets_corpus_id_on_new_claims(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(tmp_path / "evidence.jsonl", _evidence_record("ev-1"))
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        ["graph-build", "--evidence", str(evidence_path), "--corpus", "glp1_weight_loss"],
+    )
+
+    assert result.exit_code == 0, result.output
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claim = repository.find_claim_by_evidence_id("ev-1")
+        assert claim is not None
+        assert claim.corpus_id == "glp1_weight_loss"
+
+
+def test_graph_build_cli_corpus_flag_backfills_a_pre_existing_unscoped_claim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(tmp_path / "evidence.jsonl", _evidence_record("ev-1"))
+
+    first = CliRunner().invoke(entrypoint.app, ["graph-build", "--evidence", str(evidence_path)])
+    assert first.exit_code == 0, first.output
+
+    second = CliRunner().invoke(
+        entrypoint.app,
+        ["graph-build", "--evidence", str(evidence_path), "--corpus", "glp1_weight_loss"],
+    )
+
+    assert second.exit_code == 0, second.output
+    assert "backfilled corpus_id=glp1_weight_loss on 1 previously-unscoped claim" in _unwrapped(
+        second.output
+    )
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claim = repository.find_claim_by_evidence_id("ev-1")
+        assert claim is not None
+        assert claim.corpus_id == "glp1_weight_loss"
+
+
+def test_graph_build_cli_corpus_flag_never_overwrites_an_existing_corpus_id(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    evidence_path = _write_jsonl(tmp_path / "evidence.jsonl", _evidence_record("ev-1"))
+
+    first = CliRunner().invoke(
+        entrypoint.app,
+        ["graph-build", "--evidence", str(evidence_path), "--corpus", "glp1_weight_loss"],
+    )
+    assert first.exit_code == 0, first.output
+
+    second = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "graph-build",
+            "--evidence",
+            str(evidence_path),
+            "--corpus",
+            "oncology_nsclc_checkpoint_inhibitors",
+        ],
+    )
+    assert second.exit_code == 0, second.output
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claim = repository.find_claim_by_evidence_id("ev-1")
+        assert claim is not None
+        assert claim.corpus_id == "glp1_weight_loss"
+
+
 def test_graph_build_cli_skips_network_lookups_for_already_graphed_claims(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -678,6 +761,61 @@ def test_graph_relationship_candidates_respects_minimum_shared_concepts(
     assert "Candidate pairs found: 0" in _unwrapped(result.output)
 
 
+def test_graph_relationship_candidates_corpus_flag_scopes_to_matching_claims(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    glp1_evidence_path = _write_jsonl(
+        tmp_path / "glp1_evidence.jsonl",
+        _evidence_record("ev-glp1-1"),
+        _evidence_record("ev-glp1-2"),
+    )
+    oncology_evidence_path = _write_jsonl(
+        tmp_path / "oncology_evidence.jsonl",
+        _evidence_record("ev-onc-1"),
+        _evidence_record("ev-onc-2"),
+    )
+    runner = CliRunner()
+    build_glp1 = runner.invoke(
+        entrypoint.app,
+        [
+            "graph-build",
+            "--evidence",
+            str(glp1_evidence_path),
+            "--corpus",
+            "glp1_weight_loss",
+        ],
+    )
+    assert build_glp1.exit_code == 0, build_glp1.output
+    build_oncology = runner.invoke(
+        entrypoint.app,
+        [
+            "graph-build",
+            "--evidence",
+            str(oncology_evidence_path),
+            "--corpus",
+            "oncology_nsclc_checkpoint_inhibitors",
+        ],
+    )
+    assert build_oncology.exit_code == 0, build_oncology.output
+
+    unscoped = runner.invoke(entrypoint.app, ["graph-relationship-candidates"])
+    assert unscoped.exit_code == 0, unscoped.output
+    assert "Candidate pairs found: 6" in _unwrapped(unscoped.output)
+
+    scoped = runner.invoke(
+        entrypoint.app, ["graph-relationship-candidates", "--corpus", "glp1_weight_loss"]
+    )
+    assert scoped.exit_code == 0, scoped.output
+    scoped_unwrapped = _unwrapped(scoped.output)
+    assert "Corpus: glp1_weight_loss" in scoped_unwrapped
+    assert "Candidate pairs found: 1" in scoped_unwrapped
+    assert "ev-glp1-1 <-> ev-glp1-2" in scoped_unwrapped
+    assert "ev-onc-1" not in scoped_unwrapped
+
+
 def test_graph_relationship_candidates_writes_output_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -874,6 +1012,65 @@ def test_relationship_review_worksheet_shows_full_fields_for_a_candidate_pair(
     assert '"source_evidence_record_id": "ev-1"' in unwrapped
     assert '"target_evidence_record_id": "ev-2"' in unwrapped
     assert "never infers, scores, or suggests a relationship" in unwrapped
+
+
+def test_relationship_review_worksheet_corpus_flag_excludes_other_corpora(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    _patch_lookup_services(monkeypatch)
+    glp1_evidence_path = _write_jsonl(
+        tmp_path / "glp1_evidence.jsonl",
+        _evidence_record("ev-glp1-1"),
+        _evidence_record("ev-glp1-2"),
+    )
+    oncology_evidence_path = _write_jsonl(
+        tmp_path / "oncology_evidence.jsonl",
+        _evidence_record("ev-onc-1"),
+        _evidence_record("ev-onc-2"),
+    )
+    runner = CliRunner()
+    build_glp1 = runner.invoke(
+        entrypoint.app,
+        [
+            "graph-build",
+            "--evidence",
+            str(glp1_evidence_path),
+            "--corpus",
+            "glp1_weight_loss",
+        ],
+    )
+    assert build_glp1.exit_code == 0, build_glp1.output
+    build_oncology = runner.invoke(
+        entrypoint.app,
+        [
+            "graph-build",
+            "--evidence",
+            str(oncology_evidence_path),
+            "--corpus",
+            "oncology_nsclc_checkpoint_inhibitors",
+        ],
+    )
+    assert build_oncology.exit_code == 0, build_oncology.output
+
+    result = runner.invoke(
+        entrypoint.app,
+        [
+            "relationship-review-worksheet",
+            "--evidence",
+            str(glp1_evidence_path),
+            "--corpus",
+            "glp1_weight_loss",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Corpus: glp1_weight_loss" in unwrapped
+    assert "Candidate pairs total: 1" in unwrapped
+    assert "ev-glp1-1" in unwrapped
+    assert "ev-onc-1" not in unwrapped
 
 
 def test_relationship_review_worksheet_respects_limit_and_offset(

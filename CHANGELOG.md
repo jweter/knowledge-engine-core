@@ -30,6 +30,67 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Record-to-source fidelity check for the oncology golden evidence
+  map (13 records, 9 relationships).** Cross-checked every record's
+  key numerical figures (hazard ratios, confidence intervals,
+  p-values, sample sizes) against the extracted source-PDF page text
+  at each record's own `source_span.page_number`, and read all 9
+  relationship rationales for scientific coherence. All 13 records
+  faithfully represent their sources; all 9 relationships are
+  scientifically sound and conservatively typed. Two non-error
+  findings: a likely internal typo in Liao's source PDF (correctly
+  resolved in the record using the figure-legend value, not the
+  inconsistent running-prose value) and one table (Nodbrant's) that
+  did not extract as machine-readable text, so its CI/n/mortality
+  figures could not be independently re-confirmed from extracted text
+  alone. Because this check was performed by the same AI system
+  (Claude) that compiled the map -- not a genuinely independent
+  reviewer, unlike GLP-1's map audit (a different AI system, OpenAI
+  Codex) -- `map_status` stays `"provisional"`; a human or
+  different-AI-system pass is the one remaining step to
+  `"reviewed"`. See `data/corpora/oncology_nsclc_checkpoint_inhibitors/golden_evidence_map.json`'s
+  `review`/`limitations`/`known_gaps` fields and that corpus's
+  README for full detail.
+
+- **`docs/roadmap.md` doc-sync pass: corrected several sections that had
+  gone stale relative to the actual codebase state.** The
+  "domain-general extraction framework" decision still described mental
+  health as "seeding it with real papers remains future work" and
+  oncology as blocked on a still-unresolved extraction gap; both were
+  in fact resolved days earlier (oncology: 336 sources / 1,534 promoted
+  records; mental health: 62 sources / 133 records), and both corpora
+  have since gained a first (`provisional`) golden evidence map. Updated
+  the `v0.3.0-alpha` release-tag description to match (marked `-- live`,
+  consistent with the other tag descriptions in that ladder) and added an
+  M70 Phase 4 entry for this milestone's own `graph_claims.corpus_id`
+  work. No git tag was actually cut -- that stays the project owner's
+  explicit call per the existing `v1.0.0` gate language.
+
+- **Optional corpus scoping for the knowledge graph (schema v12).**
+  `graph_claims` gained a nullable, indexed `corpus_id` column
+  (`_migrate_schema_v12`, additive `ALTER TABLE`). The graph itself stays
+  corpus-agnostic by design (`ke graph-build` still writes every
+  corpus's claims into the same shared tables) -- `corpus_id` is opt-in,
+  set only when a caller passes the new `--corpus <id>` option to `ke
+  graph-build`, and `NULL` means "unscoped," never "unknown." `--corpus`
+  is applied to every claim referenced by that run's `--evidence` file,
+  not just newly-created ones: an already-existing claim with no
+  `corpus_id` yet gets backfilled (`GraphRepository.backfill_claim_corpus_id`,
+  a bulk `UPDATE ... WHERE corpus_id IS NULL`), while one that already
+  has a `corpus_id` is never overwritten -- relabeling a claim to a
+  different corpus is never done silently. `ke
+  graph-relationship-candidates` and `ke relationship-review-worksheet`
+  both gained a matching optional `--corpus <id>` that restricts
+  candidates to claim pairs where *both* claims carry that `corpus_id`;
+  omitting it on any of the three commands preserves the original
+  cross-corpus behavior exactly. Motivated by a direct measurement:
+  `ke graph-relationship-candidates` with `--min-shared-concepts 1`
+  returned 164,146 candidates spanning all 3 corpora combined (1,824
+  total claims) with no way to narrow the list to one corpus. See
+  `docs/core_interface_contract.md`'s `ke graph-build`/
+  `graph-relationship-candidates`/`relationship-review-worksheet`
+  entries.
+
 - Ran the second weekly discovery cycle (`ke discovery-cycle-run`,
   `retstart=3600`) against the persisted `discovery_state.json`: 50
   candidates discovered, 21 deterministically accepted, 0 already in

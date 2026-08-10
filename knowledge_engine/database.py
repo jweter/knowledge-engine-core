@@ -7,11 +7,11 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from itertools import combinations
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
-from sqlalchemy import Engine, create_engine, event, func, select, text
-from sqlalchemy.engine import Connection
+from sqlalchemy import Engine, create_engine, event, func, select, text, update
+from sqlalchemy.engine import Connection, CursorResult
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
@@ -34,7 +34,7 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 11
+CURRENT_SCHEMA_VERSION = 12
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
@@ -71,6 +71,12 @@ _SCHEMA_V7_COLUMNS: dict[str, dict[str, str]] = {
 _SCHEMA_V11_COLUMNS: dict[str, dict[str, str]] = {
     "paper_pages": {
         "table_text": "TEXT",
+    },
+}
+
+_SCHEMA_V12_COLUMNS: dict[str, dict[str, str]] = {
+    "graph_claims": {
+        "corpus_id": "VARCHAR(128)",
     },
 }
 
@@ -209,6 +215,8 @@ def migrate_schema(engine: Engine) -> None:
             _migrate_schema_v10(connection)
         if existing_version < 11:
             _migrate_schema_v11(connection)
+        if existing_version < 12:
+            _migrate_schema_v12(connection)
 
         _verify_schema_complete(connection)
 
@@ -355,6 +363,29 @@ def _migrate_schema_v11(connection: Connection) -> None:
     """
 
     for table_name, columns in _SCHEMA_V11_COLUMNS.items():
+        existing_columns = _table_columns(connection, table_name)
+        for column_name, definition in columns.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(
+                text(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {definition}')
+            )
+
+
+def _migrate_schema_v12(connection: Connection) -> None:
+    """Add `graph_claims.corpus_id` so relationship candidates can be scoped to one corpus.
+
+    Additive and nullable, same shape as the v6/v7/v11 migrations above.
+    An existing claim's `corpus_id` stays `NULL` until a caller re-runs
+    `ke graph-build --corpus <id> --evidence <that corpus's file>`, which
+    backfills it via `GraphRepository.backfill_claim_corpus_id` -- there
+    is no way to derive a claim's corpus purely from its
+    `evidence_record_id` (many are `auto-<hash>` automated-extraction IDs
+    with no corpus hint in the string itself), so this migration does not
+    attempt to guess one.
+    """
+
+    for table_name, columns in _SCHEMA_V12_COLUMNS.items():
         existing_columns = _table_columns(connection, table_name)
         for column_name, definition in columns.items():
             if column_name in existing_columns:
@@ -798,8 +829,17 @@ class GraphRepository:
 
         return self.session.get(GraphConcept, concept_id)
 
-    def get_or_create_claim(self, evidence_record_id: str) -> GraphClaim:
-        """Return an existing claim node by `EvidenceRecord` ID, or create one."""
+    def get_or_create_claim(
+        self, evidence_record_id: str, *, corpus_id: str | None = None
+    ) -> GraphClaim:
+        """Return an existing claim node by `EvidenceRecord` ID, or create one.
+
+        `corpus_id` is only applied on creation -- an already-existing
+        claim's `corpus_id` is never overwritten here (use
+        `backfill_claim_corpus_id` to fill in a `NULL` value on an
+        already-existing claim, which never overwrites a real value
+        either).
+        """
 
         existing = self.session.scalar(
             select(GraphClaim).where(GraphClaim.evidence_record_id == evidence_record_id)
@@ -807,10 +847,44 @@ class GraphRepository:
         if existing:
             return existing
 
-        claim = GraphClaim(evidence_record_id=evidence_record_id, created_at=_utc_now_iso())
+        claim = GraphClaim(
+            evidence_record_id=evidence_record_id,
+            created_at=_utc_now_iso(),
+            corpus_id=corpus_id,
+        )
         self.session.add(claim)
         self.session.flush()
         return claim
+
+    def backfill_claim_corpus_id(self, evidence_record_ids: Sequence[str], corpus_id: str) -> int:
+        """Set `corpus_id` on already-existing claims that don't have one yet.
+
+        Only touches rows where `corpus_id IS NULL` -- never overwrites a
+        value a prior call (possibly for a different corpus) already set,
+        since that would silently relabel a claim without a human
+        deciding to. Returns the number of rows actually updated. This is
+        the only way an already-existing claim (created before `--corpus`
+        existed, or by a `ke graph-build` run that omitted it) gets a
+        `corpus_id` -- M54's incremental skip-logic means
+        `get_or_create_claim` is never called again for a claim that
+        already exists, so its `corpus_id` cannot be set there.
+        """
+
+        if not evidence_record_ids:
+            return 0
+
+        result = cast(
+            CursorResult[Any],
+            self.session.execute(
+                update(GraphClaim)
+                .where(
+                    GraphClaim.evidence_record_id.in_(evidence_record_ids),
+                    GraphClaim.corpus_id.is_(None),
+                )
+                .values(corpus_id=corpus_id)
+            ),
+        )
+        return int(result.rowcount or 0)
 
     def get_claim(self, claim_id: int) -> GraphClaim | None:
         """Return one claim by primary key."""
@@ -1046,7 +1120,7 @@ class GraphRepository:
         return list(self.session.scalars(statement))
 
     def relationship_candidates(
-        self, *, minimum_shared_concepts: int = 1
+        self, *, minimum_shared_concepts: int = 1, corpus_id: str | None = None
     ) -> list[tuple[GraphClaim, GraphClaim, list[GraphConcept]]]:
         """Return claim pairs sharing at least `minimum_shared_concepts` concepts.
 
@@ -1059,6 +1133,15 @@ class GraphRepository:
         entirely to the human reviewer who authors a `RelationshipRecord`. A
         pair already linked by a `graph_claim_relationships` edge, in either
         direction, is excluded -- a human has already made that call for it.
+
+        `corpus_id`, when given, restricts candidates to pairs where *both*
+        claims carry that `corpus_id` -- the graph is otherwise
+        corpus-agnostic by design (see `GraphClaim.corpus_id`'s docstring),
+        so omitting this preserves today's cross-corpus behavior exactly.
+        A claim with `corpus_id IS NULL` (never backfilled) never matches a
+        `corpus_id`-scoped call, even if it happens to belong to that
+        corpus in practice -- this method only trusts what was explicitly
+        recorded, never guesses from `evidence_record_id`.
         """
 
         concept_claim_pairs = self.session.execute(
@@ -1068,6 +1151,15 @@ class GraphRepository:
         claims_by_concept: dict[int, set[int]] = defaultdict(set)
         for concept_id, claim_id in concept_claim_pairs:
             claims_by_concept[concept_id].add(claim_id)
+
+        if corpus_id is not None:
+            scoped_claim_ids = set(
+                self.session.scalars(select(GraphClaim.id).where(GraphClaim.corpus_id == corpus_id))
+            )
+            claims_by_concept = {
+                concept_id: claim_ids & scoped_claim_ids
+                for concept_id, claim_ids in claims_by_concept.items()
+            }
 
         shared_concepts_by_pair: dict[tuple[int, int], set[int]] = defaultdict(set)
         for concept_id, claim_ids in claims_by_concept.items():
