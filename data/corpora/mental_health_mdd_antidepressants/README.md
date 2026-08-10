@@ -405,3 +405,25 @@ investigated explanation already documented in the map's `known_gaps`
 (an adverse-effect statistic spanning onto the next page of the source
 PDF), not an unresolved discrepancy. Both `map_status` and
 `review.status` now read `"reviewed"`.
+
+**Comorbidity-coverage discovery cycle run against the exact named gap
+(2026-08-10, same day).** The map's `known_gaps` named broader
+comorbidity coverage (diabetes, cardiovascular disease beyond
+post-CABG, neurological conditions beyond post-stroke) as
+unrepresented. Ran a real `ke discovery-cycle-run` cycle with a
+comorbidity-targeted query (state:
+`discovery_state_comorbidity.json`, ledger: `rejected_candidates.csv`,
+worksheet: `cycles/comorbidity-cycle-20260810-*.json`): 25 candidates
+discovered, 11 deterministically accepted as `oa_verified`. Two are
+strong, individually license-verified (CC BY 4.0, confirmed against
+each article's own PMC license statement) matches for the named gap:
+a systematic review/meta-analysis of 9 RCTs on SSRIs for diabetes
+mellitus with comorbid depression (PMID 42558439, PMC13437470), and a
+placebo-controlled pilot RCT of escitalopram/nortriptyline for
+depression in Parkinson's disease (the ADepT-PD trial, PMID 42101650,
+PMC13428755) -- see the map's `known_gaps` for full citations.
+Deliberately stopped at discovery + license verification rather than
+rushing acquisition and evidence authoring in the same session; the
+worksheet's `ready_for_scope_review` candidates still need the same
+scope screen this project has always required before `ke
+pmc-oa-acquire`.
