@@ -1751,6 +1751,49 @@ gate asked for. Combined with the already-closed backup/restore and
 API-fixture gates above, `v1.0.0`'s remaining condition is the project
 owner's own confirmation that public messaging matches capability.
 
+### 2026-08-10: `v1.0.0` declared
+
+The project owner explicitly confirmed public `v1.0.0` messaging matches
+actual capability (in response to a direct clarifying question), closing
+the one remaining gate named above. Before writing this declaration,
+each of the other three gates was independently re-verified against
+current live state rather than trusted from its own prior write-up:
+
+- **Tags `v0.2.0-alpha.2` through `v0.5.0-beta` are live**, all pointing
+  at commit `8eab23e`, confirmed via the GitHub API (`list_tags`).
+- **Backup/restore integrity re-run right now, not just referenced from
+  2026-08-08.** `tools/reassemble_corpus_database.py` against the
+  currently-committed `data/db_parts/` (6 parts) reproduced the exact
+  whole-file SHA-256 recorded in `manifest.json`
+  (`693002a8...573e7b`), `PRAGMA integrity_check = ok`, and a `papers`
+  row count of 1,357 matching the manifest -- an independent
+  reassembly run in this session, not a reuse of the earlier report's
+  own claim.
+- **License/attribution re-checked live via `ke corpus-validate
+  --check-files`-free run against all three corpora's `corpus.json`
+  manifests** (not `sources.csv` directly, which is not itself the
+  validated artifact): `glp1_weight_loss` (953 sources),
+  `oncology_nsclc_checkpoint_inhibitors` (336 sources), and
+  `mental_health_mdd_antidepressants` (62 sources, now including the
+  two comorbidity records closed the same day -- see the comorbidity
+  gap-closure entry above) each report 0 blocking structural errors, 0
+  import-blocking policy/legal/file issues, and 100%
+  `approved_open_access`/`included` status.
+
+`v1.0.0` is a claim about honesty and operational stability, exactly as
+scoped above -- not a claim that the underlying science is finished, or
+that every corpus's known gaps (durability, safety synthesis, agent
+coverage, and the others named throughout this document) are closed.
+Creating and pushing the actual git tag is a separate, deliberate action
+from this declaration -- consistent with every prior tag in this ladder,
+it is pushed by the project owner from their own machine (this session's
+own git credential scope cannot create or push tags; see the ref-scope
+diagnosis earlier in this project's history). The command is: `git tag
+-a v1.0.0 -m "v1.0.0: honesty and operational stability, per
+docs/roadmap.md's Release Milestones gate" 8eab23e && git push origin
+v1.0.0` (substitute the actual commit this repository's `main` points to
+at tag time if it has advanced past `8eab23e`).
+
 ### Historical intent (superseded, kept for context only)
 
 The list below was the original phase-to-version mapping before any of Phase

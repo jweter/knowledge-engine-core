@@ -30,6 +30,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`v1.0.0` declared.** The project owner confirmed public `v1.0.0`
+  messaging matches actual capability, the one remaining condition
+  named in `docs/roadmap.md`'s Release Milestones gate. The other three
+  conditions were independently re-verified live in this session rather
+  than trusted from their own prior write-ups: tags `v0.2.0-alpha.2`
+  through `v0.5.0-beta` confirmed live via the GitHub API; the
+  backup/restore mechanism re-run against the currently-committed
+  `data/db_parts/`, reproducing the exact SHA-256 in `manifest.json`
+  with `PRAGMA integrity_check = ok`; and `ke corpus-validate` re-run
+  against all three corpora's `corpus.json` manifests, each reporting 0
+  blocking issues and 100% `approved_open_access`/`included` status.
+  `v1.0.0` is a claim about honesty and operational stability, not that
+  the underlying science is finished. See `docs/roadmap.md`'s new
+  "2026-08-10: `v1.0.0` declared" section for the full gate-by-gate
+  verification and the tag command (pushed by the project owner from
+  their own machine, per this session's git credential scope).
+
 - **Closed the mental-health golden map's comorbidity coverage gap**
   (diabetes, Parkinson's disease). Two license-verified (CC BY 4.0)
   candidates identified by an earlier discovery cycle but left
