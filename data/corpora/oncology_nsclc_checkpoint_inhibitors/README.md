@@ -329,3 +329,23 @@ GLP-1's audit used a different AI system (OpenAI Codex) -- so
 different-AI-system) pass remains the one thing standing between this
 map and GLP-1's `"reviewed"` bar. See the map's `review`/`limitations`/
 `known_gaps` fields for the full detail.
+
+**Reproducible same-PICO contradiction search established (2026-08-10,
+same day).** The map's own `known_gaps` named a reproducible,
+periodically-rerun search (matching GLP-1's 2026-08-04 precedent) as
+still missing. Established and ran one: screened all 1,534 committed
+Evidence Records (not just the 13 golden-map records) for a
+negative-signal phrase set, cross-referenced each of the 108 matches
+against its own `evidence_direction` classification, and investigated
+in full the single record flagged `contradicts` -- a real phase 3
+trial (SWOG/NRG S1914) cited in another paper's discussion, finding no
+OS benefit from adding immunotherapy to SBRT. Resolved as out of scope:
+that trial's population is early-stage NSCLC, outside this corpus's
+own defined advanced-NSCLC research question. The remaining 108
+matches were sampled/reviewed and found to concern secondary
+endpoints, biomarker associations, or active-ICI-vs-ICI comparisons,
+not a same-PICO direction reversal. See
+`docs/oncology_same_pico_contradiction_search_audit.md` for the full
+methodology, search contract, and candidate-disposition table. This
+search does not yet include a live PubMed literature layer (named as
+explicit follow-up, not silently skipped).

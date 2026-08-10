@@ -214,9 +214,20 @@ map found 2 of its 13 records (Tsuboi, Weber) with zero relationship
 edges; one edge was authored to close Tsuboi's gap (a `qualifies`
 relationship to Dang's pooled OS finding), while Weber was deliberately
 left unconnected rather than force a weak match onto an unrelated
-comparison axis. Neither map's own follow-up audit has been run yet --
-that is the next concrete step to bring either domain to GLP-1's
-`"reviewed"` bar.
+comparison axis. A same-system record-to-source fidelity check has since been run
+against both maps (all 13 oncology and 9 mental-health records
+cross-checked against extracted source-PDF text, all faithful), and a
+reproducible same-PICO contradiction search has been established and
+run for both corpora against their full local Evidence Record bases
+(1,534 oncology / 133 mental-health records screened; no same-PICO
+contradiction found in either -- see
+`docs/oncology_same_pico_contradiction_search_audit.md` and
+`docs/mental_health_same_pico_contradiction_search_audit.md`). Neither
+check was performed by a genuinely independent reviewer, though --
+both were done by the same AI system that compiled the maps, unlike
+GLP-1's audit (a different AI system, OpenAI Codex). That independent
+pass is the one remaining concrete step to bring either domain to
+GLP-1's `"reviewed"` bar.
 
 ### Decision: corpus database versioning via chunked git commits
 
