@@ -9,6 +9,24 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **First golden evidence maps for the oncology and mental-health
+  corpora.** `data/corpora/oncology_nsclc_checkpoint_inhibitors/golden_evidence_map.json`
+  (13 manually-reviewed records, 8 relationship edges) and
+  `data/corpora/mental_health_mdd_antidepressants/golden_evidence_map.json`
+  (9 records, 7 edges) organize each corpus's already-manually-reviewed
+  Evidence Records and Relationship Records into population/comparator
+  groupings and a bounded contradiction assessment (none identified in
+  either -- oncology's Weber active-comparator null and mental-health's
+  Ju null augmentation result are both real negative findings that
+  qualify a narrower question, not same-PICO contradictions of either
+  corpus's core research question). Both pass `ke evidence-map-validate`
+  and render via `ke evidence-map-report`. Honestly `map_status:
+  "provisional"`, not `"reviewed"` like GLP-1's golden map -- each was
+  compiled in a single AI-assisted session from already-reviewed
+  records, not independently re-audited against source PDFs by a second
+  reviewer the way GLP-1's map was; each map's own `review`/`known_gaps`
+  fields state exactly what that follow-up audit would need to cover.
+
 - **Investigated `detect_sections`' 114-of-1,357-paper "no Abstract/
   Methods section detected at all" gap; found and documented it is not
   a narrow regex fix.** 79% (90/114) have no "abstract" text anywhere
