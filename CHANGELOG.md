@@ -30,6 +30,25 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Ran the second weekly discovery cycle (`ke discovery-cycle-run`,
+  `retstart=3600`) against the persisted `discovery_state.json`: 50
+  candidates discovered, 21 deterministically accepted, 0 already in
+  the ledger. The manual scope screen found the same pagination-drift
+  failure mode the `retstart=3550` cycle first caught, this time even
+  more pronounced: cross-checking every accepted PMID against
+  `sources.csv` found 20 of the 21 were exact-title/PMID duplicates
+  already present in the corpus (PubMed's `sort=pub_date` ordering
+  shifting the same already-included records to `retstart=3600`). The
+  remaining 1 was genuinely net-new but off-target (a *Mycolicibacterium
+  neoaurum* pulmonary-infection case report naming no
+  obesity/T2D/metabolic-syndrome scope term or treatment). All 21
+  recorded in `rejected_candidates.csv` with PMID-level provenance (20
+  `duplicate_or_already_included`, 1 `off_target_primary_disease`).
+  Zero net-new papers accepted; corpus remains at 953, 47 below the
+  1,000-paper cap. `discovery_state.json` advanced to `next_retstart:
+  3650` for the next cycle. See the corpus README's `retstart=3600`
+  batch-history entry.
+
 - **First golden evidence maps for the oncology and mental-health
   corpora.** `data/corpora/oncology_nsclc_checkpoint_inhibitors/golden_evidence_map.json`
   (13 manually-reviewed records, 8 relationship edges) and
