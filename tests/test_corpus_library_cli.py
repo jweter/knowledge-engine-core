@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -153,3 +154,34 @@ def test_corpus_library_import_cli_reports_missing_input(
 
     assert result.exit_code != 0
     assert "does not exist" in _unwrapped(result.output)
+
+
+def test_corpus_library_import_cli_reports_a_clear_error_for_a_stale_snapshot_schema(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression test for a real incident: a committed corpus-library snapshot exported
+    before `paper_pages.table_text` existed produced a raw SQLAlchemy traceback
+    (`OperationalError: no such column: paper_pages.table_text`) instead of an actionable
+    message, silently stalling the automated weekly alpha-snapshot-refresh Routine."""
+
+    source = _database(tmp_path, "source")
+    with source.session() as session:
+        PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "d" * 64))
+    snapshot_output = tmp_path / "snapshot.sqlite3"
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: source)
+    CliRunner().invoke(entrypoint.app, ["corpus-library-export", "--output", str(snapshot_output)])
+
+    with sqlite3.connect(snapshot_output) as connection:
+        connection.execute("ALTER TABLE paper_pages DROP COLUMN table_text")
+        connection.commit()
+
+    target = _database(tmp_path, "target")
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: target)
+    result = CliRunner().invoke(
+        entrypoint.app, ["corpus-library-import", "--input", str(snapshot_output)]
+    )
+
+    assert result.exit_code != 0
+    unwrapped = _unwrapped(result.output)
+    assert "predates the current database schema" in unwrapped
+    assert "ke corpus-library-export" in unwrapped
