@@ -30,6 +30,31 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`ke clinicaltrials-lookup <NCT_ID>` -- fifth reference-layer live-lookup
+  source (M71), NLM/NIH's ClinicalTrials.gov API v2.** Extends the
+  live-lookup path M41-M44 established (Wikipedia, RxNorm, MeSH,
+  PubChem), per the project owner's explicit direction to keep
+  extending live-lookup rather than start the still-unbuilt
+  stored-textbook path. Resolves a trial's NCT ID (e.g. one a paper
+  cites, like the mental-health corpus's Schrag ADepT-PD record citing
+  NCT03652870) to its registry-level summary: brief/official title,
+  overall status, phase, study type, conditions, interventions,
+  enrollment count, lead sponsor, and brief summary. New
+  `knowledge_engine/clinicaltrials_http.py`
+  (`UrllibClinicalTrialsTransport`, host-allowlisted to
+  `clinicaltrials.gov`) and `knowledge_engine/clinicaltrials_lookup.py`
+  (`ClinicalTrialsLookupService`), with unit and CLI-level tests
+  (`tests/test_clinicaltrials_lookup.py`,
+  `tests/test_clinicaltrials_lookup_cli.py`). Live-verified before and
+  after writing the parser: a real ID resolves correctly (phase 3, 52
+  enrolled); a well-formed but unregistered ID returns a clean 404; a
+  malformed ID returns 400 ("Parameter `nctId` has incorrect format") --
+  both are reported as `found: false`, never a guess, the same posture
+  M44's PubChem lookup established for its own not-found case. Always
+  background context, never evidence -- never routed through
+  `EvidenceRecord` promotion. See `docs/roadmap.md`'s M71 entry and
+  `docs/reference_knowledge_layer_design.md`.
+
 - **`v1.0.0` declared.** The project owner confirmed public `v1.0.0`
   messaging matches actual capability, the one remaining condition
   named in `docs/roadmap.md`'s Release Milestones gate. The other three

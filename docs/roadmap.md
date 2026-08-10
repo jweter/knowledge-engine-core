@@ -1229,7 +1229,7 @@ extraction pipeline and AI Interface Layer the background context
 paper always assumes but never restates. Corresponds to
 `knowledge-engine-reference` in the long-term ecosystem; see
 `docs/roadmap/long_term_vision.md` and
-`docs/reference_knowledge_layer_design.md`. M41-M44 built four
+`docs/reference_knowledge_layer_design.md`. M41-M44 and M71 built five
 independent live-lookup sources; M45 wired three of the design doc's
 Addendum items into Phase 2's review workflow, so it depends on Phase 2
 existing first. Always background context, never evidence -- none of it
@@ -1387,6 +1387,37 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   `research_question`/`evidence_direction`, and never changes `ke
   extraction-review-promote`'s existing refusal to promote a record
   missing either. See `docs/history/milestones/m45_extraction_review_annotate.md`.
+- **M71 (2026-08-10)** added a fifth live-lookup reference source, NLM/NIH's
+  ClinicalTrials.gov API v2, alongside M41-M44's Wikipedia/RxNorm/MeSH/PubChem
+  lookups. Owner-confirmed direction: extend the live-lookup path only,
+  no stored-textbook path (the design doc's other, still-unbuilt option).
+  A new `ke clinicaltrials-lookup <NCT_ID>` command and
+  `knowledge_engine/clinicaltrials_lookup.py` resolve a trial's own NCT
+  ID to its registry-level summary -- brief/official title, overall
+  status, phase, study type, conditions, interventions, enrollment
+  count, lead sponsor, and brief summary -- through a dedicated
+  host-allowlisted transport (`clinicaltrials_http.py`'s
+  `UrllibClinicalTrialsTransport`, since `clinicaltrials.gov` is a
+  distinct host from every prior lookup's). Chosen as the fifth source
+  because it closes a gap none of the first four cover: independent
+  trial-registration metadata for a study already cited by ID in this
+  project's own corpus (the mental-health corpus's Schrag ADepT-PD
+  Evidence Record cites NCT03652870 directly in its source paper).
+  Two real API behaviors verified live before writing the parser: a
+  well-formed but unregistered ID (`NCT99999999`) returns a clean 404,
+  while a malformed ID (not matching ClinicalTrials.gov's own `NCT` +
+  8-digit format, e.g. `not-an-nct-id`) returns 400 with "Parameter
+  `nctId` has incorrect format" -- both are reported as `found: false`
+  by this module rather than distinguished into a separate error path,
+  the same not-a-guess posture M44's PubChem lookup established for its
+  own not-found case. Live-verified end to end against the real API: a
+  real ID resolves to the correct trial (phase 3, 52 enrolled, University
+  College London as lead sponsor); both not-found cases decline cleanly.
+  Explicitly background context, not evidence, with the same
+  non-`EvidenceRecord` boundary M41-M45 drew; `license` states registry
+  content is sponsor/PI-submitted, hosted (not authored) by NLM/NIH, the
+  same depositor-vs-host distinction M44 drew for PubChem's ChEBI-sourced
+  records.
 
 ## Phase 3: Search Plus Semantics
 

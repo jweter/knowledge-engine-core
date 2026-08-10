@@ -331,11 +331,15 @@ itself, but may need to trigger for a specific paper):**
   These write JSONL to `--output` by design (they are pipeline steps
   producing an artifact for the next step to consume).
 
-**Reference-layer live lookups (M41-M45, always background context, see
+**Reference-layer live lookups (M41-M45, M71, always background context, see
 "the seam" above):**
 - `ke reference-lookup` (Wikipedia), `ke rxnorm-lookup`, `ke mesh-lookup`,
-  `ke pubchem-lookup` each support an optional `--output <path.json>`.
-  `ke extraction-review-annotate` requires `--output` (it always writes a
+  `ke pubchem-lookup`, `ke clinicaltrials-lookup <NCT_ID>` (M71,
+  ClinicalTrials.gov API v2 -- trial phase, arms/interventions,
+  enrollment, sponsor, and status for an NCT ID a paper cites; a
+  malformed or unregistered ID reports `found: false`, never a guess)
+  each support an optional `--output <path.json>`. `ke
+  extraction-review-annotate` requires `--output` (it always writes a
   file).
 
 **Phase 4 knowledge graph (M46-M51, see "the seam" above):**
