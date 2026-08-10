@@ -390,3 +390,14 @@ equivalents, GEMSTONE-301 and PACIFIC-6, are fully closed-access, not
 merely non-CC-BY. This is now a verified, dead-end-documented gap
 rather than an unexplored one -- see the map's `known_gaps` for the
 full per-paper citation trail.
+
+**Toxicity/adverse-event synthesis built as a qualifier layer (2026-08-10,
+same day).** The map's `known_gaps` named this as not yet built. New
+`docs/oncology_toxicity_adverse_event_synthesis.md`: a source-linked
+collation of the safety/tolerability content already present in the
+golden map's own 13 records (9 report some safety content, 4 do not),
+plus a corpus-wide phrase-set scan (264/1,534 records match an
+adverse-event/toxicity phrase set, reported for scale context only, not
+individually re-read). Explicitly qualitative, not a pooled safety
+estimate -- the underlying records use incommensurable AE definitions and
+ascertainment windows.

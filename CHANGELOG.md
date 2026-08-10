@@ -30,6 +30,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Toxicity/adverse-event synthesis docs for the oncology and mental-health
+  golden evidence maps.** Both maps' `known_gaps` named this as not yet
+  built. New `docs/oncology_toxicity_adverse_event_synthesis.md` and
+  `docs/mental_health_toxicity_adverse_event_synthesis.md`: a source-linked,
+  qualitative collation of the safety/tolerability content already present
+  in each golden map's own records (9 of 13 oncology records, 5 of 9
+  mental-health records), plus a bounded corpus-wide phrase-set scan for
+  scale context (264/1,534 oncology records, 17/133 mental-health records
+  match an adverse-event/toxicity phrase set). Explicitly not a pooled or
+  meta-analytic safety estimate -- the underlying records use incommensurable
+  AE definitions, grading systems, and ascertainment windows, so no rate is
+  recomputed or averaged across them. Both maps' `known_gaps` updated to
+  reference these documents. Mental health's synthesis explicitly names
+  discontinuation-syndrome (antidepressant-withdrawal, distinct from
+  on-treatment adverse events) as a still-fully-open gap, not silently
+  folded into the broader safety heading.
+
 - **`ke evidence-map-grounding-verify` -- automated, deterministic golden-map
   review, replacing the "needs an independent human/AI reviewer" gate.**
   The project owner explicitly decided that golden-map review requiring a

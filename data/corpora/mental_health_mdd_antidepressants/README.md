@@ -427,3 +427,17 @@ rushing acquisition and evidence authoring in the same session; the
 worksheet's `ready_for_scope_review` candidates still need the same
 scope screen this project has always required before `ke
 pmc-oa-acquire`.
+
+**Toxicity/adverse-event synthesis built as a qualifier layer (2026-08-10,
+same day).** The map's `known_gaps` named this as not yet built. New
+`docs/mental_health_toxicity_adverse_event_synthesis.md`: a source-linked
+collation of the safety/tolerability content already present in the
+golden map's own 9 records (5 report some safety content, 4 do not),
+plus a corpus-wide phrase-set scan (17/133 records, scale context only).
+The clearest signal is a class-wide efficacy-tolerability trade-off in
+older adults (Kishi: significantly higher discontinuation-due-to-AEs and
+any-AE incidence vs placebo, alongside significant efficacy).
+Discontinuation-syndrome specifically (antidepressant-withdrawal on
+stopping, distinct from on-treatment AEs) remains fully unaddressed --
+named explicitly as still open, not folded into the broader safety
+heading.
