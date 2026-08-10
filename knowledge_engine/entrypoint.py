@@ -2136,8 +2136,10 @@ def extraction_review_batch_generate(
     )
     console.print(
         "[bold]Draft items are a review queue, not validated evidence -- "
-        "research_question and evidence_direction require human completion before "
-        "ke extraction-review-promote will accept any of them.[/bold]"
+        "research_question and evidence_direction still need to be filled before "
+        "ke extraction-review-promote will accept them. Run ke "
+        "extraction-review-autoclassify (M52's deterministic, automated classifier) "
+        "to fill them -- no human completion is required.[/bold]"
     )
 
 
