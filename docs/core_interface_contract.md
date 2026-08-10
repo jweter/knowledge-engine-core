@@ -201,6 +201,24 @@ most likely to actually call:
   the reviewed map's stored PICO, results, limitations, citations, and
   relationships in deterministic map order. It does not parse numerical prose
   or perform synthesis.
+- `ke evidence-map-grounding-verify <map.json> --evidence <records.jsonl>
+  [--output <path.md>] [--force]` -- deterministic, non-LLM, non-human check
+  that every numeric token in each golden-map record's `result_summary`
+  (hazard ratios, confidence intervals, p-values, sample sizes) is genuinely
+  present in the extracted source-PDF page text at that record's own
+  `source_span.local_pdf_path`/`page_number` (resolved via the local
+  database's `paper_pages`, so this command requires `ke init` to have
+  populated the papers referenced by the map). Exit `1` if any record is not
+  fully grounded or its source page could not be resolved, `0` otherwise. This
+  is the automated review mechanism `map_status: "reviewed"` relies on (the
+  project owner's 2026-08-10 decision extended M69's existing "human reading
+  is not a required review gate" precedent to golden-map review) -- narrower
+  than full semantic review, since it confirms a number is present in the
+  source page, not that it is attached to the correct claim, and it does not
+  re-derive population/comparator groupings or the contradiction assessment.
+  See `knowledge_engine/golden_map_grounding.py`'s module docstring for why it
+  checks numeric presence rather than reusing `verify_grounding`'s
+  sentence-level near-match.
 - `ke statistical-verify <statistical_inputs.jsonl> --evidence
   <records.jsonl> [--binary-inputs <binary_inputs.jsonl>] [--output <path.md>]`
   -- validate version 1 or 2 source-linked

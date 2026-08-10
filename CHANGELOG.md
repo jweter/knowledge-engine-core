@@ -30,6 +30,36 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`ke evidence-map-grounding-verify` -- automated, deterministic golden-map
+  review, replacing the "needs an independent human/AI reviewer" gate.**
+  The project owner explicitly decided that golden-map review requiring a
+  genuinely independent human or different-AI-system reviewer repeats the
+  same non-scaling assumption M69 already rejected for individual Evidence
+  Records; the fix is the same shape -- a deterministic, non-LLM check
+  replaces the reviewer-identity requirement. New module
+  `knowledge_engine/golden_map_grounding.py`: extracts every numeric token
+  from a record's `result_summary` and confirms each one is genuinely
+  present in the extracted source-PDF page text at that record's own
+  `source_span` (resolved via the local database's `paper_pages`). New CLI
+  command `ke evidence-map-grounding-verify <map.json> --evidence
+  <records.jsonl> [--output <path.md>]`, with tests
+  (`tests/test_golden_map_grounding.py`, `tests/test_evidence_map_grounding_verify.py`).
+  Deliberately does not reuse `verify_grounding`'s sentence-window
+  near-match, which produces false negatives against a heavily-paraphrased
+  `result_summary` (confirmed empirically) -- see the module's docstring.
+  Run against both non-GLP-1 golden maps: oncology 11/13 records fully
+  grounded, mental health 8/9, each exception individually investigated and
+  explained (a citation on a different page, a non-machine-readable table,
+  a statistic spanning onto the next page) rather than left unexplained.
+  Running the checker also caught and fixed a real data bug: one oncology
+  record's `source_span.page_number` was recorded as the journal's own
+  printed page number (585) instead of the local PDF's actual physical
+  page (4), making its source page entirely unresolvable until corrected.
+  Both maps now carry `map_status: "reviewed"` (previously `"provisional"`)
+  on this basis. See `docs/roadmap/long_term_vision.md`'s "Extension to
+  golden-map review" addendum and `docs/core_interface_contract.md`'s new
+  command entry.
+
 - **Reproducible same-PICO contradiction search for the oncology and
   mental-health corpora**, matching GLP-1's 2026-08-04 search
   precedent and closing the gap both golden maps' own `known_gaps`

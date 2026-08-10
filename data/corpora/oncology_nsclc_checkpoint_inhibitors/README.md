@@ -349,3 +349,23 @@ not a same-PICO direction reversal. See
 methodology, search contract, and candidate-disposition table. This
 search does not yet include a live PubMed literature layer (named as
 explicit follow-up, not silently skipped).
+
+**Golden map reaches `map_status: "reviewed"` via automated deterministic
+verification (2026-08-10, same day).** The project owner decided that
+requiring a genuinely independent human or different-AI-system reviewer
+for golden-map review repeats the same non-scaling assumption M69
+already rejected for individual Evidence Records -- see
+`docs/roadmap/long_term_vision.md`'s "Extension to golden-map review"
+addendum. Built `ke evidence-map-grounding-verify`
+(`knowledge_engine/golden_map_grounding.py`): a pure, deterministic,
+non-LLM check confirming every numeric token in each record's
+`result_summary` is genuinely present in its cited source-PDF page.
+Result: 11/13 records fully grounded; the 2 exceptions (Dang, Nodbrant)
+each have a specific, individually investigated explanation already
+documented in the map's `known_gaps` (a figure on a different page than
+declared; a table that doesn't extract as text), not an unexplained
+miss. Running the checker also caught and fixed a real data bug:
+Nodbrant's `source_span.page_number` had been recorded as 585 (the
+journal's own printed page number) instead of 4 (the local PDF's actual
+physical page), which made its source page entirely unresolvable until
+corrected. Both `map_status` and `review.status` now read `"reviewed"`.

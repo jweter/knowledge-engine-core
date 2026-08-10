@@ -393,3 +393,15 @@ Ju's already-documented null agomelatine-augmentation qualifier). See
 `docs/mental_health_same_pico_contradiction_search_audit.md` for the
 full methodology and candidate-disposition table. This search does
 not yet include a live PubMed literature layer.
+
+**Golden map reaches `map_status: "reviewed"` via automated deterministic
+verification (2026-08-10, same day).** Mirrors the equivalent oncology
+update the same day -- see `docs/roadmap/long_term_vision.md`'s
+"Extension to golden-map review" addendum for the project owner's
+decision. `ke evidence-map-grounding-verify` reports 8/9 records fully
+grounded (every `result_summary` number confirmed present in its cited
+source page); the 1 exception (Yan) has a specific, individually
+investigated explanation already documented in the map's `known_gaps`
+(an adverse-effect statistic spanning onto the next page of the source
+PDF), not an unresolved discrepancy. Both `map_status` and
+`review.status` now read `"reviewed"`.

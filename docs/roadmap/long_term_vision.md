@@ -203,6 +203,27 @@ proposed field, never accepts prompt labels as evidence, and never widens to
 the whole paper. The follow-up grounded 11 records and left the other 10
 untouched. Existing v1 records remain valid grounded-review provenance.
 
+**Extension to golden-map review (2026-08-10).** The oncology and
+mental-health golden evidence maps' path to `map_status: "reviewed"` had
+been scoped, following GLP-1's precedent, as requiring an independent
+*second reviewer* -- a human or a different AI system than the one that
+compiled the map. The project owner explicitly decided this repeats the
+same non-scaling assumption M69 already rejected for individual Evidence
+Records: nobody can read every golden map by hand either, and gating
+`"reviewed"` on a different AI system happening to be available is not
+meaningfully more scalable than requiring a human. The fix is the same
+shape as M69's: replace the reviewer-identity requirement with a
+deterministic, automated check. `ke evidence-map-grounding-verify`
+(`knowledge_engine/golden_map_grounding.py`) is that check for golden
+maps -- confirming every numeric token in a record's `result_summary` is
+genuinely present in its cited source-PDF page, the same "trace to the
+source, don't trust the author" discipline `verify_grounding` established
+for per-field extraction, just applied to a map's own claims instead of
+an LLM's proposed PICO field. Both maps now carry `map_status: "reviewed"`
+on this basis. As with M69, a human or independent AI system reading a
+map is still available and still the highest-rigor tier; this decision
+only removes that as a *required* gate.
+
 ## The AI Interface Layer (Active Foundation, Future Stages)
 
 `knowledge-engine-core` deliberately stops short of deciding what a piece of
