@@ -1,0 +1,776 @@
+{
+  "already_in_rejected_ledger": 0,
+  "candidates_discovered": 50,
+  "cycle_number": 2,
+  "deterministically_accepted": 21,
+  "held_for_manual_review": 29,
+  "next_retstart": 3650,
+  "query": "(obesity OR overweight OR \"type 2 diabetes\" OR \"metabolic syndrome\") AND (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR liraglutide OR tirzepatide OR metformin OR \"SGLT2 inhibitor\") AND pubmed pmc open access[filter]",
+  "ready_for_scope_review": [
+    {
+      "abstract": "Background/Objectives: Bariatric surgery is an effective treatment for severe obesity. Although physiotherapy delivered before and after surgery may support functional recovery, evidence describing real-world multidisciplinary bariatric pathways with embedded perioperative physiotherapy remains limited. This study evaluated perioperative changes in anthropometric, functional, and haemodynamic outcomes in adults who completed preoperative and postoperative physiotherapy within the multidisciplinary Polish KOS-BAR bariatric pathway. Methods: We conducted a single-centre retrospective medical-record study at the University Clinical Centre in Gda\u0144sk. The analysis included a complete-case cohort of 91 adults who completed both supervised physiotherapy cycles and had paired outcome data available. Assessments were performed at four time points: before and after prehabilitation (T1-T2) and before and after postoperative rehabilitation (T3-T4). Outcomes included body mass, body mass index (BMI), waist and chest circumference, 6 min walk test (6MWT) distance with Borg-rated exertion, and haemodynamic measures (heart rate, blood pressure, oxygen saturation) recorded before and after the 6MWT. Results: From T1 to T4, body mass decreased by a median of 26.0 kg and BMI by 8.98 kg/m2, with reductions in waist (-19.0 cm) and chest (-13.0 cm) circumference. Exercise tolerance improved (6MWT median change +30.0 m), and post-test perceived exertion decreased (median -1.0 point). Pre-6MWT resting HR, post-6MWT HR, and blood pressure decreased. The 6MWT distance increased after prehabilitation (T1 \u2192 T2) and again after postoperative rehabilitation (T3 \u2192 T4). Exploratory correlations suggested weak nominal associations between greater weight loss and larger 6MWT improvement (Spearman r = 0.251, p = 0.016) and between BMI reduction and 6MWT improvement (r = 0.226, p = 0.031), but these associations did not remain statistically significant after Bonferroni correction. Conclusions: In this retrospective cohort of programme completers, participation in the multidisciplinary KOS-BAR pathway with embedded preoperative and postoperative physiotherapy was associated with improved anthropometric, functional, perceived-exertion, and haemodynamic outcomes across follow-up. Because of the uncontrolled retrospective design, these findings cannot establish the independent effect of physiotherapy relative to surgery and other components of multidisciplinary care. Prospective controlled studies are needed to clarify causality and long-term durability.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Michalina Damrath",
+        "Martyna Hromiak",
+        "Bartosz Wilczy\u0144ski",
+        "Katarzyna Gierat-Haponiuk"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3390/diagnostics16111736",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13256890.1/PMC13256890.1.pdf?md5=5f265b69acadcfd44ea1c05326b74d5f",
+      "pmcid": "PMC13256890",
+      "pmid": "42279603",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Anthropometric, Functional, and Haemodynamic Changes in Bariatric Surgery Patients Within the Polish KOS-BAR Pathway: A Retrospective Cohort Study.",
+      "unresolved_ambiguities": [],
+      "venue": "Diagnostics (Basel, Switzerland)"
+    },
+    {
+      "abstract": "BACKGROUND: Diabetic peripheral neuropathy (DPN) is a common complication of type 2 diabetes mellitus (T2DM) and is closely linked to immune and inflammatory dysregulation. Multi-component pharmacological interventions have been explored as complementary approaches for metabolic and immune modulation; however, their effects on DPN and related mechanisms remain incompletely understood. METHODS: A rat model of T2DM-associated peripheral neuropathy was established, and a multi-component pharmacological intervention (MPCI) was administered for 8 weeks. Peripheral nerve dysfunction was evaluated by motor and sensory nerve conduction velocities (MNCV and SNCV), behavioral outcomes, and histological/ultrastructural assessments. In parallel, spleen tissues were collected for transcriptomic profiling. RNA sequencing was performed to identify differentially expressed genes and immune-related pathways, and representative molecules involved in inflammatory regulation were further validated using western blotting and quantitative real-time PCR in sciatic nerve tissue. RESULTS: MPCI administration significantly ameliorated peripheral nerve dysfunction in T2DM rats, as evidenced by improved nerve conduction velocities and pathological features. Transcriptomic analysis of spleen tissue revealed that MPCI was associated with broad remodeling of diabetes-related immune and inflammatory gene programs. In parallel, sciatic nerve analyses showed attenuation of NF-\u03baB/c-Jun-associated inflammatory signaling and modulation of inhibitory regulators at both the protein and mRNA levels. CONCLUSION: These findings indicate that MPCI improves T2DM-associated DPN and is associated with splenic immune remodeling and attenuation of peripheral nerve inflammatory signaling, providing exploratory evidence for associations between splenic immune transcriptomic remodeling and peripheral nerve inflammatory signaling.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Lu Zhang",
+        "Si Wang",
+        "Jie Lei",
+        "Lingrui Zeng",
+        "Ailin Lu",
+        "Yongqing Wu",
+        "Yuan Shi",
+        "Jing Yang",
+        "Mengrui Yuan",
+        "Hongyi Liu"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1371/journal.pone.0350984",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13235885.1/PMC13235885.1.pdf?md5=48e9ca0fe4c062de36b6b2898179b1f1",
+      "pmcid": "PMC13235885",
+      "pmid": "42241451",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Immunomodulatory effects of a multi-component pharmacological intervention on diabetic peripheral neuropathy in type 2 diabetic rats: An exploratory study.",
+      "unresolved_ambiguities": [],
+      "venue": "PloS one"
+    },
+    {
+      "abstract": "BACKGROUND: The Awareness, Care, and Treatment In Obesity maNagement Asia Pacific (ACTION APAC) online survey identified perceptions, attitudes, and barriers to effective obesity care among People with Obesity (PwO) and Health Care Professionals (HCP) across nine APAC countries. Here, we present findings from Indonesia. METHODS: This was a cross-sectional, observational, descriptive survey in PwO (\u226518-year-old) with self-reported body mass index of \u226525 kg/m2 and HCPs who spent \u226550% of their time in direct patient care. The survey was conducted between 20 April, 2022 to 11 May, 2022. The questionnaires were approved by the institutional review board as per local regulations. FINDINGS: A total of 1,000 PwO and 200 HCPs completed the survey. Notable differences were observed among PwO and HCPs in acknowledging obesity as a chronic disease (54% PwO and 90% HCPs), considering weight loss as PwO responsibility (91% PwO and 17% HCPs) and in agreeing that PwO were motivated to lose weight (76% PwO and 50% HCPs). Almost, two-thirds (67%) of PwO perceived themselves as either overweight or normal weight while only 30% discussed weight with their HCPs in the past five years. Financial concerns (45%) and assuming self-responsibility for weight loss (43%) were cited as the top reasons for not discussing. Only 53% HCPs initiated weight conversations, as they believed that PwO were either not motivated (55%) or not able to lose weight (51%). When discussed, most (68%) HCPs recommended lifestyle changes. INTERPRETATION: Our study identified gaps in understanding obesity as a disease and its management among PwO and HCPs, highlighting a need for increased awareness to improve obesity care in Indonesia.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Sidartawan Soegondo",
+        "Gaga Irawan Nugraha",
+        "Farid Kurniawan",
+        "Ana Asmara Jannati",
+        "Dicky L Tahapary"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1371/journal.pone.0350857",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13235876.1/PMC13235876.1.pdf?md5=a19580ca2b206ab6b885bd0cf7f0801b",
+      "pmcid": "PMC13235876",
+      "pmid": "42241397",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Perceptions, attitudes, behaviours and barriers towards obesity among people with obesity and health care professionals in Indonesia: An exploratory online survey.",
+      "unresolved_ambiguities": [],
+      "venue": "PloS one"
+    },
+    {
+      "abstract": "PURPOSE OF REVIEW: This systematic review aims to investigate barriers and facilitators that Health Care Professionals (HCPs) experience during the implementation of a lifestyle intervention for patients with overweight or obesity targeting weight loss in primary care. RECENT FINDINGS: Overweight and obesity are one of the most pressing public health problems worldwide and have severe health consequences. Lifestyle interventions are the first treatment in line for patients with overweight and obesity. HCPs are trained to provide lifestyle interventions, but implementing these interventions in primary care remains challenging as HCPs face multiple barriers. There is no clear overview of the perceived barriers and facilitators experienced by HCPs to implement lifestyle interventions targeting weight loss for patients with overweight or obesity in primary care. Main reported barriers by HCPs were lack of time, unavailability of staff, lack of tools and limited financial resources. Interventions fitting HCPs workflow, structural financial support, training and tools were reported as facilitators for successful implementation of the intervention. Policy makers should ensure future lifestyle interventions take these barriers and facilitators into account enhancing the implementation and delivery of the intervention by HCPs to their patients in practice.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Maxime A M Van der Velden",
+        "Priya Gharbaran",
+        "Nuria Jansen",
+        "Maxim de Jong",
+        "Patrick J E Bindels",
+        "Marienke Van Middelkoop"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1007/s13679-026-00721-8",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13236802.1/PMC13236802.1.pdf?md5=397d8ab3795ba892df84f6cced5cad67",
+      "pmcid": "PMC13236802",
+      "pmid": "42240803",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Health Care Professionals' Barriers and Facilitators for the Implementation of Lifestyle Interventions Targeting Weight Loss in Primary Care - A Systematic Review of Qualitative Studies.",
+      "unresolved_ambiguities": [],
+      "venue": "Current obesity reports"
+    },
+    {
+      "abstract": "Nontuberculous mycobacteria (NTM) are increasingly recognized as causes of human infection. Mycolicibacterium neoaurum (formerly Mycobacterium neoaurum), a rapidly growing mycobacterium, is a rare pathogen, usually associated with catheter-related bloodstream infections. Pulmonary involvement is exceptional. We report the first documented case of pulmonary infection due to Mycobacterium neoaurum (M. neoaurum) in Morocco. A 39-year-old man with type 2 diabetes mellitus and refractory ulcerative colitis was hospitalized for severe autoimmune blistering disease and subsequently developed fever, productive cough, night sweats, and hypoxemia. Laboratory findings were indicative of an inflammatory syndrome. Chest imaging revealed a right upper lobe cavitary lesion. Bronchoalveolar lavage culture yielded acid-fast bacilli after eight days, identified as M. neoaurum by matrix-assisted laser desorption/ionization-time-of-flight mass spectrometry (MALDI-TOF). Empirical ciprofloxacin therapy administered for four weeks resulted in marked clinical and biological improvement. This case highlights the rare pulmonary pathogenicity of M. neoaurum and underscores the importance of considering uncommon NTM in cavitary lung disease, particularly in patients with complex comorbidities. Advanced diagnostic tools, such as MALDI-TOF, are crucial for accurate identification.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Abderrahim Oumloul",
+        "Sahar Rochd",
+        "Taoufik Ben Houmich",
+        "Asmae Lamrani Hanchi",
+        "Nabila Soraa"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.7759/cureus.110189",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13331367.1/PMC13331367.1.pdf?md5=2ab39f11fc19362dc3ccbba05723a43f",
+      "pmcid": "PMC13331367",
+      "pmid": "42403867",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Pulmonary Infection Caused by Mycolicibacterium neoaurum: The First Documented Case in Morocco.",
+      "unresolved_ambiguities": [],
+      "venue": "Cureus"
+    },
+    {
+      "abstract": "Background Chronic obstructive pulmonary disease (COPD) frequently coexists with heart failure (HF), worsening patient prognosis. While single-inhaler triple therapy (BGF: budesonide/glycopyrronium/formoterol) is effective, the clinical impact of its initiation by cardiologists, who often manage latent COPD in patients with HF, remains underexplored. This study aimed to evaluate the validity and safety of BGF therapy managed by cardiologists compared to respiratory specialists and to identify prognostic factors associated with acute exacerbations. Methods This retrospective pilot study analyzed 22 outpatients who received BGF therapy between April 2024 and March 2025. Outcomes were compared between the Department of Cardiology and the Department of Pulmonary Medicine. Statistical analyses included Kaplan-Meier survival curves and Cox proportional hazards regression. Results No significant differences were found in mortality, hospitalization, or exacerbation rates between departments. The cardiology group had a significantly higher prevalence of HF and more frequent treatment initiation. Multivariate analysis revealed that comorbid HF significantly increased the risk of acute exacerbations (hazard ratio (HR) > 1), while higher body mass index was a protective factor (obesity paradox). Conclusions BGF triple therapy is safe and effective under cardiologist management. Proactive intervention is particularly justified in patients with HF, where the risk of exacerbation remains high regardless of the severity of the primary respiratory symptom.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Takahiro Kamihara",
+        "Shinji Kaneko",
+        "Takuya Omura",
+        "Toyoaki Murohara",
+        "Atsuya Shimizu"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.7759/cureus.110204",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13332178.1/PMC13332178.1.pdf?md5=4adc0eb6cb1986e5d7bd10df5abafd6d",
+      "pmcid": "PMC13332178",
+      "pmid": "42403841",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Verification of Budesonide/Glycopyrronium/Formoterol (BGF) Triple Therapy in the Department of Cardiology: A Pilot Study.",
+      "unresolved_ambiguities": [],
+      "venue": "Cureus"
+    },
+    {
+      "abstract": "This literature review examines how dietary fructose intake and fat mass and obesity-associated (FTO) gene polymorphisms may influence the efficacy of glucagon-like peptide-1 (GLP-1)- and glucose-dependent insulinotropic polypeptide (GIP)-based therapies in obesity and metabolic syndrome. The narrative review synthesizes evidence showing that incretin-based therapies, particularly GLP-1 receptor agonists and dual GLP-1/GIP agonists, produce substantial weight loss and metabolic improvement, but response varies considerably among individuals. A central theme is that high fructose consumption promotes hepatic steatosis, de novo lipogenesis, insulin resistance, oxidative stress, and systemic inflammation, thereby creating a metabolic environment that may contribute to variability in incretin responsiveness. In parallel, FTO risk alleles are associated with increased obesity susceptibility, altered appetite regulation, impaired leptin signaling, and greater vulnerability to metabolic dysfunction. The review proposes an integrated model in which FTO-mediated leptin resistance and fructose-induced hepatic and inflammatory stress converge to reduce the appetite-suppressive and metabolic benefits of GLP-1/GIP therapies. Furthermore, it discusses the clinical implications of this interaction, emphasizing dietary fructose reduction, combination pharmacotherapy, and precision medicine strategies such as FTO genotyping and individualized therapeutic selection. Overall, the evidence suggests that gene-diet interactions may meaningfully shape incretin treatment outcomes and that more personalized, multi-targeted approaches may improve weight-loss efficacy in patients with obesity and metabolic syndrome. However, direct clinical evidence linking FTO genotype and fructose intake to reduced GLP-1/GIP therapeutic efficacy remains limited.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Douglas S Larner"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.7759/cureus.110199",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13331727.1/PMC13331727.1.pdf?md5=c068b1a1e3fcc3dbdc970e99b1c18753",
+      "pmcid": "PMC13331727",
+      "pmid": "42403816",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "The Effect of Fructose and FTO Gene Polymorphism on the Efficacy of GLP-1 and GIP Combination Therapies: A Narrative Review.",
+      "unresolved_ambiguities": [],
+      "venue": "Cureus"
+    },
+    {
+      "abstract": "Background Type 2 diabetes mellitus (T2DM) is a major global health burden. Despite being the preferred first-line therapy, metformin use is sometimes limited by gastrointestinal intolerance, creating a need for alternative management strategies. A promising oral antidiabetic substitute, imeglimin, a first-in-class tetrahydrotriazine, has a distinct mitochondrial mechanism of action. However, its real-world efficacy and tolerability as a direct replacement for metformin in GI-intolerant patients remain uncharacterized. Methods This retrospective observational study was conducted on 100 adult patients with T2DM who had documented metformin intolerance and were initiated on imeglimin monotherapy or combination therapy for three months. Primary outcomes included variations in glycated hemoglobin (HbA1c), fasting plasma glucose (FPG), and postprandial plasma glucose (PPG). Body weight, lipid profile, and renal function were the secondary outcomes. Normality was assessed using the Shapiro-Wilk test; paired t-tests and Wilcoxon signed-rank tests were applied as appropriate. Multivariate linear regression was performed with change in HbA1c as the dependent variable and key covariates (baseline HbA1c, age, sex, T2DM duration, body weight, imeglimin dose, and number of concomitant oral anti-diabetic drugs) as independent variables. A two-tailed p<0.05 was considered statistically significant. Results The study comprised 100 patients (55% female; mean age: 57.69 \u00b1 9.24 years; mean T2DM duration: 10.38 \u00b1 5.69 years). HbA1c decreased significantly from 7.96 \u00b1 1.56% to 7.35 \u00b1 1.02% (mean change: -0.62 \u00b1 1.05%; p<0.001; n=77) after three months of imeglimin therapy. FPG decreased from 156.63 \u00b1 48.48 mg/dL to 124.45 \u00b1 20.46 mg/dL (-32.18 \u00b1 47.02 mg/dL; p<0.001), and PPG decreased from 217.85 \u00b1 84.08 mg/dL to 173.22 \u00b1 39.71 mg/dL (-44.63 \u00b1 68.44 mg/dL; p<0.001). Body weight decreased significantly (-0.81 kg; p<0.001). Low-density lipoprotein cholesterol and triglyceride levels also showed significant reductions (p<0.001). The estimated glomerular filtration rate remained stable (p=0.135), and gastrointestinal side effects were reported in only 2% of the patients. Conclusion Imeglimin demonstrated meaningful improvements in glycemic control, with a favorable safety and tolerability profile in metformin-intolerant patients with T2DM. These findings support the use of imeglimin as an effective and well-tolerated alternative option for metformin in patients with T2DM.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Debmalya Sanyal",
+        "Rituraj B Deb"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.7759/cureus.110200",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13332843.1/PMC13332843.1.pdf?md5=3c7c0656f31771485536d8d09f434c44",
+      "pmcid": "PMC13332843",
+      "pmid": "42403739",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Imeglimin as a Replacement Therapy for Metformin in Patients With Type 2 Diabetes Mellitus Experiencing Metformin Intolerance: A Retrospective Observational Study.",
+      "unresolved_ambiguities": [],
+      "venue": "Cureus"
+    },
+    {
+      "abstract": "Orforglipron is an oral, nonpeptide, small-molecule glucagon-like peptide-1 receptor agonist developed for type 2 diabetes and obesity. This narrative review evaluates its comparative positioning among marketed GLP-1 receptor agonists by integrating structural, pharmacological, clinical, and practical evidence. A narrative literature review was conducted using PubMed/MEDLINE, Embase, Scopus, Web of Science, ClinicalTrials, official prescribing information, and citation tracking. The synthesis was organized by comparative domains, including molecular structure, receptor pharmacology, early clinical pharmacology, direct comparative evidence, contextual comparator evidence, and practical administration. From 245 screened records, 88 duplicates were removed, 157 unique records were assessed, and 35 orforglipron-focused sources were retained. Seven additional comparator trials were selected through targeted citation verification because they represented clinically relevant benchmarks for oral semaglutide in type 2 diabetes and obesity, danuglipron as another oral small-molecule GLP-1 receptor agonist, and injectable semaglutide as a high-efficacy class comparator. Current evidence identifies several domains relevant to the comparative positioning of orforglipron, including its nonpeptide small-molecule structure, receptor pharmacology, once-daily oral dosing profile, and direct comparator evidence against dulaglutide and oral semaglutide. Food-effect and prescribing-information sources describe fewer food-related administration constraints for orforglipron than for oral semaglutide. However, indirect comparisons remain limited by differences in populations, doses, follow-up duration, comparators, and endpoints. At present, orforglipron should be viewed as an oral small-molecule GLP-1 receptor agonist with emerging comparative evidence, rather than as a broadly superior replacement for existing agents. Further long-term comparative, cardiovascular, renal, safety, adherence, and real-world effectiveness data are needed to define its final place in therapy.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Jos\u00e9 Castro-Gamboa",
+        "Jeaustin Mora-Jim\u00e9nez",
+        "Sebasti\u00e1n Arguedas-Chac\u00f3n",
+        "Esteban Zavaleta-Monestel"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.7759/cureus.110178",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13330733.1/PMC13330733.1.pdf?md5=f79e2260d802b8ed74725ba520313290",
+      "pmcid": "PMC13330733",
+      "pmid": "42403733",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Comparative Positioning of Orforglipron Among Selected GLP-1 Receptor Agonist Benchmarks: A Narrative Review.",
+      "unresolved_ambiguities": [],
+      "venue": "Cureus"
+    },
+    {
+      "abstract": "Hidradenitis suppurative (HS) is a chronic inflammatory skin disorder characterized by deep-seated nodules, abscesses, sinus tract formation, and scarring. Growing evidence has begun to support the notion that HS not only is a local follicular disorder but also has strong associations with metabolic dysfunction. The metabolic abnormalities seen in patients with HS include obesity, insulin resistance, metabolic syndrome, adipose-mediated inflammation, and altered cytokine signaling. Sodium-glucose cotransporter-2 inhibitors (SGLT2is) are a class of drugs currently used to lower blood glucose in patients with type 2 diabetes mellitus (T2DM). However, recent studies have provided evidence that SGLT2i can alter multiple immunometabolic mediators, including reducing nucleotide-binding oligomerization domain (NOD)-like receptor protein 3 (NLRP3) inflammasome activity, lowering pro-inflammatory cytokine levels, and improving insulin resistance. The purpose of this review was to determine whether SGLT2i can alter mechanisms involved in the development of HS through their anti-inflammatory and metabolic effects. Using Web of Science and PubMed, a literature review was conducted to compile studies on HS, metabolic dysfunction, and the anti-inflammatory effects of SGLT2is. The current evidence indicates that the metabolic and inflammatory pathways targeted by SGLT2is contribute to the development of HS, including the NLRP3 inflammasome, cytokine production, and adipose-related inflammation. The evidence supporting this is largely mechanistic; therefore, future clinical studies are needed to determine whether SGLT2i use in HS can provide significant improvement. However, with current therapies targeting downstream inflammatory mediators, SGLT2i and potentially other metabolic therapies may be promising adjunctive therapies by targeting upstream metabolic drivers that amplify these mediators.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Declan C McCann",
+        "Ben Martinez",
+        "Nathalia G O'Brien",
+        "Harvey N Mayrovitz"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.7759/cureus.110202",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13331934.1/PMC13331934.1.pdf?md5=0f9bd1154b4071ee0510ea6e88c95219",
+      "pmcid": "PMC13331934",
+      "pmid": "42403731",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Sodium-Glucose Cotransporter-2 (SGLT2) Inhibitors as Therapy for Hidradenitis Suppurativa and Other Inflammatory Skin Diseases: A Narrative Review.",
+      "unresolved_ambiguities": [],
+      "venue": "Cureus"
+    },
+    {
+      "abstract": "OBJECTIVE: This study aims to examine the challenges experienced by women in the diagnosis and management of PCOS. METHODS: This study is qualitative and phenomenological. The study included 19 women with PCOS aged over 18 years. The data were collected via a semistructured interview guide with open-ended questions. Content analysis of the transcripts was performed with the MaxQDA Analytics Pro 2024 program to analyze the qualitative data. RESULTS: The participants had an average age of 23.1 years; 42.1% were overweight or obese, with an average BMI of 24.2. Six main themes were identified: PCOS diagnosis experiences, treatment-related changes, management strategies, experienced challenges, symptoms and coping approaches, and uncertainties and concerns. Participants described diagnosis and treatment as emotionally demanding processes shaped by insufficient information, uncertainty, limited multidisciplinary support, appearance-related distress, fertility concerns, and self-directed coping strategies. Many women reported managing PCOS largely through self-directed strategies, such as medication use, dietary changes, physical activity, cosmetic procedures, and informal information seeking, often without structured multidisciplinary support. CONCLUSION: Women had difficulty accepting the diagnosis and experienced feelings of disappointment and anxiety. During this period, rejection of treatment, feelings of uncertainty, and a lack of information and support were commonly reported. A multidisciplinary team should be recommended to provide women with comprehensive information, education, and counseling services.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Merve Yilmaz Menek",
+        "Merve Sen",
+        "Merve Pehlivan"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fmed.2026.1758959",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13280794.1/PMC13280794.1.pdf?md5=c9726a5fdad3741b04a6270bff4eaa31",
+      "pmcid": "PMC13280794",
+      "pmid": "42328545",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Challenges faced by women in the diagnosis and management of polycystic ovary syndrome: a qualitative study.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in medicine"
+    },
+    {
+      "abstract": "BACKGROUND: Diabetic kidney disease (DKD) is a major complication of type 2 diabetes mellitus (T2DM) and a leading cause of end-stage kidney disease (ESKD). This study aimed to investigate the association between stress hyperglycemia ratio (SHR) and triglyceride-glucose (TyG) index with renal outcomes in patients with Chronic Kidney Disease (CKD) initiating finerenone therapy. METHODS: This retrospective cohort study included 387 adults with DKD and CKD stages 1-4 who initiated finerenone therapy between January 2023 and December 2025. The primary composite renal endpoint included sustained \u226540% eGFR decline or progression to ESKD. Secondary outcomes were absolute UACR change at 12 months and annualized eGFR decline rate. Cox proportional hazards models evaluated their associations with renal outcomes, adjusted for clinical covariates. RESULTS: The primary endpoint was reached by 62 patients (16.0%). Higher baseline SHR and TyG were associated with worse renal outcomes. In multivariable analysis, the highest SHR tertile (T3) had a 2.52-fold increased risk (95% CI 1.48-4.29; p = 0.001) and the highest TyG tertile (T3) had a 1.96-fold increased risk (95% CI 1.22-3.15; p = 0.006) compared to the lowest tertiles. Subgroup analyses showed stronger associations in advanced CKD stages. At 12 months, high-index groups had attenuated UACR reduction and accelerated eGFR decline. Adding SHR and TyG to the clinical model improved predictive performance, with a C-statistic increase from 0.70 to 0.78. CONCLUSION: Higher SHR and TyG values were independently associated with worse renal outcomes in patients with DKD initiating finerenone therapy. These biomarkers could enhance predictive models and inform targeted interventions.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Anqi Chen",
+        "Liting Zou",
+        "Wei Sun",
+        "Xuelian Yao",
+        "Xinfeng Qian",
+        "Fang Shao"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fmed.2026.1802071",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13271952.1/PMC13271952.1.pdf?md5=3154c634559bc080d369888acbb37573",
+      "pmcid": "PMC13271952",
+      "pmid": "42318396",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Stress hyperglycemia ratio (SHR) and triglyceride-glucose index (TYG) associated with renal response to finerenone in diabetic kidney disease: a retrospective cohort study.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in medicine"
+    },
+    {
+      "abstract": "BACKGROUND: Type 2 diabetes mellitus (T2DM) has become a major global public health challenge, affecting more than 500 million adults worldwide. Early vascular aging (EVA) is one of the key pathological changes for diabetic vascular complications. However, targeted and effective therapeutic strategies remain limited. Based on our previous research and clinical experience, we developed a granulated natural herbal formulation, Yiqi-Yangyin-Huoxue (YQYYHX). This trial aims to evaluate the clinical efficacy and safety of YQYYHX in patients with T2DM and EVA, and to preliminarily explore its potential mechanisms. METHODS: This is a single-center, randomized, double-blind, placebo-controlled, parallel-group clinical trial. It will enroll 120 participants with T2DM and EVA, who will be randomized in a 1:1 allocation ratio to two groups. In addition to standard therapy, the treatment group will receive the YQYYHX granules, while the control group will receive a matched placebo. Based on mass spectrometry analysis, daidzin, salvianolic acid L, and oleamide were identified as the compounds with the largest peak area in YQYYHX. After a 12-week intervention, brachial-ankle pulse wave velocity (baPWV) is planned to be assessed as the primary outcome. Secondary outcomes are expected to include the ankle-brachial index, blood glucose levels, lipid profiles, inflammatory cytokines, 6-min walk test and questionnaires. Safety will be evaluated using liver transaminases, serum creatinine, and related indicators. Serum and fecal samples will be collected before and after treatment. The serum will be used for metabolomic and proteomic sequencing analysis, and feces will be used for metagenomic sequencing. Electronic case report forms are generated within the clinical record system, ensuring that all follow-up information is traceable. Subsequently, the data will be entered into a specific electronic data capture, and the data administrator will verify it. RESULTS: The recruitment began on March 27, 2025 and is expected to end on December 31, 2026. As of March 10, 2026, 72 participants have been enrolled. CONCLUSION: This rigorously designed trial is expected to generate reliable evidence. As a complementary and alternative therapeutic option, YQYYHX has the potential to benefit patients with T2DM and EVA. CLINICAL TRIAL REGISTRATION: This trial has been registered with the International Traditional Medicine Clinical Trial Registry Platform (http://itmctr.ccebtcm.org.cn/, ITMCTR2024000388).",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Jinyi Fu",
+        "Yifei Qi",
+        "Jingyi Zhan",
+        "Linjing Su",
+        "Yucong Gao",
+        "Qingbing Zhou",
+        "Ying Zhang"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fmed.2026.1768610",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13273645.1/PMC13273645.1.pdf?md5=7282da1a3bb442c54257edde7397829f",
+      "pmcid": "PMC13273645",
+      "pmid": "42318385",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Clinical effects of Yiqi-Yangyin-Huoxue granules in the management of type 2 diabetes mellitus and early vascular aging: a randomized, double-blind, placebo-controlled trial protocol.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in medicine"
+    },
+    {
+      "abstract": "INTRODUCTION: Type 2 diabetes has become one of the most common causes of human deaths. Key factors that contribute to the progression of this disease include a sedentary lifestyle, high-fat diet, and genetic abnormalities. Enzyme PTP1B is an important target for researchers as it plays a vital role in performing normal metabolic functions of the human body. Metabolic diseases such as obesity, type 2 diabetes, and cardiovascular complications are due to PTP1B imbalance. It is evident that the overproduction of PTP1B is a prominent factor contributing to the onset and progression of type 2 diabetes. METHODS: Multiple attempts have been made in recent years to synthesize PTP1B inhibitors but, in most cases, complications were associated with the selectivity and toxicity of the synthesized analogs, which resulted in the failure of their clinical trials. This study comprises a series of ondansetron derivatives, which were developed by employing a one-pot (reductive amination) reaction between ondansetron and substituted anilines to synthesize primary amines as final products. These final products (ondansetron derivatives) were analyzed as PTP1B inhibitors to study the role of enzyme PTP1B in lowering blood glucose levels in conditions such as type 2 diabetes. These novel compounds can provide valuable insights into the development of improved treatment options for diabetes. RESULTS: The synthesized PTP1B inhibitors were subject to in silico, in vitro, and in vivo analysis that revealed encouraging results. The computational data of the selected ligand FN-06 showed highest binding affinity, with the protein PTP1B (1T48) having a docking score of -7.317 kcal/mol. The indicators of the simulation also reflected the stability of the said ligand. Similarly, the results of an in vitro inhibition assay further confirmed that the synthesized compound FN-10 showed direct inhibition of the enzyme PTP1B. Furthermore, animal studies demonstrate the hepatoprotective and anti-diabetic action of the selected compounds FN-06 and FN-10 along with the parent compound ondansetron. DISCUSSION: The findings of this study suggest that compounds FN-06 and FN-10 may act as lead structures to design potent derivatives, which have antidiabetic activity with hepatoprotective effects.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Fawad Naeem",
+        "Wei Jiang",
+        "Mustafeez Mujtaba Babar",
+        "Syed Haroon Hussain",
+        "Zaman Ashraf",
+        "Jiayi Sun",
+        "Sohaib Zafar",
+        "Qiang Liu"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fphar.2026.1796359",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13272487.1/PMC13272487.1.pdf?md5=0312f1f8c8ee44b3f742313e327714f0",
+      "pmcid": "PMC13272487",
+      "pmid": "42318345",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Ondansetron derivatives as potential PTP1B inhibitors for treating type 2 diabetes mellitus: in silico, in vitro, and in vivo analysis.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in pharmacology"
+    },
+    {
+      "abstract": "PURPOSE: Glucagon-like peptide-1 (GLP-1) secretagogues offer therapeutic potential for type 2 diabetes. Bioactive compounds in citrus were supposed to be effective in treating diabetes, while exact compounds activating enteroendocrine L-cell pathways remain underexplored. This study aimed to identify citrus-derived compounds that stimulate GLP-1 secretion from L cells by screening a traditional Chinese medicine library and to elucidate the underlying cellular mechanisms. METHODS: A reporter GLUTag cell line (murine L cell line), designed to introduce a luciferase into the proglucagon sequence, was utilized to screen a traditional Chinese medicine library. The effects of selected compounds on GLP-1 secretion were evaluated in both GLUTag cells and primary mouse ileac epithelial cells. Intracellular cAMP levels and calcium flux were measured to elucidate their underlying mechanism, and a dual-luciferase reporter assay was used to confirm their activation on TGR5 target. In vivo effect was confirmed in high-fat-diet-induced diabetic mice by oral administration. RESULTS: Hesperetin and Naringenin significantly promoted GLP-1 secretion from L cells. Both compounds increased cAMP accumulation and intracellular calcium influx in L cells, effects that were largely absent in TGR5-deficient L cells. Subsequently, dual-luciferase reporter assays identified them as TGR5 activators. Furthermore, cellular thermal shift assay (CETSA) provided evidence that each flavonoid forms a stable complex with TGR5. Finally, in high-fat-diet-induced diabetic mice, oral administration of either compound enhanced glucose-stimulated serum GLP-1 levels and ameliorated obesity and hyperglycemia under obese diabetic conditions. CONCLUSION: This study demonstrated that Hesperetin and Naringenin promoted GLP-1 secretion from L-cells through TGR5 activation and alleviated type 2 diabetes.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Chen-Yang Zhang",
+        "Zi-Lu Wang",
+        "Ze-Ju Jiang",
+        "Hanna Kim",
+        "Chang Liu",
+        "Hao Wang"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fphar.2026.1838267",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13272436.1/PMC13272436.1.pdf?md5=d0d22f94f26a81f56b5ffbfc3eaedab0",
+      "pmcid": "PMC13272436",
+      "pmid": "42318341",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Hesperetin and Naringenin promote glucagon-like peptide-1 secretion from L-cell through activation of TGR5 and alleviated type 2 diabetes.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in pharmacology"
+    },
+    {
+      "abstract": "BACKGROUND: Diabetic kidney disease (DKD), a major microvascular complication of diabetes, represents the leading cause of end-stage renal disease globally. Jinlida Granule (JLD), a multi-botanical Traditional Chinese Medicine preparation, has shown potential in type 2 diabetes management; however, a comprehensive systematic evaluation of its efficacy and safety specifically for DKD is lacking. OBJECTIVE: To systematically evaluate the efficacy and safety of JLD for DKD through a meta-analysis. METHODS: We conducted a systematic search of Chinese and English databases and clinical trial registries for randomized controlled trials (RCTs) on JLD for DKD from inception to 9 October 2025. Two researchers independently performed literature screening, data extraction, and quality assessment using the Cochrane Risk of Bias (RoB) 2 tool. Meta-analysis was conducted with a random-effects model using STATA 15.0 and Review Manager 5.4. Subgroup and sensitivity analyses were performed. RESULTS: Twelve RCTs involving 1,341 patients were included. JLD was associated with significant reductions in serum creatinine (MD -30.54 \u03bcmol/L, 95% CI -37.61 to -23.47; I2 = 94%), blood urea nitrogen (MD -0.95 mmol/L, 95% CI -1.29 to -0.60; I2 = 79%), urinary albumin excretion rate (MD -27.09 mg/24 h, 95% CI -29.16 to -25.02; I2 = 94%), and HbA1c (MD -0.86%, 95% CI -1.23% to -0.49%; I2 = 83%). Improvements were also observed in lipid profiles and inflammatory markers. Subgroup analyses suggested greater benefit in early-stage DKD and with specific combination regimens. Adverse events did not differ significantly between groups (RR 0.86, 95% CI 0.50-1.48). Substantial heterogeneity was noted. CONCLUSION: Current evidence suggests that adjunctive JLD may provide multifaceted clinical benefits for DKD patients, with a comparable safety profile. However, these findings should be interpreted cautiously given the moderate to high risk of bias and considerable heterogeneity. Well-designed, large-scale RCTs are required. SYSTEMATIC REVIEW REGISTRATION: https://www.crd.york.ac.uk/PROSPERO/view/CRD420251178318, identifier [CRD420251178318].",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Qi Yong",
+        "Yunxi Xu",
+        "Peiying Zhang",
+        "Hua Bai",
+        "Chao Xu",
+        "Hejiang Ye"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fphar.2026.1761454",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13272490.1/PMC13272490.1.pdf?md5=54b2a53dec9bbabc3e69ec5f9e8168cf",
+      "pmcid": "PMC13272490",
+      "pmid": "42318334",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Efficacy and safety of jinlida granule in the treatment of diabetic kidney disease: a systematic review and meta-analysis of randomized controlled trials.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in pharmacology"
+    },
+    {
+      "abstract": "BACKGROUND: Advanced Glycation End Products (AGEs) accumulate under chronic hyperglycemia and contribute to type 2 diabetes mellitus (T2DM) complications. Three chemical routes generate AGEs in vivo: the Hodge pathway (Amadori rearrangement), the Namiki pathway (Schiff base retroaldol cleavage), and the Wolff pathway (glucose auto-oxidation via Fenton-type chemistry). Each has been extensively characterized, but their integrated behavior in the clinical context - and their relationships to accessible biomarkers - has received less synthetic treatment. OBJECTIVE: This paper provides a clinically oriented mechanistic synthesis of the three pathways, identifying their points of convergence and divergence, and proposes - as a hypothesis-generating organizing schema rather than as established biology - a clinical biomarker mapping linking each pathway to routinely accessible laboratory parameters as a basis for prospective validation. APPROACH: Narrative mechanistic review synthesizing primary biochemistry, dicarbonyl chemistry, and clinical biomarker literatures. FINDINGS: The three pathways converge upon a shared reactive dicarbonyl pool comprising methylglyoxal (MGO), glyoxal (GO), and 3-deoxyglucosone (3-DG); upon the GLO1/GLO2 glyoxalase axis (highest catalytic efficiency for MGO; complementary handling of 3-DG by aldose/aldo-keto reductases); and upon RAGE-mediated inflammatory amplification. They diverge in their dominant kinetic drivers (sustained hyperglycemia for Hodge; glycemic variability for Namiki; oxidative-metal milieu for Wolff) and characteristic AGE adducts. Methylglyoxal also arises substantially from glycolytic triose phosphate degradation independent of the AGE synthesis pathways. We propose that routine laboratory parameters - HbA1c \u00d7 diabetes duration, glycemic variability indices, hs-CRP, ferritin, gamma-glutamyl transferase, and red cell distribution width - may serve as accessible clinical proxies for pathway-specific activity, with the caveat that these mappings require prospective validation. CONCLUSIONS: The Hodge, Namiki, and Wolff pathways are best understood as an integrated AGE synthesis network. This has implications for therapeutic strategy, favoring approaches that act on shared downstream mediators rather than single-pathway interventions, and for the design of pathway-resolved clinical biomarker panels. The proposed mappings and temporal staging are presented as testable hypotheses, not as established clinical algorithms; their validation will require prospective biomarker studies in defined T2DM cohorts.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Enrique C Fernandez"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fendo.2026.1856036",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13272067.1/PMC13272067.1.pdf?md5=994f62994718edcf14a903067d387309",
+      "pmcid": "PMC13272067",
+      "pmid": "42318220",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "The three pathways of advanced glycation end product synthesis: Hodge, Namiki, and Wolff - a clinically oriented mechanistic synthesis with network-based implications.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in endocrinology"
+    },
+    {
+      "abstract": "BACKGROUND: Evidence regarding maternal body mass index (BMI) and intrauterine insemination (IUI) outcomes remains controversial. This study aimed to evaluate such independent associations, focusing on potential non-linear patterns, clinical thresholds, and population-specific heterogeneities. METHODS: Data from 1951 couples (3788 cycles) were retrospectively analyzed. Multivariable generalized linear models (GLM), generalized estimating equations (GEE), and Cox proportional hazards models assessed first-cycle, per-cycle, and cumulative success, respectively; generalized additive model (GAM) and two-piecewise linear regression characterized non-linear patterns and thresholds. RESULTS: While maternal BMI showed no significant independent association with clinical pregnancy or live birth in the first cycle (all P > 0.05), per-cycle analysis of 3788 cycles revealed a modest positive correlation (pregnancy: aOR 1.04, P = 0.004; live birth: aOR 1.03, P = 0.030). Notably, cumulative success followed a non-linear pattern (PLRT = 0.027), with live birth probability increasing until a BMI of approximately 21.2 kg/m\u00b2 (aHR: 1.12, P = 0.007) but plateauing thereafter, potentially linked in part to an exploratory observation of higher spontaneous abortion rates in the obesity group (29.03%, P = 0.087). Subgroup analyses suggested potential heterogeneities in these associations across basal FSH levels and treatment protocols used in the first cycle (Pinteraction = 0.030 and 0.009, respectively). Specifically, for the FSH < 8mIU/mL group, a non-linear association was suggested (PLRT = 0.020), with success increasing up to approximately 21.2 kg/m\u00b2 (aHR: 1.12, P = 0.011) and plateauing thereafter. Similarly, for patients whose first cycle used a gonadotropin protocol, a potential reversal was observed beyond approximately 21.0 kg/m\u00b2 (PLRT = 0.020), where the trend shifted to a significant decline (aHR: 0.81, P = 0.023). CONCLUSIONS: Maternal BMI appears to exhibit a non-linear, context-dependent association with cumulative IUI success, underscoring the potential need for individualized preconception management.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Huan-Qun Zhou",
+        "Jian-Fang Zhu",
+        "Ai-Ai Wang",
+        "Qi-Long Yuan",
+        "Ai-Hua Wu",
+        "Shan Lu",
+        "Wen Zhou"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fendo.2026.1841344",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13271875.1/PMC13271875.1.pdf?md5=11f7dfe6a3b6e690dba10b5213c72c77",
+      "pmcid": "PMC13271875",
+      "pmid": "42318215",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Non-linear and context-dependent association of maternal BMI with cumulative live birth in Chinese women undergoing intrauterine insemination: a retrospective study of 3788 cycles.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in endocrinology"
+    },
+    {
+      "abstract": "BACKGROUND: The remarkable cardiorenal benefits of sodium-glucose cotransporter-2 (SGLT2) inhibitors have positioned these agents as cornerstone therapies for diabetic kidney disease (DKD). However, theoretical concerns regarding glycosuria-mediated effects on tissue perfusion have left clinicians uncertain about their safety in patients with active wounds. We conducted a prospective cohort study to characterize wound healing outcomes in this vulnerable population. METHODS: Between January 2018 and December 2023, we prospectively enrolled 247 adults with type 2 diabetes mellitus, estimated glomerular filtration rate (eGFR) of 30-90 mL/min/1.73m\u00b2, and wounds requiring medical attention at a tertiary wound care center. Participants receiving SGLT2 inhibitors (dapagliflozin, empagliflozin, or canagliflozin) for \u226530 days were matched 1:1 with unexposed controls using propensity scores derived from 15 baseline covariates. The primary endpoint was the time to complete epithelialization; secondary endpoints included wound infection and renal progression at six months. RESULTS: Following propensity score matching, 204 patients (102 per cohort) with excellent covariate balance (all standardized mean differences <0.10) were analyzed. Wound healing trajectories were virtually identical between the cohorts: median healing time was 33 days (interquartile range [IQR]: 22-52) with SGLT2 inhibitors versus 34 days (24-62) in controls (adjusted hazard ratio [HR], 1.08; 95% confidence interval [CI], 0.82-1.42; p=0.594). No statistically significant difference in infection rates was observed (38.2% vs. 32.4%; unadjusted p=0.464; adjusted p=0.310). During the six-month follow-up period, no renal progression events were observed among SGLT2 inhibitor users (0% vs. 5.9%; p=0.029) and demonstrated superior eGFR preservation (-2.3 \u00b1 3.8 vs. -5.5 \u00b1 4.5 mL/min/1.73m\u00b2; p<0.001). CONCLUSIONS: No evidence of impaired wound healing or increased infection risk was observed with SGLT2 inhibitor therapy in patients with DKD; however, the anticipated nephroprotective benefits were preserved during the six-month follow-up period. These findings argue against the withholding of these beneficial agents in patients with concurrent wounds.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Rong-Rong Zhang",
+        "Siyue Huang",
+        "Xinjie Wang",
+        "Xiaoqin Li"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fendo.2026.1793030",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13271949.1/PMC13271949.1.pdf?md5=f9775c633ec8badb4f35295312a80527",
+      "pmcid": "PMC13271949",
+      "pmid": "42318208",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Wound healing outcomes in diabetic kidney disease patients receiving SGLT2 inhibitor therapy: a prospective propensity score-matched cohort study.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in endocrinology"
+    },
+    {
+      "abstract": "BACKGROUND: The goal was having the comparisons be direct when it came to seeing how much of a help the sodium-glucose co transporter - 2 inhibitors (SGTL2is) compared to the glucagon-like peptide-1 receptor agonists (GLP-1RAs) were in regard to how the liver enzymes performed within people having type 2 diabetes (T2D) along with nonalcoholic fatty liver disease (NAFLD), a condition characterized by excessive fat accumulation in the liver without alcohol overconsumption. METHODS: A total of 705 subjects with T2DM and NAFLD at time of first SGLT2is (n=381) or GLP-1RAs (n=324) enrolment in this multicentre posterior cohort study from 01/2020-12/2024. Baseline characteristics were made equivalent via PSM via a 1: 1 NN match and a 0. 2 SD match clamp. The main measurement was the difference in alanine amino transferase (\u0394ALT) and aspartate aminotransferase (\u0394AST) from the beginning and 6 months. And other result was about the change in metabolic parametres. The independent predictors of liver-enzyme change came from the multivariate linear regression analysis. RESULTS: After PSM, 243 well-matched pairs were successfully identified, with baseline characteristics acceptably balanced (standardized differences <0.2 for all covariates and <0.1 for most covariates). In the matched cohort, SGLT2is treatment was associated with significantly greater reductions in ALT (\u0394ALT: -10.55 \u00b1 12.66 vs. -7.28 \u00b1 15.34 U/L, p=0.011) and AST (\u0394AST: -7.68 \u00b1 10.07 vs. -5.18 \u00b1 11.04 U/L, p=0.010) compared to GLP-1RAs treatment. No significant differences were observed for changes in GGT, body weight, glycemic control, or lipid profiles between groups. Multivariable regression analysis revealed that SGLT2is treatment was independently associated with reductions in both ALT (\u03b2 = -3.34, p=0.009) and AST (\u03b2 = -2.32, p=0.016). Weight change was independently associated with AST reduction (\u03b2 = 0.22, p=0.016) but not with ALT reduction. CONCLUSION: SGLT2is were associated with greater ALT and AST reductions than GLP-1RAs in T2D patients with NAFLD, with ALT improvement independent of weight loss, suggesting potential direct hepatoprotective effects.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Wancheng Guo",
+        "Wenhe Li",
+        "Xianlin Li",
+        "Wen Shi",
+        "Yan Yan",
+        "Ting Yan",
+        "Jie Zhou",
+        "Yujie Huang"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fendo.2026.1865769",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13271928.1/PMC13271928.1.pdf?md5=812c96aa4fe3a07c2dc47b5293c642d9",
+      "pmcid": "PMC13271928",
+      "pmid": "42318205",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Effects of SGLT-2 inhibitors and GLP-1 receptor agonists on liver function in patients with non-alcoholic fatty liver disease and type 2 diabetes.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in endocrinology"
+    },
+    {
+      "abstract": "OBJECTIVE: To characterize the multisystem presentation and care requirements of rapid-onset obesity with hypothalamic dysfunction, hypoventilation, and autonomic dysregulation (ROHHAD) syndrome from an interdisciplinary perspective. STUDY DESIGN: A retrospective analysis of clinically confirmed ROHHAD cases managed within a specialized pediatric palliative care service over a 13-year period (2012-2025). Collected data included demographic and socio-familial characteristics, clinical manifestations, care needs, management strategies, disease trajectories, and outcomes. Descriptive statistics and exploratory Spearman's rank correlation were applied. RESULTS: Six patients (three females and three males) were identified, with a median age at onset of 3.3 years and a median diagnostic delay of 1.6 years. Central hypoventilation represented a key driver of clinical complexity, with most children rapidly progressing to tracheostomy and long-term invasive ventilation. Endocrine involvement was multisystemic and frequently associated with electrolyte and metabolic instability. Autonomic dysregulation was recurrent but clinically heterogeneous. Neurodevelopmental concerns were common, and many children later developed severe behavioral dysregulation and additional neuropsychiatric symptoms that significantly affected treatment adherence and overall management. No neuroendocrine tumors were identified on the available imaging studies. At the time of data collection, four children had died, predominantly due to cardiorespiratory arrest. CONCLUSIONS: The clinical complexity of ROHHAD requires coordinated, interdisciplinary care. However, real-world data comprehensively defining patient needs and clarifying the contribution of different specialties remain limited. Our findings provide novel insights and highlight how the evolving course challenges traditional discipline-centered approaches, instead demanding ongoing, integrated collaboration to ensure adaptable, individualized care pathways.",
+      "adjudicated_at": "2026-08-10T06:27:17.921059+00:00",
+      "authors": [
+        "Anna Mercante",
+        "Annalisa Salerno",
+        "Anna Marinetto",
+        "Anna Santini",
+        "Benedetta Tascini",
+        "Alessia Raffagnato",
+        "Valentina De Tommasi",
+        "Antuan Divisic",
+        "Franca Benini"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fped.2026.1777286",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13273399.1/PMC13273399.1.pdf?md5=0eb4f9b7e9a94b9ecaab0109f45dd85d",
+      "pmcid": "PMC13273399",
+      "pmid": "42317651",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "ROHHAD syndrome: an interdisciplinary perspective.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in pediatrics"
+    }
+  ],
+  "rejected_by_adjudication": 0,
+  "retstart_used": 3600,
+  "rules_version": "m55-discovery-cycle-v1"
+}
