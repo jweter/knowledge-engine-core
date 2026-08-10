@@ -224,6 +224,18 @@ CorpusScopeOption = Annotated[
         ),
     ),
 ]
+GraphCorpusIdOption = Annotated[
+    str | None,
+    typer.Option(
+        "--corpus",
+        help=(
+            "Corpus id to record on (`graph-build`) or filter to (the "
+            "candidate-surfacing commands). Optional and unset by default -- "
+            "the graph is corpus-agnostic unless a caller opts in. See "
+            "knowledge_engine.scientific_scope for known corpus ids."
+        ),
+    ),
+]
 DiscoveryCycleStateOption = Annotated[
     Path,
     typer.Option(
@@ -2304,6 +2316,7 @@ def graph_build(
     relationships: GraphBuildRelationshipsOption = None,
     output: GraphBuildOutputOption = None,
     force: ForceOutputOption = False,
+    corpus: GraphCorpusIdOption = None,
 ) -> None:
     """Populate the Phase 4 knowledge graph from validated evidence and relationship records.
 
@@ -2348,6 +2361,18 @@ def graph_build(
     already-authored signals, never computes, defaults, or infers a
     confidence rating. `graph_citations` is out of scope here -- see the
     design doc's Open Questions.
+
+    An optional `--corpus <id>` records which corpus every claim in this
+    `--evidence` file belongs to (`graph_claims.corpus_id`), so
+    `graph-relationship-candidates`/`relationship-review-worksheet` can
+    later be scoped to one corpus instead of the whole (otherwise
+    corpus-agnostic) graph. Applied to *every* claim referenced by this
+    run's `--evidence` file, not just newly-created ones -- an
+    already-existing claim with no `corpus_id` yet gets backfilled, but
+    one that already has a `corpus_id` is never overwritten (see
+    `GraphRepository.backfill_claim_corpus_id`). Omitting `--corpus`
+    leaves every claim's `corpus_id` exactly as it was, preserving this
+    command's pre-`--corpus` behavior unchanged.
     """
 
     if output is not None:
@@ -2425,7 +2450,7 @@ def graph_build(
                 )
                 continue
 
-            claim = repository.get_or_create_claim(evidence_record_id)
+            claim = repository.get_or_create_claim(evidence_record_id, corpus_id=corpus)
             claims_by_evidence_id[evidence_record_id] = claim.id
 
             reference_context = item.get("reference_context") or {}
@@ -2481,6 +2506,10 @@ def graph_build(
             )
             relationships_created += 1
 
+        claims_backfilled = 0
+        if corpus is not None:
+            claims_backfilled = repository.backfill_claim_corpus_id(candidate_ids, corpus)
+
         counts = repository.population_counts()
 
     console.print(
@@ -2488,6 +2517,11 @@ def graph_build(
         f"{concepts_linked} claim-concept link(s) created, "
         f"{relationships_created} relationship edge(s) created."
     )
+    if corpus is not None:
+        console.print(
+            f"Corpus scoping: backfilled corpus_id=[cyan]{escape(corpus)}[/cyan] on "
+            f"{claims_backfilled} previously-unscoped claim(s)."
+        )
     if relationships_skipped:
         console.print(
             f"[yellow]Skipped {len(relationships_skipped)} relationship(s) with a missing "
@@ -2832,7 +2866,10 @@ def graph_report(
 
 
 def _build_relationship_candidates_report(
-    graph_repository: GraphRepository, minimum_shared_concepts: int
+    graph_repository: GraphRepository,
+    minimum_shared_concepts: int,
+    *,
+    corpus_id: str | None = None,
 ) -> str:
     """Build a Markdown report of claim pairs sharing PICO-resolved concepts.
 
@@ -2842,10 +2879,14 @@ def _build_relationship_candidates_report(
     actually relate stays a human judgment call authored as a
     `RelationshipRecord` and validated via `ke relationship-validate`, the
     same posture `ke relationship-report` already documents.
+
+    An optional `corpus_id` scopes candidates to claims backfilled with
+    that `graph_claims.corpus_id` (via `ke graph-build --corpus`); `None`
+    preserves this report's original corpus-agnostic behavior unchanged.
     """
 
     candidates = graph_repository.relationship_candidates(
-        minimum_shared_concepts=minimum_shared_concepts
+        minimum_shared_concepts=minimum_shared_concepts, corpus_id=corpus_id
     )
 
     lines = [
@@ -2854,6 +2895,7 @@ def _build_relationship_candidates_report(
         f"Generated: {_utc_now_iso_for_report()}",
         "",
         f"Minimum shared concepts: {minimum_shared_concepts}",
+        f"Corpus: {corpus_id if corpus_id else '(all corpora -- unscoped)'}",
         f"Candidate pairs found: {len(candidates)}",
         "",
     ]
@@ -2896,6 +2938,7 @@ def graph_relationship_candidates(
     minimum_shared_concepts: GraphRelationshipCandidatesMinimumSharedConceptsOption = 1,
     output: GraphReportOutputOption = None,
     force: ForceOutputOption = False,
+    corpus: GraphCorpusIdOption = None,
 ) -> None:
     """Surface claim pairs sharing PICO-resolved concepts, for a human to review.
 
@@ -2908,6 +2951,11 @@ def graph_relationship_candidates(
     relationship-validate` already requires. A pair already linked by a
     validated relationship edge (any type, `supersedes` included) is
     excluded, since a human has already made that call for it.
+
+    An optional `--corpus <id>` restricts candidates to claims backfilled
+    with that `graph_claims.corpus_id` (see `ke graph-build --corpus`).
+    Omitting it preserves this command's original behavior: candidates
+    span every corpus in the (corpus-agnostic by default) graph.
     """
 
     if output is not None:
@@ -2918,7 +2966,9 @@ def graph_relationship_candidates(
 
     with database.session() as session:
         graph_repository = GraphRepository(session)
-        report = _build_relationship_candidates_report(graph_repository, minimum_shared_concepts)
+        report = _build_relationship_candidates_report(
+            graph_repository, minimum_shared_concepts, corpus_id=corpus
+        )
 
     if output is not None:
         _write_output(output, report)
@@ -3011,6 +3061,7 @@ def _build_relationship_review_worksheet(
     offset: int,
     limit: int,
     ranked_by_similarity: bool,
+    corpus_id: str | None = None,
 ) -> str:
     """Build a Markdown worksheet assembling full field detail for a batch of candidate pairs.
 
@@ -3033,6 +3084,7 @@ def _build_relationship_review_worksheet(
         f"Generated: {_utc_now_iso_for_report()}",
         "",
         f"Minimum shared concepts: {minimum_shared_concepts}",
+        f"Corpus: {corpus_id if corpus_id else '(all corpora -- unscoped)'}",
         f"Candidate pairs total: {len(ranked_candidates)}",
         f"This worksheet: pairs {offset + 1}-{offset + len(batch)} of {len(ranked_candidates)}"
         if batch
@@ -3115,6 +3167,7 @@ def relationship_review_worksheet(
     rank_by_similarity: RelationshipReviewWorksheetRankBySimilarityOption = False,
     output: GraphReportOutputOption = None,
     force: ForceOutputOption = False,
+    corpus: GraphCorpusIdOption = None,
 ) -> None:
     """Assemble a batch of relationship candidates into one side-by-side review worksheet.
 
@@ -3140,6 +3193,10 @@ def relationship_review_worksheet(
     multiple review sessions; a pair already linked by a validated
     relationship edge stops appearing automatically, exactly as `ke
     graph-relationship-candidates` already excludes it.
+
+    An optional `--corpus <id>` restricts candidates to claims backfilled
+    with that `graph_claims.corpus_id` (see `ke graph-build --corpus`),
+    identically to `ke graph-relationship-candidates --corpus`.
     """
 
     if output is not None:
@@ -3159,7 +3216,7 @@ def relationship_review_worksheet(
     with database.session() as session:
         graph_repository = GraphRepository(session)
         raw_candidates = graph_repository.relationship_candidates(
-            minimum_shared_concepts=minimum_shared_concepts
+            minimum_shared_concepts=minimum_shared_concepts, corpus_id=corpus
         )
 
         if rank_by_similarity:
@@ -3185,6 +3242,7 @@ def relationship_review_worksheet(
             offset=offset,
             limit=limit,
             ranked_by_similarity=rank_by_similarity,
+            corpus_id=corpus,
         )
 
     if output is not None:

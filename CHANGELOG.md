@@ -30,6 +30,31 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Optional corpus scoping for the knowledge graph (schema v12).**
+  `graph_claims` gained a nullable, indexed `corpus_id` column
+  (`_migrate_schema_v12`, additive `ALTER TABLE`). The graph itself stays
+  corpus-agnostic by design (`ke graph-build` still writes every
+  corpus's claims into the same shared tables) -- `corpus_id` is opt-in,
+  set only when a caller passes the new `--corpus <id>` option to `ke
+  graph-build`, and `NULL` means "unscoped," never "unknown." `--corpus`
+  is applied to every claim referenced by that run's `--evidence` file,
+  not just newly-created ones: an already-existing claim with no
+  `corpus_id` yet gets backfilled (`GraphRepository.backfill_claim_corpus_id`,
+  a bulk `UPDATE ... WHERE corpus_id IS NULL`), while one that already
+  has a `corpus_id` is never overwritten -- relabeling a claim to a
+  different corpus is never done silently. `ke
+  graph-relationship-candidates` and `ke relationship-review-worksheet`
+  both gained a matching optional `--corpus <id>` that restricts
+  candidates to claim pairs where *both* claims carry that `corpus_id`;
+  omitting it on any of the three commands preserves the original
+  cross-corpus behavior exactly. Motivated by a direct measurement:
+  `ke graph-relationship-candidates` with `--min-shared-concepts 1`
+  returned 164,146 candidates spanning all 3 corpora combined (1,824
+  total claims) with no way to narrow the list to one corpus. See
+  `docs/core_interface_contract.md`'s `ke graph-build`/
+  `graph-relationship-candidates`/`relationship-review-worksheet`
+  entries.
+
 - Ran the second weekly discovery cycle (`ke discovery-cycle-run`,
   `retstart=3600`) against the persisted `discovery_state.json`: 50
   candidates discovered, 21 deterministically accepted, 0 already in

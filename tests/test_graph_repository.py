@@ -126,6 +126,61 @@ def test_get_or_create_claim_is_idempotent(tmp_path: Path) -> None:
         assert fetched.evidence_record_id == "ev-glp1-step5-body-weight-week104-001"
 
 
+def test_get_or_create_claim_sets_corpus_id_only_on_creation(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        created = repository.get_or_create_claim("ev-a", corpus_id="glp1_weight_loss")
+        assert created.corpus_id == "glp1_weight_loss"
+
+        fetched_again = repository.get_or_create_claim(
+            "ev-a", corpus_id="oncology_nsclc_checkpoint_inhibitors"
+        )
+        assert fetched_again.id == created.id
+        assert fetched_again.corpus_id == "glp1_weight_loss"
+
+
+def test_get_or_create_claim_defaults_corpus_id_to_none(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claim = repository.get_or_create_claim("ev-a")
+        assert claim.corpus_id is None
+
+
+def test_backfill_claim_corpus_id_fills_only_unscoped_matching_claims(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        unscoped = repository.get_or_create_claim("ev-unscoped")
+        already_scoped = repository.get_or_create_claim(
+            "ev-already-scoped", corpus_id="oncology_nsclc_checkpoint_inhibitors"
+        )
+
+        updated = repository.backfill_claim_corpus_id(
+            ["ev-unscoped", "ev-already-scoped", "ev-does-not-exist"], "glp1_weight_loss"
+        )
+
+        assert updated == 1
+        refetched_unscoped = repository.get_claim(unscoped.id)
+        refetched_already_scoped = repository.get_claim(already_scoped.id)
+        assert refetched_unscoped is not None
+        assert refetched_already_scoped is not None
+        assert refetched_unscoped.corpus_id == "glp1_weight_loss"
+        assert refetched_already_scoped.corpus_id == "oncology_nsclc_checkpoint_inhibitors"
+
+
+def test_backfill_claim_corpus_id_returns_zero_for_empty_input(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        assert repository.backfill_claim_corpus_id([], "glp1_weight_loss") == 0
+
+
 def test_find_claim_by_evidence_id_is_read_only(tmp_path: Path) -> None:
     database = build_database(tmp_path)
 
@@ -576,3 +631,57 @@ def test_relationship_candidates_respects_minimum_shared_concepts(tmp_path: Path
 
         assert repository.relationship_candidates(minimum_shared_concepts=2) == []
         assert len(repository.relationship_candidates(minimum_shared_concepts=1)) == 1
+
+
+def test_relationship_candidates_corpus_id_scopes_to_matching_claims_only(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claim_a = repository.get_or_create_claim("ev-a", corpus_id="glp1_weight_loss")
+        claim_b = repository.get_or_create_claim("ev-b", corpus_id="glp1_weight_loss")
+        claim_c = repository.get_or_create_claim(
+            "ev-c", corpus_id="oncology_nsclc_checkpoint_inhibitors"
+        )
+        semaglutide = repository.get_or_create_concept(
+            label="Semaglutide",
+            source="rxnorm",
+            source_reference_id="123456",
+            definition="A GLP-1 receptor agonist.",
+            source_url="https://rxnav.nlm.nih.gov/123456",
+            license="public-domain",
+            retrieved_at="2026-08-10T00:00:00Z",
+        )
+        repository.link_claim_concept(claim_a.id, semaglutide.id, "intervention")
+        repository.link_claim_concept(claim_b.id, semaglutide.id, "intervention")
+        repository.link_claim_concept(claim_c.id, semaglutide.id, "intervention")
+
+        unscoped = repository.relationship_candidates()
+        assert len(unscoped) == 3
+
+        scoped = repository.relationship_candidates(corpus_id="glp1_weight_loss")
+        assert len(scoped) == 1
+        found_a, found_b, _shared = scoped[0]
+        assert {found_a.id, found_b.id} == {claim_a.id, claim_b.id}
+
+
+def test_relationship_candidates_corpus_id_excludes_unscoped_claims(tmp_path: Path) -> None:
+    database = build_database(tmp_path)
+
+    with database.session() as session:
+        repository = GraphRepository(session)
+        claim_a = repository.get_or_create_claim("ev-a", corpus_id="glp1_weight_loss")
+        claim_b_unscoped = repository.get_or_create_claim("ev-b")
+        concept = repository.get_or_create_concept(
+            label="Obesity",
+            source="mesh",
+            source_reference_id="D009765",
+            definition="A condition of excess body fat.",
+            source_url="https://meshb.nlm.nih.gov/D009765",
+            license="public-domain",
+            retrieved_at="2026-08-10T00:00:00Z",
+        )
+        repository.link_claim_concept(claim_a.id, concept.id, "population")
+        repository.link_claim_concept(claim_b_unscoped.id, concept.id, "population")
+
+        assert repository.relationship_candidates(corpus_id="glp1_weight_loss") == []

@@ -244,26 +244,32 @@ most likely to actually call:
   relationship edges. `--paper-id`: one paper's citation edges. Supports
   `--output <path.md>` (Markdown, not JSON), matching
   `evidence-report`/`relationship-report`'s own precedent.
-- `ke graph-relationship-candidates [--min-shared-concepts <n>] [--output <path.md>]`
+- `ke graph-relationship-candidates [--min-shared-concepts <n>] [--output <path.md>] [--corpus <id>]`
   -- surfaces claim pairs sharing a PICO-resolved concept, for a human to
   review before authoring a `RelationshipRecord`. Structural overlap
   only: never infers, detects, or suggests a relationship type or
   rationale, the same boundary `ke relationship-validate` already draws.
-  Supports `--output <path.md>` (Markdown, not JSON). See
+  Supports `--output <path.md>` (Markdown, not JSON). Optional `--corpus
+  <id>` (schema v12) restricts candidates to claim pairs where *both*
+  claims carry that `graph_claims.corpus_id`; omitting it preserves the
+  original cross-corpus behavior, since the graph is corpus-agnostic by
+  design (see `ke graph-build`'s `--corpus` entry below). See
   `docs/history/milestones/m49_graph_relationship_candidates.md`.
-- `ke relationship-review-worksheet --evidence <records.jsonl> [--min-shared-concepts <n>] [--limit <n>] [--offset <n>] [--rank-by-similarity] [--output <path.md>]`
-  (M60, `--rank-by-similarity` added M61) -- assembles a batch of `ke
-  graph-relationship-candidates`'s exact candidate pairs into one
-  worksheet with both claims' full PICO fields side by side, plus a
-  fill-in-the-blank `RelationshipRecord` JSON template per pair. Adds no
-  candidate-selection logic of its own; never infers, scores, or
-  suggests a relationship. `--limit` (default 10) and `--offset` page
-  through a large candidate list across review sessions.
+- `ke relationship-review-worksheet --evidence <records.jsonl> [--min-shared-concepts <n>] [--limit <n>] [--offset <n>] [--rank-by-similarity] [--output <path.md>] [--corpus <id>]`
+  (M60, `--rank-by-similarity` added M61, `--corpus` added schema v12) --
+  assembles a batch of `ke graph-relationship-candidates`'s exact
+  candidate pairs into one worksheet with both claims' full PICO fields
+  side by side, plus a fill-in-the-blank `RelationshipRecord` JSON
+  template per pair. Adds no candidate-selection logic of its own; never
+  infers, scores, or suggests a relationship. `--limit` (default 10) and
+  `--offset` page through a large candidate list across review sessions.
   `--rank-by-similarity` re-sorts candidates by cosine similarity of
   each pair's `outcome`/`result_summary` text, using a local, offline
   `sentence-transformers` model (M31's `SentenceTransformerEmbeddingGenerator`,
   no network access, no API key) -- ranking only, never a relationship
-  judgment. Supports `--output <path.md>` (Markdown, not JSON).
+  judgment. `--corpus <id>` restricts to that corpus, identically to `ke
+  graph-relationship-candidates --corpus`. Supports `--output <path.md>`
+  (Markdown, not JSON).
 - `ke graph-unconfirmed-claims [--output <path.md>]` -- lists claims with
   zero relationship edges of any type, M50's Tracking the Unknown
   decision (`docs/stability_and_tracking_design.md`). No filtering, no
@@ -315,14 +321,23 @@ itself, but may need to trigger for a specific paper):**
   file).
 
 **Phase 4 knowledge graph (M46-M51, see "the seam" above):**
-- `ke graph-build --evidence <records.jsonl> [--relationships <records.jsonl>] [--output <path.json>]`
+- `ke graph-build --evidence <records.jsonl> [--relationships <records.jsonl>] [--output <path.json>] [--corpus <id>]`
   -- populates `graph_concepts`/`graph_claims`/`graph_claim_concepts`/
   `graph_claim_relationships` in the SQLite database from an already-
   validated Evidence Record file (and optional Relationship Record
   file), reusing M45's `annotate_draft_items` to resolve PICO fields into
   concept nodes. Writes to the database always; `--output` is an
   optional JSON summary of total graph row counts, not the graph data
-  itself. See `docs/history/milestones/m46_graph_repository.md`.
+  itself. See `docs/history/milestones/m46_graph_repository.md`. Optional
+  `--corpus <id>` (schema v12, `graph_claims.corpus_id`) records which
+  corpus every claim referenced by `--evidence` belongs to -- applied to
+  *every* referenced claim, not just newly-created ones (an
+  already-existing claim with no `corpus_id` yet is backfilled; one that
+  already has a `corpus_id` is never overwritten). Omitting it leaves
+  every claim's `corpus_id` exactly as it was: the graph remains
+  corpus-agnostic by default, and `--corpus` is required on the same run
+  for `ke graph-relationship-candidates`/`relationship-review-worksheet`
+  to later scope to that corpus.
 - `ke graph-citations-build [--output <path.json>]` -- populates
   `graph_citations` from every persisted paper's own reference list,
   matching cited DOIs against other papers already in this database. No

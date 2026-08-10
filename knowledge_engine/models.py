@@ -446,6 +446,13 @@ class GraphClaim(Base):
     there is no table for a `ForeignKey()` to target. This node inherits its
     parent record's `research_question`/`evidence_direction`/`confidence_note`
     by reference; none of those judgment fields are duplicated here.
+
+    `corpus_id` is nullable and unset by default -- the graph is
+    deliberately corpus-agnostic (`ke graph-build` writes every corpus's
+    claims into these same shared tables), so a claim only carries a
+    `corpus_id` when a caller explicitly opts in via `ke graph-build
+    --corpus <id>`. `NULL` means "unscoped," not "unknown"; nothing
+    guesses a corpus for a claim that was never told one.
     """
 
     __tablename__ = "graph_claims"
@@ -455,6 +462,7 @@ class GraphClaim(Base):
         String(128), nullable=False, unique=True, index=True
     )
     created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+    corpus_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
 
 
 class GraphClaimConcept(Base):
