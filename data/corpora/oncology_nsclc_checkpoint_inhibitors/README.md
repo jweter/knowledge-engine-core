@@ -301,3 +301,31 @@ matching, and exclude conservatively when uncertain" discipline. Passed
 `ke relationship-validate` and `ke evidence-map-validate`. Corpus
 relationship graph is now 9 edges (was 8); graph-wide total is 42
 (was 41).
+
+**Record-fidelity check against source PDFs (2026-08-10, same day).**
+The golden map's own `known_gaps` named an independent source-by-source
+audit, matching GLP-1's, as the next step toward `"reviewed"` status.
+Performed the record-to-source half of that check: read the extracted
+source-PDF page text at each of the 13 records' own
+`source_span.page_number` and cross-checked every `claim_text`/
+`result_summary` numerical figure (hazard ratios, confidence intervals,
+p-values, sample sizes) against it, and read all 9 relationship
+rationales for scientific coherence. Result: all 13 records faithfully
+represent their sources, and all 9 relationships are scientifically
+sound and conservatively typed (`qualifies`/`contextualizes` used
+rather than an overreaching `supports` wherever a population,
+regimen, or measurement-domain difference existed). Two specific,
+non-error findings: Liao's source PDF itself shows a likely internal
+typo in one confidence interval (its running prose and its own figure
+legend render the same number two different ways; the record correctly
+used the figure-legend value), and Nodbrant's cited CI/n/mortality
+figures live in a table that did not extract as machine-readable text,
+so only its three headline median-OS figures were independently
+re-confirmed. This check was performed by the same AI system (Claude)
+that compiled the map, not a genuinely independent reviewer the way
+GLP-1's audit used a different AI system (OpenAI Codex) -- so
+`map_status` stays `"provisional"` and `review.status` stays
+`"secondary_review_required"`. A genuinely independent (human or
+different-AI-system) pass remains the one thing standing between this
+map and GLP-1's `"reviewed"` bar. See the map's `review`/`limitations`/
+`known_gaps` fields for the full detail.

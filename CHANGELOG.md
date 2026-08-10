@@ -30,6 +30,28 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Record-to-source fidelity check for the oncology golden evidence
+  map (13 records, 9 relationships).** Cross-checked every record's
+  key numerical figures (hazard ratios, confidence intervals,
+  p-values, sample sizes) against the extracted source-PDF page text
+  at each record's own `source_span.page_number`, and read all 9
+  relationship rationales for scientific coherence. All 13 records
+  faithfully represent their sources; all 9 relationships are
+  scientifically sound and conservatively typed. Two non-error
+  findings: a likely internal typo in Liao's source PDF (correctly
+  resolved in the record using the figure-legend value, not the
+  inconsistent running-prose value) and one table (Nodbrant's) that
+  did not extract as machine-readable text, so its CI/n/mortality
+  figures could not be independently re-confirmed from extracted text
+  alone. Because this check was performed by the same AI system
+  (Claude) that compiled the map -- not a genuinely independent
+  reviewer, unlike GLP-1's map audit (a different AI system, OpenAI
+  Codex) -- `map_status` stays `"provisional"`; a human or
+  different-AI-system pass is the one remaining step to
+  `"reviewed"`. See `data/corpora/oncology_nsclc_checkpoint_inhibitors/golden_evidence_map.json`'s
+  `review`/`limitations`/`known_gaps` fields and that corpus's
+  README for full detail.
+
 - **`docs/roadmap.md` doc-sync pass: corrected several sections that had
   gone stale relative to the actual codebase state.** The
   "domain-general extraction framework" decision still described mental
