@@ -380,3 +380,16 @@ A genuinely independent (human or different-AI-system) pass remains
 the one thing standing between this map and GLP-1's `"reviewed"` bar.
 See the map's `review`/`limitations`/`known_gaps` fields for the full
 detail.
+
+**Reproducible same-PICO contradiction search established (2026-08-10,
+same day).** Mirrors the equivalent oncology search performed the same
+day. Screened all 133 committed Evidence Records for a negative-signal
+phrase set; 13 matched, all read in full. None reported a same-PICO
+direction reversal -- 5 concerned neuroimaging biomarker outcomes (a
+different outcome from depressive-symptom-severity), 2 concerned a
+medication-adherence-scale active comparator, and the remaining
+matches were golden-map records already accounted for (including
+Ju's already-documented null agomelatine-augmentation qualifier). See
+`docs/mental_health_same_pico_contradiction_search_audit.md` for the
+full methodology and candidate-disposition table. This search does
+not yet include a live PubMed literature layer.

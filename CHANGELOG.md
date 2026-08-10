@@ -30,6 +30,29 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Reproducible same-PICO contradiction search for the oncology and
+  mental-health corpora**, matching GLP-1's 2026-08-04 search
+  precedent and closing the gap both golden maps' own `known_gaps`
+  named. For each corpus, screened every committed Evidence Record's
+  `claim_text`/`result_summary` for a negative-signal phrase set,
+  cross-referenced matches against each record's own automated
+  `evidence_direction` classification, and investigated any
+  `contradicts`-labeled candidate in full. Oncology: 1,534 records
+  screened, 108 matched, 1 flagged `contradicts` -- a real phase 3
+  trial (SWOG/NRG S1914) cited in another paper's discussion finding
+  no OS benefit from adding immunotherapy to SBRT, resolved as out of
+  scope (early-stage NSCLC, outside this corpus's own defined
+  advanced-NSCLC research question). Mental health: 133 records
+  screened, 13 matched, all read in full, none reporting a same-PICO
+  direction reversal. Neither search found a same-PICO contradiction;
+  neither yet includes a live PubMed literature layer, named as
+  explicit follow-up rather than silently skipped. See
+  `docs/oncology_same_pico_contradiction_search_audit.md` and
+  `docs/mental_health_same_pico_contradiction_search_audit.md` for
+  full methodology and candidate-disposition tables, and each
+  corpus's `golden_evidence_map.json`/README for the map-level
+  effect.
+
 - **Record-to-source fidelity check for the mental-health golden
   evidence map (9 records, 7 relationships).** Same methodology as
   the oncology check below, performed the same day. Cross-checked
