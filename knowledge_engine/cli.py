@@ -650,9 +650,10 @@ def extraction_review_promote(
 ) -> None:
     """Promote reviewer-completed draft extraction items into evidence records.
 
-    Never infers or classifies a field -- validates and persists only what a
-    human reviewer has already supplied, using the same validator as
-    `ke evidence-validate`.
+    Never infers or classifies a field -- validates and persists only what
+    has already been supplied (by `ke extraction-review-autoclassify`, an
+    AI agent, or a human -- no human completion is required), using the
+    same validator as `ke evidence-validate`.
     """
 
     if not input_path.exists():
@@ -2179,7 +2180,8 @@ def _build_evidence_report(
         "## Scope",
         "",
         "This report combines retrieval results with curated corpus metadata and "
-        "evidence records. It is intended for human review.",
+        "evidence records. It is intended for review (by an AI agent or a "
+        "human -- no human review is required).",
         "",
         "This is retrieval plus recorded evidence only. Extraction method is shown "
         "per evidence record.",

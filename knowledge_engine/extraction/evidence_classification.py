@@ -163,7 +163,8 @@ def build_automated_evidence_record(
     `generate_research_question` declines to automate it. The returned
     dict is shaped for `ke extraction-review-promote`, which performs the
     actual schema validation -- this function does not duplicate that
-    check, only fills the fields a human reviewer would otherwise supply.
+    check, only fills the fields that otherwise stay empty (no human
+    completion required).
     """
 
     claim_text = draft_item.get("claim_text")

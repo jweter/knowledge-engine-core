@@ -1,16 +1,17 @@
 """Deterministically pre-score discovery-cycle candidates against a corpus's
-scope criteria, to speed up (never replace) the manual title/abstract scope
-screen this project has always required before `ke pmc-oa-acquire`.
+scope criteria, to speed up (never replace) the AI (or human) title/abstract
+scope screen this project has always required before `ke pmc-oa-acquire`.
 
 Context: every discovery cycle across the GLP-1, oncology, and mental-health
 corpora ends with `ke discovery-cycle-run` handing back a
-`ready_for_scope_review` worksheet of 50-100 raw candidate titles, which a
-human or agent then reads one by one and classifies against that corpus's
-`inclusion_criteria.md`/`exclusion_criteria.md`. That per-title judgment call
-is real and this tool does not remove it -- see `docs/ai_layer_architecture.md`'s
-"one rule that does not change": nothing in this project auto-authors a scope
-decision without a human/AI review step. What this tool does is exactly what a
-human reviewer already does mechanically before applying judgment: recognize
+`ready_for_scope_review` worksheet of 50-100 raw candidate titles, which an
+AI agent (or a human) then reads one by one and classifies against that
+corpus's `inclusion_criteria.md`/`exclusion_criteria.md`. That per-title
+judgment call is real and this tool does not remove it -- see
+`docs/ai_layer_architecture.md`'s "one rule that does not change": nothing
+in this project auto-authors a scope decision without an AI (or human)
+review step -- no human review is required. What this tool does is exactly
+what that review already does mechanically before applying judgment: recognize
 title-level signals ("this says 'case report'", "this names sertraline",
 "this is about mice") that make many candidates fast, low-judgment calls, so
 review time concentrates on the genuinely ambiguous ones.
@@ -285,7 +286,7 @@ def prescreen_candidate(title: str, rules: ScopeRuleSet) -> tuple[Verdict, list[
             ["no_named_agent"],
             "On-topic but names no specific in-scope agent -- generic class "
             "terms alone have repeatedly produced low yield in this "
-            "project's own discovery cycles; needs a human/AI read of the "
+            "project's own discovery cycles; needs an AI (or human) read of the "
             "abstract.",
         )
 
@@ -298,7 +299,7 @@ def prescreen_candidate(title: str, rules: ScopeRuleSet) -> tuple[Verdict, list[
             "co-occurrence at the PubMed abstract/MeSH level, so this can be "
             "a genuinely on-topic paper (e.g. an agent-specific case report "
             "or pharmacovigilance finding) whose title just doesn't repeat "
-            "'depression'; needs a human/AI read rather than a title-only "
+            "'depression'; needs an AI (or human) read rather than a title-only "
             "guess either way.",
         )
 
@@ -386,7 +387,7 @@ def main() -> int:
     )
     print(
         "These are deterministic proposals, not decisions -- the same "
-        "human/AI title-and-abstract scope screen this project has always "
+        "AI (or human) title-and-abstract scope screen this project has always "
         "required before ke pmc-oa-acquire still applies to every row, "
         "especially needs_manual_review and likely_include rows."
     )

@@ -993,8 +993,8 @@ def pubmed_candidate_discover(
         f"({verified} PMC OA verified)."
     )
     console.print(
-        "[bold]Candidates require human inclusion and license review; "
-        "no PDFs were downloaded.[/bold]"
+        "[bold]Candidates require an AI/automated inclusion and license review "
+        "(no human review required); no PDFs were downloaded.[/bold]"
     )
 
 
@@ -1031,9 +1031,11 @@ def discovery_cycle_run(
     own docstring (`knowledge_engine.discovery_cycle`) for why
     deterministic adjudication alone is not sufficient to admit a paper
     unattended. Writes a bounded "ready for review" worksheet of
-    net-new accepted candidates to `--output`, for a human or agent to
-    give the same final scope screen this project has always required
-    before running `ke pmc-oa-acquire`.
+    net-new accepted candidates to `--output`, for an AI agent to give
+    the same automated scope screen this project has always required
+    before running `ke pmc-oa-acquire` -- no human review is required
+    or expected (see `docs/roadmap/long_term_vision.md`'s automated-review
+    decision).
     """
 
     try:
@@ -1154,8 +1156,8 @@ def europepmc_candidate_discover(
     if result.next_cursor_mark is not None:
         console.print(f"Next page: --cursor-mark {result.next_cursor_mark!r}")
     console.print(
-        "[bold]Candidates require human inclusion and license review; "
-        "no PDFs were downloaded.[/bold]"
+        "[bold]Candidates require an AI/automated inclusion and license review "
+        "(no human review required); no PDFs were downloaded.[/bold]"
     )
 
 
@@ -1233,8 +1235,8 @@ def core_candidate_discover(
     if result.next_offset is not None:
         console.print(f"Next page: --offset {result.next_offset}")
     console.print(
-        "[bold]Candidates require human inclusion and license review; "
-        "no PDFs were downloaded.[/bold]"
+        "[bold]Candidates require an AI/automated inclusion and license review "
+        "(no human review required); no PDFs were downloaded.[/bold]"
     )
 
 
@@ -2018,7 +2020,10 @@ def extraction_review_generate(
     )
     console.print(
         "[bold]Draft items are a review queue, not validated evidence -- "
-        "research_question and evidence_direction require human completion. "
+        "research_question and evidence_direction still need to be filled before "
+        "ke extraction-review-promote will accept them. Run ke "
+        "extraction-review-autoclassify (M52's deterministic, automated classifier) "
+        "to fill them -- no human completion is required. "
         "study_type, limitations, and population/intervention/comparator/outcome are "
         "populated automatically when detected, never guessed.[/bold]"
     )
@@ -2033,14 +2038,16 @@ def extraction_review_batch_generate(
     """Run `ke extraction-review-generate`'s pipeline across many papers at once.
 
     Writes one combined JSONL draft-evidence-item review queue -- every item
-    already carries its own `source_span.paper_id`, so a reviewer can trace
-    any item back to its paper without needing per-paper files. Exactly the
-    same pipeline as the single-paper command; this only removes the
-    one-paper-at-a-time friction of generating the queue a reviewer works
-    from. Still not validated evidence: `ke extraction-review-promote`
-    remains the only path from a draft item to a real `EvidenceRecord`, and
-    it still refuses any item missing a human-supplied
-    `research_question`/`evidence_direction`. A paper with no persisted
+    already carries its own `source_span.paper_id`, so it can be traced back
+    to its paper without needing per-paper files. Exactly the same pipeline
+    as the single-paper command; this only removes the one-paper-at-a-time
+    friction of generating the queue. Still not validated evidence: `ke
+    extraction-review-promote` remains the only path from a draft item to a
+    real `EvidenceRecord`, and it still refuses any item missing
+    `research_question`/`evidence_direction` -- run `ke
+    extraction-review-autoclassify` (M52's deterministic, automated
+    classifier) to fill them; no human completion is required. A paper with
+    no persisted
     pages is skipped and counted, not a hard failure, so one incomplete
     paper cannot abort the whole batch. An unknown `--paper-id` is rejected
     outright, matching `ke embedding-index-build`'s existing dangling-ID
@@ -2151,15 +2158,17 @@ def extraction_review_annotate(
     once: a coverage-gap flag when a term has no reference-layer match
     (`found: false`, never silently omitted), full provenance on every
     embedded result (`source_url`/`license`/`retrieved_at`), and background
-    definitions inline for the human deciding `research_question`/
-    `evidence_direction` before running `ke extraction-review-promote`.
+    definitions inline for whatever fills `research_question`/
+    `evidence_direction` (typically `ke extraction-review-autoclassify`,
+    M52's automated classifier) before running `ke
+    extraction-review-promote`.
 
     Never touches `research_question`, `evidence_direction`, or any other
     field `ke extraction-review-promote` requires -- purely additive context
-    a reviewer can read or ignore. A separate, opt-in step from generation:
-    run it by hand against the paper(s) you are about to review, not
-    automatically across the whole corpus -- generating the review queue
-    itself must stay network-free even at the corpus's real scale (M40:
+    that can be read or ignored. A separate, opt-in step from generation:
+    run it against the paper(s) being processed next, not automatically
+    across the whole corpus -- generating the review queue itself must stay
+    network-free even at the corpus's real scale (M40:
     13,588 draft items across 943 papers). Live-verified against real
     papers: expect on the order of a minute or more of network calls for
     one paper's full draft-item set, not a near-instant operation -- see
@@ -2221,8 +2230,10 @@ def extraction_review_annotate(
     )
     console.print(
         "[bold]reference_context is background context, not evidence -- "
-        "research_question and evidence_direction still require human completion "
-        "before ke extraction-review-promote will accept any item.[/bold]"
+        "research_question and evidence_direction still need to be filled "
+        "(run ke extraction-review-autoclassify, M52's automated classifier -- "
+        "no human completion required) before ke extraction-review-promote "
+        "will accept any item.[/bold]"
     )
 
 
@@ -3306,7 +3317,8 @@ def _build_unconfirmed_claims_report(graph_repository: GraphRepository) -> str:
             "judgment about the underlying science; run `ke "
             "graph-relationship-candidates` to see which of these claims "
             "already share a PICO-resolved concept with another claim, a "
-            "candidate a human reviewer may want to look at first.",
+            "candidate worth looking at first (by an AI agent or a human, "
+            "as this project's `RelationshipRecord` review always has been).",
             "",
         ]
     )
@@ -3675,7 +3687,7 @@ def _evidence_review_tier(
 def _build_evidence_review_queue(
     graph_repository: GraphRepository, evidence_records: list[dict[str, Any]], *, limit: int
 ) -> str:
-    """Build a Markdown report prioritizing automated evidence records for manual review.
+    """Build a Markdown report prioritizing automated evidence records for the next review pass.
 
     M62: "automated" means `extraction_method` is not `manual_human_review`/
     `manual` (M52's automated classification pass) and
@@ -3798,16 +3810,18 @@ def evidence_review_queue(
     output: GraphReportOutputOption = None,
     force: ForceOutputOption = False,
 ) -> None:
-    """Prioritize automated (M52) evidence records for manual review.
+    """Prioritize automated (M52) evidence records for the next review pass.
 
     M62: of the corpus's automated (`m52-evidence-classification-v1`)
-    records, prioritizes which to review first by real structural signal
-    -- a record already touching a relationship edge (reviewing it
-    directly firms up a number already shown in reports/pages) ranks
-    above one merely appearing in a relationship candidate pair, which
-    ranks above everything else. Never a judgment about a record's own
-    content or accuracy; that is exactly what the review itself is for.
-    Reads `--evidence` and the already-built graph; writes nothing.
+    records, prioritizes which to feed to `ke evidence-review-automate`
+    (M69's automated, grounding-verified LLM review -- no human review
+    required) first, by real structural signal -- a record already
+    touching a relationship edge (reviewing it directly firms up a number
+    already shown in reports/pages) ranks above one merely appearing in a
+    relationship candidate pair, which ranks above everything else. Never
+    a judgment about a record's own content or accuracy; that is exactly
+    what the review itself is for. Reads `--evidence` and the already-built
+    graph; writes nothing.
     """
 
     if output is not None:

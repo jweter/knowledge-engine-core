@@ -5,19 +5,21 @@ names the gap this closes: M16-M28's deterministic extraction pipeline has
 been unit-tested against synthetic fixtures and, as of M38/M38-follow-up,
 measured in aggregate across the real 943-paper corpus -- but `ke
 extraction-review-generate` (M19/M20) only ever runs against one paper at a
-time, so the real corpus's actual draft-evidence-item review queue, the
-material a human reviewer works from, has never been generated at scale.
-The real corpus still has exactly two `EvidenceRecord` rows, both
-hand-authored before any of this automation existed.
+time, so the real corpus's actual draft-evidence-item review queue had
+never been generated at scale. At the time this module was written, the
+real corpus had exactly two `EvidenceRecord` rows, both hand-authored
+before any of this automation existed; M52's automated classification and
+M69's automated LLM-grounded review have since removed that dependency on
+manual authorship entirely.
 
-This module does not change that human-review boundary: it runs the exact
-same pipeline `ke extraction-review-generate` runs for one paper, across
-however many papers are supplied, and returns draft evidence items --
-never a validated `EvidenceRecord`. Promoting a draft item into real
-evidence remains `ke extraction-review-promote`'s job, which still refuses
-any record missing a human-supplied `research_question`/
-`evidence_direction`. This module only removes the one-paper-at-a-time
-friction of generating the queue a reviewer works from.
+This module runs the exact same pipeline `ke extraction-review-generate`
+runs for one paper, across however many papers are supplied, and returns
+draft evidence items -- never a validated `EvidenceRecord`. Promoting a
+draft item into real evidence remains `ke extraction-review-promote`'s
+job, which still refuses any record missing `research_question`/
+`evidence_direction` -- filled by `ke extraction-review-autoclassify`
+(M52), not necessarily by a human. This module only removes the
+one-paper-at-a-time friction of generating the queue.
 """
 
 from __future__ import annotations
