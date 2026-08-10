@@ -236,6 +236,36 @@ had been recorded as the journal's own printed page number (585) instead
 of the local PDF's actual physical page (4), making its source
 unresolvable until corrected.
 
+**2026-08-10 update (later same day): mental health's comorbidity gap
+closed.** The 2026-08-10 comorbidity discovery cycle referenced above had
+identified two license-verified (CC BY 4.0) candidates but left them
+unacquired to avoid rushing a source-grounded record. Both are now
+acquired, source-audited against the full local PDF, and promoted:
+`ev-mh-zhang-2026-ssri-diabetes-comorbid-depression-001` (a 9-RCT,
+770-participant meta-analysis of SSRIs in diabetes with comorbid
+depression -- a genuinely mixed result: no overall depressive-symptom
+benefit, a benefit only in a >=6-month-follow-up subgroup, a significant
+anxiety-score increase, no glycaemic/BMI effect) and
+`ev-mh-schrag-2026-adept-pd-nortriptyline-escitalopram-001` (a
+placebo-controlled three-arm pilot RCT of nortriptyline and escitalopram
+in Parkinson's disease with comorbid depression -- an underpowered
+feasibility pilot with no BDI-II benefit for either drug but a
+nortriptyline-specific PHQ-9 and Persistent-Anxiety-Scale signal versus
+placebo). Reading the Schrag paper in full caught a genuine
+Abstract/Results internal inconsistency -- the Abstract states the
+escitalopram-vs-placebo PHQ-9 confidence interval as `-3.54 to -1.17`,
+which cannot be reconciled with the paper's own reported non-significance
+(p = 0.33) for that comparison; the Results section's `-3.54 to 1.17`
+is the internally-consistent figure and is what this record uses,
+with the discrepancy disclosed in the record's `source_span.locator_note`
+rather than silently resolved. Both records are added to the golden
+map's existing "MDD with co-occurring medical comorbidity" population
+group (now 4 records: post-stroke, post-CABG, diabetes, Parkinson's) and
+pass `ke evidence-map-grounding-verify` (10/11 records fully grounded,
+the sole remaining exception being the already-documented Yan cross-page
+citation). Mental-health corpus totals: 135 Evidence Records (11
+reviewed), 11-record golden map.
+
 ### Decision: corpus database versioning via chunked git commits
 
 The corpus SQLite database (`data/knowledge_engine.sqlite3`, gitignored

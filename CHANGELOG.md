@@ -30,6 +30,31 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Closed the mental-health golden map's comorbidity coverage gap**
+  (diabetes, Parkinson's disease). Two license-verified (CC BY 4.0)
+  candidates identified by an earlier discovery cycle but left
+  unacquired are now source-audited and promoted as reviewed Evidence
+  Records: `ev-mh-zhang-2026-ssri-diabetes-comorbid-depression-001` (a
+  9-RCT, 770-participant meta-analysis of SSRIs in diabetes with
+  comorbid depression -- mixed result: no overall depressive-symptom
+  benefit, a benefit only at >=6 months follow-up, a significant
+  anxiety-score increase, no glycaemic/BMI effect) and
+  `ev-mh-schrag-2026-adept-pd-nortriptyline-escitalopram-001` (a
+  placebo-controlled three-arm pilot RCT of nortriptyline/escitalopram
+  in Parkinson's disease with comorbid depression -- an underpowered
+  feasibility pilot with no BDI-II benefit for either drug but a
+  nortriptyline-specific PHQ-9 and Persistent-Anxiety-Scale signal).
+  Reading the Schrag source in full caught a genuine Abstract/Results
+  internal inconsistency in the paper itself (a PHQ-9 confidence
+  interval sign that contradicts the paper's own reported
+  non-significance); the record uses the internally-consistent Results
+  value and discloses the discrepancy in `source_span.locator_note`
+  rather than silently picking one. Both records added to the golden
+  map's "MDD with co-occurring medical comorbidity" population group
+  (now 4 records) and pass `ke evidence-map-grounding-verify` (10/11
+  records fully grounded). Mental-health corpus: 135 Evidence Records
+  (11 reviewed), 11-record golden map.
+
 - **Toxicity/adverse-event synthesis docs for the oncology and mental-health
   golden evidence maps.** Both maps' `known_gaps` named this as not yet
   built. New `docs/oncology_toxicity_adverse_event_synthesis.md` and
