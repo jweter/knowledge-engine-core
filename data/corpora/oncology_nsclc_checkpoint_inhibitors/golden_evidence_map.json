@@ -85,7 +85,8 @@
     "rel-onc-machado-supports-nodbrant-ecog-survival-001",
     "rel-onc-gandara-contextualizes-liao-baseline-risk-score-001",
     "rel-onc-esen-contextualizes-stuschke-alternative-sequencing-001",
-    "rel-onc-mao-supports-wu-liver-metastases-subgroup-001"
+    "rel-onc-mao-supports-wu-liver-metastases-subgroup-001",
+    "rel-onc-tsuboi-qualifies-dang-perioperative-os-001"
   ],
   "population_groups": [
     {
@@ -163,7 +164,7 @@
     "The direct randomized/meta-analytic evidence pools many distinct specific agents, chemotherapy backbones, and NSCLC subpopulations under each PD-1/PD-L1-class heading; agent-level and regimen-level differences are preserved in each record's own limitations but not separately re-verified here.",
     "Five of thirteen records (Katsarolis, Nodbrant, Machado, Gandara, Esen) are real-world or single-arm observational cohorts vulnerable to confounding by indication and selection bias.",
     "The PACIFIC trial itself, the foundational RCT establishing durvalumab consolidation after chemoradiotherapy, is not present in this corpus (closed-access venue); the perioperative/consolidation branch instead rests on real-world validations of it (Stuschke, Selke) and one alternative-sequencing cohort (Esen).",
-    "Two of the thirteen manually-reviewed records (Tsuboi's stage II EFS/OS subgroup, Weber's active-comparator study) are not yet connected to any other record by a reviewed relationship edge; they stand as independent context, not yet cross-referenced.",
+    "One of the thirteen manually-reviewed records (Weber's active-comparator study) is not yet connected to any other record by a reviewed relationship edge; it stands as independent context, not yet cross-referenced. Tsuboi's stage-II EFS/OS subgroup is now connected (`rel-onc-tsuboi-qualifies-dang-perioperative-os-001`, added 2026-08-10): it extends Dang's advanced-disease OS-benefit finding to a resectable, perioperative population, where OS is directionally favorable but not independently significant while EFS and pathologic response are clearly significant -- a qualifier, not a contradiction.",
     "Access, cost, quality of life, and individual benefit-harm tradeoffs are not represented."
   ],
   "known_gaps": [
@@ -179,6 +180,6 @@
     "reviewed_by": "Claude (session compilation, single-pass)",
     "reviewer_type": "ai_compiled_map_synthesis_pending_independent_audit",
     "review_date": "2026-08-10",
-    "notes": "Every evidence_record_id and relationship_id referenced here already exists as a manually-reviewed record or edge in the corpus (see evidence_records.jsonl/relationship_records.jsonl); this document adds map-level organization (scope, population/comparator groupings, contradiction assessment) on top of them, not new source claims. Requires the same independent source audit the GLP-1 golden map underwent before map_status can move from provisional to reviewed."
+    "notes": "Every evidence_record_id and relationship_id referenced here already exists as a manually-reviewed record or edge in the corpus (see evidence_records.jsonl/relationship_records.jsonl); this document adds map-level organization (scope, population/comparator groupings, contradiction assessment) on top of them, not new source claims. Requires the same independent source audit the GLP-1 golden map underwent before map_status can move from provisional to reviewed. A same-day connectivity check found two of the thirteen nodes (Tsuboi, Weber) had zero relationship edges despite being included; Tsuboi's connectivity gap was closed with one new reviewed relationship (rel-onc-tsuboi-qualifies-dang-perioperative-os-001), authored by direct PICO/result_summary comparison against Dang, not automated candidate matching. Weber was deliberately left unconnected rather than force a relationship to a mismatched comparison axis."
   }
 }

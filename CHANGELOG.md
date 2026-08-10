@@ -67,6 +67,23 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reviewer the way GLP-1's map was; each map's own `review`/`known_gaps`
   fields state exactly what that follow-up audit would need to cover.
 
+- **Closed a connectivity gap the oncology golden map's own
+  `limitations` field flagged: 1 new relationship edge.** A direct
+  `evidence_nodes`-vs-`relationship_ids` connectivity check confirmed 2
+  of the 13 reviewed records (Tsuboi, Weber) had zero relationship
+  edges. Authored `rel-onc-tsuboi-qualifies-dang-perioperative-os-001`:
+  Tsuboi's randomized KEYNOTE-671 stage-II subgroup (EFS HR 0.50,
+  significant; OS HR 0.69, directionally favorable but not
+  independently significant) qualifies Dang's pooled-RCT advanced-
+  disease OS finding, extending the same intervention to a resectable,
+  perioperative population without contradicting it. Weber was
+  deliberately left unconnected -- its active-comparator finding
+  doesn't cleanly map onto any other node's comparison axis, and this
+  project's discipline is to exclude conservatively rather than force a
+  weak match. Passed `ke relationship-validate` and `ke
+  evidence-map-validate`. Corpus relationship graph 8 -> 9 edges,
+  graph-wide 41 -> 42.
+
 - **Investigated `detect_sections`' 114-of-1,357-paper "no Abstract/
   Methods section detected at all" gap; found and documented it is not
   a narrow regex fix.** 79% (90/114) have no "abstract" text anywhere
