@@ -280,3 +280,24 @@ already-manually-reviewed records, not independently re-audited
 against source PDFs by a second reviewer the way GLP-1's map was. See
 the map's own `review`/`known_gaps` fields for exactly what independent
 audit work remains before it could move to `"reviewed"`.
+
+**Relationship graph: 1 more edge closing a connectivity gap
+(2026-08-10).** The golden map's own `limitations` field flagged that
+2 of the 13 reviewed records (Tsuboi, Weber) had zero relationship
+edges. A direct `evidence_nodes`-vs-`relationship_ids` connectivity
+check confirmed this. Authored one new relationship: Tsuboi's
+randomized KEYNOTE-671 stage-II subgroup (EFS HR 0.50, significant;
+OS HR 0.69, directionally favorable but not independently significant)
+qualifies Dang's pooled-RCT advanced-disease OS finding -- it extends
+the same ICI-plus-chemotherapy intervention to a resectable,
+perioperative population, without contradicting Dang's result, since
+EFS and pathologic response are the clearly significant endpoints in
+this subgroup while OS remains underpowered rather than reversed.
+Weber was deliberately left unconnected: its nivolumab+ipilimumab-vs-
+pembrolizumab active-comparator finding doesn't cleanly map onto any
+other node's actual comparison axis, and forcing a relationship there
+would not meet this project's own "human judgment, not automated
+matching, and exclude conservatively when uncertain" discipline. Passed
+`ke relationship-validate` and `ke evidence-map-validate`. Corpus
+relationship graph is now 9 edges (was 8); graph-wide total is 42
+(was 41).
