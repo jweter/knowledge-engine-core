@@ -1,0 +1,454 @@
+{
+  "already_in_rejected_ledger": 0,
+  "candidates_discovered": 25,
+  "cycle_number": 1,
+  "deterministically_accepted": 11,
+  "held_for_manual_review": 14,
+  "next_retstart": 25,
+  "query": "(\"major depressive disorder\" OR \"major depression\" OR \"depressive disorder\" OR \"depressive symptoms\") AND (SSRI OR SNRI OR fluoxetine OR sertraline OR escitalopram OR paroxetine OR citalopram OR venlafaxine OR duloxetine OR desvenlafaxine OR \"selective serotonin reuptake inhibitor\" OR \"serotonin-norepinephrine reuptake inhibitor\") AND (diabetes OR \"cardiovascular disease\" OR \"coronary artery disease\" OR \"heart failure\" OR \"chronic kidney disease\" OR \"Parkinson disease\" OR epilepsy OR dementia OR \"multiple sclerosis\" OR comorbidity OR comorbid) AND pubmed pmc open access[filter]",
+  "ready_for_scope_review": [
+    {
+      "abstract": "Selective serotonin reuptake inhibitors (SSRIs) are widely used as first-line treatments for major depressive disorder (MDD) and anxiety disorders, with common adverse effects, including sexual dysfunction, anxiety, insomnia, and appetite changes, although seizures have also been reported, particularly in the presence of risk factors such as older age, family history of epilepsy, neurological comorbidities, and high antidepressant dosages. We describe two patients who developed generalized tonic-clonic seizures associated with SSRI therapy. The first case is a man with SSRI-resistant MDD and multiple medical comorbidities who experienced five generalized tonic-clonic seizures while receiving various antidepressants. The second case is a woman with generalized anxiety disorder (GAD) who developed two generalized tonic-clonic seizures temporally related to paroxetine use. In both cases, extensive investigations, including laboratory tests, electroencephalogram (EEG), CT, and MRI, yielded normal results, suggesting a potential drug-associated etiology. Both patients were subsequently switched to the atypical antidepressant agomelatine, which was followed by a complete cessation of seizures and marked improvement in mood and anxiety symptoms. These observations underscore the need to consider seizures as a potential adverse event of SSRIs and suggest that agomelatine could be considered an alternative pharmacological option for patients at risk of antidepressant-associated seizures.",
+      "adjudicated_at": "2026-08-10T21:11:04.984389+00:00",
+      "authors": [
+        "Jos\u00e9 Alfonso Ontiveros Sanchez De La Barquera",
+        "Luis Alberto De La Garza Garcia",
+        "Guillermo Sanchez Torres",
+        "Leopoldo Iv\u00e1n Santacruz Torres",
+        "Arturo Alejandro Vera Vidaurri"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1155/crps/9178274",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13401160.1/PMC13401160.1.pdf?md5=fea1f254de3079f713ee9d449064a12e",
+      "pmcid": "PMC13401160",
+      "pmid": "42502621",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Seizures Temporally Associated With SSRI Treatment: A Two-Case Report Exploring Agomelatine as a Treatment Alternative.",
+      "unresolved_ambiguities": [],
+      "venue": "Case reports in psychiatry"
+    },
+    {
+      "abstract": "OBJECTIVES: To evaluate the efficacy and safety of selective serotonin reuptake inhibitors (SSRIs) in patients with diabetes mellitus and comorbid depression. METHODS: This study was registered in PROSPERO (CRD420261305439). Eight electronic databases were searched up to February 11, 2026 for randomized controlled trials comparing SSRIs plus usual care versus control. Outcomes included depressive symptoms (HDRS, BDI), anxiety (HARS), glycaemic control (HbA1c, FPG, PPG), and BMI. Meta-analyses were performed using random-effects models; subgroup analysis by follow-up duration and sensitivity analysis were conducted. RESULTS: Nine RCTs (770 participants) were included. Overall, SSRIs did not significantly improve HDRS (MD = 0.16, 95% CI -0.69 to 1.01, P = 0.72) or BDI scores. However, subgroup analysis showed significant HDRS reduction when follow-up was \u2265 6 months (MD = -0.96, 95% CI -1.86 to -0.05, P = 0.04). SSRIs were associated with increased HARS scores (MD = 2.37, 95% CI 0.73 to 4.02, P = 0.005). No significant effects were observed for HbA1c, FPG, PPG, or BMI. CONCLUSION: Preliminary evidence suggests that SSRIs may offer modest antidepressant benefits when used for \u2265 6 months in diabetic patients with depression, but they may be associated with a small increase in anxiety scores and do not appear to improve glycaemic control or BMI. However, the overall certainty of evidence is low to moderate. Monitoring of early anxiety symptoms is recommended, and further high-quality RCTs are needed. SYSTEMATIC REVIEW REGISTRATION: https://www.crd.york.ac.uk/prospero/, identifier CRD420261305439.",
+      "adjudicated_at": "2026-08-10T21:11:04.984389+00:00",
+      "authors": [
+        "Yuqing Zhang",
+        "Shilin Liu",
+        "Andong Li",
+        "Zheng Nan"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fendo.2026.1891729",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13437470.1/PMC13437470.1.pdf?md5=005ef185e4be7110e437fd08d8034d34",
+      "pmcid": "PMC13437470",
+      "pmid": "42558439",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Efficacy and safety of selective serotonin reuptake inhibitors for diabetes mellitus with depression: a systematic review and meta-analysis.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in endocrinology"
+    },
+    {
+      "abstract": "Pilot randomised-controlled trial of nortriptyline and escitalopram compared to placebo for depressive symptoms in people with Parkinson's disease (PD). Participants with PD and depressive symptoms received either nortriptyline, escitalopram or placebo with assessments at baseline and 8 weeks. Feasibility of the full trial was assessed using recruitment rate, loss to follow up before the 8-week primary endpoint, adherence to trial medication and rate of clinically significant adverse reactions. Intended efficacy outcomes included the BDI-II, Patient Health Questionnaire (PHQ-9), Parkinson Anxiety Scale (PAS), MDS-UPDRS and adverse effects. The aim was to recruit 46 participants to determine feasibility of the full trial. 52 participants were recruited from 24 NHS sites and randomised to nortriptyline (n = 16), escitalopram (n = 17) or placebo (n = 19). However, despite multiple strategies, recruitment took two years, and the study therefore did not reach its feasibility aim. Exploratory analyses showed that at 8 weeks depressive symptoms decreased significantly in all three arms. There was no difference in BDI-II score changes between the nortriptyline or the escitalopram when compared to the placebo arm, but PHQ-9 scores showed a greater reduction compared to placebo with nortriptyline (-3.4, 95% CI -5.75 to -0.95) but not with escitalopram (-1.2, 95% CI -3.54 to -1.17). Persistent Anxiety Scale scores showed a similar pattern (nortriptyline: -2.8, 95% CI -5.5 to -0.01; escitalopram: -2.2, 95% CI -4.9 to 0.05). As the study did not reach its primary aim of feasibility due to recruitment difficulties it did not continue to the full trial. The exploratory results are in keeping with previous studies suggesting a beneficial effect of nortriptyline on symptoms of depression and persistent anxiety. The small sample size however limits conclusions on efficacy and a beneficial effect of escitalopram is not excluded. STUDY DATASET IS AVAILABLE ON CLINICALTRIALS.GOV ID: NCT03652870, registered 29 August 2018.",
+      "adjudicated_at": "2026-08-10T21:11:04.984389+00:00",
+      "authors": [
+        "Anette Schrag",
+        "Andrew Embleton-Thirsk",
+        "Camille Carroll",
+        "Marc Serfaty",
+        "Gordon Duncan",
+        "Sophie Molloy",
+        "John Whipps",
+        "Blair McLennan",
+        "Glyn Lewis"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1007/s00702-026-03170-8",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13428755.1/PMC13428755.1.pdf?md5=82adcdf9bc152323a9881ae5f7c7b46b",
+      "pmcid": "PMC13428755",
+      "pmid": "42101650",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Placebo-controlled three-armed pilot trial of Escitalopram or Nortriptyline for depressive symptoms in Parkinson's disease (ADepT-PD).",
+      "unresolved_ambiguities": [],
+      "venue": "Journal of neural transmission (Vienna, Austria : 1996)"
+    },
+    {
+      "abstract": "Hemolacria is a rare condition characterized by bloody tears. Its etiology is often multifactorial, but functional/psychosomatic mechanisms have been proposed when organic causes are excluded. A 48-year-old woman with a history of multiple traumatic brain injuries (coma in 2008, car accident in 2017) presented with refractory generalized anxiety disorder, major depressive disorder, insomnia disorder, and treatment-resistant hypertension. Since 2022, she developed bilateral hemolacria with a baseline frequency of 4-5 episodes daily despite extensive negative ophthalmological, neurological, hematological, and imaging workups. She had been on stable doses of sertraline 100 mg/day, amlodipine 10 mg/day, losartan 100 mg/day, and intermittent zolpidem for at least 6 months. Anodal transcranial direct current stimulation (tDCS) targeting the left dorsolateral prefrontal cortex (L-DLPFC; anode F3, cathode Fp2) was administered for 27 sessions over 61 days (1-2 mA, 20 min/session, 5 days/week). No concurrent medication changes were made during or after the intervention. Marked clinical improvement began around session 12. By session 27, standardized scores showed remission of symptoms (HAM-D-17 from 26 to 4, HAM-A from 34 to 6, PSQI from 16 to 5), office blood pressure normalized to 125-135/80-85 mmHg, and hemolacria frequency decreased to one minor episode every 43 days. All improvements were sustained at the 3-month follow-up without further tDCS. This single-case, open-label report describes concurrent reductions in psychiatric, cardiovascular, and hemolacria symptoms that occurred in temporal association with anodal tDCS over the L-DLPFC in a treatment-refractory patient after organic causes had been excluded. Given the uncontrolled design, causality cannot be established; alternative explanations including placebo response, non-specific effects of clinical attention, regression to the mean, or spontaneous remission cannot be excluded. Randomized controlled trials are warranted to investigate the potential efficacy and mechanisms of tDCS in functional hemolacria.",
+      "adjudicated_at": "2026-08-10T21:11:04.984389+00:00",
+      "authors": [
+        "Roghayeh Mohammadi",
+        "Ahmad Alipour"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1002/ccr3.72787",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13239904.1/PMC13239904.1.pdf?md5=47ba63f814d34812daa8c980510bf2f2",
+      "pmcid": "PMC13239904",
+      "pmid": "42256963",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Transcranial Direct Current Stimulation (tDCS) for the Treatment of Hemolacria Comorbid With Psychiatric and Somatic Symptoms: A Case Report.",
+      "unresolved_ambiguities": [],
+      "venue": "Clinical case reports"
+    },
+    {
+      "abstract": "AIM: Vortioxetine has been approved for the treatment of patients with major depressive disorder (MDD) in Japan since 2019; however, limited data are available on its use in clinical practice. This study aimed to identify real-world prescribing patterns for first-line antidepressant treatment of patients with MDD in Japan, and to understand how patient characteristics influence treatment selection and continuation. METHODS: This retrospective cohort study utilized data from the JMDC claims database. Patients with MDD (aged \u2265 18 years) were included if they were newly prescribed antidepressants between November 1, 2019 and May 31, 2024. The primary outcome was the distribution of antidepressants prescribed as first-line treatment. Secondary outcomes included evaluating treatment patterns and characteristics among patients receiving a single antidepressant as first-line therapy. RESULTS: The analysis population included 263 773 patients, of whom 97.4% had single-drug prescriptions (vortioxetine [10.2%], selective serotonin reuptake inhibitors [48.3%], serotonin-norepinephrine reuptake inhibitors [15.2%], noradrenergic and specific serotonergic antidepressants [9.8%], and other antidepressants [13.9%]), and 2.6% had multiple-drug prescriptions. Patients were less likely to be prescribed vortioxetine if they were female (odds ratio: 0.802; 95% confidence interval: 0.781-0.824) or older than 60 years (0.544; 0.498-0.594), whereas patients with somnolence (2.248; 1.152-4.385), adjustment disorders (1.488; 1.433-1.544), and nausea and vomiting (1.253; 1.194-1.315) were more likely to be prescribed vortioxetine. In the first 3 months after initiating vortioxetine treatment, 41.3% of patients continued treatment, 44.7% discontinued, and 14.0% changed treatment. Treatment change was more common in women (1.129; 1.046-1.218), and in patients with physical symptoms, whereas mental health-related comorbidities were associated with treatment persistence. CONCLUSION: These findings suggest that vortioxetine is more commonly prescribed to working-age men in Japan, and that patient characteristics and tolerability considerations contribute to prescribing and continuation patterns in clinical practice.",
+      "adjudicated_at": "2026-08-10T21:11:04.984389+00:00",
+      "authors": [
+        "Masaki Kato",
+        "Tatsuya Hoshino",
+        "Yayoi Kawata",
+        "Fumie Tokuda",
+        "Shinji Fujimoto"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1002/npr2.70133",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13240034.1/PMC13240034.1.pdf?md5=2fa6654dd8e907c9d2b5563a2e127b5e",
+      "pmcid": "PMC13240034",
+      "pmid": "42234570",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Real-World Vortioxetine Prescription for Patients With Major Depressive Disorder in Japan: A Retrospective Cohort Study Using a Japanese Health Insurance Claims Database.",
+      "unresolved_ambiguities": [],
+      "venue": "Neuropsychopharmacology reports"
+    },
+    {
+      "abstract": "BACKGROUND: Depression is a prevalent comorbidity in cancer, yet conventional treatments show inconsistent efficacy. This review sought to provide a mechanism-based framework for managing cancer-related depression by exploring its unique pathophysiology and evaluating promising pharmacotherapies based on their alignment with these biological pathways. This narrative review synthesized evidence on promising pharmacotherapies based on their ability to target the core biological mechanisms of cancer-related depression, including pro-inflammatory cytokine activity, hypothalamic-pituitary-adrenal axis hyperactivity, serotonin pathway disruption via indolamine-2,3-dioxygenase activation, and glutamate excitotoxicity. RECENT FINDINGS: Interventions directly targeting inflammation (e.g., celecoxib) and glutamate modulation (e.g., ketamine) demonstrated encouraging early evidence. The effect of ketamine can also be due to its anti-inflammatory properties. Atypical antidepressants, such as mirtazapine, and the serotonergic psychedelic psilocybin also showed promising but preliminary benefits. In contrast, conventional selective serotonin reuptake inhibitors and tricyclic antidepressants yielded conflicting results. Other agents, including the psychostimulant methylphenidate, showed utility for specific symptoms like fatigue. CONCLUSION: A personalized, mechanism-informed approach targeting the core pathophysiological cascade of inflammation, hypothalamic-pituitary-adrenal axis hyperactivity, and glutamate excitotoxicity is essential for effectively managing depression in patients with cancer. This represents a necessary paradigm shift away from a one-size-fits-all treatment model.",
+      "adjudicated_at": "2026-08-10T21:11:04.984389+00:00",
+      "authors": [
+        "Sepideh Hajivalizadeh",
+        "Kimia Farahmand",
+        "Kimia Kazemzadeh",
+        "Ghazaleh Hajivalizadeh",
+        "Ahmad Shamabadi"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1002/cnr2.70587",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13240069.1/PMC13240069.1.pdf?md5=5a12bfb82494150290a0fcfb82b7c7f9",
+      "pmcid": "PMC13240069",
+      "pmid": "42178235",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Pharmacotherapeutic Management of Depression in Patients With Cancer: A Review of Mechanistic and Clinical Evidence.",
+      "unresolved_ambiguities": [],
+      "venue": "Cancer reports (Hoboken, N.J.)"
+    },
+    {
+      "abstract": "BACKGROUND: Patients with obsessive\u2013compulsive disorder (OCD) and comorbid major depressive disorder (MDD) represent a severe subgroup with increased treatment resistance, greater functional impairment, and limited therapeutic options. Intranasal esketamine is a rapidly acting treatment for resistant depression, with emerging interest in potential anti-obsessional effects. However, prospective data in this comorbid population remain lacking. METHODS: We present eight adult cases (mean age 47.3 \u00b1 8.8 years) with treatment-resistant OCD (TR-OCD) and comorbid MDD treated at Bellvitge University Hospital. All patients had failed at least two adequate SSRI trials, clomipramine, cognitive-behavioral therapy with exposure and response prevention, and at least one pharmacological augmentation strategy. Intranasal esketamine (56\u201384 mg/session) was administered according to the standard antidepressant protocol over 12 weeks. Response was defined as \u2265 35% reduction in Y-BOCS and \u2265 50% reduction in MADRS. RESULTS: Depressive symptoms improved substantially, with MADRS scores decreasing by 48.8% at Week 12 (p = 0.0026). Obsessive-compulsive symptoms showed a more modest and heterogeneous reduction, with a 30.3% decrease in Y-BOCS scores (p = 0.0037). Four of the eight participants (50.0%) achieved depression response, including two (25.0%) remissions, and four of the eight participants (50.0%) met OCD response criteria. Depressive symptoms improved earlier, whereas OCD symptoms followed a slower and more variable trajectory. CONCLUSIONS: Repeated intranasal esketamine may offer a therapeutic window for patients with severe TR-OCD and comorbid MDD. These preliminary findings support further controlled studies to clarify its role, optimal administration, and integration with psychotherapy.",
+      "adjudicated_at": "2026-08-10T21:11:04.984389+00:00",
+      "authors": [
+        "Sergi L\u00f3pez-Rodr\u00edguez",
+        "Cinto Segal\u00e0s",
+        "Eva Real",
+        "Mikel Urretavizcaya",
+        "Sara Bertol\u00edn",
+        "Jos\u00e9 Manuel Mench\u00f3n",
+        "Del Pino Alonso"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1186/s12888-026-08119-5",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13267743.1/PMC13267743.1.pdf?md5=bcf5135de48fdd96f83f9c33cb398762",
+      "pmcid": "PMC13267743",
+      "pmid": "42036648",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Repeated intranasal esketamine augmentation in treatment-resistant obsessive-compulsive disorder with comorbid major depressive disorder: a prospective case series.",
+      "unresolved_ambiguities": [],
+      "venue": "BMC psychiatry"
+    },
+    {
+      "abstract": "Dyspeptic symptoms associated with chronic belching may substantially affect quality of life and can be challenging to manage in clinical practice. We report the case of a 40-year-old nulligravid woman with depressive disorder, bilateral cochlear implants due to deafness, a hiatal hernia, and a previous pulmonary embolism. Her medications included desvenlafaxine, multiple benzodiazepines, mirtazapine, trazodone, and apixaban. She presented with an 18-month history of persistent belching, heartburn, early satiety, and intermittent dry cough, severely impairing her quality of life and leading to social isolation. Additionally, her symptoms intensified during anxiety and depressive episodes. Physical examination was unremarkable, and upper gastrointestinal endoscopy revealed only a small hiatal hernia and mild gastropathy, with no evidence of Helicobacter pylori infection. Despite repeated medical evaluations and multiple therapeutic approaches, including proton pump inhibitors, sucralfate, domperidone, simethicone, and bilastine, symptoms persisted without significant improvement. Functional dyspepsia was therefore suspected, and treatment with baclofen 10 mg twice daily was initiated, resulting in significant clinical improvement and enhanced quality of life. This report highlights the potential benefit of baclofen in patients with persistent belching and dyspeptic symptoms refractory to conventional therapy, particularly in the context of psychiatric comorbidity.",
+      "adjudicated_at": "2026-08-10T21:11:04.984389+00:00",
+      "authors": [
+        "Mariana Rocha",
+        "Lisete Silva",
+        "Francisco Coelho"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.7759/cureus.106942",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13169938.1/PMC13169938.1.pdf?md5=45836bffcb187df86dada6686f13b2f0",
+      "pmcid": "PMC13169938",
+      "pmid": "42137706",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Baclofen in Refractory Dyspepsia With Chronic Belching: A Case Report.",
+      "unresolved_ambiguities": [],
+      "venue": "Cureus"
+    },
+    {
+      "abstract": "Major depressive disorder (MDD) is associated with complex metabolic alterations. In this study, we applied a multiplatform metabolomics approach (GC-MS and LC-MS) to characterize the plasma extracellular vesicle (EV) metabolome in healthy controls (N = 50), responsive MDD patients (N = 60), and patients with treatment-resistant depression (TRD; N = 65). Longitudinal analyses were performed following 8-week treatment with duloxetine (N = 30), bright-light therapy (BLT; N = 30), or esketamine (N = 35). A total of 230 metabolites were identified, with the most pronounced metabolic alterations observed in TRD patients, particularly in lipid, amino acid, and energy metabolism pathways. Elevated lysophospholipids and fatty acids in TRD suggested dysregulated lipid metabolism and inflammatory processes. All treatments resulted in clinical improvement, accompanied by partial normalization of metabolic profiles. Duloxetine treatment was associated with modulation of amino acid and glycerophospholipid metabolism, including increases in tryptophan-related metabolites and normalization of specific lipid species. BLT primarily reduced lysophospholipids and mannose levels, while esketamine modulated metabolites related to lipid turnover, short-chain fatty acids, carbohydrate metabolism, and neuroendocrine function, including increased thyrotropin-releasing hormone levels. These findings support the concept that TRD represents a biologically distinct and more metabolically dysregulated subtype of depression and highlight EV-based metabolomics as a promising approach for elucidating disease and treatment mechanisms.",
+      "adjudicated_at": "2026-08-10T21:11:04.984389+00:00",
+      "authors": [
+        "Nikola Balic",
+        "Gordana Nedic Erjavec",
+        "Marcela Konjevod",
+        "Jorge Saiz",
+        "Tina Curkovic",
+        "Lucija Tudor",
+        "Dubravka Svob Strac",
+        "Alja Videtic Paska",
+        "Julija Smon",
+        "Magda Tusek-Znidaric",
+        "Marina Sagud",
+        "Bjanka Vuksan Cusa",
+        "Tea Fabijanic",
+        "Zrinka Pesut",
+        "Biljana Kosanovic Rajacic",
+        "Zoran Bradas",
+        "Nela Pivac",
+        "Matea Nikolac Perkovic"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3390/biom16040533",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13113742.1/PMC13113742.1.pdf?md5=79fc8c8fad8bed624a97eec769e5720d",
+      "pmcid": "PMC13113742",
+      "pmid": "42072654",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Metabolomic Profiling of Extracellular Vesicles Reveals Distinct Metabolic Dysregulation and Treatment-Specific Signatures in Depression.",
+      "unresolved_ambiguities": [],
+      "venue": "Biomolecules"
+    },
+    {
+      "abstract": "BACKGROUND: Late-life depression refers to a depression occurring in older adults, defined as individuals aged 65 years and older. It is common and often mismanaged due to complex clinical profiles, polypharmacy, and limited evidence-based guidance. Existing tools poorly address psychiatric nuances in older adults. This work aims to develop French recommendations based on experts' consensus on the use of antidepressants in unipolar late-life depression, to guide safer prescribing practices. METHODS: This tool was developed using a Delphi survey, based on a review of literature published between 2014 and 2024 and focused on \"antidepressants\" and \"late-life depression\" Experts from various fields: geriatric psychiatry, clinical pharmacy and general practice, rated items using a 9-point Likert scale. Items with a median score \u2265 7 and at least 80% agreement were validated and included in the final version of the tool. RESULTS: Twenty to 23 experts per round, different from the authors of the proposed items, participated in a four-round Delphi process. The resulting tool includes 57 validated items across 10 sections and a stepped-care algorithm for treating major depression in older adults. It addresses drug choice, dosing, monitoring, comorbidities, and treatment resistance, prioritizing safe first-line options like sertraline, citalopram, and escitalopram. CONCLUSION: A Delphi survey involving multidisciplinary experts led to a French consensus tool for prescribing antidepressants in unipolar late-life depression. It integrates clinical evidence and expert judgment to address treatment complexity, drug safety, and resistance. The tool offers practical, stepwise recommendations tailored to primary care, aiming to optimize antidepressant use, reduce iatrogenesis, and improve patient outcomes.",
+      "adjudicated_at": "2026-08-10T21:11:04.984389+00:00",
+      "authors": [
+        "Morgane Houix",
+        "Alexis Lepetit",
+        "Christophe Arbus",
+        "Sophie Armand-Branger",
+        "Sylvie Bonin-Guillaume",
+        "Benjamin Calvet",
+        "Mathieu Corvaisier",
+        "Ismael Conejero",
+        "Anne-Laure Debruyne",
+        "Sandrine Louchart de la Chapelle",
+        "G\u00e9rald Deschietere",
+        "Thomas Desmidt",
+        "Jean-Michel Dorey",
+        "Olivier Drunat",
+        "Jean-Pascal Fournier",
+        "Quentin Gallet",
+        "Jacques Gauillard",
+        "C\u00e9cile Hanon",
+        "Nicolas Hoertel",
+        "Ilia Humbert",
+        "Isabelle Jalenques",
+        "Aline Lepelletier",
+        "Fr\u00e9d\u00e9ric Limosin",
+        "Nicolas Marie",
+        "St\u00e9phanie Miot",
+        "Jean Olivier",
+        "Laurence Petit",
+        "Beatriz Pozuelo Moyano",
+        "Maximilien Redon",
+        "Gabriel Robert",
+        "Jean Roche",
+        "Tanguy Taillefer de Laportaliere",
+        "Pierre Vandel",
+        "Sonia Prot-Labarthe",
+        "Samuel Bulteau"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1192/j.eurpsy.2026.12206",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13372736.1/PMC13372736.1.pdf?md5=b9fbdcf312255cf0731a7d06e5c2cb8b",
+      "pmcid": "PMC13372736",
+      "pmid": "41883330",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Optimizing antidepressant use in geriatric depression: expert consensus from French societies of geriatrics, old age psychiatry, and clinical pharmacy (SFGG, SF3PA, and SFPC).",
+      "unresolved_ambiguities": [],
+      "venue": "European psychiatry : the journal of the Association of European Psychiatrists"
+    },
+    {
+      "abstract": "INTRODUCTION: Major depressive disorder (MDD) is a leading cause of disability worldwide and contributes significantly to the global burden of disease. Recent data show an increasing prevalence of treatment-resistant depression (TRD). Patients with autism spectrum disorder (ASD) often exhibit MDD as a comorbidity and it is often resistant to conventional treatments. ASD determines emotional dysregulation and a reduced ability to understand mental states (mentalization). These features can lead to suicidal ideation and/or behavior. Intranasal esketamine may offer a novel therapeutic option for this population. METHODS: This case series focuses on the clinical response to intranasal esketamine in patients with autism and TRD; esketamine is approved in Italy as an add-on therapy in TRD, so our case study is based on an in-label treatment. Three young patients (n = 3, F/M 2:1, age range 20-25 y) with light to moderate autism (Level 1 or 2) were treated. Esketamine was administered in augmentation with selective serotonin reuptake inhibitors (SSRIs) or serotonin-norepinephrine reuptake inhibitors (SNRIs) in accordance with EMA/AIFA guidelines. A structured follow-up protocol was set to monitor depressive symptoms, social cognition, and mentalization. Follow-up during treatment was maintained for six months, and psychometric evaluations were performed at six time points: baseline (T0), 1 week (T1), 1 month (T2), 2 months (T3), 3 months (T4), and 6 months (T5). Also, subjective quality of life was investigated before and after the observation period. RESULTS: Despite differences in clinical profile, all patients showed good efficacy of esketamine in reducing depressive symptoms: two patients experienced clinical remission at T5 (MADRS < 10), one patient showed partial response (dMADRS = 43.24%). No major side effects were reported. Significant improvements were observed after the first week of treatment (P1: MADRS_T0 = 37, MADRS_T1 = 12; P2: MADRS_T0 = 32, MADRS_T1 = 21; P3: MADRS_T0 = 25, MADRS_T1 = 12). Depressive relapses occurred (e.g., P1, T3-T4), but they were not associated with hospitalizations and/or suicidal attempts. Suicidal ideation, when present, decreased by the end of the follow-up period. Lack of mentalization and in social cognition was noted, with just mild improvements during therapy. Subjective quality of life improved significantly for all patients (P1: 28% at T0, 73% at T5. P2: 25% at T0, 71% at T5. P3: 35% at T0, 80% at T5). CONCLUSIONS: Intranasal esketamine showed a favorable efficacy and safety in these three cases of TRD in comorbidity with ASD (at six months: total remission = 66.66%, partial remission = 33.33%, inefficacy = 0%, drop-out = 0, severe adverse events = 0). Besides improvements in depressive symptoms, esketamine was associated with a constant decrease in suicidal thoughts. A case series is unfit to form statistical conclusions; preliminary data warrant further investigation in randomized controlled studies to validate the therapeutic potential of esketamine in this population.",
+      "adjudicated_at": "2026-08-10T21:11:04.984389+00:00",
+      "authors": [
+        "Alessandro Guffanti",
+        "Matteo Leonardi",
+        "Natascia Brondino",
+        "Bernardo Dell'Osso",
+        "Vassilis Martiadis",
+        "Miriam Olivola"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3390/clinpract16030061",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13024768.1/PMC13024768.1.pdf?md5=f29cb9d5d8d1f76f963942305a662b99",
+      "pmcid": "PMC13024768",
+      "pmid": "41892505",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Efficacy and Safety of Intranasal Esketamine in Treatment-Resistant Depression with Comorbid Autism Spectrum Disorder: Three Case Reports.",
+      "unresolved_ambiguities": [],
+      "venue": "Clinics and practice"
+    }
+  ],
+  "rejected_by_adjudication": 0,
+  "retstart_used": 0,
+  "rules_version": "m55-discovery-cycle-v1"
+}

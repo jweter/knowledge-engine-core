@@ -349,3 +349,55 @@ not a same-PICO direction reversal. See
 methodology, search contract, and candidate-disposition table. This
 search does not yet include a live PubMed literature layer (named as
 explicit follow-up, not silently skipped).
+
+**Golden map reaches `map_status: "reviewed"` via automated deterministic
+verification (2026-08-10, same day).** The project owner decided that
+requiring a genuinely independent human or different-AI-system reviewer
+for golden-map review repeats the same non-scaling assumption M69
+already rejected for individual Evidence Records -- see
+`docs/roadmap/long_term_vision.md`'s "Extension to golden-map review"
+addendum. Built `ke evidence-map-grounding-verify`
+(`knowledge_engine/golden_map_grounding.py`): a pure, deterministic,
+non-LLM check confirming every numeric token in each record's
+`result_summary` is genuinely present in its cited source-PDF page.
+Result: 11/13 records fully grounded; the 2 exceptions (Dang, Nodbrant)
+each have a specific, individually investigated explanation already
+documented in the map's `known_gaps` (a figure on a different page than
+declared; a table that doesn't extract as text), not an unexplained
+miss. Running the checker also caught and fixed a real data bug:
+Nodbrant's `source_span.page_number` had been recorded as 585 (the
+journal's own printed page number) instead of 4 (the local PDF's actual
+physical page), which made its source page entirely unresolvable until
+corrected. Both `map_status` and `review.status` now read `"reviewed"`.
+
+**PACIFIC trial open-access investigation, completed with a negative
+but fully documented result (2026-08-10, same day).** The map's
+`known_gaps` named acquiring the PACIFIC trial (or an open-access
+equivalent) as a way to move the perioperative/consolidation branch
+onto randomized rather than only real-world evidence. Checked every
+plausible route via PubMed/PMC/Europe PMC license lookups: the primary
+PACIFIC trial paper and its OS update (both NEJM) have no PMC record
+at all; the JCO five-year-survival update (PMID 35108059, PMC9015199)
+and PACIFIC-5 -- a real phase III randomized, placebo-controlled trial
+extending durvalumab consolidation to a broader, PD-L1-unselected,
+concurrent-or-sequential-CRT population (Wu et al. 2025, PMID
+41354932, PMC12696894,
+[10.1186/s13045-025-01768-1](https://doi.org/10.1186/s13045-025-01768-1))
+-- are both in PMC but licensed CC BY-NC-ND, which this project's
+license policy (`knowledge_engine/license_rules.py`) deliberately
+excludes. The two trials PACIFIC-5 itself names as closest mechanistic
+equivalents, GEMSTONE-301 and PACIFIC-6, are fully closed-access, not
+merely non-CC-BY. This is now a verified, dead-end-documented gap
+rather than an unexplored one -- see the map's `known_gaps` for the
+full per-paper citation trail.
+
+**Toxicity/adverse-event synthesis built as a qualifier layer (2026-08-10,
+same day).** The map's `known_gaps` named this as not yet built. New
+`docs/oncology_toxicity_adverse_event_synthesis.md`: a source-linked
+collation of the safety/tolerability content already present in the
+golden map's own 13 records (9 report some safety content, 4 do not),
+plus a corpus-wide phrase-set scan (264/1,534 records match an
+adverse-event/toxicity phrase set, reported for scale context only, not
+individually re-read). Explicitly qualitative, not a pooled safety
+estimate -- the underlying records use incommensurable AE definitions and
+ascertainment windows.

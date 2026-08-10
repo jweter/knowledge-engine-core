@@ -19,6 +19,8 @@ import typer
 from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from knowledge_engine.binary_statistical_verification import (
     BinaryStatisticalVerification,
@@ -38,11 +40,15 @@ from knowledge_engine.evidence_map_report import (
     build_comparison_rows,
     render_evidence_map_report,
 )
+from knowledge_engine.golden_map_grounding import (
+    GOLDEN_MAP_GROUNDING_RULES_VERSION,
+    check_record_numeric_grounding,
+)
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.cli_modes import resolve_corpus_import_mode
 from knowledge_engine.import_runs.ingestion import CorpusIngestionService, ImportedCorpusRun
 from knowledge_engine.import_runs.linked_ingestion import LinkedCorpusIngestionService
-from knowledge_engine.models import ImportRun
+from knowledge_engine.models import ImportRun, Paper, PaperPage
 from knowledge_engine.parser import PyMuPDFParser
 from knowledge_engine.search import SearchResult, SearchService, build_natural_language_fts_query
 from knowledge_engine.statistical_readiness import (
@@ -918,6 +924,159 @@ def evidence_map_report(
         return
 
     console.print(report, markup=False)
+
+
+def _resolve_source_page_text(
+    session: Session, local_pdf_path: str | None, page_number: object
+) -> str | None:
+    """Resolve a `source_span.local_pdf_path`/`page_number` pair to real page text.
+
+    Returns `None` for any unresolvable step -- no PDF path, no matching `Paper`
+    row, no `page_number`, or no `PaperPage` row for that page -- rather than
+    guessing. `local_pdf_path` is matched against `Paper.source_path` by its
+    filename stem (e.g. `PMC12345678`), since `source_span.local_pdf_path` is a
+    corpus-relative path (`papers/corpora/<corpus>/PMC....pdf`) while
+    `Paper.source_path` is whatever absolute or relative path the paper was
+    actually imported from.
+    """
+
+    if not local_pdf_path or not isinstance(page_number, int):
+        return None
+    stem = Path(local_pdf_path).stem
+    if not stem:
+        return None
+    paper = session.scalar(select(Paper).where(Paper.source_path.contains(stem)))
+    if paper is None:
+        return None
+    return session.scalar(
+        select(PaperPage.text).where(
+            PaperPage.paper_id == paper.id, PaperPage.page_number == page_number
+        )
+    )
+
+
+@app.command("evidence-map-grounding-verify")
+def evidence_map_grounding_verify(
+    map_path: EvidenceMapArgument,
+    evidence: RequiredEvidenceRecordsOption,
+    output: OutputMarkdownOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Deterministically check a golden map's records' result_summary against source text.
+
+    Per-record: extracts every numeric token (hazard ratios, confidence
+    intervals, p-values, sample sizes) from the record's `result_summary` and
+    checks each one is genuinely present in the extracted source-PDF page text
+    at the record's own `source_span.local_pdf_path`/`page_number` (resolved
+    via the local database's `paper_pages` table). This is a pure, deterministic
+    text comparison -- no LLM, no human judgment -- the same posture
+    `knowledge_engine.extraction.grounding.verify_grounding` already established
+    for per-field extraction. See `knowledge_engine/golden_map_grounding.py`'s
+    module docstring for why this checks numeric presence rather than reusing
+    `verify_grounding`'s sentence-level near-match directly.
+
+    This is a narrower claim than full semantic grounding: it confirms a
+    number is genuinely present in the source page, not that it is attached to
+    the correct claim. It never infers, scores, or asserts a relationship,
+    consensus, or scientific conclusion -- only whether cited numbers trace
+    back to their stated source page.
+    """
+
+    if output and output.resolve() in {map_path.resolve(), evidence.resolve()}:
+        raise typer.BadParameter("Output must not overwrite an input file.")
+    if output and output.exists() and not force:
+        raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
+
+    evidence_result = _validate_evidence_records(evidence, require_review_fields=True)
+    if evidence_result.errors:
+        console.print(
+            f"[red]Evidence map grounding verify failed; evidence is invalid:[/red] {evidence.name}"
+        )
+        for error in evidence_result.errors:
+            console.print(f"- {_safe_text(error)}")
+        raise typer.Exit(1)
+    evidence_by_id = {record["evidence_record_id"]: record for record in evidence_result.records}
+
+    try:
+        payload = load_evidence_map(map_path)
+    except EvidenceMapError as exc:
+        console.print(f"[red]Evidence map grounding verify failed:[/red] {_safe_text(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    evidence_nodes = payload.get("evidence_nodes")
+    if not isinstance(evidence_nodes, list):
+        console.print("[red]Evidence map has no evidence_nodes list.[/red]")
+        raise typer.Exit(1)
+
+    database = _database()
+    database.initialize()
+
+    lines = [
+        "# Golden Evidence Map Grounding Verification",
+        "",
+        f"Map: {_safe_text(str(payload.get('map_id') or map_path))}",
+        f"Method: {GOLDEN_MAP_GROUNDING_RULES_VERSION} "
+        "(deterministic numeric-token presence check, no LLM, no human judgment)",
+        "",
+    ]
+    fully_grounded_count = 0
+    checked_count = 0
+    with database.session() as session:
+        for node in evidence_nodes:
+            if not isinstance(node, dict):
+                continue
+            record_id = node.get("evidence_record_id")
+            if not isinstance(record_id, str):
+                continue
+            record = evidence_by_id.get(record_id)
+            if record is None:
+                lines.append(f"- `{_safe_text(record_id)}`: **not found in --evidence file**")
+                continue
+            span = record.get("source_span") or {}
+            page_text = _resolve_source_page_text(
+                session, span.get("local_pdf_path"), span.get("page_number")
+            )
+            result = check_record_numeric_grounding(
+                record_id, record.get("result_summary"), page_text
+            )
+            checked_count += 1
+            if result.fully_grounded:
+                fully_grounded_count += 1
+                lines.append(
+                    f"- `{_safe_text(record_id)}`: **grounded** "
+                    f"({result.numbers_checked} number(s) checked, all found)"
+                )
+            elif not result.source_page_found:
+                lines.append(
+                    f"- `{_safe_text(record_id)}`: **source page not resolved** "
+                    f"(local_pdf_path={span.get('local_pdf_path')!r}, "
+                    f"page_number={span.get('page_number')!r})"
+                )
+            else:
+                lines.append(
+                    f"- `{_safe_text(record_id)}`: **{len(result.missing_numbers)} of "
+                    f"{result.numbers_checked} number(s) not found in source page**: "
+                    f"{', '.join(result.missing_numbers)}"
+                )
+
+    lines.insert(
+        5,
+        f"Result: {fully_grounded_count}/{checked_count} records fully grounded "
+        "(every result_summary number found in its cited source page).",
+    )
+    lines.insert(6, "")
+    report = "\n".join(lines) + "\n"
+
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(report, encoding="utf-8")
+        console.print(f"[green]Wrote grounding verification report:[/green] {output}")
+        console.print(f"{fully_grounded_count}/{checked_count} records fully grounded.")
+        return
+
+    console.print(report, markup=False)
+    if fully_grounded_count < checked_count:
+        raise typer.Exit(1)
 
 
 @app.command("statistical-verify")

@@ -204,30 +204,37 @@ each now have a **first golden evidence map**
 13 records / 9 relationship edges; `data/corpora/mental_health_mdd_antidepressants/golden_evidence_map.json`,
 9 records / 7 edges) organizing their already-reviewed records into
 population/comparator groupings and a bounded contradiction assessment
-(none found in either). Both carry `map_status: "provisional"`, not
-`"reviewed"` like GLP-1's -- each was compiled in a single AI-assisted
-session from already-reviewed records, not independently re-audited
-against source PDFs by a second pass the way GLP-1's map was; each map's
-own `review`/`known_gaps` fields state exactly what that follow-up audit
-would need to cover. A direct connectivity check against oncology's own
+(none found in either). A direct connectivity check against oncology's own
 map found 2 of its 13 records (Tsuboi, Weber) with zero relationship
 edges; one edge was authored to close Tsuboi's gap (a `qualifies`
 relationship to Dang's pooled OS finding), while Weber was deliberately
 left unconnected rather than force a weak match onto an unrelated
-comparison axis. A same-system record-to-source fidelity check has since been run
-against both maps (all 13 oncology and 9 mental-health records
-cross-checked against extracted source-PDF text, all faithful), and a
-reproducible same-PICO contradiction search has been established and
-run for both corpora against their full local Evidence Record bases
-(1,534 oncology / 133 mental-health records screened; no same-PICO
-contradiction found in either -- see
+comparison axis. A reproducible same-PICO contradiction search has since
+been established and run for both corpora against their full local
+Evidence Record bases (1,534 oncology / 133 mental-health records
+screened; no same-PICO contradiction found in either -- see
 `docs/oncology_same_pico_contradiction_search_audit.md` and
-`docs/mental_health_same_pico_contradiction_search_audit.md`). Neither
-check was performed by a genuinely independent reviewer, though --
-both were done by the same AI system that compiled the maps, unlike
-GLP-1's audit (a different AI system, OpenAI Codex). That independent
-pass is the one remaining concrete step to bring either domain to
-GLP-1's `"reviewed"` bar.
+`docs/mental_health_same_pico_contradiction_search_audit.md`).
+
+**Both maps now carry `map_status: "reviewed"`** (2026-08-10). The
+project owner explicitly extended M69's existing decision -- human
+reading is not a required review gate for an Evidence Record, since it
+does not scale to this project's real corpus sizes -- to golden-map
+review as well: an independent *deterministic* check, not necessarily a
+human or a different AI system, is what `"reviewed"` requires. `ke
+evidence-map-grounding-verify` (new command, `knowledge_engine/golden_map_grounding.py`)
+is that check: a pure, non-LLM comparison confirming every numeric token
+in a record's `result_summary` is genuinely present in the extracted
+source-PDF page text at that record's own `source_span`. Oncology: 11/13
+records fully grounded, the 2 exceptions each individually investigated
+and explained (one figure on a different page than the record's declared
+`page_number`; one table that does not extract as machine-readable text).
+Mental health: 8/9 fully grounded, the 1 exception similarly explained
+(a statistic spanning onto the next page). Running the checker also
+caught and fixed a real data bug: one record's `source_span.page_number`
+had been recorded as the journal's own printed page number (585) instead
+of the local PDF's actual physical page (4), making its source
+unresolvable until corrected.
 
 ### Decision: corpus database versioning via chunked git commits
 
@@ -1614,9 +1621,12 @@ automatically.
   336 sources / 1,534 promoted evidence records via the M69 grounded-LLM
   extraction path (see the domain-general decision above), and a third
   domain, mental health (SSRIs/SNRIs in adult MDD), is seeded too (62
-  sources / 133 records). Both now have a first golden evidence map
-  (`provisional`, not yet independently re-audited the way GLP-1's is --
-  see that decision's 2026-08-10 update). Current Project Path goal 3's
+  sources / 133 records). Both now have a first golden evidence map,
+  `map_status: "reviewed"` as of 2026-08-10 -- verified by `ke
+  evidence-map-grounding-verify`'s deterministic automated check, not a
+  human or different-AI-system pass (see that decision's 2026-08-10
+  update for why that bar was extended from M69's existing precedent).
+  Current Project Path goal 3's
   remaining GLP-1-specific gaps (durability, safety synthesis, agent
   coverage) do not block this tag; they remain independently tracked.
 - `v0.4.0-alpha`: Current Project Path goal 4's next concrete step ships --

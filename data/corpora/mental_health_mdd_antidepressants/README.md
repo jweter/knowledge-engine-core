@@ -393,3 +393,51 @@ Ju's already-documented null agomelatine-augmentation qualifier). See
 `docs/mental_health_same_pico_contradiction_search_audit.md` for the
 full methodology and candidate-disposition table. This search does
 not yet include a live PubMed literature layer.
+
+**Golden map reaches `map_status: "reviewed"` via automated deterministic
+verification (2026-08-10, same day).** Mirrors the equivalent oncology
+update the same day -- see `docs/roadmap/long_term_vision.md`'s
+"Extension to golden-map review" addendum for the project owner's
+decision. `ke evidence-map-grounding-verify` reports 8/9 records fully
+grounded (every `result_summary` number confirmed present in its cited
+source page); the 1 exception (Yan) has a specific, individually
+investigated explanation already documented in the map's `known_gaps`
+(an adverse-effect statistic spanning onto the next page of the source
+PDF), not an unresolved discrepancy. Both `map_status` and
+`review.status` now read `"reviewed"`.
+
+**Comorbidity-coverage discovery cycle run against the exact named gap
+(2026-08-10, same day).** The map's `known_gaps` named broader
+comorbidity coverage (diabetes, cardiovascular disease beyond
+post-CABG, neurological conditions beyond post-stroke) as
+unrepresented. Ran a real `ke discovery-cycle-run` cycle with a
+comorbidity-targeted query (state:
+`discovery_state_comorbidity.json`, ledger: `rejected_candidates.csv`,
+worksheet: `cycles/comorbidity-cycle-20260810-*.json`): 25 candidates
+discovered, 11 deterministically accepted as `oa_verified`. Two are
+strong, individually license-verified (CC BY 4.0, confirmed against
+each article's own PMC license statement) matches for the named gap:
+a systematic review/meta-analysis of 9 RCTs on SSRIs for diabetes
+mellitus with comorbid depression (PMID 42558439, PMC13437470), and a
+placebo-controlled pilot RCT of escitalopram/nortriptyline for
+depression in Parkinson's disease (the ADepT-PD trial, PMID 42101650,
+PMC13428755) -- see the map's `known_gaps` for full citations.
+Deliberately stopped at discovery + license verification rather than
+rushing acquisition and evidence authoring in the same session; the
+worksheet's `ready_for_scope_review` candidates still need the same
+scope screen this project has always required before `ke
+pmc-oa-acquire`.
+
+**Toxicity/adverse-event synthesis built as a qualifier layer (2026-08-10,
+same day).** The map's `known_gaps` named this as not yet built. New
+`docs/mental_health_toxicity_adverse_event_synthesis.md`: a source-linked
+collation of the safety/tolerability content already present in the
+golden map's own 9 records (5 report some safety content, 4 do not),
+plus a corpus-wide phrase-set scan (17/133 records, scale context only).
+The clearest signal is a class-wide efficacy-tolerability trade-off in
+older adults (Kishi: significantly higher discontinuation-due-to-AEs and
+any-AE incidence vs placebo, alongside significant efficacy).
+Discontinuation-syndrome specifically (antidepressant-withdrawal on
+stopping, distinct from on-treatment AEs) remains fully unaddressed --
+named explicitly as still open, not folded into the broader safety
+heading.
