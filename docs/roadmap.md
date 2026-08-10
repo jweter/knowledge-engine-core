@@ -145,6 +145,8 @@ more heterogeneous observational-study mix; see the scoping doc's
 Records were promoted. Diagnosing and fixing that domain-specific
 extraction gap is the next concrete milestone before this corpus can grow
 a trustworthy evidence base the same way `glp1_weight_loss` did.
+**Resolved** -- see the domain-general decision immediately below, and its
+2026-08-10 update, for how and the corpus's current state.
 
 ### Decision: the extraction and discovery framework must be domain-general, not per-field-patched
 
@@ -190,7 +192,31 @@ now scoped (`docs/mental_health_corpus_scoping.md`,
 `knowledge_engine/scientific_scope.py`'s
 `MENTAL_HEALTH_MDD_ANTIDEPRESSANT_SCOPE`), chosen by the project owner over
 cardiovascular disease and infectious disease/vaccines as alternatives.
-Seeding it with real papers remains future work.
+
+**2026-08-10 update:** both domains grew well past their scoping-stage
+state above. Oncology's promoted Evidence Records reached 1,534 (336
+sources), and mental health was seeded and promoted to 133 records (62
+sources) -- both pass the same `corpus-validate`/`evidence-validate` gates
+`glp1_weight_loss` does, and both passed the 2026-08-09 license/attribution
+review below with no source removal needed. Oncology and mental health
+each now have a **first golden evidence map**
+(`data/corpora/oncology_nsclc_checkpoint_inhibitors/golden_evidence_map.json`,
+13 records / 9 relationship edges; `data/corpora/mental_health_mdd_antidepressants/golden_evidence_map.json`,
+9 records / 7 edges) organizing their already-reviewed records into
+population/comparator groupings and a bounded contradiction assessment
+(none found in either). Both carry `map_status: "provisional"`, not
+`"reviewed"` like GLP-1's -- each was compiled in a single AI-assisted
+session from already-reviewed records, not independently re-audited
+against source PDFs by a second pass the way GLP-1's map was; each map's
+own `review`/`known_gaps` fields state exactly what that follow-up audit
+would need to cover. A direct connectivity check against oncology's own
+map found 2 of its 13 records (Tsuboi, Weber) with zero relationship
+edges; one edge was authored to close Tsuboi's gap (a `qualifies`
+relationship to Dang's pooled OS finding), while Weber was deliberately
+left unconnected rather than force a weak match onto an unrelated
+comparison axis. Neither map's own follow-up audit has been run yet --
+that is the next concrete step to bring either domain to GLP-1's
+`"reviewed"` bar.
 
 ### Decision: corpus database versioning via chunked git commits
 
@@ -1449,6 +1475,21 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   corpus: both real claims list as unconfirmed before any relationship
   exists, correctly drops to zero once one real `supports` relationship
   is built between them.
+- **M70 (schema v12, 2026-08-10)** closed a gap the graph's
+  corpus-agnostic-by-design shape created once a second and third domain
+  existed: `ke graph-relationship-candidates` with `--min-shared-concepts
+  1` returned 164,146 candidate pairs spanning all 3 corpora combined
+  (1,824 total claims), with no way to narrow the list to one domain.
+  Added a nullable, opt-in `graph_claims.corpus_id` column and an
+  optional `--corpus <id>` on `ke graph-build` (backfills existing claims,
+  never overwrites), `ke graph-relationship-candidates`, and `ke
+  relationship-review-worksheet`. Omitting `--corpus` on any of the three
+  preserves the original cross-corpus behavior exactly -- the graph stays
+  corpus-agnostic by default. Live-verified against the real database:
+  all 1,824 claims backfilled correctly by corpus (157
+  `glp1_weight_loss` / 1,534 `oncology_nsclc_checkpoint_inhibitors` / 133
+  `mental_health_mdd_antidepressants`), and `--corpus glp1_weight_loss`
+  now returns 374 candidates instead of the unscoped 164,146.
 
 ## Phase 5: Human Interface
 
@@ -1558,8 +1599,14 @@ automatically.
   `docs/oncology_corpus_scoping.md`) is seeded with real, source-audited
   papers and passes the same `corpus-validate`/`evidence-validate` gates as
   `glp1_weight_loss` -- proof this is general-purpose scientific
-  infrastructure, not single-drug-class tooling. Current Project Path goal
-  3's remaining GLP-1-specific gaps (durability, safety synthesis, agent
+  infrastructure, not single-drug-class tooling -- live. Oncology grew to
+  336 sources / 1,534 promoted evidence records via the M69 grounded-LLM
+  extraction path (see the domain-general decision above), and a third
+  domain, mental health (SSRIs/SNRIs in adult MDD), is seeded too (62
+  sources / 133 records). Both now have a first golden evidence map
+  (`provisional`, not yet independently re-audited the way GLP-1's is --
+  see that decision's 2026-08-10 update). Current Project Path goal 3's
+  remaining GLP-1-specific gaps (durability, safety synthesis, agent
   coverage) do not block this tag; they remain independently tracked.
 - `v0.4.0-alpha`: Current Project Path goal 4's next concrete step ships --
   live. The prespecified zero-cell correction was audited and closed with

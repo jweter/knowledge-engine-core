@@ -30,6 +30,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`docs/roadmap.md` doc-sync pass: corrected several sections that had
+  gone stale relative to the actual codebase state.** The
+  "domain-general extraction framework" decision still described mental
+  health as "seeding it with real papers remains future work" and
+  oncology as blocked on a still-unresolved extraction gap; both were
+  in fact resolved days earlier (oncology: 336 sources / 1,534 promoted
+  records; mental health: 62 sources / 133 records), and both corpora
+  have since gained a first (`provisional`) golden evidence map. Updated
+  the `v0.3.0-alpha` release-tag description to match (marked `-- live`,
+  consistent with the other tag descriptions in that ladder) and added an
+  M70 Phase 4 entry for this milestone's own `graph_claims.corpus_id`
+  work. No git tag was actually cut -- that stays the project owner's
+  explicit call per the existing `v1.0.0` gate language.
+
 - **Optional corpus scoping for the knowledge graph (schema v12).**
   `graph_claims` gained a nullable, indexed `corpus_id` column
   (`_migrate_schema_v12`, additive `ALTER TABLE`). The graph itself stays
