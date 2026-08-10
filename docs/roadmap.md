@@ -350,8 +350,8 @@ acceptance, release validation, and optional post-release quality audits.
   at build time, so there is no reliable endpoint to build a `--query`
   discovery command against; its working per-DOI endpoint also carries no
   scientific-scope signal and no single canonical host to allowlist. Makes
-  no accept/reject/hold decision -- pure evidence for a human reviewing a
-  DOI already surfaced by another pipeline. See
+  no accept/reject/hold decision -- pure evidence for whoever (an AI agent
+  or a human) is reviewing a DOI already surfaced by another pipeline. See
   `docs/history/milestones/m36_unpaywall_lookup.md`.
 - **M37** added `ke manual-pdf-preview`/`ke manual-pdf-manifest-draft`,
   closing the "no door is closed" manual-PDF-upload path's real gap: not
@@ -607,8 +607,9 @@ acquisition -- deterministic scope adjudication alone has a measured,
 real residual false-accept rate (see this section's own `retstart=3000`/
 `retstart=3250` history above), a materially different, harder-to-
 reverse risk than M52's evidence-direction nuance, so each cycle writes
-a bounded worksheet for the same human/AI scope screen this project has
-always required before `ke pmc-oa-acquire`. Live-verified against the
+a bounded worksheet for the same AI (or human) scope screen this project
+has always required before `ke pmc-oa-acquire` -- no human review is
+required. Live-verified against the
 real PubMed/PMC APIs: pagination correctly resumed across cycles, and a
 real PMID added to the ledger was correctly excluded on a repeat run of
 the same page. **M56** authored the real corpus's first
@@ -1461,7 +1462,9 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   validated relationship edge excluded. Structural overlap only -- it
   never infers, detects, or suggests a relationship type or rationale,
   the same boundary `ke relationship-validate` already draws; that
-  judgment call stays entirely with the human reviewer. Live-verified
+  judgment call stays entirely with whoever authors the
+  `RelationshipRecord` (an AI agent or a human -- this project's actual
+  RelationshipRecords have mostly been AI-authored). Live-verified
   against the real corpus's 2 validated `EvidenceRecord`s: correctly
   surfaces the one real pair sharing 2 concepts (`semaglutide`,
   `placebo`), and correctly reports 0 pairs when

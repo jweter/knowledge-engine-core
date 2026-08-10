@@ -27,8 +27,9 @@ surfaced -- and possibly `held` -- by `pubmed_discovery.py`,
 official per-DOI endpoint and reports what Unpaywall knows: OA status, best
 OA location, license, and every OA location it has on file, plus this
 project's own `license_rule_result` (via the shared `license_rules.py`) so
-a human reviewer can see at a glance whether Unpaywall's reported license
-would clear this project's reusable-license bar. It makes **no**
+whoever reviews it next (an AI agent or a human) can see at a glance
+whether Unpaywall's reported license would clear this project's
+reusable-license bar. It makes **no**
 accept/reject/hold decision of its own -- that remains the responsibility
 of whichever pipeline's `held` candidate this evidence is being used to
 re-examine.

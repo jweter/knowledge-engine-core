@@ -7,8 +7,9 @@ one. `PyMuPDFParser` (the same parser `ke import` itself uses) already
 extracts title/authors/abstract/DOI/page-count/word-count deterministically
 from the PDF's own bytes; this module wires that into a review-first
 preview, optionally cross-checked against Unpaywall (M36) for OA/license
-evidence when a DOI is found, so a human reviews one small JSON file
-instead of typing a CSV row by hand.
+evidence when a DOI is found, so whoever is adding this one PDF (a human
+or an AI agent) reviews one small JSON file instead of typing a CSV row
+by hand.
 
 Mirrors the discovery-then-adjudication shape used everywhere else in this
 project, scaled down to one PDF at a time: `prepare_manual_pdf_preview`
@@ -16,8 +17,9 @@ never writes to the corpus manifest or database, and
 `export_manual_pdf_manifest_draft` refuses to produce a manifest-ready row
 unless the preview's `license_rule_result` is `"passed"` -- exactly the
 same bar every automated pipeline's adjudication engine already enforces.
-Running the second command is itself the human's explicit approval act,
-the same way an automated batch's `--approvals` file is.
+Running the second command is itself the explicit approval act (by a
+human or an AI agent), the same way an automated batch's `--approvals`
+file is.
 """
 
 from __future__ import annotations

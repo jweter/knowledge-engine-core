@@ -55,8 +55,9 @@ reuse that corpus's pipeline wholesale:
   find," a question that does not apply to a chemistry textbook chapter.
 - No `EvidenceRecord` promotion path. A definition or mechanism
   explanation from a textbook is never itself an `EvidenceRecord`, and
-  `ke extraction-review-promote`'s existing human-review gate is not
-  the right tool for it either -- textbook content isn't a claim awaiting
+  `ke extraction-review-promote`'s existing review gate (AI-automated or
+  human, no human required) is not the right tool for it either --
+  textbook content isn't a claim awaiting
   a research_question/evidence_direction, it's reference material with a
   different shape entirely.
 - Not a replacement for, or expansion of, the 1,000-paper corpus cap

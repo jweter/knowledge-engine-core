@@ -1,4 +1,4 @@
-"""Standalone CLI for preparing human-review candidate worksheets."""
+"""Standalone CLI for preparing candidate-review worksheets (AI/automated, no human required)."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ CandidatesOption = Annotated[
 ]
 OutputOption = Annotated[
     Path,
-    typer.Option("--output", help="Pending human-review worksheet JSON path."),
+    typer.Option("--output", help="Pending candidate-review worksheet JSON path."),
 ]
 ForceOption = Annotated[
     bool,

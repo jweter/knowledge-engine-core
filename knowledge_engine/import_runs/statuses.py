@@ -15,7 +15,7 @@ class RunStatus(StrEnum):
 
 
 class ReviewStatus(StrEnum):
-    """Human-review disposition of an import run."""
+    """Review disposition of an import run (AI/automated review, no human required)."""
 
     CLEAR = "clear"
     NEEDS_REVIEW = "needs_review"

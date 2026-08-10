@@ -10,17 +10,21 @@ empirically -- see `core_discovery.py`'s module docstring). There is
 therefore no license evidence this engine could ever pass: every CORE
 candidate's `license_rule_result` is `"incomplete_missing_license"`, which
 means **no CORE candidate can ever auto-accept**. A candidate that clears
-every other rule still lands in `held`, pending a human visiting the
-original source to confirm reuse terms. This is a deliberate, honest
-consequence of CORE's real API contract, not a bug to work around.
+every other rule still lands in `held`, pending someone (an AI agent or a
+human -- this project's Europe PMC/PMC pipelines already verify license
+this way automatically, e.g. by reading a PMC page's license statement
+directly) visiting the original source to confirm reuse terms. This is a
+deliberate, honest consequence of CORE's real API contract, not a bug to
+work around.
 
 This engine also does not attempt PMC-overlap detection (the equivalent of
 `europepmc_candidate_review.py`'s `DUPLICATE_OF_PMC_PIPELINE_SCOPE` rule):
 CORE's response never includes a PMCID, and checking overlap would require
 an extra network round-trip per candidate against a different service. This
-is a known, deliberate limitation for this milestone -- human reviewers
-should sanity-check obviously-duplicate DOIs during working-version
-acceptance review, per the project's existing corpus-review process.
+is a known, deliberate limitation for this milestone -- whoever processes
+the worksheet (an AI agent or a human) should sanity-check obviously-
+duplicate DOIs during working-version acceptance review, per the project's
+existing corpus-review process.
 
 Scientific-scope and license rules ARE shared -- see
 `scientific_scope.py`/`license_rules.py` -- since those criteria are the

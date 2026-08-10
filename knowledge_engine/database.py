@@ -249,7 +249,7 @@ def _migrate_schema_v2(connection: Connection) -> None:
 
 
 def _migrate_schema_v3(connection: Connection) -> None:
-    """Separate operational execution status from human-review disposition."""
+    """Separate operational execution status from review disposition (AI/automated, not human)."""
 
     existing_columns = _table_columns(connection, "import_runs")
     for column_name, definition in _SCHEMA_V3_COLUMNS["import_runs"].items():
@@ -1130,9 +1130,11 @@ class GraphRepository:
         `docs/phase4_design.md`'s Open Questions on automated
         candidate-surfacing): this method only surfaces which claim pairs
         share PICO-resolved concepts, leaving whether and how they relate
-        entirely to the human reviewer who authors a `RelationshipRecord`. A
-        pair already linked by a `graph_claim_relationships` edge, in either
-        direction, is excluded -- a human has already made that call for it.
+        entirely to whoever authors a `RelationshipRecord` (an AI agent or a
+        human -- this project's actual RelationshipRecords have mostly been
+        AI-authored, not a human-only step). A pair already linked by a
+        `graph_claim_relationships` edge, in either direction, is excluded
+        -- that call has already been made for it.
 
         `corpus_id`, when given, restricts candidates to pairs where *both*
         claims carry that `corpus_id` -- the graph is otherwise
