@@ -14,6 +14,7 @@ from typing import Annotated, Any, cast
 import typer
 from rich.markup import escape
 from rich.table import Table
+from sqlalchemy.exc import OperationalError
 
 from knowledge_engine.candidate_review import CandidateReviewError, prepare_candidate_review
 from knowledge_engine.citation_extraction import find_cited_dois
@@ -36,6 +37,7 @@ from knowledge_engine.corpus_library import (
 from knowledge_engine.crossref_http import UrllibCrossrefTransport
 from knowledge_engine.crossref_provider import CrossrefProvider
 from knowledge_engine.database import (
+    CURRENT_SCHEMA_VERSION,
     Database,
     ExtractionRunRepository,
     GraphRepository,
@@ -4130,6 +4132,18 @@ def corpus_library_import(input_path: CorpusLibraryInputOption) -> None:
     except FileNotFoundError as exc:
         console.print(f"[red]{escape(str(exc))}[/red]")
         raise typer.Exit(1) from None
+    except OperationalError as exc:
+        if "no such column" in str(exc):
+            console.print(
+                "[red]This snapshot predates the current database schema[/red] "
+                f"(schema version {CURRENT_SCHEMA_VERSION}) -- {escape(str(exc.orig))}. "
+                "Regenerate it from a fully-migrated local database with "
+                "`ke corpus-library-export --output <path>` and re-commit the result; "
+                "there is no automatic schema upgrade for a corpus-library snapshot file "
+                "itself, only for the local database `ke init` builds."
+            )
+            raise typer.Exit(1) from None
+        raise
     console.print(
         f"[green]Imported corpus library:[/green] {summary.imported_paper_count} paper(s) "
         f"imported, {summary.skipped_existing_paper_count} already present and skipped."

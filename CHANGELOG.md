@@ -7,6 +7,27 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`ke corpus-library-import` raised a raw `OperationalError` traceback,
+  not an actionable message, when the committed snapshot predates the
+  current database schema.** Confirmed as a real incident: the
+  committed `data/corpus_library/obesity_metabolic_disease_library.sqlite3.gz`
+  was exported before `paper_pages.table_text` existed, silently
+  stalling `knowledge-engine-web`'s automated weekly
+  alpha-snapshot-refresh Routine with no visible cause. Now catches
+  `OperationalError`/`"no such column"` and tells the operator
+  precisely what happened and the fix (`ke corpus-library-export
+  --output <path>` from a fully-migrated database, then re-commit) --
+  there is no automatic schema upgrade for a snapshot *file* itself,
+  only for the local database `ke init` builds. Also regenerated the
+  stale snapshot itself from the current, fully-migrated local database
+  (1,357 papers across all 3 corpora, schema version 11) and verified
+  the fix with a real round-trip against the new file: `ke
+  corpus-library-import` into a fresh database succeeded, and `ke
+  evidence-report` against the freshly-hydrated database returned real
+  results.
+
 ### Added
 
 - **Investigated `detect_sections`' 114-of-1,357-paper "no Abstract/
