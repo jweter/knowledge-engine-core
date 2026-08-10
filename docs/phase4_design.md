@@ -29,8 +29,8 @@ capture at all (citations between papers, concepts as entities distinct
 from the claims that mention them), as an explicit graph -- queryable by
 traversal, not just by row lookup. This is not new judgment logic: every
 node and edge Phase 4 populates must already be either (a) something
-`core`'s deterministic extraction or a human reviewer already produced
-(an `EvidenceRecord`, a `RelationshipRecord`, a reference-layer lookup
+`core`'s deterministic extraction, an AI agent, or a human already
+produced (an `EvidenceRecord`, a `RelationshipRecord`, a reference-layer lookup
 result), or (b) a new deterministic extraction target with the same
 "never guess" discipline every prior milestone held to (citation-list
 parsing). Phase 4 is a new *storage and traversal* layer over trustworthy

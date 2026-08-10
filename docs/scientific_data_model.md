@@ -19,7 +19,10 @@ the project.
 - Preserve provenance for every derived object.
 - Never make a storage representation synonymous with knowledge.
 - Never let the system decide truth; let it organize evidence, disagreement,
-  uncertainty, and traceable conclusions for human review.
+  uncertainty, and traceable conclusions for review -- by an AI agent or a
+  human, whichever performs the deterministic/grounding checks this
+  project relies on (see `docs/roadmap/long_term_vision.md`'s "Decision:
+  automated evidence review at scale").
 
 ## Model Layers
 
@@ -1068,7 +1071,11 @@ Every reasoning output should be traceable to Evidence and Source.
 7. Mathematical knowledge may not fit cleanly into observation-centered models.
 8. Engineering and design knowledge may require artifact and constraint objects.
 9. Patent claims and scientific claims use the same word "claim" differently.
-10. The model does not yet specify governance for human review and correction.
+10. The model did not yet specify governance for review and correction at
+    the time this list was written -- `docs/roadmap/long_term_vision.md`'s
+    "Decision: automated evidence review at scale (M69)" and its
+    golden-map-review extension now specify this: deterministic,
+    grounding-verified automated review, not a human-required gate.
 
 ### 10 Biggest Assumptions
 

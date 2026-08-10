@@ -29,8 +29,9 @@ only the representable-in-`core` half.
 
 Same principle as every phase before it: never guess, and never build
 new machinery where existing machinery already fits. A "revision" event
-must be something a human reviewer explicitly asserts, the same way a
-`supports`/`contradicts` relationship is today -- never inferred from
+must be something explicitly asserted by whoever authors it (an AI agent
+or a human -- no human required), the same way a `supports`/`contradicts`
+relationship is today -- never inferred from
 text similarity or promotion order. A "gap" must be a real, queryable
 absence in the graph's own data (zero relationship edges on a claim,
 concretely), never a heuristic guess about what evidence "should" exist.

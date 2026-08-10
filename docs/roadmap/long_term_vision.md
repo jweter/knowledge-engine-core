@@ -89,17 +89,18 @@ outside it:
   inherits the same externality. A synthesized confidence *rating*
   requires judging what a question's accumulated evidence supports, which
   is reasoning, not extraction.
-- **Currently human-typed, worth re-examining:** the Relationship Layer's
-  first slice (M24) requires a human to author every relationship record
-  by hand -- `relationship_type`, `rationale`, and both endpoint IDs are
-  all typed, not extracted. Unlike `research_question`, a relationship
+- **Currently typed by hand, worth re-examining:** the Relationship Layer's
+  first slice (M24) requires `relationship_type`, `rationale`, and both
+  endpoint IDs to be authored, not mechanically extracted -- by an AI
+  agent or a human (in practice, this project's actual `RelationshipRecord`s
+  have mostly been AI-authored). Unlike `research_question`, a relationship
   between two evidence records *can* have machine-checkable structure (do
   their claims share PICO overlap? does one paper cite the other?) even
   though deciding the relationship *type* correctly still needs care. A
-  future Relationship Layer milestone should narrow, not eliminate, human
-  involvement here -- surfacing candidate pairs automatically so a human
-  confirms rather than composes from scratch, the same conservative
-  posture M18 already uses for framing cues.
+  future Relationship Layer milestone should narrow, not eliminate, that
+  typed-authorship step -- surfacing candidate pairs automatically so
+  whoever authors the record confirms rather than composes from scratch,
+  the same conservative posture M18 already uses for framing cues.
 
 ### Decision: automated evidence review at scale (M69)
 
@@ -229,8 +230,10 @@ only removes that as a *required* gate.
 `knowledge-engine-core` deliberately stops short of deciding what a piece of
 evidence means for a person's actual research question -- see
 `docs/phase2_design.md`'s Extraction Layer and Evidence Layer milestones
-(M16-M22), which locate and validate evidence but leave `research_question`
-and `evidence_direction` for a human reviewer to supply by hand, and which
+(M16-M22), which locate and validate evidence but originally left
+`research_question` and `evidence_direction` to be supplied by hand (M52's
+`ke extraction-review-autoclassify` now fills both deterministically -- see
+that decision above; no human completion is required), and which
 explicitly exclude confidence *scoring* (beyond the existing free-text
 `confidence_note` field) from Phase 2's scope. That is not a temporary gap
 waiting for `core` to get smarter -- it is the deliberate seam where
