@@ -541,3 +541,31 @@ papers accepted or imported this cycle; corpus remains at 951, 49 below
 the 1,000-paper cap. `discovery_state.json` advanced to
 `next_retstart: 3600` regardless, so the next scheduled cycle resumes
 from the correct page rather than rescanning this one.
+
+The `retstart=3600` cycle (2026-08-10), the first run of the weekly
+scheduled corpus-growth Routine, discovered 50 candidates at the
+persisted offset, deterministically accepted 21, 0 already in the
+rejected-PMID ledger, 21 written to `ready_for_scope_review`. (The
+corpus had grown 951 -> 953 between the `retstart=3550` cycle and this
+one via two unrelated, separately-tracked golden-evidence-map additions
+-- the STEP 1 withdrawal-extension and semaglutide safety/discontinuation
+qualifier records -- not discovery-cycle growth; this cycle's own
+before/after count is 953 -> 953.) The manual scope screen this project
+has always required found the same pagination-drift failure mode the
+`retstart=3550` cycle first caught, this time even more pronounced:
+cross-checking every accepted PMID against `sources.csv` found 20 of the
+21 were exact-title/PMID duplicates already present in the corpus (one
+verified directly against its stored `source_id` for this entry:
+`pmc-13256890`, `pmc-13235885`, `pmc-13331727`, and `pmc-13332843` among
+them) -- PubMed's `sort=pub_date` ordering shifting the same records to
+`retstart=3600` this time. The remaining 1 was genuinely net-new but
+off-target: a *Mycolicibacterium neoaurum* pulmonary-infection case
+report naming no obesity/T2D/metabolic-syndrome scope term and no
+metabolic-disease treatment. All 21 recorded in
+`rejected_candidates.csv` with PMID-level provenance (20
+`duplicate_or_already_included`, 1 `off_target_primary_disease`). Zero
+net-new papers accepted or imported this cycle; corpus remains at 953,
+47 below the 1,000-paper cap. `discovery_state.json` advanced to
+`next_retstart: 3650` regardless. Google Drive corpus-library backup
+(`docs/corpus_library_drive_backup.md`) was skipped this cycle since
+nothing was imported -- there is nothing new to push.
