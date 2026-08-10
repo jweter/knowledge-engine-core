@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+from click import unstyle
 from typer.testing import CliRunner
 
 import knowledge_engine.cli as cli
@@ -295,5 +296,5 @@ def test_grounding_verify_refuses_an_existing_output_without_force(
     )
 
     assert result.exit_code == 2
-    assert "Use --force to overwrite" in result.output
+    assert "Use --force to overwrite" in unstyle(result.output)
     assert output_path.read_text(encoding="utf-8") == "keep"
