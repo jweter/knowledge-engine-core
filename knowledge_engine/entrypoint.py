@@ -176,6 +176,12 @@ from knowledge_engine.scientific_scope import (
 )
 from knowledge_engine.search import SearchService
 from knowledge_engine.search_fusion import fuse_rankings
+from knowledge_engine.uniprot_http import UrllibUniProtTransport
+from knowledge_engine.uniprot_lookup import GetTransport as UniProtLookupGetTransport
+from knowledge_engine.uniprot_lookup import (
+    UniProtLookupError,
+    UniProtLookupService,
+)
 from knowledge_engine.unpaywall_http import UrllibUnpaywallTransport
 from knowledge_engine.unpaywall_lookup import GetTransport as UnpaywallGetTransport
 from knowledge_engine.unpaywall_lookup import (
@@ -378,6 +384,14 @@ ClinicalTrialsLookupNctIdArgument = Annotated[
     typer.Argument(help="A ClinicalTrials.gov NCT ID to look up (e.g. 'NCT03652870')."),
 ]
 ClinicalTrialsLookupOutputOption = Annotated[
+    Path | None,
+    typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
+]
+UniProtLookupTermArgument = Annotated[
+    str,
+    typer.Argument(help="A protein or gene name to look up (e.g. 'PD-1', 'GLP-1 receptor')."),
+]
+UniProtLookupOutputOption = Annotated[
     Path | None,
     typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
 ]
@@ -1888,6 +1902,70 @@ def clinicaltrials_lookup(
     console.print()
     console.print(
         "[bold]This is background reference context from ClinicalTrials.gov, not evidence -- "
+        "no scientific synthesis has been performed.[/bold]"
+    )
+
+
+@app.command("uniprot-lookup")
+def uniprot_lookup(
+    term: UniProtLookupTermArgument,
+    output: UniProtLookupOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Resolve a protein/gene name to its top-ranked entry via UniProt's public REST API.
+
+    M73's sixth slice of the reference knowledge layer
+    (`docs/reference_knowledge_layer_design.md`), alongside M41's
+    Wikipedia lookup, M42's RxNorm lookup, M43's MeSH lookup, M44's
+    PubChem lookup, and M71's ClinicalTrials.gov lookup: background
+    protein/gene-target context for a term a paper assumes its reader
+    already knows (e.g. "PD-1", "GLP-1 receptor"), not primary-research
+    evidence. Restricted to reviewed (Swiss-Prot) human entries. Never
+    routed through `EvidenceRecord` promotion, and never merged with
+    the evidence corpus's own search commands (`ke search`/`ke answer`/
+    `ke vector-search`/`ke fused-search`) -- this is a separate,
+    explicitly non-evidentiary lookup. A term UniProt does not
+    recognize returns `found: false` rather than a guess.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    console.print("[yellow]Network access:[/yellow] querying UniProt's public REST API.")
+    transport = cast(UniProtLookupGetTransport, UrllibUniProtTransport())
+    service = UniProtLookupService(transport)
+    try:
+        result = service.lookup(term)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except UniProtLookupError as exc:
+        console.print(f"[red]UniProt lookup failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    if output is not None:
+        _write_output(output, result.to_json())
+
+    if not result.found:
+        console.print(f"[yellow]No UniProt entry found for:[/yellow] {escape(term)}")
+    else:
+        console.print(f"[bold]{escape(result.protein_name or result.term)}[/bold]")
+        if result.gene_name:
+            console.print(f"Gene: {escape(result.gene_name)}")
+        if result.organism:
+            console.print(f"Organism: {escape(result.organism)}")
+        if result.function:
+            console.print(f"Function: {escape(result.function)}")
+        if result.sequence_length is not None:
+            console.print(f"Sequence length: {result.sequence_length}")
+        console.print()
+        console.print(
+            f"UniProt ID: {escape(result.accession or 'unknown')}  "
+            f"Source: {escape(result.source_url or 'unknown')}"
+        )
+
+    console.print()
+    console.print(
+        "[bold]This is background reference context from UniProt, not evidence -- "
         "no scientific synthesis has been performed.[/bold]"
     )
 
