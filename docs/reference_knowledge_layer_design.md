@@ -26,10 +26,19 @@ of the first four sources cover -- independent registry-level context for
 a specific trial a paper cites by ID (e.g. the mental-health corpus's
 Schrag ADepT-PD Evidence Record cites NCT03652870 directly), rather than
 a general-encyclopedia, drug-name, medical-concept, or
-chemical-structure lookup. The stored-textbook path remains unbuilt and
-still needs the licensing and storage decisions below actually made
-before any code assumes a title list -- nothing here authorizes starting
-that path.
+chemical-structure lookup. **M73 (2026-08-11) added a sixth live-lookup
+slice**, extending the same path again: a live lookup against UniProt's
+public REST API for protein/gene-target data (canonical identity, gene
+symbol, function summary, sequence length), `ke uniprot-lookup`. Chosen
+because it closes the one gap the first five still left open -- what a
+drug's *biological target* actually is at the protein/gene level, the
+exact background this project's own oncology corpus (built entirely
+around the checkpoint proteins PD-1, PD-L1, CTLA-4) and GLP-1 corpus
+(built around the GLP-1 receptor) assume a reader already has, and
+which none of Wikipedia/RxNorm/MeSH/PubChem/ClinicalTrials.gov resolve.
+The stored-textbook path remains unbuilt and still needs the licensing
+and storage decisions below actually made before any code assumes a
+title list -- nothing here authorizes starting that path.
 
 ## Motivation
 
@@ -215,10 +224,21 @@ with a third source, NLM's MeSH database, for medical-concept
 terminology (diseases, procedures) beyond drug names -- see
 `docs/history/milestones/m43_mesh_lookup.md`. **Extended again in M44** (`ke
 pubchem-lookup`, `knowledge_engine/pubchem_lookup.py`) with a fourth
-and, per this section's original list, last named source, NLM/NCBI's
-PubChem PUG REST API, for chemical-compound structure data (molecular
-formula, weight, SMILES) none of the first three sources cover -- see
-`docs/history/milestones/m44_pubchem_lookup.md`. UniProt remains unbuilt.
+source, NLM/NCBI's PubChem PUG REST API, for chemical-compound structure
+data (molecular formula, weight, SMILES) none of the first three
+sources cover -- see `docs/history/milestones/m44_pubchem_lookup.md`.
+**Extended in M71** (`ke clinicaltrials-lookup`,
+`knowledge_engine/clinicaltrials_lookup.py`) with a fifth source,
+NLM/NIH's ClinicalTrials.gov API v2, for trial-registration metadata by
+NCT ID. **Extended in M73** (`ke uniprot-lookup`,
+`knowledge_engine/uniprot_lookup.py`) with a sixth and, per this
+section's original list, last named source, UniProt's REST API, for
+protein/gene-target data (canonical identity, gene symbol, function
+summary, sequence length) none of the first five sources cover --
+restricted to reviewed (Swiss-Prot) human entries for precision, an
+unmatched term returning `found: false` rather than a guess, the same
+posture every prior source in this list takes for its own not-found
+case.
 
 ## Addendum: where this plugs into the final report (and where it never does)
 

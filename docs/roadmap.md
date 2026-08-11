@@ -1230,8 +1230,8 @@ extraction pipeline and AI Interface Layer the background context
 paper always assumes but never restates. Corresponds to
 `knowledge-engine-reference` in the long-term ecosystem; see
 `docs/roadmap/long_term_vision.md` and
-`docs/reference_knowledge_layer_design.md`. M41-M44 and M71 built five
-independent live-lookup sources; M45 wired three of the design doc's
+`docs/reference_knowledge_layer_design.md`. M41-M44, M71, and M73 built
+six independent live-lookup sources; M45 wired three of the design doc's
 Addendum items into Phase 2's review workflow, so it depends on Phase 2
 existing first. Always background context, never evidence -- none of it
 is routed through `EvidenceRecord` promotion or the confidence rating.
@@ -1419,6 +1419,45 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   content is sponsor/PI-submitted, hosted (not authored) by NLM/NIH, the
   same depositor-vs-host distinction M44 drew for PubChem's ChEBI-sourced
   records.
+- **M73 (2026-08-11)** added a sixth and, per the design doc's original
+  list, last named live-lookup reference source, UniProt's public
+  REST API, alongside M41-M44/M71's Wikipedia/RxNorm/MeSH/PubChem/
+  ClinicalTrials.gov lookups. Chosen because it closes the one gap the
+  first five still left open: none of RxNorm (drug name), PubChem
+  (small-molecule structure), MeSH (disease/procedure terminology), or
+  ClinicalTrials.gov (trial registration) resolves what a drug's
+  *biological target* actually is at the protein/gene level -- exactly
+  the background this project's own oncology corpus (built entirely
+  around the checkpoint proteins PD-1, PD-L1, CTLA-4) and GLP-1 corpus
+  (built around the GLP-1 receptor) assume a reader already has. A new
+  `ke uniprot-lookup <term>` command and
+  `knowledge_engine/uniprot_lookup.py` resolve a protein/gene term to
+  its top-ranked UniProtKB entry -- canonical accession/entry name,
+  recommended protein name, primary gene symbol, organism, a function
+  summary, and sequence length -- through a dedicated host-allowlisted
+  transport (`uniprot_http.py`'s `UrllibUniProtTransport`, since
+  `rest.uniprot.org` is a distinct host from every prior lookup's).
+  Restricted to `organism_id:9606` (human) and `reviewed:true`
+  (Swiss-Prot manually-reviewed entries only) for precision, a
+  deliberate scope choice matching this project's own human-clinical
+  focus, not a UniProt requirement. Verified live before writing the
+  parser: a gene-symbol search ("PDCD1") and free-text searches
+  ("PD-L1", "GLP-1 receptor") all resolved to the correct canonical
+  entry (Q15116/PDCD1_HUMAN, Q9NZQ7/PD1L1_HUMAN, and
+  P43220/GLP1R_HUMAN -- the GLP-1 corpus's own primary drug target,
+  respectively); an unmatched term returns 200 with an empty `results`
+  array rather than an error status, reported as `found: false` the
+  same not-a-guess posture every prior source in this list takes for
+  its own not-found case. Live-verified end to end against the real API
+  post-implementation too: `PD-1`, `CTLA-4`, and `GLP-1 receptor` all
+  resolved correctly with real function-summary text, gene symbols, and
+  UniProt accessions; a nonsense term declined cleanly. Explicitly
+  background context, not evidence, with the same non-`EvidenceRecord`
+  boundary M41-M45/M71 drew; `license` states UniProtKB's own curated
+  content (excluding third-party cross-references) is released under CC
+  BY 4.0, the actual license UniProt states for its content -- unlike
+  M71's ClinicalTrials.gov, whose externally-submitted registry content
+  could not be asserted under any single license.
 
 ## Phase 3: Search Plus Semantics
 

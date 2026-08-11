@@ -30,6 +30,36 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`ke uniprot-lookup <term>` -- sixth and last reference-layer
+  live-lookup source (M73), UniProt's public REST API.** Extends the
+  live-lookup path M41-M44/M71 established (Wikipedia, RxNorm, MeSH,
+  PubChem, ClinicalTrials.gov). Chosen because it closes the one gap
+  the first five still left open: none of them resolve what a drug's
+  *biological target* actually is at the protein/gene level -- exactly
+  the background this project's own oncology corpus (built around the
+  checkpoint proteins PD-1, PD-L1, CTLA-4) and GLP-1 corpus (built
+  around the GLP-1 receptor) assume a reader already has. Resolves a
+  protein/gene term (e.g. "PD-1", "GLP-1 receptor") to its top-ranked
+  UniProtKB entry: canonical accession/entry name, recommended protein
+  name, primary gene symbol, organism, a function summary, and sequence
+  length. New `knowledge_engine/uniprot_http.py`
+  (`UrllibUniProtTransport`, host-allowlisted to `rest.uniprot.org`) and
+  `knowledge_engine/uniprot_lookup.py` (`UniProtLookupService`),
+  restricted to `organism_id:9606` (human) and `reviewed:true`
+  (Swiss-Prot) for precision, with unit and CLI-level tests
+  (`tests/test_uniprot_lookup.py`, `tests/test_uniprot_lookup_cli.py`).
+  Live-verified before and after writing the parser: gene-symbol and
+  free-text searches for "PDCD1"/"PD-L1"/"GLP-1 receptor" all resolve to
+  the correct canonical entry (including the GLP-1 corpus's own primary
+  drug target, P43220/GLP1R_HUMAN); post-implementation, "PD-1",
+  "CTLA-4", and "GLP-1 receptor" all resolved correctly with real
+  function-summary text; an unmatched term returns `found: false`,
+  never a guess, the same posture every prior source in this list takes
+  for its own not-found case. Always background context, never
+  evidence -- never routed through `EvidenceRecord` promotion. See
+  `docs/roadmap.md`'s M73 entry and
+  `docs/reference_knowledge_layer_design.md`.
+
 - **M72: automated Relationship classification, closing the last real
   human-review gate in the codebase.** Every earlier review-gate
   milestone (M52's evidence classification, M69's LLM-grounded PICO
