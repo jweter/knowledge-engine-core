@@ -9,6 +9,16 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`ke relationship-classify-automate` generated `relationship_id` values
+  prefixed `rel-m70-` instead of `rel-m72-`.** A leftover from the M70→M72
+  milestone-numbering fix in the prior session: the case-sensitive `sed`
+  pass that renamed every `M70` reference to `M72` didn't match this
+  lowercase `f"rel-m70-{claim_a_id}-{claim_b_id}"` string literal in
+  `knowledge_engine/entrypoint.py`. Found while applying the (already
+  merged) M72 automation to the real corpora for the first time --
+  `created_for_milestone` correctly said `"M72"` but the ID itself still
+  said `m70`. Fixed to `rel-m72-`.
+
 - **`ke corpus-library-import` raised a raw `OperationalError` traceback,
   not an actionable message, when the committed snapshot predates the
   current database schema.** Confirmed as a real incident: the
@@ -29,6 +39,51 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   results.
 
 ### Added
+
+- **Applied M72's `ke evidence-record-review-promote` and
+  `ke relationship-classify-automate` to the real corpora for the first
+  time.** Both were built, tested, and merged in PR #343, but never
+  actually run against real data until now -- 0 M72-created
+  relationships existed anywhere, and a real promotable review_status
+  backlog existed. Promotion: GLP-1 133 records promoted (147/157 now
+  reviewed, was 0/157 despite many already being LLM-grounded), oncology
+  2 records promoted (15/1534 -- the other 1519 are correctly raw
+  M52-tier, not yet LLM-grounded, and honestly not eligible), mental-health
+  0 eligible. Relationship classification (M61-similarity-ranked,
+  `qwen2.5:1.5b`): GLP-1 10/10 candidates accepted and committed to
+  `relationship_records.jsonl` -- read in full before committing, not
+  just the accept count, per this project's own discipline; one instance
+  of the module's own documented limitation was confirmed live (a
+  `supersedes` label whose own rationale said "directly contradicts,"
+  and independent reading of the two source claims confirmed neither
+  label was a great fit -- the two records describe complementary
+  on-treatment-benefit vs. post-withdrawal-regain phases of the same
+  drug, closer to `qualifies`; kept as the automation's real output
+  rather than silently hand-corrected, matching the "visible via
+  rationale, not silently corrected" policy the module's docstring
+  already commits to).
+
+- **Oncology corpus quality finding from the above: 2 exact-duplicate
+  `EvidenceRecord`s found and removed, and a real limitation of
+  M61-ranked M72 classification against a still-fragmented evidence base
+  documented.** Oncology's top-10 M61-similarity-ranked candidates
+  surfaced 2 pairs that turned out to be the exact same sentence
+  extracted twice from the same paper (`auto-796da7d315ee088e`/
+  `auto-94abeabc9265b14f`, `auto-d988ca6943f67b4f`/
+  `auto-556602c9fdc6b41e`) -- removed following the same precedent M64/
+  M66 established for a duplicate found elsewhere in this project. The
+  remaining 8 of the top 10 were also same-paper pairs (different table
+  rows/subgroups, e.g. two different ECOG-PS percentages or two
+  different p-values from different figure panels), not genuine
+  cross-paper relationships -- M61's embedding similarity cannot tell
+  "same table, adjacent row" from real cross-paper thematic similarity
+  when a corpus's evidence base is still ~99% raw M52-tier table-fragment
+  extraction (1517 of 1532 records here are draft, unlike GLP-1's more
+  curated base). None of those 8 were committed as relationships; a
+  same-source-paper exclusion filter in candidate surfacing is named as
+  real, not-yet-scoped follow-up work. See
+  `data/corpora/oncology_nsclc_checkpoint_inhibitors/golden_evidence_map.json`'s
+  `known_gaps` for the full writeup.
 
 - **`ke uniprot-lookup <term>` -- sixth and last reference-layer
   live-lookup source (M73), UniProt's public REST API.** Extends the
