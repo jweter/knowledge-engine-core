@@ -199,6 +199,17 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   verification and the tag command (pushed by the project owner from
   their own machine, per this session's git credential scope).
 
+- **`v1.0.0` tagged.** The project owner pushed the annotated tag from
+  their own machine; confirmed live via the GitHub API rather than
+  trusted from terminal output. Points to `5b3cab1` (the commit right
+  after M73/#344 merged), one commit behind `main`'s tip at tag time
+  (`af7899e`, after #345's real-corpora automation application and
+  ID-prefix bugfix) -- not a release-gate defect, since #345 was data
+  application plus a one-line bugfix, not one of the four conditions
+  this gate names. The project owner was told of the discrepancy and
+  chose to leave the tag as pushed rather than retag. See
+  `docs/roadmap.md`'s "2026-08-11: `v1.0.0` tagged" section.
+
 - **Closed the mental-health golden map's comorbidity coverage gap**
   (diabetes, Parkinson's disease). Two license-verified (CC BY 4.0)
   candidates identified by an earlier discovery cycle but left
