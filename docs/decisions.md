@@ -79,3 +79,16 @@ against.
 
 See: `docs/roadmap.md`'s "Decision: the extraction and discovery framework
 must be domain-general, not per-field-patched".
+
+### Borrow LifeOS architectural primitives without depending on the LifeOS runtime
+
+Knowledge Engine adopts the portable ideas that strengthen intent, verification,
+provenance, capability boundaries, and provider-neutral execution, while keeping
+LifeOS and any specific agent harness outside the scientific trust boundary.
+
+Key invariants include Research ISA close gates, journal-before-grade capture,
+append-only observations, rebuildable retrieval indexes, typed capabilities,
+privacy-aware provider-role routing, and explicit capability-health states.
+
+See: `docs/architecture/adr/0005-borrow-lifeos-primitives-without-runtime-dependency.md`
+and `docs/architecture/lifeos_adoption.md`.
