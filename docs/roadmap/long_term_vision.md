@@ -248,6 +248,15 @@ waiting for `core` to get smarter -- it is the deliberate seam where
 synthesis are shipped; Analytical and Discovery Intelligence remain future
 stages.
 
+**A concrete execution plan for closing this section's "finished product"
+claim now exists**: `knowledge-engine-ai`'s `docs/web_integration_design.md`
+(step-wise milestones `AI-O12`-`AI-O17`) documents that this layer's own
+orchestrator -- durable sessions, parallel retrieval with contradiction
+search, Skeptic verification, session synthesis -- is fully built but has
+zero production callers today, and lays out how to wire it into
+`knowledge-engine-web`'s live `/ask` route. Not yet implemented as of this
+writing; see that document for current status.
+
 In the finished, full ecosystem, an AI interface built on top of `core`'s
 Evidence and Relationship Layers should:
 
