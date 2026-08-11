@@ -1859,11 +1859,25 @@ Creating and pushing the actual git tag is a separate, deliberate action
 from this declaration -- consistent with every prior tag in this ladder,
 it is pushed by the project owner from their own machine (this session's
 own git credential scope cannot create or push tags; see the ref-scope
-diagnosis earlier in this project's history). The command is: `git tag
--a v1.0.0 -m "v1.0.0: honesty and operational stability, per
-docs/roadmap.md's Release Milestones gate" 8eab23e && git push origin
-v1.0.0` (substitute the actual commit this repository's `main` points to
-at tag time if it has advanced past `8eab23e`).
+diagnosis earlier in this project's history).
+
+**2026-08-11: `v1.0.0` tagged.** The project owner pushed the annotated
+tag from their own machine: `git tag -a v1.0.0 -m "v1.0.0: honesty and
+operational stability, per docs/roadmap.md's Release Milestones gate"
+5b3cab19d737f028ba494fcc333ae5d529c08b5c && git push origin v1.0.0`,
+confirmed live via the GitHub API (`get_tag`) rather than trusted from
+terminal output alone. The tag points to `5b3cab1`, the commit right
+after M73 (`ke uniprot-lookup`, #344) merged -- one commit behind where
+`main` had already advanced to (`af7899e`, after #345's real-corpora
+application of M72's automation and an ID-prefix bugfix) by the time the
+tag command actually ran. This is not a defect in the release gate
+itself: the four conditions this section names are about code, backup,
+and license integrity, not corpus-data completeness, and #345 was data
+application plus a one-line bugfix, not a release-gate item. The project
+owner was told about the discrepancy and explicitly chose to leave the
+tag as pushed rather than retag -- git tags are treated as immutable
+once pushed in this project, the same discipline applied to every prior
+tag in this ladder.
 
 ### Historical intent (superseded, kept for context only)
 
