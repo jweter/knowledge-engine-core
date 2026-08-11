@@ -30,6 +30,48 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **M72: automated Relationship classification, closing the last real
+  human-review gate in the codebase.** Every earlier review-gate
+  milestone (M52's evidence classification, M69's LLM-grounded PICO
+  extraction) replaced a step that used to require reading source text
+  with a deterministic check on an LLM's proposal -- the Relationship
+  Layer (`supports`/`contradicts`/`qualifies`/`contextualizes`/
+  `supersedes`) was the one place that never happened.
+  `knowledge_engine/relationship_classification.py`'s
+  `classify_relationship` proposes a `relationship_type` and a short
+  `quoted_evidence` phrase for a ranked candidate pair, then accepts the
+  proposal only when `quoted_evidence` -- not the free-text `rationale`
+  -- passes `knowledge_engine.extraction.grounding.verify_grounding`
+  against the two claims' own text, mirroring M69's per-field (not
+  per-paragraph) grounding pattern exactly. New `ke
+  relationship-classify-automate` CLI command appends accepted proposals
+  to a `--relationships` file with `created_for_milestone="M72"`. A
+  companion `ke evidence-record-review-promote` command promotes any
+  `EvidenceRecord` already meeting an established automated-review bar
+  (LLM-grounded with a populated checklist, or manually authored) from
+  `review_status: "draft"` to `"reviewed"`, so the automation this
+  project already trusts is actually reflected in the field workflows
+  read. Live-verified against the real GLP-1 corpus: 0/3 accepted on
+  unranked candidates (correctly conservative -- no shared-concept-only
+  pair actually grounded), 5/5 accepted once fed similarity-ranked
+  candidates (M61). Reading the accepted records' own `rationale` text
+  (not just the accept/reject counts) surfaced a genuine, named
+  limitation now documented in the module's own docstring: grounding
+  `quoted_evidence` proves the quote is real, not that the chosen
+  `relationship_type` is the correct label for what it shows -- a
+  keyword cross-check was considered and rejected as its own brittle
+  heuristic, so this class of error stays visible via each record's
+  persisted `rationale` and the existing `ke relationship-validate`
+  review path rather than being silently corrected. Also rewrote every
+  "remains entirely a human judgment call" / "human-only" framing this
+  sweep found across `cli.py`, `entrypoint.py`,
+  `relationship_candidate_ranking.py`, `README.md`,
+  `docs/roadmap.md`, and `docs/roadmap/long_term_vision.md` to describe
+  the real automated-by-default, grounding-verified path, per the
+  project owner's explicit direction to remove human-reviewed
+  bottlenecks project-wide, not just word-swap the language describing
+  them.
+
 - **`ke clinicaltrials-lookup <NCT_ID>` -- fifth reference-layer live-lookup
   source (M71), NLM/NIH's ClinicalTrials.gov API v2.** Extends the
   live-lookup path M41-M44 established (Wikipedia, RxNorm, MeSH,

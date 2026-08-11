@@ -1024,8 +1024,9 @@ implementation.
   renders both claims' full evidence content side by side -- the same
   fields `ke relationship-review-worksheet` assembles into a Markdown
   document, browsable instead of generated. Never infers, scores, or
-  suggests a relationship; deciding whether one exists remains a human
-  judgment call authored directly in `relationship_records.jsonl`.
+  suggests a relationship itself -- this page supports the hand-authoring
+  path directly in `relationship_records.jsonl`; **M72** built the
+  automated, grounding-verified default path for the same candidates.
 - **M69: automated evidence review pipeline.** Done: replaces the
   human-reading gate for evidence records with a grounding-verified LLM
   extraction path, per `docs/roadmap/long_term_vision.md`'s "Decision:

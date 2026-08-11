@@ -1512,7 +1512,7 @@ def test_relationship_report_prints_markdown_without_output(tmp_path: Path) -> N
     assert "Semaglutide reduced body weight." in result.output
     assert "Target Evidence Record (ev-2)" in result.output
     assert "Tirzepatide reduced body weight." in result.output
-    assert "No relationship has been inferred" in normalized_output
+    assert "passed deterministic grounding verification" in normalized_output
 
 
 def test_relationship_report_writes_markdown_output(tmp_path: Path) -> None:

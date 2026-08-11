@@ -94,13 +94,15 @@ Rationale:
   earlier claim it revises and why -- the old claim, and the full
   history of who asserted what and when, stays intact and queryable
   forever, exactly like `supports`/`contradicts` already do.
-- Deciding whether a new claim actually *does* supersede an old one
-  stays a human judgment call, the same boundary `ke relationship-validate`
-  already draws for every other relationship type -- `core` never
-  infers a supersession from the fact that two claims discuss the same
-  concept (that's exactly what M49's `graph-relationship-candidates`
-  already surfaces as an unlabeled candidate pair for a human to look
-  at, `supersedes` included as one of the types they can now choose).
+- Deciding whether a new claim actually *does* supersede an old one is,
+  as of **M72**, the same automated-by-default, grounding-verified path
+  `ke relationship-classify-automate` draws for every other relationship
+  type -- `core` never *asserts* a supersession without a check, but it
+  no longer requires a human to draw one by hand either. M49's
+  `graph-relationship-candidates` still surfaces the unlabeled candidate
+  pair first (that part is unchanged); `supersedes` is one of the five
+  types the automated classifier, or a reviewer via `ke
+  relationship-review-worksheet`, can choose from it.
 - **Computing an actual 0-100 Stability sub-score from a chain of
   `supersedes` edges is explicitly out of scope for `core`.** Same
   boundary `docs/roadmap/long_term_vision.md`'s Confidence Rating Design
