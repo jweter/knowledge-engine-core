@@ -163,6 +163,7 @@ from knowledge_engine.relationship_candidate_ranking import (
     RankedCandidate,
     rank_candidates_by_similarity,
 )
+from knowledge_engine.relationship_classification import classify_relationship
 from knowledge_engine.rxnorm_http import UrllibRxNavTransport
 from knowledge_engine.rxnorm_lookup import GetTransport as RxNormLookupGetTransport
 from knowledge_engine.rxnorm_lookup import (
@@ -598,6 +599,46 @@ EvidenceReviewAutomateRecordIdOption = Annotated[
     typer.Option(
         "--evidence-record-id",
         help="Process only this one evidence_record_id, ignoring --limit.",
+    ),
+]
+RelationshipClassifyAutomateEvidenceOption = Annotated[
+    Path,
+    typer.Option(
+        "--evidence",
+        help="Validated EvidenceRecord JSONL file (already passed `ke evidence-validate`).",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+RelationshipClassifyAutomateRelationshipsOption = Annotated[
+    Path,
+    typer.Option(
+        "--relationships",
+        help="RelationshipRecord JSONL file to append accepted classifications to.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+        writable=True,
+    ),
+]
+RelationshipClassifyAutomateLimitOption = Annotated[
+    int,
+    typer.Option(
+        "--limit",
+        min=1,
+        help="Maximum candidate pairs to classify this run.",
+    ),
+]
+EvidenceRecordReviewPromoteEvidenceOption = Annotated[
+    Path,
+    typer.Option(
+        "--evidence",
+        help="EvidenceRecord JSONL file to promote review_status in place.",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+        writable=True,
     ),
 ]
 CorpusLibraryOutputOption = Annotated[
@@ -3376,6 +3417,150 @@ def relationship_review_worksheet(
     console.print(worksheet, markup=False)
 
 
+@app.command("relationship-classify-automate")
+def relationship_classify_automate(
+    evidence: RelationshipClassifyAutomateEvidenceOption,
+    relationships: RelationshipClassifyAutomateRelationshipsOption,
+    minimum_shared_concepts: GraphRelationshipCandidatesMinimumSharedConceptsOption = 1,
+    limit: RelationshipClassifyAutomateLimitOption = 5,
+    model: EvidenceReviewAutomateModelOption = None,
+    rank_by_similarity: RelationshipReviewWorksheetRankBySimilarityOption = False,
+    corpus: GraphCorpusIdOption = None,
+    dry_run: DryRunOption = False,
+) -> None:
+    """M70: propose and grounding-verify relationships for candidate pairs, automatically.
+
+    Replaces the "deciding whether a relationship exists remains entirely
+    a human judgment call" gate `relationship-review-worksheet`/
+    `relationship-validate` previously required, the same architecture
+    M69 already established for evidence-record review: an LLM proposes
+    a `relationship_type` and `rationale` for each candidate pair (`ke
+    graph-relationship-candidates`'s own list, optionally M61
+    similarity-ranked via `--rank-by-similarity`), and the proposal is
+    accepted only when `relationship_type` is schema-valid and the
+    rationale's own text is verified, via `verify_grounding`, against
+    both claims' `claim_text`/`result_summary`/`outcome` fields. A pair
+    the model cannot confidently classify is skipped, never guessed.
+    Requires a running `ollama serve` with the model at `--model`/
+    `KE_LLM_MODEL` already pulled.
+
+    Appends each accepted classification to `--relationships` as a new
+    `RelationshipRecord` (`provenance.created_by="automated (M70
+    relationship classification)"`) -- never rewrites or removes an
+    existing relationship. Does **not** rebuild the graph; run `ke
+    graph-build` afterward to pick up the new edge(s), the same reminder
+    `ke evidence-review-automate` already prints for its own writes.
+    """
+
+    llm_model = model or build_settings(Path.cwd()).llm_model
+    if not llm_model:
+        console.print("[red]No model given.[/red] Pass --model or set KE_LLM_MODEL.")
+        raise typer.Exit(1)
+
+    settings = build_settings(Path.cwd())
+    llm = OllamaLLM(model=llm_model, host=settings.ollama_host)
+
+    evidence_records = _read_jsonl_records(evidence)
+    evidence_records_by_id = {
+        str(record["evidence_record_id"]): record
+        for record in evidence_records
+        if isinstance(record.get("evidence_record_id"), str)
+        and record["evidence_record_id"].strip()
+    }
+
+    database = _local_database()
+    database.initialize()
+
+    with database.session() as session:
+        graph_repository = GraphRepository(session)
+        raw_candidates = graph_repository.relationship_candidates(
+            minimum_shared_concepts=minimum_shared_concepts, corpus_id=corpus
+        )
+
+        if rank_by_similarity:
+            generator = _build_embedding_generator("local", None)
+            ranked_candidates = rank_candidates_by_similarity(
+                raw_candidates, evidence_records_by_id, generator
+            )
+        else:
+            ranked_candidates = [
+                RankedCandidate(
+                    claim_a=claim_a,
+                    claim_b=claim_b,
+                    shared_concepts=shared_concepts,
+                    similarity=None,
+                )
+                for claim_a, claim_b, shared_concepts in raw_candidates
+            ]
+
+    batch = ranked_candidates[:limit]
+    accepted_records: list[dict[str, Any]] = []
+    skipped: list[tuple[str, str, str]] = []
+
+    for ranked in batch:
+        claim_a_id = ranked.claim_a.evidence_record_id
+        claim_b_id = ranked.claim_b.evidence_record_id
+        claim_a = evidence_records_by_id.get(claim_a_id)
+        claim_b = evidence_records_by_id.get(claim_b_id)
+        if claim_a is None or claim_b is None:
+            skipped.append(
+                (claim_a_id, claim_b_id, "referenced evidence record not found in --evidence")
+            )
+            continue
+
+        result = classify_relationship(llm, claim_a, claim_b)
+        if not result.accepted:
+            skipped.append((claim_a_id, claim_b_id, result.skipped_reason or "unknown"))
+            console.print(
+                f"[yellow]{claim_a_id} <-> {claim_b_id}:[/yellow] skipped ({result.skipped_reason})"
+            )
+            continue
+
+        accepted_records.append(
+            {
+                "schema_version": "0.1",
+                "relationship_id": f"rel-m70-{claim_a_id}-{claim_b_id}",
+                "source_evidence_record_id": claim_a_id,
+                "target_evidence_record_id": claim_b_id,
+                "relationship_type": result.relationship_type,
+                "rationale": result.rationale,
+                "provenance": {
+                    "created_by": "automated (M70 relationship classification)",
+                    "method": (
+                        "LLM-proposed relationship_type and rationale, accepted only after "
+                        "the rationale passed deterministic grounding verification against "
+                        "both claims' own claim_text/result_summary/outcome text "
+                        "(knowledge_engine.extraction.grounding.verify_grounding). "
+                        "No human read this pair."
+                    ),
+                },
+                "created_for_milestone": "M70",
+            }
+        )
+        console.print(f"[green]{claim_a_id} <-> {claim_b_id}:[/green] {result.relationship_type}")
+
+    if dry_run:
+        console.print(
+            f"[yellow]Dry run:[/yellow] {len(accepted_records)} relationship(s) would be "
+            "appended; nothing written."
+        )
+        return
+
+    if accepted_records:
+        with relationships.open("a", encoding="utf-8") as handle:
+            for record in accepted_records:
+                handle.write(json.dumps(record, separators=(",", ":")) + "\n")
+
+    console.print(
+        f"[green]Appended {len(accepted_records)} relationship(s), skipped {len(skipped)}.[/green]"
+    )
+    if accepted_records:
+        console.print(
+            "[yellow]Graph not rebuilt.[/yellow] Run `ke graph-build` to pick up the "
+            "new relationship edge(s)."
+        )
+
+
 def _build_unconfirmed_claims_report(graph_repository: GraphRepository) -> str:
     """Build a Markdown report of claims with zero relationship edges of any type.
 
@@ -3990,6 +4175,94 @@ def _is_already_reviewed(record: dict[str, Any]) -> bool:
         and isinstance(review_checklist, dict)
         and bool(review_checklist)
     )
+
+
+@app.command("evidence-record-review-promote")
+def evidence_record_review_promote(
+    evidence: EvidenceRecordReviewPromoteEvidenceOption,
+    dry_run: DryRunOption = False,
+) -> None:
+    """M70: promote review_status to "reviewed" without requiring a human to set it.
+
+    Several validators (`evidence_map.py`, `binary_statistical_verification.py`,
+    `statistical_verification.py`, `statistical_readiness.py`) require
+    `review_status == "reviewed"` before a record can be used -- but
+    nothing in this project has ever set that field automatically. M52
+    only ever writes `"draft"`; the only way a record has ever reached
+    `"reviewed"` was hand-editing the JSONL directly. This command closes
+    that gap using this project's own existing definition of "already
+    trustworthy without a human reading it" -- `_is_already_reviewed`,
+    the same eligibility check `ke evidence-review-automate` already uses
+    to decide a record needs no further automated-review pass (manual
+    provenance, or an LLM-grounded `extraction_method` whose fields
+    already passed `verify_grounding` during extraction). A record still
+    at raw `m52-evidence-classification-v1` -- never grounding-verified --
+    is left untouched; run `ke evidence-review-automate` on it first.
+    """
+
+    raw_lines = evidence.read_text(encoding="utf-8").splitlines()
+    records: list[dict[str, Any] | None] = []
+    for line_number, raw_line in enumerate(raw_lines, start=1):
+        stripped = raw_line.strip()
+        if not stripped:
+            records.append(None)
+            continue
+        try:
+            record = json.loads(stripped)
+        except json.JSONDecodeError as exc:
+            console.print(f"[red]Line {line_number}: invalid JSON.[/red]")
+            raise typer.Exit(1) from exc
+        if not isinstance(record, dict):
+            console.print(f"[red]Line {line_number}: record must be a JSON object.[/red]")
+            raise typer.Exit(1)
+        records.append(record)
+
+    eligible_indices = [
+        index
+        for index, record in enumerate(records)
+        if record is not None
+        and record.get("review_status") != "reviewed"
+        and _is_already_reviewed(record)
+    ]
+
+    console.print(f"Records eligible for promotion: {len(eligible_indices)}.")
+
+    if dry_run:
+        console.print(
+            f"[yellow]Dry run:[/yellow] {len(eligible_indices)} record(s) would be promoted; "
+            "nothing written."
+        )
+        return
+
+    promoted_ids: list[str] = []
+    for index in eligible_indices:
+        record = records[index]
+        assert record is not None
+        record["review_status"] = "reviewed"
+        existing_notes = record.get("review_notes")
+        promotion_note = (
+            "M70 promotion: review_status set to 'reviewed' without human review, "
+            "based on this record's own already-grounding-verified extraction "
+            "(see review_checklist) or manual provenance. No human read this record."
+        )
+        record["review_notes"] = (
+            f"{existing_notes} {promotion_note}" if existing_notes else promotion_note
+        )
+        promoted_ids.append(str(record.get("evidence_record_id", f"line {index + 1}")))
+
+    if eligible_indices:
+        with evidence.open("w", encoding="utf-8") as handle:
+            for index, raw_line in enumerate(raw_lines):
+                if index in eligible_indices:
+                    record = records[index]
+                    assert record is not None
+                    handle.write(json.dumps(record, separators=(",", ":")) + "\n")
+                else:
+                    handle.write(raw_line + "\n")
+
+    console.print(f"[green]Promoted {len(promoted_ids)} record(s) to 'reviewed'.[/green]")
+    if promoted_ids:
+        console.print(", ".join(promoted_ids))
 
 
 @app.command("evidence-review-automate")
