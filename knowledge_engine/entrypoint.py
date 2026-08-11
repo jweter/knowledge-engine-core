@@ -3031,10 +3031,12 @@ def _build_relationship_candidates_report(
 
     Structural overlap only, exactly as `GraphRepository.relationship_candidates`
     computes it -- lists which concepts two claims share, never a
-    relationship type or rationale. Deciding whether, and how, two claims
-    actually relate stays a human judgment call authored as a
-    `RelationshipRecord` and validated via `ke relationship-validate`, the
-    same posture `ke relationship-report` already documents.
+    relationship type or rationale itself. This report is candidate
+    surfacing, not classification: `ke relationship-classify-automate`
+    (M72) is what actually decides whether, and how, two claims relate,
+    running an LLM proposal through deterministic grounding verification
+    before writing a `RelationshipRecord`; authoring one by hand and
+    checking it with `ke relationship-validate` remains available too.
 
     An optional `corpus_id` scopes candidates to claims backfilled with
     that `graph_claims.corpus_id` (via `ke graph-build --corpus`); `None`
@@ -3080,9 +3082,11 @@ def _build_relationship_candidates_report(
             "",
             "This report surfaces structural overlap only -- which claims "
             "share a PICO-resolved concept. It never infers, detects, or "
-            "suggests a relationship type or rationale; that remains a "
-            "human judgment call, authored as a `RelationshipRecord` and "
-            "checked with `ke relationship-validate`.",
+            "suggests a relationship type or rationale itself; run `ke "
+            "relationship-classify-automate` (M72) to propose and "
+            "grounding-verify a relationship for these candidates, or "
+            "author one by hand and check it with `ke "
+            "relationship-validate`.",
             "",
         ]
     )
@@ -3096,17 +3100,19 @@ def graph_relationship_candidates(
     force: ForceOutputOption = False,
     corpus: GraphCorpusIdOption = None,
 ) -> None:
-    """Surface claim pairs sharing PICO-resolved concepts, for a human to review.
+    """Surface claim pairs sharing PICO-resolved concepts, ready for classification.
 
     Structural overlap only: lists which claims share a concept and which
-    concepts they share, so a reviewer does not have to compose candidate
-    pairs from scratch when authoring a `RelationshipRecord`. Never infers,
-    detects, or suggests a `supports`/`contradicts`/`qualifies`/
-    `contextualizes`/`supersedes` relationship or its rationale -- that
-    judgment call stays entirely with the human, exactly as `ke
-    relationship-validate` already requires. A pair already linked by a
-    validated relationship edge (any type, `supersedes` included) is
-    excluded, since a human has already made that call for it.
+    concepts they share, so `ke relationship-classify-automate` (M72) or
+    a reviewer authoring a `RelationshipRecord` by hand does not have to
+    compose candidate pairs from scratch. Never infers, detects, or
+    suggests a `supports`/`contradicts`/`qualifies`/`contextualizes`/
+    `supersedes` relationship or its rationale itself -- that is this
+    command's own scope boundary, not a statement about who or what
+    decides it downstream. A pair already linked by a validated
+    relationship edge (any type, `supersedes` included) is excluded,
+    since that call has already been made for it, by an automated
+    classification or a hand-authored one.
 
     An optional `--corpus <id>` restricts candidates to claims backfilled
     with that `graph_claims.corpus_id` (see `ke graph-build --corpus`).
@@ -3253,11 +3259,12 @@ def _build_relationship_review_worksheet(
         "",
         "This worksheet assembles both claims' full evidence-record fields "
         "side by side, and a fill-in-the-blank `RelationshipRecord` "
-        "template, so reviewing a batch of candidates doesn't require "
-        "opening each evidence record separately. It never infers, "
-        "scores, or suggests a relationship -- deciding whether, and how, "
-        "two claims relate remains entirely a human judgment call, "
-        "exactly as `ke relationship-validate` already requires.",
+        "template, for the hand-authoring path -- reviewing a batch of "
+        "candidates doesn't require opening each evidence record "
+        "separately. It never infers, scores, or suggests a relationship "
+        "itself; `ke relationship-classify-automate` (M72) is the "
+        "grounding-verified automated path for these same candidates, "
+        "checked the same way with `ke relationship-validate` either way.",
         "",
     ]
 
@@ -3341,9 +3348,13 @@ def relationship_review_worksheet(
     reviewer doesn't have to open every record separately -- the same
     manual assembly work done by hand for every relationship in M56/M59.
     Also includes a fill-in-the-blank `RelationshipRecord` JSON template
-    per pair. Never infers, scores, or suggests a relationship; deciding
-    whether one exists, and authoring it, remains entirely a human
-    judgment call, validated afterward with `ke relationship-validate`.
+    per pair. This worksheet itself never infers, scores, or suggests a
+    relationship -- it is the optional hand-authoring path, for a
+    reviewer who wants to write one by hand and validate it afterward
+    with `ke relationship-validate`. It is not the default: `ke
+    relationship-classify-automate` (M72) is the automated,
+    grounding-verified path most `RelationshipRecord`s in this project
+    now come from, and runs over this same candidate list.
 
     `--rank-by-similarity` (M61) re-sorts the candidate list by cosine
     similarity of each pair's `outcome`/`result_summary` text, using a
@@ -3428,24 +3439,26 @@ def relationship_classify_automate(
     corpus: GraphCorpusIdOption = None,
     dry_run: DryRunOption = False,
 ) -> None:
-    """M70: propose and grounding-verify relationships for candidate pairs, automatically.
+    """M72: propose and grounding-verify relationships for candidate pairs, automatically.
 
-    Replaces the "deciding whether a relationship exists remains entirely
-    a human judgment call" gate `relationship-review-worksheet`/
-    `relationship-validate` previously required, the same architecture
-    M69 already established for evidence-record review: an LLM proposes
-    a `relationship_type` and `rationale` for each candidate pair (`ke
-    graph-relationship-candidates`'s own list, optionally M61
-    similarity-ranked via `--rank-by-similarity`), and the proposal is
-    accepted only when `relationship_type` is schema-valid and the
-    rationale's own text is verified, via `verify_grounding`, against
-    both claims' `claim_text`/`result_summary`/`outcome` fields. A pair
-    the model cannot confidently classify is skipped, never guessed.
-    Requires a running `ollama serve` with the model at `--model`/
-    `KE_LLM_MODEL` already pulled.
+    This is the default path for deciding whether, and how, two claims
+    relate -- the same architecture M69 already established for
+    evidence-record review: an LLM proposes a `relationship_type`, a
+    short `quoted_evidence` phrase, and a `rationale` for each candidate
+    pair (`ke graph-relationship-candidates`'s own list, optionally M61
+    similarity-ranked via `--rank-by-similarity`). The proposal is
+    accepted only when `relationship_type` is schema-valid and
+    `quoted_evidence` -- not the free-text `rationale` -- is verified,
+    via `verify_grounding`, against both claims' own
+    `claim_text`/`result_summary`/`outcome` fields. A pair the model
+    cannot confidently classify is skipped, never guessed.
+    `relationship-review-worksheet`/`relationship-validate` remain
+    available for hand-authoring a relationship instead. Requires a
+    running `ollama serve` with the model at `--model`/`KE_LLM_MODEL`
+    already pulled.
 
     Appends each accepted classification to `--relationships` as a new
-    `RelationshipRecord` (`provenance.created_by="automated (M70
+    `RelationshipRecord` (`provenance.created_by="automated (M72
     relationship classification)"`) -- never rewrites or removes an
     existing relationship. Does **not** rebuild the graph; run `ke
     graph-build` afterward to pick up the new edge(s), the same reminder
@@ -3525,7 +3538,7 @@ def relationship_classify_automate(
                 "relationship_type": result.relationship_type,
                 "rationale": result.rationale,
                 "provenance": {
-                    "created_by": "automated (M70 relationship classification)",
+                    "created_by": "automated (M72 relationship classification)",
                     "method": (
                         "LLM-proposed relationship_type and rationale, accepted only after "
                         "the rationale passed deterministic grounding verification against "
@@ -3534,7 +3547,7 @@ def relationship_classify_automate(
                         "No human read this pair."
                     ),
                 },
-                "created_for_milestone": "M70",
+                "created_for_milestone": "M72",
             }
         )
         console.print(f"[green]{claim_a_id} <-> {claim_b_id}:[/green] {result.relationship_type}")
@@ -3609,13 +3622,13 @@ def _build_unconfirmed_claims_report(graph_repository: GraphRepository) -> str:
             "",
             "A claim listed here has no `supports`/`contradicts`/`qualifies`/"
             "`contextualizes`/`supersedes` edge yet -- meaning no second "
-            "claim has been reviewed and explicitly related to it, nothing "
-            "more. This is a fact about `core`'s own review coverage, not a "
-            "judgment about the underlying science; run `ke "
-            "graph-relationship-candidates` to see which of these claims "
-            "already share a PICO-resolved concept with another claim, a "
-            "candidate worth looking at first (by an AI agent or a human, "
-            "as this project's `RelationshipRecord` review always has been).",
+            "claim has been classified and explicitly related to it, "
+            "nothing more. This is a fact about `core`'s own relationship "
+            "coverage, not a judgment about the underlying science; run "
+            "`ke graph-relationship-candidates` to see which of these "
+            "claims already share a PICO-resolved concept with another "
+            "claim, then `ke relationship-classify-automate` (M72) to "
+            "classify them automatically.",
             "",
         ]
     )
@@ -4182,7 +4195,7 @@ def evidence_record_review_promote(
     evidence: EvidenceRecordReviewPromoteEvidenceOption,
     dry_run: DryRunOption = False,
 ) -> None:
-    """M70: promote review_status to "reviewed" without requiring a human to set it.
+    """M72: promote review_status to "reviewed" without requiring a human to set it.
 
     Several validators (`evidence_map.py`, `binary_statistical_verification.py`,
     `statistical_verification.py`, `statistical_readiness.py`) require
@@ -4241,7 +4254,7 @@ def evidence_record_review_promote(
         record["review_status"] = "reviewed"
         existing_notes = record.get("review_notes")
         promotion_note = (
-            "M70 promotion: review_status set to 'reviewed' without human review, "
+            "M72 promotion: review_status set to 'reviewed' without human review, "
             "based on this record's own already-grounding-verified extraction "
             "(see review_checklist) or manual provenance. No human read this record."
         )

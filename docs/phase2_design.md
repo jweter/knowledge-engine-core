@@ -95,11 +95,13 @@ character-offset-range validation, resolving two items this design's Open
 Questions section had carried since M15 pending real extraction logic to
 define meaningful values -- see Open Questions below for the values decided.
 M24 (issue #120, PR #121, merged) implements the Relationship Layer's first
-slice: a human-authored relationship schema and `ke relationship-validate`,
+slice: a hand-authorable relationship schema and `ke relationship-validate`,
 reusing `evidence_direction`'s exact vocabulary. Automated relationship
-detection is explicitly not implemented -- deciding whether a relationship
-holds between two evidence records remains a human judgment call; see
-Relationship Layer section below.
+detection was not yet implemented at this point -- deciding whether a
+relationship holds between two evidence records was, at the time, a human
+judgment call. **M72** later built the automated, grounding-verified default
+path (`ke relationship-classify-automate`); see Relationship Layer section
+below.
 M25 (issue #123, PR #124, merged) adds `extraction_runs` persistence: a new
 table recording that `ke extraction-review-generate` ran against a paper,
 with which ruleset versions, and what it produced. `core` never
@@ -352,17 +354,19 @@ Parser (extended with page/span provenance)
        contract, with extraction_method identifying the automated rule/pattern
        that produced them instead of "manual"
   -> Relationship Layer (M24 schema/validator + M29 reporting implemented;
-     automated detection not yet built)
+     automated detection built by M72)
        typed support/contradiction/qualification links between evidence
        records, reusing the direction vocabulary already used by manual
        records (supports, contradicts, qualifies, contextualizes). M24
        added the schema and `ke relationship-validate`; M29 added
        `ke relationship-report`, a display layer rendering each
-       relationship next to its two linked evidence records -- both only
-       for human-authored links. Deciding *whether* a relationship holds
-       between two records remains a human judgment call, same boundary
-       as `evidence_direction`/`research_question`; see Relationship
-       Layer section below.
+       relationship next to its two linked evidence records -- both
+       originally for hand-authored links only. **M72** added `ke
+       relationship-classify-automate`, the default path: an LLM proposes
+       *whether* a relationship holds and which type, accepted only after
+       its quoted evidence passes deterministic grounding verification --
+       the same boundary `evidence_direction`/`research_question`
+       crossed at M52; see Relationship Layer section below.
   -> ke evidence / ke evidence-validate / ke evidence-report /
      ke answer --evidence commands (validator and renderer changes above
      already applied; no further schema change needed for extraction output)
@@ -524,7 +528,15 @@ reference is dangling, and renders each relationship's type and
 rationale next to the `claim_text`/`source_title`/`source_doi`/
 `evidence_direction` of the two evidence records it links, so a reviewer
 does not have to cross-reference `evidence_record_id` values by hand.
-`core` still never infers, suggests, or detects a relationship.
+`core` still never infers, suggests, or detects a relationship -- as of
+M24/M29. **M72** (see `docs/roadmap.md`) closed that gap: `ke
+relationship-classify-automate` is now the default path, an LLM proposal
+accepted only after its quoted evidence passes deterministic grounding
+verification (`knowledge_engine.relationship_classification`), the same
+"never assert without a check" boundary M52 established for
+`evidence_direction`/`research_question`. `ke relationship-validate` and
+`ke relationship-review-worksheet` remain available for a hand-authored
+link, validated identically regardless of which path produced it.
 
 ## Extraction Run Persistence (M25, implemented)
 

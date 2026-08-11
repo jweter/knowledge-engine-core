@@ -1,4 +1,4 @@
-"""M70: automated Relationship classification -- LLM-proposed, grounding-verified.
+"""M72: automated Relationship classification -- LLM-proposed, grounding-verified.
 
 Every earlier review-gate milestone in this project (M52's evidence
 classification, M69's LLM-grounded PICO extraction, the golden-map
@@ -30,6 +30,23 @@ never contains, would fail almost every genuine relationship a model
 could correctly identify. A proposal that fails either check is dropped,
 never accepted with a caveat -- the same "skip, don't invent" posture
 every prior automated-review milestone in this project has held to.
+
+**What grounding verification does not check, found during live
+verification against the real GLP-1 corpus:** `quoted_evidence` passing
+`verify_grounding` proves the quote is real text from one of the two
+claims; it does not prove `relationship_type` is the correct label for
+what that quote shows. A live run surfaced multiple accepted
+classifications whose own `rationale` used language like "directly
+contradicts" while `relationship_type` was `"supersedes"` -- the model's
+reasoning and its structured label disagreed, and grounding alone cannot
+catch that, since the quote itself was genuinely real. This is a
+real, named limitation, not silently corrected: a keyword
+cross-check (does `rationale` contain language suggesting a different
+type than the one chosen?) would encode brittle heuristics of its own
+and was not attempted here. Every accepted record's full `rationale` is
+persisted in the `RelationshipRecord`, so this class of error is visible
+and correctable via `ke relationship-validate`'s own review path, not
+hidden by the automated one.
 """
 
 from __future__ import annotations
@@ -41,7 +58,7 @@ from typing import Any
 from knowledge_engine.extraction.grounding import DEFAULT_MIN_SIMILARITY, verify_grounding
 from knowledge_engine.llm import LocalLLM, LocalLLMError
 
-RELATIONSHIP_CLASSIFICATION_RULES_VERSION = "m70-relationship-classification-v1"
+RELATIONSHIP_CLASSIFICATION_RULES_VERSION = "m72-relationship-classification-v1"
 
 ALLOWED_RELATIONSHIP_TYPES = (
     "supports",

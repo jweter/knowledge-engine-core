@@ -692,13 +692,16 @@ def relationship_validate(
     records_path: RelationshipRecordsArgument,
     evidence: RelationshipEvidenceOption = None,
 ) -> None:
-    """Validate human-authored evidence relationship records in a JSONL file.
+    """Validate a `RelationshipRecord` JSONL file, however it was authored.
 
-    Never infers or detects a relationship -- validates only that a
-    reviewer-authored `supports`/`contradicts`/`qualifies`/`contextualizes`/
-    `supersedes` (M50: a newer claim revising an older one) link between two
-    evidence records is well-formed. Deciding whether a relationship
-    actually holds remains a human judgment call.
+    Validates only that a `supports`/`contradicts`/`qualifies`/
+    `contextualizes`/`supersedes` (M50: a newer claim revising an older
+    one) link between two evidence records is well-formed -- it does not
+    itself decide whether a relationship holds. Most `RelationshipRecord`s
+    this project produces come from `ke relationship-classify-automate`
+    (M72's LLM-proposed, grounding-verified default path); a record
+    authored by hand via `ke relationship-review-worksheet` validates
+    identically, since this command checks the schema, not the author.
     """
 
     known_evidence_ids: set[str] | None = None
@@ -2316,7 +2319,7 @@ def _build_relationship_report(
     records_path: Path,
     evidence_path: Path,
 ) -> str:
-    """Build a Markdown report of human-authored evidence relationships."""
+    """Build a Markdown report of validated evidence relationships, however authored."""
 
     generated_at = datetime.now(UTC).isoformat(timespec="seconds")
     type_counts = Counter(
@@ -2334,10 +2337,12 @@ def _build_relationship_report(
         "",
         "## Scope",
         "",
-        "This report displays human-authored evidence relationships only. No "
-        "relationship has been inferred, detected, or suggested "
-        "automatically. Deciding whether a relationship holds between two "
-        "evidence records remains a human judgment call.",
+        "This report displays validated `RelationshipRecord`s from `--relationships`, "
+        "however they were produced -- most are proposed by `ke "
+        "relationship-classify-automate` (M72) and accepted only after "
+        "grounding verification; any authored by hand via `ke "
+        "relationship-review-worksheet` validate identically. Provenance "
+        "for each relationship is shown below.",
         "",
         "## Relationship Type Summary",
         "",
@@ -2354,8 +2359,12 @@ def _build_relationship_report(
         [
             "## Final Disclaimer",
             "",
-            "This report displays recorded relationships only. No relationship "
-            "has been inferred, detected, or suggested automatically.",
+            "This report displays recorded relationships only. Each one already "
+            "passed schema validation (`ke relationship-validate`); an "
+            "automated relationship (`ke relationship-classify-automate`, "
+            "M72) additionally passed deterministic grounding verification "
+            "before being written -- see each relationship's provenance "
+            "summary above for how it was produced.",
             "",
         ]
     )

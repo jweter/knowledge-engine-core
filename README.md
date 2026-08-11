@@ -276,7 +276,8 @@ architecture and milestone-by-milestone status.
 - **M24:** implemented the Relationship Layer's first slice: a
   human-authored relationship schema (reusing `evidence_direction`'s
   vocabulary) and `ke relationship-validate`. Automated relationship
-  detection remains a human judgment call, not yet built.
+  detection was not yet built at this point -- see **M72**, which
+  built it.
 - **M25:** added `extraction_runs` persistence -- `ke
   extraction-review-generate` now records a durable row per invocation
   (paper, output path, item counts, ruleset versions). `core` never
@@ -304,8 +305,8 @@ architecture and milestone-by-milestone status.
   speculatively. No new dependency, no LLM.
 - **M29:** added the `ke relationship-report` CLI command, expanding the
   Relationship Layer past M24's validate-only first slice with a pure
-  Markdown display layer -- not automated detection, which remains a
-  human judgment call. Renders each relationship's type and rationale
+  Markdown display layer -- not automated detection at this point (see
+  **M72**). Renders each relationship's type and rationale
   next to the claim text of the two evidence records it links, reusing
   `relationship-validate`'s and `evidence-validate`'s checks unchanged.
 - **M30 (Phase 3's first milestone):** added a pluggable

@@ -7,10 +7,16 @@ matches almost any RCT). This module re-ranks candidates by actual
 session spends its time on the pairs most likely to be real
 relationships first.
 
-Ranking only -- never a relationship decision. A high similarity score
-means "these two claims are probably about a similar comparison, worth
-reading first," not "these two claims are related." Deciding whether,
-and how, two claims relate remains entirely a human judgment call.
+Ranking only -- never a relationship decision itself. A high similarity
+score means "these two claims are probably about a similar comparison,
+worth classifying first," not "these two claims are related." M72's
+`relationship_classification.classify_relationship` is what actually
+decides whether, and how, two claims relate -- an LLM proposal accepted
+only after its quoted evidence passes deterministic grounding
+verification, the default automated path `ke relationship-classify-automate`
+runs over this ranking's own output. Authoring a relationship by hand
+(`ke relationship-review-worksheet`/`ke relationship-validate`) remains
+available, not required.
 """
 
 from __future__ import annotations

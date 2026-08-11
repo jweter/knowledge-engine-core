@@ -89,18 +89,25 @@ outside it:
   inherits the same externality. A synthesized confidence *rating*
   requires judging what a question's accumulated evidence supports, which
   is reasoning, not extraction.
-- **Currently typed by hand, worth re-examining:** the Relationship Layer's
-  first slice (M24) requires `relationship_type`, `rationale`, and both
-  endpoint IDs to be authored, not mechanically extracted -- by an AI
-  agent or a human (in practice, this project's actual `RelationshipRecord`s
-  have mostly been AI-authored). Unlike `research_question`, a relationship
-  between two evidence records *can* have machine-checkable structure (do
-  their claims share PICO overlap? does one paper cite the other?) even
-  though deciding the relationship *type* correctly still needs care. A
-  future Relationship Layer milestone should narrow, not eliminate, that
-  typed-authorship step -- surfacing candidate pairs automatically so
-  whoever authors the record confirms rather than composes from scratch,
-  the same conservative posture M18 already uses for framing cues.
+- **Resolved by M72 (automated Relationship classification):** the
+  Relationship Layer's first slice (M24) required `relationship_type`,
+  `rationale`, and both endpoint IDs to be authored, not mechanically
+  extracted -- by an AI agent or a human (in practice, this project's
+  actual `RelationshipRecord`s were mostly AI-authored even before M72).
+  A relationship between two evidence records *does* have
+  machine-checkable structure (do their claims share PICO overlap? does
+  one paper cite the other? does a proposed rationale's own quoted
+  evidence actually appear in either claim's text?), the same insight
+  M18's framing-cue extraction already relied on. `ke
+  relationship-classify-automate` (`knowledge_engine/relationship_classification.py`)
+  closes this the same way M69 closed evidence-record review: an LLM
+  proposes `relationship_type` and a short, grounding-verified quoted
+  phrase; a proposal whose quote does not actually appear in either
+  claim's own `claim_text`/`result_summary`/`outcome` is dropped, never
+  accepted. `ke relationship-review-worksheet`/`ke relationship-validate`
+  remain available for anyone who wants to author or check a relationship
+  by hand -- automated classification is the default path, not the only
+  one.
 
 ### Decision: automated evidence review at scale (M69)
 

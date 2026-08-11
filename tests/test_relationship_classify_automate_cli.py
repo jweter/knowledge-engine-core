@@ -174,8 +174,8 @@ def test_relationship_classify_automate_appends_an_accepted_relationship(
     assert record["source_evidence_record_id"] == "ev-1"
     assert record["target_evidence_record_id"] == "ev-2"
     assert record["relationship_type"] == "supports"
-    assert record["provenance"]["created_by"] == "automated (M70 relationship classification)"
-    assert record["created_for_milestone"] == "M70"
+    assert record["provenance"]["created_by"] == "automated (M72 relationship classification)"
+    assert record["created_for_milestone"] == "M72"
 
 
 def test_relationship_classify_automate_skips_an_ungrounded_proposal(

@@ -48,7 +48,7 @@ def test_promotes_an_llm_grounded_record_with_a_populated_checklist(tmp_path: Pa
 
     updated = json.loads(evidence_path.read_text(encoding="utf-8").strip())
     assert updated["review_status"] == "reviewed"
-    assert "M70 promotion" in updated["review_notes"]
+    assert "M72 promotion" in updated["review_notes"]
 
 
 def test_promotes_a_manually_authored_record(tmp_path: Path) -> None:
@@ -137,4 +137,4 @@ def test_preserves_existing_review_notes(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     updated = json.loads(evidence_path.read_text(encoding="utf-8").strip())
     assert "Original M69 note." in updated["review_notes"]
-    assert "M70 promotion" in updated["review_notes"]
+    assert "M72 promotion" in updated["review_notes"]
