@@ -16,10 +16,21 @@ from rich.markup import escape
 from rich.table import Table
 from sqlalchemy.exc import OperationalError
 
-from knowledge_engine.candidate_review import CandidateReviewError, prepare_candidate_review
+from knowledge_engine.candidate_review import (
+    CandidateReviewError,
+    prepare_candidate_review,
+)
 from knowledge_engine.citation_extraction import find_cited_dois
 from knowledge_engine.cli import ReportFormatOption, console
 from knowledge_engine.cli import app as app
+from knowledge_engine.clinicaltrials_http import UrllibClinicalTrialsTransport
+from knowledge_engine.clinicaltrials_lookup import (
+    ClinicalTrialsLookupError,
+    ClinicalTrialsLookupService,
+)
+from knowledge_engine.clinicaltrials_lookup import (
+    GetTransport as ClinicalTrialsLookupGetTransport,
+)
 from knowledge_engine.config import build_settings
 from knowledge_engine.core_candidate_review import (
     CoreCandidateReviewError,
@@ -131,7 +142,9 @@ from knowledge_engine.pubmed_discovery import (
     NcbiDiscoveryError,
     PubmedPmcDiscoveryService,
 )
-from knowledge_engine.reference_lookup import GetTransport as ReferenceLookupGetTransport
+from knowledge_engine.reference_lookup import (
+    GetTransport as ReferenceLookupGetTransport,
+)
 from knowledge_engine.reference_lookup import (
     ReferenceLookupError,
     ReferenceLookupService,
@@ -156,7 +169,10 @@ from knowledge_engine.rxnorm_lookup import (
     RxNormLookupError,
     RxNormLookupService,
 )
-from knowledge_engine.scientific_scope import GLP1_METABOLIC_SCOPE, resolve_scope_vocabulary
+from knowledge_engine.scientific_scope import (
+    GLP1_METABOLIC_SCOPE,
+    resolve_scope_vocabulary,
+)
 from knowledge_engine.search import SearchService
 from knowledge_engine.search_fusion import fuse_rankings
 from knowledge_engine.unpaywall_http import UrllibUnpaywallTransport
@@ -239,7 +255,8 @@ GraphCorpusIdOption = Annotated[
 DiscoveryCycleStateOption = Annotated[
     Path,
     typer.Option(
-        "--state", help="Discovery-cycle pagination state JSON file (created on first run)."
+        "--state",
+        help="Discovery-cycle pagination state JSON file (created on first run).",
     ),
 ]
 DiscoveryCycleOutputOption = Annotated[
@@ -340,16 +357,26 @@ RxNormLookupOutputOption = Annotated[
     typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
 ]
 MeshLookupTermArgument = Annotated[
-    str, typer.Argument(help="A medical term to look up (e.g. 'obesity', 'type 2 diabetes').")
+    str,
+    typer.Argument(help="A medical term to look up (e.g. 'obesity', 'type 2 diabetes')."),
 ]
 MeshLookupOutputOption = Annotated[
     Path | None,
     typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
 ]
 PubchemLookupTermArgument = Annotated[
-    str, typer.Argument(help="A compound name to look up (e.g. 'metformin', 'empagliflozin').")
+    str,
+    typer.Argument(help="A compound name to look up (e.g. 'metformin', 'empagliflozin')."),
 ]
 PubchemLookupOutputOption = Annotated[
+    Path | None,
+    typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
+]
+ClinicalTrialsLookupNctIdArgument = Annotated[
+    str,
+    typer.Argument(help="A ClinicalTrials.gov NCT ID to look up (e.g. 'NCT03652870')."),
+]
+ClinicalTrialsLookupOutputOption = Annotated[
     Path | None,
     typer.Option("--output", help="Optional path to also save the lookup result as JSON."),
 ]
@@ -422,7 +449,8 @@ ExtractionReviewBatchPaperIdsOption = Annotated[
 ExtractionReviewAnnotateInputOption = Annotated[
     Path,
     typer.Option(
-        "--input", help="Draft extraction review JSONL file (from extraction-review-generate)."
+        "--input",
+        help="Draft extraction review JSONL file (from extraction-review-generate).",
     ),
 ]
 ExtractionReviewAnnotateOutputOption = Annotated[
@@ -630,7 +658,8 @@ VectorSearchGeneratorOption = Annotated[
 VectorSearchModelOption = Annotated[
     str | None,
     typer.Option(
-        "--model", help="Override the generator's default model name (used with --query-text)."
+        "--model",
+        help="Override the generator's default model name (used with --query-text).",
     ),
 ]
 VectorSearchLimitOption = Annotated[int, typer.Option("--limit", "-n", min=1, max=100)]
@@ -649,16 +678,19 @@ EmbeddingGenerateModelOption = Annotated[
 EmbeddingGeneratePaperIdsOption = Annotated[
     list[int] | None,
     typer.Option(
-        "--paper-id", help="Restrict generation to this paper ID (repeatable; default: all)."
+        "--paper-id",
+        help="Restrict generation to this paper ID (repeatable; default: all).",
     ),
 ]
 FusedSearchQueryTextArgument = Annotated[
-    str, typer.Argument(help="Free-text query used for both lexical and semantic retrieval.")
+    str,
+    typer.Argument(help="Free-text query used for both lexical and semantic retrieval."),
 ]
 FusedSearchGeneratorOption = Annotated[
     str,
     typer.Option(
-        "--generator", help="Embedding generator for the semantic side: 'local' or 'openai'."
+        "--generator",
+        help="Embedding generator for the semantic side: 'local' or 'openai'.",
     ),
 ]
 FusedSearchCandidateLimitOption = Annotated[
@@ -1753,6 +1785,72 @@ def pubchem_lookup(
     )
 
 
+@app.command("clinicaltrials-lookup")
+def clinicaltrials_lookup(
+    nct_id: ClinicalTrialsLookupNctIdArgument,
+    output: ClinicalTrialsLookupOutputOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Resolve an NCT ID to its registry record via NLM/NIH's public ClinicalTrials.gov API v2.
+
+    M71's fifth slice of the reference knowledge layer
+    (`docs/reference_knowledge_layer_design.md`), alongside M41's
+    Wikipedia lookup, M42's RxNorm lookup, M43's MeSH lookup, and M44's
+    PubChem lookup: background trial-registration context for an NCT ID
+    a paper cites (e.g. "NCT03652870"), not primary-research evidence.
+    Never routed through `EvidenceRecord` promotion, and never merged
+    with the evidence corpus's own search commands (`ke search`/
+    `ke answer`/`ke vector-search`/`ke fused-search`) -- this is a
+    separate, explicitly non-evidentiary lookup. An ID ClinicalTrials.gov
+    does not recognize (malformed or simply unregistered) returns
+    `found: false` rather than a guess.
+    """
+
+    if output is not None:
+        _validate_output(output, force=force)
+
+    console.print("[yellow]Network access:[/yellow] querying ClinicalTrials.gov's public API v2.")
+    transport = cast(ClinicalTrialsLookupGetTransport, UrllibClinicalTrialsTransport())
+    service = ClinicalTrialsLookupService(transport)
+    try:
+        result = service.lookup(nct_id)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except ClinicalTrialsLookupError as exc:
+        console.print(f"[red]ClinicalTrials.gov lookup failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    if output is not None:
+        _write_output(output, result.to_json())
+
+    if not result.found:
+        console.print(f"[yellow]No ClinicalTrials.gov study found for:[/yellow] {escape(nct_id)}")
+    else:
+        console.print(f"[bold]{escape(result.brief_title or result.nct_id)}[/bold]")
+        if result.overall_status:
+            console.print(f"Status: {escape(result.overall_status)}")
+        if result.phases:
+            console.print(f"Phase: {escape(', '.join(result.phases))}")
+        if result.conditions:
+            console.print(f"Conditions: {escape(', '.join(result.conditions))}")
+        if result.interventions:
+            console.print(f"Interventions: {escape(', '.join(result.interventions))}")
+        if result.enrollment_count is not None:
+            console.print(f"Enrollment: {result.enrollment_count}")
+        if result.lead_sponsor:
+            console.print(f"Lead sponsor: {escape(result.lead_sponsor)}")
+        console.print()
+        console.print(
+            f"NCT ID: {escape(result.nct_id)}  Source: {escape(result.source_url or 'unknown')}"
+        )
+
+    console.print()
+    console.print(
+        "[bold]This is background reference context from ClinicalTrials.gov, not evidence -- "
+        "no scientific synthesis has been performed.[/bold]"
+    )
+
+
 @app.command("manual-pdf-preview")
 def manual_pdf_preview(
     pdf: ManualPdfPathOption,
@@ -2083,7 +2181,9 @@ def extraction_review_batch_generate(
                 PaperMetadata(paper_id=paper.id, doi=paper.doi, title=paper.title),
                 [
                     ParsedPage(
-                        page_number=page.page_number, text=page.text, table_text=page.table_text
+                        page_number=page.page_number,
+                        text=page.text,
+                        table_text=page.table_text,
                     )
                     for page in paper.pages
                 ],
@@ -2136,8 +2236,10 @@ def extraction_review_batch_generate(
     )
     console.print(
         "[bold]Draft items are a review queue, not validated evidence -- "
-        "research_question and evidence_direction require human completion before "
-        "ke extraction-review-promote will accept any of them.[/bold]"
+        "research_question and evidence_direction still need to be filled before "
+        "ke extraction-review-promote will accept them. Run ke "
+        "extraction-review-autoclassify (M52's deterministic, automated classifier) "
+        "to fill them -- no human completion is required.[/bold]"
     )
 
 
@@ -2441,7 +2543,9 @@ def graph_build(
             mesh_service = MeshLookupService(mesh_transport)
             try:
                 annotated, _summary = annotate_draft_items(
-                    records_to_annotate, rxnorm_service=rxnorm_service, mesh_service=mesh_service
+                    records_to_annotate,
+                    rxnorm_service=rxnorm_service,
+                    mesh_service=mesh_service,
                 )
             except (RxNormLookupError, MeshLookupError) as exc:
                 console.print(f"[red]Reference-layer annotation failed:[/red] {escape(str(exc))}")
@@ -3097,9 +3201,11 @@ def _build_relationship_review_worksheet(
         f"Minimum shared concepts: {minimum_shared_concepts}",
         f"Corpus: {corpus_id if corpus_id else '(all corpora -- unscoped)'}",
         f"Candidate pairs total: {len(ranked_candidates)}",
-        f"This worksheet: pairs {offset + 1}-{offset + len(batch)} of {len(ranked_candidates)}"
-        if batch
-        else "This worksheet: no pairs at this offset.",
+        (
+            f"This worksheet: pairs {offset + 1}-{offset + len(batch)} of {len(ranked_candidates)}"
+            if batch
+            else "This worksheet: no pairs at this offset."
+        ),
         "Ordering: "
         + ("semantic similarity (M61)" if ranked_by_similarity else "shared-concept count")
         + ", descending",
@@ -3115,7 +3221,11 @@ def _build_relationship_review_worksheet(
     ]
 
     for index, ranked in enumerate(batch, start=offset + 1):
-        claim_a, claim_b, shared_concepts = ranked.claim_a, ranked.claim_b, ranked.shared_concepts
+        claim_a, claim_b, shared_concepts = (
+            ranked.claim_a,
+            ranked.claim_b,
+            ranked.shared_concepts,
+        )
         concept_labels = ", ".join(_graph_report_text(concept.label) for concept in shared_concepts)
         similarity_line = (
             f"Semantic similarity: {ranked.similarity:.2f}"
@@ -3136,12 +3246,14 @@ def _build_relationship_review_worksheet(
         lines.append("")
         lines.extend(
             _worksheet_claim_lines(
-                claim_a.evidence_record_id, evidence_records_by_id.get(claim_a.evidence_record_id)
+                claim_a.evidence_record_id,
+                evidence_records_by_id.get(claim_a.evidence_record_id),
             )
         )
         lines.extend(
             _worksheet_claim_lines(
-                claim_b.evidence_record_id, evidence_records_by_id.get(claim_b.evidence_record_id)
+                claim_b.evidence_record_id,
+                evidence_records_by_id.get(claim_b.evidence_record_id),
             )
         )
         lines.extend(
@@ -3509,7 +3621,10 @@ def _build_evidence_intelligence_report(
         *[
             _graph_report_text(line)
             for line in render_synthesis(
-                consensus=consensus, quality=quality, confidence=confidence, coverage=coverage
+                consensus=consensus,
+                quality=quality,
+                confidence=confidence,
+                coverage=coverage,
             )
         ],
         "",
@@ -3577,7 +3692,10 @@ def _build_evidence_intelligence_json(
             "percentage": coverage.percentage,
         },
         "synthesis": render_synthesis(
-            consensus=consensus, quality=quality, confidence=confidence, coverage=coverage
+            consensus=consensus,
+            quality=quality,
+            confidence=confidence,
+            coverage=coverage,
         ),
         "scope_note": (
             "Every number above is computed deterministically from already-stored "
@@ -3685,7 +3803,10 @@ def _evidence_review_tier(
 
 
 def _build_evidence_review_queue(
-    graph_repository: GraphRepository, evidence_records: list[dict[str, Any]], *, limit: int
+    graph_repository: GraphRepository,
+    evidence_records: list[dict[str, Any]],
+    *,
+    limit: int,
 ) -> str:
     """Build a Markdown report prioritizing automated evidence records for the next review pass.
 

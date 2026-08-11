@@ -236,6 +236,36 @@ had been recorded as the journal's own printed page number (585) instead
 of the local PDF's actual physical page (4), making its source
 unresolvable until corrected.
 
+**2026-08-10 update (later same day): mental health's comorbidity gap
+closed.** The 2026-08-10 comorbidity discovery cycle referenced above had
+identified two license-verified (CC BY 4.0) candidates but left them
+unacquired to avoid rushing a source-grounded record. Both are now
+acquired, source-audited against the full local PDF, and promoted:
+`ev-mh-zhang-2026-ssri-diabetes-comorbid-depression-001` (a 9-RCT,
+770-participant meta-analysis of SSRIs in diabetes with comorbid
+depression -- a genuinely mixed result: no overall depressive-symptom
+benefit, a benefit only in a >=6-month-follow-up subgroup, a significant
+anxiety-score increase, no glycaemic/BMI effect) and
+`ev-mh-schrag-2026-adept-pd-nortriptyline-escitalopram-001` (a
+placebo-controlled three-arm pilot RCT of nortriptyline and escitalopram
+in Parkinson's disease with comorbid depression -- an underpowered
+feasibility pilot with no BDI-II benefit for either drug but a
+nortriptyline-specific PHQ-9 and Persistent-Anxiety-Scale signal versus
+placebo). Reading the Schrag paper in full caught a genuine
+Abstract/Results internal inconsistency -- the Abstract states the
+escitalopram-vs-placebo PHQ-9 confidence interval as `-3.54 to -1.17`,
+which cannot be reconciled with the paper's own reported non-significance
+(p = 0.33) for that comparison; the Results section's `-3.54 to 1.17`
+is the internally-consistent figure and is what this record uses,
+with the discrepancy disclosed in the record's `source_span.locator_note`
+rather than silently resolved. Both records are added to the golden
+map's existing "MDD with co-occurring medical comorbidity" population
+group (now 4 records: post-stroke, post-CABG, diabetes, Parkinson's) and
+pass `ke evidence-map-grounding-verify` (10/11 records fully grounded,
+the sole remaining exception being the already-documented Yan cross-page
+citation). Mental-health corpus totals: 135 Evidence Records (11
+reviewed), 11-record golden map.
+
 ### Decision: corpus database versioning via chunked git commits
 
 The corpus SQLite database (`data/knowledge_engine.sqlite3`, gitignored
@@ -1199,7 +1229,7 @@ extraction pipeline and AI Interface Layer the background context
 paper always assumes but never restates. Corresponds to
 `knowledge-engine-reference` in the long-term ecosystem; see
 `docs/roadmap/long_term_vision.md` and
-`docs/reference_knowledge_layer_design.md`. M41-M44 built four
+`docs/reference_knowledge_layer_design.md`. M41-M44 and M71 built five
 independent live-lookup sources; M45 wired three of the design doc's
 Addendum items into Phase 2's review workflow, so it depends on Phase 2
 existing first. Always background context, never evidence -- none of it
@@ -1357,6 +1387,37 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   `research_question`/`evidence_direction`, and never changes `ke
   extraction-review-promote`'s existing refusal to promote a record
   missing either. See `docs/history/milestones/m45_extraction_review_annotate.md`.
+- **M71 (2026-08-10)** added a fifth live-lookup reference source, NLM/NIH's
+  ClinicalTrials.gov API v2, alongside M41-M44's Wikipedia/RxNorm/MeSH/PubChem
+  lookups. Owner-confirmed direction: extend the live-lookup path only,
+  no stored-textbook path (the design doc's other, still-unbuilt option).
+  A new `ke clinicaltrials-lookup <NCT_ID>` command and
+  `knowledge_engine/clinicaltrials_lookup.py` resolve a trial's own NCT
+  ID to its registry-level summary -- brief/official title, overall
+  status, phase, study type, conditions, interventions, enrollment
+  count, lead sponsor, and brief summary -- through a dedicated
+  host-allowlisted transport (`clinicaltrials_http.py`'s
+  `UrllibClinicalTrialsTransport`, since `clinicaltrials.gov` is a
+  distinct host from every prior lookup's). Chosen as the fifth source
+  because it closes a gap none of the first four cover: independent
+  trial-registration metadata for a study already cited by ID in this
+  project's own corpus (the mental-health corpus's Schrag ADepT-PD
+  Evidence Record cites NCT03652870 directly in its source paper).
+  Two real API behaviors verified live before writing the parser: a
+  well-formed but unregistered ID (`NCT99999999`) returns a clean 404,
+  while a malformed ID (not matching ClinicalTrials.gov's own `NCT` +
+  8-digit format, e.g. `not-an-nct-id`) returns 400 with "Parameter
+  `nctId` has incorrect format" -- both are reported as `found: false`
+  by this module rather than distinguished into a separate error path,
+  the same not-a-guess posture M44's PubChem lookup established for its
+  own not-found case. Live-verified end to end against the real API: a
+  real ID resolves to the correct trial (phase 3, 52 enrolled, University
+  College London as lead sponsor); both not-found cases decline cleanly.
+  Explicitly background context, not evidence, with the same
+  non-`EvidenceRecord` boundary M41-M45 drew; `license` states registry
+  content is sponsor/PI-submitted, hosted (not authored) by NLM/NIH, the
+  same depositor-vs-host distinction M44 drew for PubChem's ChEBI-sourced
+  records.
 
 ## Phase 3: Search Plus Semantics
 
@@ -1720,6 +1781,49 @@ than a single ingestion-time check, which is exactly what the `v1.0.0`
 gate asked for. Combined with the already-closed backup/restore and
 API-fixture gates above, `v1.0.0`'s remaining condition is the project
 owner's own confirmation that public messaging matches capability.
+
+### 2026-08-10: `v1.0.0` declared
+
+The project owner explicitly confirmed public `v1.0.0` messaging matches
+actual capability (in response to a direct clarifying question), closing
+the one remaining gate named above. Before writing this declaration,
+each of the other three gates was independently re-verified against
+current live state rather than trusted from its own prior write-up:
+
+- **Tags `v0.2.0-alpha.2` through `v0.5.0-beta` are live**, all pointing
+  at commit `8eab23e`, confirmed via the GitHub API (`list_tags`).
+- **Backup/restore integrity re-run right now, not just referenced from
+  2026-08-08.** `tools/reassemble_corpus_database.py` against the
+  currently-committed `data/db_parts/` (6 parts) reproduced the exact
+  whole-file SHA-256 recorded in `manifest.json`
+  (`693002a8...573e7b`), `PRAGMA integrity_check = ok`, and a `papers`
+  row count of 1,357 matching the manifest -- an independent
+  reassembly run in this session, not a reuse of the earlier report's
+  own claim.
+- **License/attribution re-checked live via `ke corpus-validate
+  --check-files`-free run against all three corpora's `corpus.json`
+  manifests** (not `sources.csv` directly, which is not itself the
+  validated artifact): `glp1_weight_loss` (953 sources),
+  `oncology_nsclc_checkpoint_inhibitors` (336 sources), and
+  `mental_health_mdd_antidepressants` (62 sources, now including the
+  two comorbidity records closed the same day -- see the comorbidity
+  gap-closure entry above) each report 0 blocking structural errors, 0
+  import-blocking policy/legal/file issues, and 100%
+  `approved_open_access`/`included` status.
+
+`v1.0.0` is a claim about honesty and operational stability, exactly as
+scoped above -- not a claim that the underlying science is finished, or
+that every corpus's known gaps (durability, safety synthesis, agent
+coverage, and the others named throughout this document) are closed.
+Creating and pushing the actual git tag is a separate, deliberate action
+from this declaration -- consistent with every prior tag in this ladder,
+it is pushed by the project owner from their own machine (this session's
+own git credential scope cannot create or push tags; see the ref-scope
+diagnosis earlier in this project's history). The command is: `git tag
+-a v1.0.0 -m "v1.0.0: honesty and operational stability, per
+docs/roadmap.md's Release Milestones gate" 8eab23e && git push origin
+v1.0.0` (substitute the actual commit this repository's `main` points to
+at tag time if it has advanced past `8eab23e`).
 
 ### Historical intent (superseded, kept for context only)
 

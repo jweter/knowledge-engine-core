@@ -16,7 +16,17 @@ lookup was the better starting point. **M45 then built three of the
 Addendum's buildable-now integration points** (`ke
 extraction-review-annotate`, see `docs/history/milestones/m45_extraction_review_annotate.md`
 and the Addendum section below), attaching RxNorm/MeSH context directly
-onto draft evidence items. The stored-textbook path remains unbuilt and
+onto draft evidence items. **M71 (2026-08-10) added a fifth live-lookup
+slice**, extending the same "live lookup, not stored text" path the
+project owner explicitly reaffirmed that day: a live lookup against
+NLM/NIH's ClinicalTrials.gov API v2 for trial-registration metadata (an
+NCT ID's registered phase, arms/interventions, enrollment, sponsor, and
+status), `ke clinicaltrials-lookup`. Chosen because it closes a gap none
+of the first four sources cover -- independent registry-level context for
+a specific trial a paper cites by ID (e.g. the mental-health corpus's
+Schrag ADepT-PD Evidence Record cites NCT03652870 directly), rather than
+a general-encyclopedia, drug-name, medical-concept, or
+chemical-structure lookup. The stored-textbook path remains unbuilt and
 still needs the licensing and storage decisions below actually made
 before any code assumes a title list -- nothing here authorizes starting
 that path.

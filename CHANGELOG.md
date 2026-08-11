@@ -30,6 +30,73 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`ke clinicaltrials-lookup <NCT_ID>` -- fifth reference-layer live-lookup
+  source (M71), NLM/NIH's ClinicalTrials.gov API v2.** Extends the
+  live-lookup path M41-M44 established (Wikipedia, RxNorm, MeSH,
+  PubChem), per the project owner's explicit direction to keep
+  extending live-lookup rather than start the still-unbuilt
+  stored-textbook path. Resolves a trial's NCT ID (e.g. one a paper
+  cites, like the mental-health corpus's Schrag ADepT-PD record citing
+  NCT03652870) to its registry-level summary: brief/official title,
+  overall status, phase, study type, conditions, interventions,
+  enrollment count, lead sponsor, and brief summary. New
+  `knowledge_engine/clinicaltrials_http.py`
+  (`UrllibClinicalTrialsTransport`, host-allowlisted to
+  `clinicaltrials.gov`) and `knowledge_engine/clinicaltrials_lookup.py`
+  (`ClinicalTrialsLookupService`), with unit and CLI-level tests
+  (`tests/test_clinicaltrials_lookup.py`,
+  `tests/test_clinicaltrials_lookup_cli.py`). Live-verified before and
+  after writing the parser: a real ID resolves correctly (phase 3, 52
+  enrolled); a well-formed but unregistered ID returns a clean 404; a
+  malformed ID returns 400 ("Parameter `nctId` has incorrect format") --
+  both are reported as `found: false`, never a guess, the same posture
+  M44's PubChem lookup established for its own not-found case. Always
+  background context, never evidence -- never routed through
+  `EvidenceRecord` promotion. See `docs/roadmap.md`'s M71 entry and
+  `docs/reference_knowledge_layer_design.md`.
+
+- **`v1.0.0` declared.** The project owner confirmed public `v1.0.0`
+  messaging matches actual capability, the one remaining condition
+  named in `docs/roadmap.md`'s Release Milestones gate. The other three
+  conditions were independently re-verified live in this session rather
+  than trusted from their own prior write-ups: tags `v0.2.0-alpha.2`
+  through `v0.5.0-beta` confirmed live via the GitHub API; the
+  backup/restore mechanism re-run against the currently-committed
+  `data/db_parts/`, reproducing the exact SHA-256 in `manifest.json`
+  with `PRAGMA integrity_check = ok`; and `ke corpus-validate` re-run
+  against all three corpora's `corpus.json` manifests, each reporting 0
+  blocking issues and 100% `approved_open_access`/`included` status.
+  `v1.0.0` is a claim about honesty and operational stability, not that
+  the underlying science is finished. See `docs/roadmap.md`'s new
+  "2026-08-10: `v1.0.0` declared" section for the full gate-by-gate
+  verification and the tag command (pushed by the project owner from
+  their own machine, per this session's git credential scope).
+
+- **Closed the mental-health golden map's comorbidity coverage gap**
+  (diabetes, Parkinson's disease). Two license-verified (CC BY 4.0)
+  candidates identified by an earlier discovery cycle but left
+  unacquired are now source-audited and promoted as reviewed Evidence
+  Records: `ev-mh-zhang-2026-ssri-diabetes-comorbid-depression-001` (a
+  9-RCT, 770-participant meta-analysis of SSRIs in diabetes with
+  comorbid depression -- mixed result: no overall depressive-symptom
+  benefit, a benefit only at >=6 months follow-up, a significant
+  anxiety-score increase, no glycaemic/BMI effect) and
+  `ev-mh-schrag-2026-adept-pd-nortriptyline-escitalopram-001` (a
+  placebo-controlled three-arm pilot RCT of nortriptyline/escitalopram
+  in Parkinson's disease with comorbid depression -- an underpowered
+  feasibility pilot with no BDI-II benefit for either drug but a
+  nortriptyline-specific PHQ-9 and Persistent-Anxiety-Scale signal).
+  Reading the Schrag source in full caught a genuine Abstract/Results
+  internal inconsistency in the paper itself (a PHQ-9 confidence
+  interval sign that contradicts the paper's own reported
+  non-significance); the record uses the internally-consistent Results
+  value and discloses the discrepancy in `source_span.locator_note`
+  rather than silently picking one. Both records added to the golden
+  map's "MDD with co-occurring medical comorbidity" population group
+  (now 4 records) and pass `ke evidence-map-grounding-verify` (10/11
+  records fully grounded). Mental-health corpus: 135 Evidence Records
+  (11 reviewed), 11-record golden map.
+
 - **Toxicity/adverse-event synthesis docs for the oncology and mental-health
   golden evidence maps.** Both maps' `known_gaps` named this as not yet
   built. New `docs/oncology_toxicity_adverse_event_synthesis.md` and
