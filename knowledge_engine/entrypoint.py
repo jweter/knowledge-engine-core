@@ -3610,7 +3610,7 @@ def relationship_classify_automate(
         accepted_records.append(
             {
                 "schema_version": "0.1",
-                "relationship_id": f"rel-m70-{claim_a_id}-{claim_b_id}",
+                "relationship_id": f"rel-m72-{claim_a_id}-{claim_b_id}",
                 "source_evidence_record_id": claim_a_id,
                 "target_evidence_record_id": claim_b_id,
                 "relationship_type": result.relationship_type,
