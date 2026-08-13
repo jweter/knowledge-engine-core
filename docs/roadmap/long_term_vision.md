@@ -248,14 +248,25 @@ waiting for `core` to get smarter -- it is the deliberate seam where
 synthesis are shipped; Analytical and Discovery Intelligence remain future
 stages.
 
-**A concrete execution plan for closing this section's "finished product"
-claim now exists**: `knowledge-engine-ai`'s `docs/web_integration_design.md`
-(step-wise milestones `AI-O12`-`AI-O17`) documents that this layer's own
-orchestrator -- durable sessions, parallel retrieval with contradiction
-search, Skeptic verification, session synthesis -- is fully built but has
-zero production callers today, and lays out how to wire it into
-`knowledge-engine-web`'s live `/ask` route. Not yet implemented as of this
-writing; see that document for current status.
+**The first complete local caller is now verified.**
+`knowledge-engine-ai`'s `docs/web_integration_design.md` defines milestones
+`AI-O12`-`AI-O17`; those milestones now connect its durable sessions, parallel
+retrieval with contradiction search, Skeptic verification, session synthesis,
+and independent close gate to `knowledge-engine-web`'s live `/ask` route. The
+2026-08-13 AI-O17 rehearsal ran the canonical semaglutide/body-weight question
+through Web, AI, Core, the committed corpus, and local Ollama. Workflow
+integrity, citation integrity, and contradiction review all passed; the
+released narrative cited all five retrieved evidence records, including the
+qualifying safety and study-design records. Unavailable-model and forced-timeout
+drills preserved deterministic retrieval and exposed no private paths.
+
+That result is a local software-composition proof, not a hosted launch claim.
+Web now withholds a generated draft unless the AI layer's deterministic release
+gate passes. The Render alpha remains retrieval-only until an operator provides
+durable Research Session storage, Core and corpus inputs in the hosted
+environment, and a secured hosted inference service. A laptop Ollama listener
+is explicitly not the public hosting plan. See `knowledge-engine-ai` PR #33 and
+`knowledge-engine-web` PR #52 for the measured implementation record.
 
 In the finished, full ecosystem, an AI interface built on top of `core`'s
 Evidence and Relationship Layers should:
