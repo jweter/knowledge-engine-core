@@ -40,6 +40,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Recorded the completed AI-O17 cross-repository launch checkpoint.** The
+  real local Web-to-AI-to-Core Research Copilot path was exercised against the
+  committed GLP-1 corpus and local Ollama: the canonical semaglutide/body-weight
+  question passed workflow, citation, and contradiction gates and cited all
+  five retrieved Evidence Records, while unavailable-model and timeout drills
+  preserved deterministic retrieval. `knowledge-engine-ai` PR #33 corrected
+  numeric grounding and workflow-integrity release gating;
+  `knowledge-engine-web` PR #52 pins that contract and withholds blocked drafts.
+  Core behavior and scientific data are unchanged. The Render alpha remains
+  retrieval-only until its durable storage, hosted Core/corpus, and secured
+  inference prerequisites exist.
+
 - **Applied M72's `ke evidence-record-review-promote` and
   `ke relationship-classify-automate` to the real corpora for the first
   time.** Both were built, tested, and merged in PR #343, but never

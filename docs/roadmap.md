@@ -115,6 +115,21 @@ temporary detour:
    Status" section); the project explicitly commits to the current model for
    the near term.
 
+**2026-08-13 cross-layer launch checkpoint:** AI-O17 completed the first
+measured local Web-to-AI-to-Core Research Copilot rehearsal. The canonical
+semaglutide/body-weight question passed workflow integrity, citation integrity,
+and contradiction review and cited all five retrieved evidence records,
+including qualifying evidence. Unavailable-Ollama and forced-timeout drills
+kept deterministic retrieval visible. Two defects discovered by the rehearsal
+were corrected: supplied deterministic Evidence Quality/Claim Confidence
+numbers are now grounded against the supplied score context, and failed
+workflow branches now block the Research ISA close gate. Web additionally
+withholds any generated draft whose release gate does not pass. This closes the
+local composition gate only; the Render alpha remains retrieval-only pending a
+durable session disk, hosted Core/corpus inputs, and secured hosted inference.
+The record lives in `knowledge-engine-ai`'s `docs/ai_o17_live_verification.md`
+and `knowledge-engine-web`'s matching document.
+
 The strategic preference behind this order is explicit: retrieval quality and
 one complete scientific evidence map take priority over *further GLP-1-only*
 corpus growth, cosmetic polish in isolation, or more autonomous AI. These are
