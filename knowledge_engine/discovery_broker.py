@@ -44,62 +44,50 @@ class FederatedDiscoveryBroker:
 
         for provider in self._providers:
             name = _normalize_provider_name(provider.name)
-            try:
-                result = provider.search(query)
-            except Exception:  # noqa: BLE001 - provider boundary must not collapse the run
-                statuses.append(
-                    ProviderStatus(
-                        provider=name,
-                        outcome=ProviderOutcome.FAILED,
-                        attempted=True,
-                        reason="provider_exception",
-                    )
-                )
-                continue
-
-            if result.query != query:
-                statuses.append(
-                    ProviderStatus(
-                        provider=name,
-                        outcome=ProviderOutcome.FAILED,
-                        attempted=True,
-                        reason="query_contract_mismatch",
-                    )
-                )
-                continue
-
-            if len(result.provider_statuses) != 1:
-                statuses.append(
-                    ProviderStatus(
-                        provider=name,
-                        outcome=ProviderOutcome.FAILED,
-                        attempted=True,
-                        reason="provider_status_contract_mismatch",
-                    )
-                )
-                continue
-
-            status = result.provider_statuses[0]
-            if _normalize_provider_name(status.provider) != name:
-                statuses.append(
-                    ProviderStatus(
-                        provider=name,
-                        outcome=ProviderOutcome.FAILED,
-                        attempted=True,
-                        reason="provider_identity_mismatch",
-                    )
-                )
-                continue
-
-            normalized_status = replace(status, provider=name)
-            statuses.append(normalized_status)
-            candidates.extend(result.candidates)
+            status, provider_candidates = _search_provider(provider, name=name, query=query)
+            statuses.append(status)
+            candidates.extend(provider_candidates)
 
         return FederatedSearchResult(
             query=query,
             provider_statuses=tuple(statuses),
             candidates=tuple(candidates),
         )
+
+
+def _search_provider(
+    provider: DiscoveryProvider,
+    *,
+    name: str,
+    query: DiscoveryQuery,
+) -> tuple[ProviderStatus, tuple[FederatedCandidate, ...]]:
+    """Execute and validate one provider without allowing it to collapse the run."""
+    try:
+        result = provider.search(query)
+        if not isinstance(result, FederatedSearchResult):
+            return _failed_status(name, "provider_result_contract_mismatch"), ()
+        if result.query != query:
+            return _failed_status(name, "query_contract_mismatch"), ()
+        if len(result.provider_statuses) != 1:
+            return _failed_status(name, "provider_status_contract_mismatch"), ()
+
+        status = result.provider_statuses[0]
+        if _normalize_provider_name(status.provider) != name:
+            return _failed_status(name, "provider_identity_mismatch"), ()
+
+        normalized_status = replace(status, provider=name)
+        return normalized_status, result.candidates
+    except Exception:  # noqa: BLE001 - runtime provider boundary must contain malformed adapters
+        return _failed_status(name, "provider_exception"), ()
+
+
+def _failed_status(provider: str, reason: str) -> ProviderStatus:
+    return ProviderStatus(
+        provider=provider,
+        outcome=ProviderOutcome.FAILED,
+        attempted=True,
+        reason=reason,
+    )
 
 
 def _normalize_provider_name(value: str) -> str:
