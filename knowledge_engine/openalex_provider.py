@@ -68,6 +68,7 @@ class OpenAlexProvider:
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
         max_response_bytes: int = DEFAULT_MAX_RESPONSE_BYTES,
         user_agent: str = DEFAULT_USER_AGENT,
+        api_key: str | None = None,
     ) -> None:
         if timeout_seconds <= 0:
             raise ValueError("OpenAlex timeout must be positive.")
@@ -75,12 +76,15 @@ class OpenAlexProvider:
             raise ValueError("OpenAlex response limit must be positive.")
         if not user_agent.strip():
             raise ValueError("OpenAlex User-Agent must not be blank.")
+        if api_key is not None and not api_key.strip():
+            raise ValueError("OpenAlex API key must not be blank when provided.")
 
         self._transport = transport
         self._clock = clock or (lambda: datetime.now(UTC))
         self._timeout_seconds = timeout_seconds
         self._max_response_bytes = max_response_bytes
         self._user_agent = user_agent
+        self._api_key = api_key.strip() if api_key is not None else None
 
     @property
     def name(self) -> str:
@@ -98,6 +102,8 @@ class OpenAlexProvider:
             filters.append(f"to_publication_date:{query.year_to:04d}-12-31")
         if filters:
             params["filter"] = ",".join(filters)
+        if self._api_key is not None:
+            params["api_key"] = self._api_key
 
         return self._fetch_list(query=query, url=f"{OPENALEX_WORKS_URL}?{urlencode(params)}")
 
@@ -111,14 +117,19 @@ class OpenAlexProvider:
         query = DiscoveryQuery(text=f"openalex lookup {normalized}", limit_per_provider=1)
         if openalex_id is not None:
             url = f"{OPENALEX_WORKS_URL}/{quote(openalex_id, safe='')}"
-            return self._fetch_single(query=query, url=url)
+            return self._fetch_single(query=query, url=self._with_api_key(url))
 
         doi = _normalize_doi(normalized)
         if doi is None:
             raise ValueError("OpenAlex lookup requires an OpenAlex work ID or DOI.")
 
-        params = urlencode({"filter": f"doi:{doi}", "per-page": "1"})
-        return self._fetch_list(query=query, url=f"{OPENALEX_WORKS_URL}?{params}")
+        url = f"{OPENALEX_WORKS_URL}/doi:{quote(doi, safe='/')}"
+        return self._fetch_single(query=query, url=self._with_api_key(url))
+
+    def _with_api_key(self, url: str) -> str:
+        if self._api_key is None:
+            return url
+        return f"{url}?{urlencode({'api_key': self._api_key})}"
 
     def _fetch_single(self, *, query: DiscoveryQuery, url: str) -> FederatedSearchResult:
         response_or_result = self._request(query=query, url=url)
