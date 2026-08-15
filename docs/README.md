@@ -13,7 +13,9 @@ original prototype narrative, one-off status reports) live in
   milestones, and what's next. The best single entry point.
 - **`architecture.md`** -- what this system is and isn't today.
 - **`project_principles.md`** -- the standing principles the project
-  holds itself to.
+  holds itself to, including continuous external learning without architectural
+  drift, honest degradation, provenance-preserving normalization, and local-first
+  privacy.
 - **`glossary.md`** -- core terminology, defined precisely.
 - **`decisions.md`** -- a lightweight index of significant project
   decisions and why they were made.
@@ -93,8 +95,18 @@ original prototype narrative, one-off status reports) live in
 ## Subdirectories
 
 - **`roadmap/`** -- phase-by-phase goal statements (`phase0.md`
-  through `phase3.md`) and `long_term_vision.md`, the multi-package
-  ecosystem plan `founding_vision.md` translates into concrete scope.
+  through `phase3.md`) plus long-horizon guidance:
+  - **`long_term_vision.md`** -- the multi-package ecosystem plan the founding
+    vision translates into concrete scope;
+  - **`federated_research_discovery_adoption.md`** -- Knowledge Engine-native
+    adoption plan distilled from the `find-research-papers-mcp` review: common
+    provider contracts, OpenAlex/Semantic Scholar/arXiv priorities, graceful
+    degradation, citation traversal, provenance, security rejections, and FRD
+    milestones;
+  - **`evolving_vision_principles.md`** -- the standing improvement horizon
+    beyond any one release: how to keep learning, benchmarking, refreshing,
+    simplifying, and expanding without losing the project's identity or
+    bounded active roadmap.
 - **`architecture/`** -- Architecture Decision Records (`adr/`) and
   diagrams.
 - **`releases/`** -- versioned release notes.
