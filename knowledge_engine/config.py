@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     data_dir: Path | None = None
     database_url: str | None = None
     openai_api_key: str | None = None
+    openalex_api_key: str | None = None
     core_api_key: str | None = None
     unpaywall_email: str | None = None
     llm_model: str | None = None
