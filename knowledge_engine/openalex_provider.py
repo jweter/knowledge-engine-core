@@ -90,10 +90,19 @@ class OpenAlexProvider:
     def name(self) -> str:
         return "openalex"
 
+    @property
+    def configured(self) -> bool:
+        """Whether this optional provider has the credential required by OpenAlex."""
+        return self._api_key is not None
+
     def search(self, query: DiscoveryQuery) -> FederatedSearchResult:
+        if self._api_key is None:
+            return _disabled_result(query, "missing_api_key")
+
         params: dict[str, str] = {
             "search": query.normalized_text,
             "per-page": str(query.limit_per_provider),
+            "api_key": self._api_key,
         }
         filters: list[str] = []
         if query.year_from is not None:
@@ -102,8 +111,6 @@ class OpenAlexProvider:
             filters.append(f"to_publication_date:{query.year_to:04d}-12-31")
         if filters:
             params["filter"] = ",".join(filters)
-        if self._api_key is not None:
-            params["api_key"] = self._api_key
 
         return self._fetch_list(query=query, url=f"{OPENALEX_WORKS_URL}?{urlencode(params)}")
 
@@ -115,6 +122,9 @@ class OpenAlexProvider:
 
         openalex_id = _normalize_openalex_id(normalized)
         query = DiscoveryQuery(text=f"openalex lookup {normalized}", limit_per_provider=1)
+        if self._api_key is None:
+            return _disabled_result(query, "missing_api_key")
+
         if openalex_id is not None:
             url = f"{OPENALEX_WORKS_URL}/{quote(openalex_id, safe='')}"
             return self._fetch_single(query=query, url=self._with_api_key(url))
@@ -128,7 +138,7 @@ class OpenAlexProvider:
 
     def _with_api_key(self, url: str) -> str:
         if self._api_key is None:
-            return url
+            raise RuntimeError("OpenAlex request attempted without required API key.")
         return f"{url}?{urlencode({'api_key': self._api_key})}"
 
     def _fetch_single(self, *, query: DiscoveryQuery, url: str) -> FederatedSearchResult:
@@ -208,6 +218,8 @@ class OpenAlexProvider:
             return _empty_result(query)
         if response.status_code == 429:
             return _failure_result(query, ProviderOutcome.RATE_LIMITED, "rate_limited")
+        if response.status_code in {401, 403}:
+            return _failure_result(query, ProviderOutcome.FAILED, "authentication_failed")
         if 500 <= response.status_code <= 599:
             return _failure_result(query, ProviderOutcome.UNAVAILABLE, "provider_unavailable")
         if response.status_code < 200 or response.status_code >= 300:
@@ -367,6 +379,21 @@ def _empty_result(query: DiscoveryQuery) -> FederatedSearchResult:
                 outcome=ProviderOutcome.EMPTY,
                 attempted=True,
                 result_count=0,
+            ),
+        ),
+    )
+
+
+def _disabled_result(query: DiscoveryQuery, reason: str) -> FederatedSearchResult:
+    return FederatedSearchResult(
+        query=query,
+        provider_statuses=(
+            ProviderStatus(
+                provider="openalex",
+                outcome=ProviderOutcome.DISABLED,
+                attempted=False,
+                result_count=0,
+                reason=reason,
             ),
         ),
     )
