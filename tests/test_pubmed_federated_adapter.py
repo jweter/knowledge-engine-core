@@ -48,8 +48,12 @@ def _candidate(*, title: str = "A PubMed paper") -> PubmedCandidate:
     )
 
 
-def _result(query: str, *candidates: PubmedCandidate) -> DiscoveryResult:
-    return DiscoveryResult(query=query, retstart=0, limit=20, candidates=tuple(candidates))
+def _result(
+    query: str,
+    *candidates: PubmedCandidate,
+    limit: int = 20,
+) -> DiscoveryResult:
+    return DiscoveryResult(query=query, retstart=0, limit=limit, candidates=tuple(candidates))
 
 
 def test_pubmed_adapter_preserves_existing_candidate_observations() -> None:
@@ -142,6 +146,29 @@ def test_pubmed_adapter_rejects_unsupported_limit_without_network_call() -> None
     assert service.calls == []
     assert result.provider_statuses[0].outcome is ProviderOutcome.FAILED
     assert result.provider_statuses[0].reason == "unsupported_limit"
+
+
+def test_pubmed_adapter_rejects_result_limit_mismatch() -> None:
+    service = FakePubmedService(result=_result("aging", limit=21))
+
+    result = PubmedFederatedAdapter(service).search(DiscoveryQuery(text="aging"))
+
+    assert result.candidates == ()
+    assert result.provider_statuses[0].outcome is ProviderOutcome.FAILED
+    assert result.provider_statuses[0].reason == "provider_result_mismatch"
+
+
+def test_pubmed_adapter_rejects_result_page_over_requested_bound() -> None:
+    candidates = tuple(_candidate() for _ in range(2))
+    service = FakePubmedService(result=_result("aging", *candidates, limit=1))
+
+    result = PubmedFederatedAdapter(service).search(
+        DiscoveryQuery(text="aging", limit_per_provider=1)
+    )
+
+    assert result.candidates == ()
+    assert result.provider_statuses[0].outcome is ProviderOutcome.FAILED
+    assert result.provider_statuses[0].reason == "provider_result_mismatch"
 
 
 def test_pubmed_adapter_fails_closed_on_malformed_candidate() -> None:
