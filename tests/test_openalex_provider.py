@@ -36,7 +36,11 @@ def _response(status_code: int, body: bytes = b"{}") -> TransportResponse:
     return TransportResponse(status_code=status_code, body=body, headers={})
 
 
-def _provider(response: TransportResponse | Exception) -> tuple[OpenAlexProvider, FakeTransport]:
+def _provider(
+    response: TransportResponse | Exception,
+    *,
+    api_key: str | None = None,
+) -> tuple[OpenAlexProvider, FakeTransport]:
     transport = FakeTransport(response)
     provider = OpenAlexProvider(
         transport=transport,
@@ -44,38 +48,39 @@ def _provider(response: TransportResponse | Exception) -> tuple[OpenAlexProvider
         timeout_seconds=3.0,
         max_response_bytes=10_000,
         user_agent="knowledge-engine-test/1",
+        api_key=api_key,
     )
     return provider, transport
 
 
-def _work_payload() -> bytes:
+def _single_work_payload() -> bytes:
     return b"""{
-      "results": [
-        {
-          "id": "https://openalex.org/W123456789",
-          "doi": "https://doi.org/10.1000/Example",
-          "title": "Example Paper",
-          "publication_year": 2024,
-          "authorships": [
-            {"author": {"display_name": "Ada Scientist"}},
-            {"author": {"display_name": "Ben Researcher"}}
-          ],
-          "primary_location": {
-            "landing_page_url": "https://example.org/article",
-            "pdf_url": "https://example.org/article.pdf",
-            "source": {"display_name": "Example Journal"}
-          },
-          "abstract_inverted_index": {
-            "OpenAlex": [0],
-            "preserves": [1],
-            "provenance": [2]
-          },
-          "cited_by_count": 42,
-          "open_access": {"is_oa": true},
-          "is_retracted": false
-        }
-      ]
+      "id": "https://openalex.org/W123456789",
+      "doi": "https://doi.org/10.1000/Example",
+      "title": "Example Paper",
+      "publication_year": 2024,
+      "authorships": [
+        {"author": {"display_name": "Ada Scientist"}},
+        {"author": {"display_name": "Ben Researcher"}}
+      ],
+      "primary_location": {
+        "landing_page_url": "https://example.org/article",
+        "pdf_url": "https://example.org/article.pdf",
+        "source": {"display_name": "Example Journal"}
+      },
+      "abstract_inverted_index": {
+        "OpenAlex": [0],
+        "preserves": [1],
+        "provenance": [2]
+      },
+      "cited_by_count": 42,
+      "open_access": {"is_oa": true},
+      "is_retracted": false
     }"""
+
+
+def _work_payload() -> bytes:
+    return b'{"results":[' + _single_work_payload() + b"]}"
 
 
 def test_openalex_search_maps_provider_native_metadata_and_request_bounds() -> None:
@@ -123,11 +128,18 @@ def test_openalex_search_maps_provider_native_metadata_and_request_bounds() -> N
     assert max_response_bytes == 10_000
 
 
+def test_openalex_search_supports_optional_api_key_without_logging_it() -> None:
+    provider, transport = _provider(_response(200, b'{"results":[]}'), api_key="secret-key")
+
+    result = provider.search(DiscoveryQuery(text="example"))
+
+    assert result.provider_statuses[0].outcome == ProviderOutcome.EMPTY
+    assert "api_key=secret-key" in transport.calls[0][0]
+    assert result.to_json().find("secret-key") == -1
+
+
 def test_openalex_lookup_by_openalex_id_uses_single_work_endpoint() -> None:
-    single_work = _work_payload().replace(b'{\n      "results": [\n        ', b"").replace(
-        b"\n      ]\n    }", b""
-    )
-    provider, transport = _provider(_response(200, single_work))
+    provider, transport = _provider(_response(200, _single_work_payload()))
 
     result = provider.lookup("https://openalex.org/W123456789")
 
@@ -136,14 +148,13 @@ def test_openalex_lookup_by_openalex_id_uses_single_work_endpoint() -> None:
     assert transport.calls[0][0] == "https://api.openalex.org/works/W123456789"
 
 
-def test_openalex_lookup_by_doi_uses_exact_doi_filter() -> None:
-    provider, transport = _provider(_response(200, _work_payload()))
+def test_openalex_lookup_by_doi_uses_documented_shorthand_endpoint() -> None:
+    provider, transport = _provider(_response(200, _single_work_payload()))
 
     result = provider.lookup("https://doi.org/10.1000/Example")
 
     assert result.provider_statuses[0].outcome == ProviderOutcome.SUCCESS
-    assert "filter=doi%3A10.1000%2Fexample" in transport.calls[0][0]
-    assert "per-page=1" in transport.calls[0][0]
+    assert transport.calls[0][0] == "https://api.openalex.org/works/doi:10.1000/example"
 
 
 @pytest.mark.parametrize(
@@ -174,8 +185,16 @@ def test_openalex_classifies_http_statuses(
     ("error", "outcome", "reason"),
     [
         (TimeoutError(), ProviderOutcome.UNAVAILABLE, "timeout"),
-        (OSError("secret transport detail"), ProviderOutcome.UNAVAILABLE, "transport_error"),
-        (ResponseTooLargeError("raw response detail"), ProviderOutcome.FAILED, "oversized_response"),
+        (
+            OSError("secret transport detail"),
+            ProviderOutcome.UNAVAILABLE,
+            "transport_error",
+        ),
+        (
+            ResponseTooLargeError("raw response detail"),
+            ProviderOutcome.FAILED,
+            "oversized_response",
+        ),
     ],
 )
 def test_openalex_sanitizes_transport_failures(
@@ -243,17 +262,19 @@ def test_openalex_lookup_rejects_invalid_identifiers(identifier: str, message: s
 
 
 @pytest.mark.parametrize(
-    ("timeout_seconds", "max_response_bytes", "user_agent", "message"),
+    ("timeout_seconds", "max_response_bytes", "user_agent", "api_key", "message"),
     [
-        (0.0, 100, "agent", "timeout"),
-        (1.0, 0, "agent", "response limit"),
-        (1.0, 100, " ", "User-Agent"),
+        (0.0, 100, "agent", None, "timeout"),
+        (1.0, 0, "agent", None, "response limit"),
+        (1.0, 100, " ", None, "User-Agent"),
+        (1.0, 100, "agent", " ", "API key"),
     ],
 )
 def test_openalex_rejects_invalid_configuration(
     timeout_seconds: float,
     max_response_bytes: int,
     user_agent: str,
+    api_key: str | None,
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
@@ -262,4 +283,5 @@ def test_openalex_rejects_invalid_configuration(
             timeout_seconds=timeout_seconds,
             max_response_bytes=max_response_bytes,
             user_agent=user_agent,
+            api_key=api_key,
         )
