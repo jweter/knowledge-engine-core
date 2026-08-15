@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
-from knowledge_engine.discovery_broker import FederatedDiscoveryBroker
+from knowledge_engine.discovery_broker import DiscoveryProvider, FederatedDiscoveryBroker
 from knowledge_engine.federated_discovery import (
     DiscoveryQuery,
     FederatedCandidate,
@@ -24,6 +25,15 @@ class FakeProvider:
         if self.error is not None:
             raise self.error
         assert self.result is not None
+        return self.result
+
+
+@dataclass(frozen=True)
+class MalformedProvider:
+    name: str
+    result: object
+
+    def search(self, query: DiscoveryQuery) -> object:
         return self.result
 
 
@@ -104,6 +114,27 @@ def test_broker_marks_run_partial_when_one_provider_fails() -> None:
     assert result.candidates == (candidate,)
     assert result.failed_providers == ("openalex",)
     assert result.provider_statuses[0].reason == "provider_exception"
+
+
+def test_broker_contains_malformed_provider_return_and_keeps_healthy_results() -> None:
+    query = DiscoveryQuery(text="bounded provider boundary")
+    candidate = _candidate("crossref", "10.4/example", "Healthy result")
+    malformed = cast(DiscoveryProvider, MalformedProvider("openalex", None))
+    broker = FederatedDiscoveryBroker(
+        (
+            malformed,
+            FakeProvider(
+                "crossref", _result(query, "crossref", ProviderOutcome.SUCCESS, (candidate,))
+            ),
+        )
+    )
+
+    result = broker.search(query)
+
+    assert result.completeness is SearchCompleteness.PARTIAL
+    assert result.candidates == (candidate,)
+    assert result.failed_providers == ("openalex",)
+    assert result.provider_statuses[0].reason == "provider_result_contract_mismatch"
 
 
 def test_disabled_provider_does_not_make_successful_run_partial() -> None:
