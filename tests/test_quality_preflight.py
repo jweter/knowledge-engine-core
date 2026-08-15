@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from scripts.quality_preflight import QualityGate, quality_gates, run_preflight
 
 
@@ -15,7 +17,7 @@ def test_quality_gates_match_ci_order() -> None:
     assert gates[3].args == ("python-test", "-m", "pytest")
 
 
-def test_preflight_stops_at_first_failure(monkeypatch) -> None:
+def test_preflight_stops_at_first_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[str, ...]] = []
     gates = (
         QualityGate("format", ("format-command",)),
@@ -34,7 +36,7 @@ def test_preflight_stops_at_first_failure(monkeypatch) -> None:
     assert calls == [("format-command",), ("lint-command",)]
 
 
-def test_preflight_runs_all_gates_when_clean(monkeypatch) -> None:
+def test_preflight_runs_all_gates_when_clean(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[str, ...]] = []
     gates = (
         QualityGate("format", ("format-command",)),
