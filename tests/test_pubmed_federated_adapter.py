@@ -122,7 +122,9 @@ def test_pubmed_adapter_maps_rate_limit_without_leaking_error_text() -> None:
 
 
 def test_pubmed_adapter_maps_transport_failure_to_unavailable() -> None:
-    service = FakePubmedService(error=NcbiDiscoveryError("PubMed search request failed after 3 attempts."))
+    service = FakePubmedService(
+        error=NcbiDiscoveryError("PubMed search request failed after 3 attempts.")
+    )
 
     result = PubmedFederatedAdapter(service).search(DiscoveryQuery(text="aging"))
 
