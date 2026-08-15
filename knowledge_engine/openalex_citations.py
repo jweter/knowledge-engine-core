@@ -208,7 +208,9 @@ def _normalize_openalex_id(value: str) -> str:
 
 def _validate_limit(limit: int) -> None:
     if not 1 <= limit <= MAX_CITATION_TRAVERSAL:
-        raise ValueError(f"Citation traversal limit must be between 1 and {MAX_CITATION_TRAVERSAL}.")
+        raise ValueError(
+            f"Citation traversal limit must be between 1 and {MAX_CITATION_TRAVERSAL}."
+        )
 
 
 def _status(
