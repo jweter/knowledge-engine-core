@@ -157,7 +157,10 @@ class ProviderStatus:
             raise ValueError("Provider latency must not be negative.")
         if self.outcome in {ProviderOutcome.SKIPPED, ProviderOutcome.DISABLED} and self.attempted:
             raise ValueError("Skipped or disabled providers must not be marked attempted.")
-        if self.outcome not in {ProviderOutcome.SKIPPED, ProviderOutcome.DISABLED} and not self.attempted:
+        if (
+            self.outcome not in {ProviderOutcome.SKIPPED, ProviderOutcome.DISABLED}
+            and not self.attempted
+        ):
             raise ValueError("Non-skipped provider outcomes must be marked attempted.")
         if self.outcome in {ProviderOutcome.SUCCESS, ProviderOutcome.EMPTY} and self.reason:
             raise ValueError("Successful/empty provider outcomes must not carry a failure reason.")
