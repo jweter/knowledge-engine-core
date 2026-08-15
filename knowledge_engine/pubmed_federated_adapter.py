@@ -57,7 +57,12 @@ class PubmedFederatedAdapter:
             outcome, reason = _classify_ncbi_failure(str(exc))
             return _failure_result(query, outcome, reason)
 
-        if result.query != provider_query or result.retstart != 0:
+        if (
+            result.query != provider_query
+            or result.retstart != 0
+            or result.limit != query.limit_per_provider
+            or len(result.candidates) > query.limit_per_provider
+        ):
             return _failure_result(query, ProviderOutcome.FAILED, "provider_result_mismatch")
 
         retrieved_at = self._clock().astimezone(UTC).isoformat()
