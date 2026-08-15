@@ -39,7 +39,7 @@ def _response(status_code: int, body: bytes = b"{}") -> TransportResponse:
 def _provider(
     response: TransportResponse | Exception,
     *,
-    api_key: str | None = None,
+    api_key: str | None = "test-key",
 ) -> tuple[OpenAlexProvider, FakeTransport]:
     transport = FakeTransport(response)
     provider = OpenAlexProvider(
@@ -83,6 +83,32 @@ def _work_payload() -> bytes:
     return b'{"results":[' + _single_work_payload() + b"]}"
 
 
+def test_openalex_search_requires_key_without_attempting_transport() -> None:
+    provider, transport = _provider(_response(200, _work_payload()), api_key=None)
+
+    result = provider.search(DiscoveryQuery(text="protein folding"))
+
+    status = result.provider_statuses[0]
+    assert provider.configured is False
+    assert status.outcome == ProviderOutcome.DISABLED
+    assert status.attempted is False
+    assert status.reason == "missing_api_key"
+    assert transport.calls == []
+    assert result.to_json().find("test-key") == -1
+
+
+def test_openalex_lookup_requires_key_without_attempting_transport() -> None:
+    provider, transport = _provider(_response(200, _single_work_payload()), api_key=None)
+
+    result = provider.lookup("W123456789")
+
+    status = result.provider_statuses[0]
+    assert status.outcome == ProviderOutcome.DISABLED
+    assert status.attempted is False
+    assert status.reason == "missing_api_key"
+    assert transport.calls == []
+
+
 def test_openalex_search_maps_provider_native_metadata_and_request_bounds() -> None:
     provider, transport = _provider(_response(200, _work_payload()))
 
@@ -95,6 +121,7 @@ def test_openalex_search_maps_provider_native_metadata_and_request_bounds() -> N
         )
     )
 
+    assert provider.configured is True
     assert result.completeness.value == "complete"
     assert result.provider_statuses[0].outcome == ProviderOutcome.SUCCESS
     assert result.provider_statuses[0].result_count == 1
@@ -118,6 +145,7 @@ def test_openalex_search_maps_provider_native_metadata_and_request_bounds() -> N
     assert url.startswith("https://api.openalex.org/works?")
     assert "search=protein+folding" in url
     assert "per-page=7" in url
+    assert "api_key=test-key" in url
     assert "from_publication_date%3A2020-01-01" in url
     assert "to_publication_date%3A2024-12-31" in url
     assert headers == {
@@ -126,16 +154,7 @@ def test_openalex_search_maps_provider_native_metadata_and_request_bounds() -> N
     }
     assert timeout_seconds == 3.0
     assert max_response_bytes == 10_000
-
-
-def test_openalex_search_supports_optional_api_key_without_logging_it() -> None:
-    provider, transport = _provider(_response(200, b'{"results":[]}'), api_key="secret-key")
-
-    result = provider.search(DiscoveryQuery(text="example"))
-
-    assert result.provider_statuses[0].outcome == ProviderOutcome.EMPTY
-    assert "api_key=secret-key" in transport.calls[0][0]
-    assert result.to_json().find("secret-key") == -1
+    assert result.to_json().find("test-key") == -1
 
 
 def test_openalex_lookup_by_openalex_id_uses_single_work_endpoint() -> None:
@@ -145,7 +164,7 @@ def test_openalex_lookup_by_openalex_id_uses_single_work_endpoint() -> None:
 
     assert result.provider_statuses[0].outcome == ProviderOutcome.SUCCESS
     assert result.candidates[0].observations[0].openalex_id == "W123456789"
-    assert transport.calls[0][0] == "https://api.openalex.org/works/W123456789"
+    assert transport.calls[0][0] == "https://api.openalex.org/works/W123456789?api_key=test-key"
 
 
 def test_openalex_lookup_by_doi_uses_documented_shorthand_endpoint() -> None:
@@ -154,7 +173,9 @@ def test_openalex_lookup_by_doi_uses_documented_shorthand_endpoint() -> None:
     result = provider.lookup("https://doi.org/10.1000/Example")
 
     assert result.provider_statuses[0].outcome == ProviderOutcome.SUCCESS
-    assert transport.calls[0][0] == "https://api.openalex.org/works/doi:10.1000/example"
+    assert transport.calls[0][0] == (
+        "https://api.openalex.org/works/doi:10.1000/example?api_key=test-key"
+    )
 
 
 @pytest.mark.parametrize(
@@ -164,7 +185,8 @@ def test_openalex_lookup_by_doi_uses_documented_shorthand_endpoint() -> None:
         (429, ProviderOutcome.RATE_LIMITED, "rate_limited"),
         (500, ProviderOutcome.UNAVAILABLE, "provider_unavailable"),
         (503, ProviderOutcome.UNAVAILABLE, "provider_unavailable"),
-        (403, ProviderOutcome.FAILED, "unsupported_http_status"),
+        (401, ProviderOutcome.FAILED, "authentication_failed"),
+        (403, ProviderOutcome.FAILED, "authentication_failed"),
     ],
 )
 def test_openalex_classifies_http_statuses(
