@@ -160,7 +160,7 @@ def test_crossref_adapter_maps_bad_provider_payloads_to_failed() -> None:
                 diagnostics=(
                     ProviderDiagnostic(
                         provider="crossref",
-                        code=code,  # type: ignore[arg-type]
+                        code=code,
                         message="raw response details must not escape",
                     ),
                 )
