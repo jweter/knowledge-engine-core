@@ -147,9 +147,7 @@ def test_crossref_adapter_maps_retryable_provider_diagnostics() -> None:
             )
         )
 
-        result = CrossrefFederatedAdapter(provider).search(
-            DiscoveryQuery(text="10.1000/example")
-        )
+        result = CrossrefFederatedAdapter(provider).search(DiscoveryQuery(text="10.1000/example"))
 
         assert result.provider_statuses[0].outcome == expected_outcome
         assert result.provider_statuses[0].reason == code
@@ -169,9 +167,7 @@ def test_crossref_adapter_maps_bad_provider_payloads_to_failed() -> None:
             )
         )
 
-        result = CrossrefFederatedAdapter(provider).search(
-            DiscoveryQuery(text="10.1000/example")
-        )
+        result = CrossrefFederatedAdapter(provider).search(DiscoveryQuery(text="10.1000/example"))
 
         assert result.provider_statuses[0].outcome == ProviderOutcome.FAILED
         assert result.provider_statuses[0].reason == code
