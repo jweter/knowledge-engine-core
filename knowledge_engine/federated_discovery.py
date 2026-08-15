@@ -87,6 +87,11 @@ class ProviderObservation:
     semantic_scholar_id: str | None = None
     landing_url: str | None = None
     full_text_url: str | None = None
+    xml_url: str | None = None
+    license: str | None = None
+    metadata_source: str | None = None
+    pmcid_source: str | None = None
+    open_access_source: str | None = None
     citation_count: int | None = None
     open_access: bool | None = None
     retracted: bool | None = None
