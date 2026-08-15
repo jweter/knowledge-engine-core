@@ -15,10 +15,10 @@ from knowledge_engine.citation_discovery import (
 )
 from knowledge_engine.federated_discovery import ProviderOutcome, ProviderStatus
 from knowledge_engine.openalex_provider import (
-    OPENALEX_WORKS_URL,
     DEFAULT_MAX_RESPONSE_BYTES,
     DEFAULT_TIMEOUT_SECONDS,
     DEFAULT_USER_AGENT,
+    OPENALEX_WORKS_URL,
     OpenAlexTransport,
     ResponseTooLargeError,
 )
