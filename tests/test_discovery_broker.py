@@ -70,8 +70,12 @@ def test_broker_aggregates_successful_providers_without_deduplicating() -> None:
     crossref = _candidate("crossref", "10.1/example", "Shared title")
     broker = FederatedDiscoveryBroker(
         (
-            FakeProvider("openalex", _result(query, "openalex", ProviderOutcome.SUCCESS, (openalex,))),
-            FakeProvider("crossref", _result(query, "crossref", ProviderOutcome.SUCCESS, (crossref,))),
+            FakeProvider(
+                "openalex", _result(query, "openalex", ProviderOutcome.SUCCESS, (openalex,))
+            ),
+            FakeProvider(
+                "crossref", _result(query, "crossref", ProviderOutcome.SUCCESS, (crossref,))
+            ),
         )
     )
 
@@ -88,7 +92,9 @@ def test_broker_marks_run_partial_when_one_provider_fails() -> None:
     broker = FederatedDiscoveryBroker(
         (
             FakeProvider("openalex", error=TimeoutError()),
-            FakeProvider("crossref", _result(query, "crossref", ProviderOutcome.SUCCESS, (candidate,))),
+            FakeProvider(
+                "crossref", _result(query, "crossref", ProviderOutcome.SUCCESS, (candidate,))
+            ),
         )
     )
 
@@ -115,7 +121,9 @@ def test_disabled_provider_does_not_make_successful_run_partial() -> None:
                     reason="missing_api_key",
                 ),
             ),
-            FakeProvider("crossref", _result(query, "crossref", ProviderOutcome.SUCCESS, (candidate,))),
+            FakeProvider(
+                "crossref", _result(query, "crossref", ProviderOutcome.SUCCESS, (candidate,))
+            ),
         )
     )
 
