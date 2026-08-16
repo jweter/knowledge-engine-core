@@ -23,6 +23,7 @@ from knowledge_engine.citation_traversal import (
     CitationTraversalResult,
 )
 from knowledge_engine.federated_discovery import (
+    FederatedCandidate,
     FederatedSearchResult,
     ProviderOutcome,
     ProviderStatus,
@@ -80,8 +81,8 @@ class OpenAlexCitationAdapter:
                 provider_status=_status(ProviderOutcome.EMPTY),
             )
 
-        candidates = []
-        edges = []
+        candidates: list[FederatedCandidate] = []
+        edges: list[CitationEdge] = []
         for discovered_id, legacy_edge in zip(legacy.discovered_ids, legacy.edges, strict=True):
             lookup = self._work_lookup.lookup(discovered_id)
             candidate = _single_openalex_candidate(lookup, expected_provider_id=discovered_id)
@@ -160,7 +161,11 @@ def _validate_legacy_result(
         raise ValueError("OpenAlex citation source exceeded the requested traversal limit.")
 
 
-def _single_openalex_candidate(result: FederatedSearchResult, *, expected_provider_id: str):
+def _single_openalex_candidate(
+    result: FederatedSearchResult,
+    *,
+    expected_provider_id: str,
+) -> FederatedCandidate | None:
     if len(result.provider_statuses) != 1:
         return None
     status = result.provider_statuses[0]
