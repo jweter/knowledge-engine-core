@@ -284,7 +284,9 @@ class SemanticScholarProvider:
 
         retrieved_at = self._clock()
         retrieved_at_text = retrieved_at.astimezone(UTC).isoformat()
-        paper_key = "citedPaper" if query.direction is CitationDirection.REFERENCES else "citingPaper"
+        paper_key = (
+            "citedPaper" if query.direction is CitationDirection.REFERENCES else "citingPaper"
+        )
         candidates: list[FederatedCandidate] = []
         edges: list[CitationEdge] = []
         for item in raw_data:
