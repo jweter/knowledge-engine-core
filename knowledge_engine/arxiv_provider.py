@@ -168,10 +168,7 @@ def _build_search_query(query: DiscoveryQuery) -> str:
     if query.year_from is not None or query.year_to is not None:
         year_from = query.year_from if query.year_from is not None else 1000
         year_to = query.year_to if query.year_to is not None else 9999
-        clauses.append(
-            "submittedDate:"
-            f"[{year_from:04d}01010000 TO {year_to:04d}12312359]"
-        )
+        clauses.append(f"submittedDate:[{year_from:04d}01010000 TO {year_to:04d}12312359]")
     return " AND ".join(clauses)
 
 
