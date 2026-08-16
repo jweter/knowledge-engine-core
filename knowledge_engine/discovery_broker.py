@@ -5,6 +5,9 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Protocol
 
+from knowledge_engine.federated_candidate_deduplication import (
+    deduplicate_candidates_by_exact_doi,
+)
 from knowledge_engine.federated_discovery import (
     DiscoveryQuery,
     FederatedCandidate,
@@ -51,7 +54,7 @@ class FederatedDiscoveryBroker:
         return FederatedSearchResult(
             query=query,
             provider_statuses=tuple(statuses),
-            candidates=tuple(candidates),
+            candidates=deduplicate_candidates_by_exact_doi(tuple(candidates)),
         )
 
 
