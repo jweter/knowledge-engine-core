@@ -70,7 +70,8 @@ class SearchRunRecord:
         return tuple(
             provider.provider
             for provider in self.providers
-            if provider.attempted and provider.outcome in {outcome.value for outcome in _SUCCESSFUL_OUTCOMES}
+            if provider.attempted
+            and provider.outcome in {outcome.value for outcome in _SUCCESSFUL_OUTCOMES}
         )
 
     @property
@@ -78,7 +79,8 @@ class SearchRunRecord:
         return tuple(
             provider.provider
             for provider in self.providers
-            if provider.attempted and provider.outcome not in {outcome.value for outcome in _SUCCESSFUL_OUTCOMES}
+            if provider.attempted
+            and provider.outcome not in {outcome.value for outcome in _SUCCESSFUL_OUTCOMES}
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -189,7 +191,9 @@ class FederatedSearchLedger:
         self._root.mkdir(parents=True, exist_ok=True)
         target = self._record_path(record.search_run_id)
         if target.exists():
-            raise FileExistsError(f"Federated search-run record already exists: {record.search_run_id}")
+            raise FileExistsError(
+                f"Federated search-run record already exists: {record.search_run_id}"
+            )
 
         temporary = target.with_suffix(".json.tmp")
         payload = json.dumps(record.to_dict(), indent=2, sort_keys=True) + "\n"
@@ -280,9 +284,7 @@ def _payload_optional_string(payload: dict[str, Any], field: str) -> str | None:
     return value
 
 
-def _required_nonnegative_int(
-    payload: dict[str, Any], field: str, *, minimum: int = 0
-) -> int:
+def _required_nonnegative_int(payload: dict[str, Any], field: str, *, minimum: int = 0) -> int:
     value = payload.get(field)
     if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
         raise ValueError(f"Federated search-run field {field} is invalid.")
