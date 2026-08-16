@@ -5,6 +5,10 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from knowledge_engine.discovery_broker import DiscoveryProvider, FederatedDiscoveryBroker
+from knowledge_engine.federated_discovery_service import (
+    FederatedDiscoveryService,
+    FederatedSearchRecorder,
+)
 
 _PROVIDER_PRIORITY = {
     "pubmed": 0,
@@ -70,6 +74,15 @@ class DiscoveryProviderRegistry:
         """Build a broker from all configured providers or an explicit subset."""
 
         return FederatedDiscoveryBroker(self.select(provider_names))
+
+    def build_recorded_service(
+        self,
+        recorder: FederatedSearchRecorder,
+        provider_names: Iterable[str] | None = None,
+    ) -> FederatedDiscoveryService:
+        """Build the runtime service that records every returned federated search."""
+
+        return FederatedDiscoveryService(self.build_broker(provider_names), recorder)
 
 
 def _normalize_provider_name(value: str) -> str:
