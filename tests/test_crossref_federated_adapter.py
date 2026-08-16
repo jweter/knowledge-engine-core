@@ -139,7 +139,7 @@ def test_crossref_adapter_maps_retryable_provider_diagnostics() -> None:
                 diagnostics=(
                     ProviderDiagnostic(
                         provider="crossref",
-                        code=code,  # type: ignore[arg-type]
+                        code=code,
                         message="sanitized provider message",
                         retryable=True,
                     ),
