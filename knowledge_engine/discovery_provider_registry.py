@@ -14,7 +14,8 @@ _PROVIDER_PRIORITY = {
     "pubmed": 0,
     "crossref": 1,
     "openalex": 2,
-    "semantic_scholar": 3,
+    "arxiv": 3,
+    "semantic_scholar": 4,
 }
 
 
