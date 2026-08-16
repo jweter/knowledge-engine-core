@@ -95,7 +95,9 @@ def build_provider_disagreement_report(result: FederatedSearchResult) -> Provide
     return ProviderDisagreementReport(candidates=tuple(candidates))
 
 
-def inspect_provider_disagreements(candidate: FederatedCandidate) -> tuple[ProviderDisagreement, ...]:
+def inspect_provider_disagreements(
+    candidate: FederatedCandidate,
+) -> tuple[ProviderDisagreement, ...]:
     """Return deterministic disagreements without inferring which value is true.
 
     Missing values do not count as disagreement. Cosmetic title/venue whitespace
