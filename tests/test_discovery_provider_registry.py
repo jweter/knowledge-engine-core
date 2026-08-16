@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import pytest
 
@@ -11,6 +12,8 @@ from knowledge_engine.federated_discovery import (
     ProviderOutcome,
     ProviderStatus,
 )
+from knowledge_engine.federated_discovery_service import FederatedDiscoveryService
+from knowledge_engine.federated_search_ledger import FederatedSearchLedger
 
 
 @dataclass(frozen=True)
@@ -103,3 +106,17 @@ def test_registry_builds_broker_with_explicit_provider_order() -> None:
     result = broker.search(DiscoveryQuery(text="example"))
     assert tuple(status.provider for status in result.provider_statuses) == ("openalex", "pubmed")
     assert result.completeness.value == "complete"
+
+
+def test_registry_builds_recorded_service_from_selected_providers(tmp_path: Path) -> None:
+    registry = DiscoveryProviderRegistry(
+        (FakeProvider("pubmed"), FakeProvider("crossref"), FakeProvider("openalex"))
+    )
+    service = registry.build_recorded_service(
+        FederatedSearchLedger(tmp_path),
+        ("crossref", "pubmed"),
+    )
+
+    assert isinstance(service, FederatedDiscoveryService)
+    execution = service.search(DiscoveryQuery(text="recorded registry search"))
+    assert execution.coverage.providers_requested == ("crossref", "pubmed")
