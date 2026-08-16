@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from typing import TypeAlias
 
 from knowledge_engine.federated_discovery import (
     FederatedCandidate,
@@ -18,7 +17,7 @@ from knowledge_engine.federated_discovery import (
 )
 from knowledge_engine.utils import normalize_doi
 
-ObservedValue: TypeAlias = str | int | bool
+type ObservedValue = str | int | bool
 
 
 @dataclass(frozen=True)
