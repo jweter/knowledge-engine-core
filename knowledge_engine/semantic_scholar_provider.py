@@ -275,9 +275,7 @@ class SemanticScholarProvider:
             )
 
         next_offset = payload.get("next")
-        if next_offset is not None and (
-            not isinstance(next_offset, int) or next_offset < 0
-        ):
+        if next_offset is not None and (not isinstance(next_offset, int) or next_offset < 0):
             return _traversal_failure_result(
                 query,
                 ProviderOutcome.FAILED,
@@ -286,11 +284,7 @@ class SemanticScholarProvider:
 
         retrieved_at = self._clock()
         retrieved_at_text = retrieved_at.astimezone(UTC).isoformat()
-        paper_key = (
-            "citedPaper"
-            if query.direction is CitationDirection.REFERENCES
-            else "citingPaper"
-        )
+        paper_key = "citedPaper" if query.direction is CitationDirection.REFERENCES else "citingPaper"
         candidates: list[FederatedCandidate] = []
         edges: list[CitationEdge] = []
         for item in raw_data:
