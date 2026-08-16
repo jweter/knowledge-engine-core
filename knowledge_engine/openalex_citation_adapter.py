@@ -28,6 +28,7 @@ from knowledge_engine.federated_discovery import (
     ProviderOutcome,
     ProviderStatus,
 )
+from knowledge_engine.openalex_citations import MAX_CITATION_TRAVERSAL
 
 
 class OpenAlexCitationSource(Protocol):
@@ -67,6 +68,8 @@ class OpenAlexCitationAdapter:
 
         if query.offset != 0:
             return _failure_result(query, "unsupported_offset")
+        if query.limit > MAX_CITATION_TRAVERSAL:
+            return _failure_result(query, "unsupported_limit")
 
         legacy = self._legacy_traverse(query)
         _validate_legacy_result(query, legacy)
