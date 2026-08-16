@@ -127,9 +127,7 @@ def test_missing_open_access_pdf_stays_unknown_not_false() -> None:
     paper["openAccessPdf"] = None
     transport = FakeTransport(_response({"data": [paper]}))
 
-    result = SemanticScholarProvider(transport=transport).search(
-        DiscoveryQuery(text="test")
-    )
+    result = SemanticScholarProvider(transport=transport).search(DiscoveryQuery(text="test"))
 
     observation = result.candidates[0].observations[0]
     assert observation.full_text_url is None
@@ -164,9 +162,7 @@ def test_http_failures_map_to_explicit_provider_status(
 ) -> None:
     transport = FakeTransport(TransportResponse(status_code, b"{}", {}))
 
-    result = SemanticScholarProvider(transport=transport).search(
-        DiscoveryQuery(text="test")
-    )
+    result = SemanticScholarProvider(transport=transport).search(DiscoveryQuery(text="test"))
 
     assert result.provider_statuses[0].outcome is outcome
     assert result.provider_statuses[0].reason == reason
@@ -196,9 +192,7 @@ def test_transport_failures_are_contained(
 def test_malformed_search_item_fails_closed() -> None:
     transport = FakeTransport(_response({"data": [{"paperId": "missing-title"}]}))
 
-    result = SemanticScholarProvider(transport=transport).search(
-        DiscoveryQuery(text="test")
-    )
+    result = SemanticScholarProvider(transport=transport).search(DiscoveryQuery(text="test"))
 
     assert result.candidates == ()
     assert result.provider_statuses[0].reason == "malformed_response"
@@ -207,9 +201,7 @@ def test_malformed_search_item_fails_closed() -> None:
 def test_lookup_normalizes_doi_to_semantic_scholar_identifier() -> None:
     transport = FakeTransport(_response(_paper()))
 
-    result = SemanticScholarProvider(transport=transport).lookup(
-        "https://doi.org/10.1000/Example"
-    )
+    result = SemanticScholarProvider(transport=transport).lookup("https://doi.org/10.1000/Example")
 
     assert result.provider_statuses[0].outcome is ProviderOutcome.SUCCESS
     path = urlparse(transport.calls[0][0]).path
