@@ -7,10 +7,15 @@ select a preferred provider value.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
 from typing import TypeAlias
 
-from knowledge_engine.federated_discovery import FederatedCandidate, ProviderObservation
+from knowledge_engine.federated_discovery import (
+    FederatedCandidate,
+    FederatedSearchResult,
+    ProviderObservation,
+)
 from knowledge_engine.utils import normalize_doi
 
 ObservedValue: TypeAlias = str | int | bool
@@ -39,6 +44,30 @@ class ProviderDisagreement:
             raise ValueError("A provider disagreement requires at least two assertions.")
 
 
+@dataclass(frozen=True)
+class CandidateProviderDisagreements:
+    """All inspectable provider disagreements for one canonical candidate."""
+
+    canonical_id: str
+    disagreements: tuple[ProviderDisagreement, ...]
+
+
+@dataclass(frozen=True)
+class ProviderDisagreementReport:
+    """Deterministic metadata-quality report for a federated search result."""
+
+    candidates: tuple[CandidateProviderDisagreements, ...]
+
+    @property
+    def disagreement_count(self) -> int:
+        return sum(len(candidate.disagreements) for candidate in self.candidates)
+
+    def to_json(self) -> str:
+        payload = asdict(self)
+        payload["disagreement_count"] = self.disagreement_count
+        return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
 _FIELD_ORDER = (
     "title",
     "publication_year",
@@ -48,6 +77,22 @@ _FIELD_ORDER = (
     "retracted",
     "citation_count",
 )
+
+
+def build_provider_disagreement_report(result: FederatedSearchResult) -> ProviderDisagreementReport:
+    """Build a stable report containing only candidates with observed disagreement."""
+
+    candidates: list[CandidateProviderDisagreements] = []
+    for candidate in result.candidates:
+        disagreements = inspect_provider_disagreements(candidate)
+        if disagreements:
+            candidates.append(
+                CandidateProviderDisagreements(
+                    canonical_id=candidate.canonical_id,
+                    disagreements=disagreements,
+                )
+            )
+    return ProviderDisagreementReport(candidates=tuple(candidates))
 
 
 def inspect_provider_disagreements(candidate: FederatedCandidate) -> tuple[ProviderDisagreement, ...]:
