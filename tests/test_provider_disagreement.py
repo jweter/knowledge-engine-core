@@ -41,7 +41,9 @@ def _observation(
     )
 
 
-def _candidate(*observations: ProviderObservation, canonical_id: str = "doi:10.1000/example") -> FederatedCandidate:
+def _candidate(
+    *observations: ProviderObservation, canonical_id: str = "doi:10.1000/example"
+) -> FederatedCandidate:
     return FederatedCandidate(
         canonical_id=canonical_id,
         title=observations[0].title,
@@ -104,7 +106,9 @@ def test_cosmetic_text_and_normalized_doi_differences_are_not_disagreements() ->
 def test_missing_metadata_is_unknown_not_a_conflict() -> None:
     candidate = _candidate(
         _observation("PubMed", "1", open_access=True, retracted=None, citation_count=None),
-        _observation("Semantic Scholar", "S1", open_access=None, retracted=None, citation_count=None),
+        _observation(
+            "Semantic Scholar", "S1", open_access=None, retracted=None, citation_count=None
+        ),
     )
 
     assert inspect_provider_disagreements(candidate) == ()
