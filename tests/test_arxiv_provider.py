@@ -15,9 +15,7 @@ def _feed(*entries: str) -> bytes:
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<feed xmlns="http://www.w3.org/2005/Atom" '
-        'xmlns:arxiv="http://arxiv.org/schemas/atom">'
-        + "".join(entries)
-        + "</feed>"
+        'xmlns:arxiv="http://arxiv.org/schemas/atom">' + "".join(entries) + "</feed>"
     ).encode()
 
 
@@ -30,9 +28,7 @@ def _entry(
 ) -> str:
     doi_xml = f"<arxiv:doi>{doi}</arxiv:doi>" if doi is not None else ""
     journal_xml = (
-        f"<arxiv:journal_ref>{journal_ref}</arxiv:journal_ref>"
-        if journal_ref is not None
-        else ""
+        f"<arxiv:journal_ref>{journal_ref}</arxiv:journal_ref>" if journal_ref is not None else ""
     )
     return f"""
     <entry>
