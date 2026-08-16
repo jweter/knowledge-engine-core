@@ -139,7 +139,6 @@ def test_snowball_expands_breadth_first_and_does_not_revisit_seed_ids() -> None:
     assert [candidate.canonical_id for candidate in result.candidates] == [
         "openalex:W2",
         "openalex:W3",
-        "openalex:W1",
         "openalex:W4",
     ]
     assert [edge.related_provider_id for edge in result.edges] == [
