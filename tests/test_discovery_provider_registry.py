@@ -37,14 +37,24 @@ def test_registry_uses_stable_core_provider_order_then_sorted_extensions() -> No
     registry = DiscoveryProviderRegistry(
         (
             FakeProvider("zeta"),
+            FakeProvider("Semantic Scholar"),
             FakeProvider("OpenAlex"),
             FakeProvider("pubmed"),
+            FakeProvider("arxiv"),
             FakeProvider("alpha"),
             FakeProvider("crossref"),
         )
     )
 
-    assert registry.provider_names == ("pubmed", "crossref", "openalex", "alpha", "zeta")
+    assert registry.provider_names == (
+        "pubmed",
+        "crossref",
+        "openalex",
+        "arxiv",
+        "semantic_scholar",
+        "alpha",
+        "zeta",
+    )
 
 
 def test_registry_normalizes_names_and_rejects_duplicates() -> None:
