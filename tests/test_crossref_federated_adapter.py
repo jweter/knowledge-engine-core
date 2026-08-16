@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from knowledge_engine.crossref_federated_adapter import CrossrefFederatedAdapter
 from knowledge_engine.federated_discovery import DiscoveryQuery, ProviderOutcome
 from knowledge_engine.metadata_enrichment import (
+    DiagnosticCode,
     MetadataCandidate,
     MetadataProviderResult,
     MetadataQuery,
@@ -128,12 +129,13 @@ def test_crossref_adapter_maps_no_match_to_empty() -> None:
 
 
 def test_crossref_adapter_maps_retryable_provider_diagnostics() -> None:
-    for code, expected_outcome in (
+    retryable_cases: tuple[tuple[DiagnosticCode, ProviderOutcome], ...] = (
         ("rate_limited", ProviderOutcome.RATE_LIMITED),
         ("provider_unavailable", ProviderOutcome.UNAVAILABLE),
         ("timeout", ProviderOutcome.UNAVAILABLE),
         ("transport_error", ProviderOutcome.UNAVAILABLE),
-    ):
+    )
+    for code, expected_outcome in retryable_cases:
         provider = FakeCrossrefProvider(
             MetadataProviderResult(
                 diagnostics=(
