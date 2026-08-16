@@ -120,8 +120,7 @@ class ProviderObservation:
             if self.preprint is not True:
                 raise ValueError("preprint_version requires preprint=true.")
         if (
-            self.related_journal_doi is not None
-            or self.related_journal_reference is not None
+            self.related_journal_doi is not None or self.related_journal_reference is not None
         ) and self.preprint is not True:
             raise ValueError("Related journal-version metadata requires preprint=true.")
 
