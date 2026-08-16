@@ -69,7 +69,9 @@ class ProviderObservation:
     """One provider's observation of one scholarly work.
 
     Missing provider fields remain ``None``. Provider-generated summaries are
-    intentionally not part of this scientific-evidence contract.
+    intentionally not part of this scientific-evidence contract. Preprint
+    relationships remain explicit provider observations: a related journal DOI
+    is not automatically the DOI identity of the preprint itself.
     """
 
     provider: str
@@ -95,6 +97,10 @@ class ProviderObservation:
     citation_count: int | None = None
     open_access: bool | None = None
     retracted: bool | None = None
+    preprint: bool | None = None
+    preprint_version: int | None = None
+    related_journal_doi: str | None = None
+    related_journal_reference: str | None = None
     retrieved_at: str | None = None
 
     def __post_init__(self) -> None:
@@ -108,6 +114,15 @@ class ProviderObservation:
             raise ValueError("publication_year must be a four-digit year.")
         if self.citation_count is not None and self.citation_count < 0:
             raise ValueError("citation_count must not be negative.")
+        if self.preprint_version is not None:
+            if self.preprint_version < 1:
+                raise ValueError("preprint_version must be positive.")
+            if self.preprint is not True:
+                raise ValueError("preprint_version requires preprint=true.")
+        if (
+            self.related_journal_doi is not None or self.related_journal_reference is not None
+        ) and self.preprint is not True:
+            raise ValueError("Related journal-version metadata requires preprint=true.")
 
     @property
     def normalized_provider(self) -> str:

@@ -119,3 +119,35 @@ def test_internally_conflicting_doi_assertions_are_not_merged() -> None:
     assert result[0] is conflicting
     assert result[1].canonical_id == "doi:10.3/one"
     assert len(result) == 2
+
+
+def test_related_journal_doi_does_not_silently_merge_preprint_with_journal_article() -> None:
+    preprint = FederatedCandidate(
+        canonical_id="arxiv:2408.12345v2",
+        title="Preprint version",
+        observations=(
+            ProviderObservation(
+                provider="arxiv",
+                provider_id="2408.12345v2",
+                title="Preprint version",
+                arxiv_id="2408.12345",
+                preprint=True,
+                preprint_version=2,
+                related_journal_doi="10.4/journal",
+            ),
+        ),
+    )
+    journal = _candidate(
+        "crossref",
+        "10.4/journal",
+        title="Journal version",
+        doi="10.4/journal",
+        observation_doi="10.4/journal",
+    )
+
+    result = deduplicate_candidates_by_exact_doi((preprint, journal))
+
+    assert len(result) == 2
+    assert result[0].canonical_id == "arxiv:2408.12345v2"
+    assert result[0].doi is None
+    assert result[1].canonical_id == "doi:10.4/journal"

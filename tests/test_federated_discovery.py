@@ -53,6 +53,40 @@ def test_provider_observation_preserves_provider_native_identity() -> None:
     assert observation.normalized_provider == "semantic_scholar"
 
 
+def test_preprint_version_requires_explicit_preprint_status() -> None:
+    with pytest.raises(ValueError, match="requires preprint=true"):
+        ProviderObservation(
+            provider="arxiv",
+            provider_id="2408.12345v2",
+            title="Paper",
+            arxiv_id="2408.12345",
+            preprint_version=2,
+        )
+
+
+def test_preprint_version_must_be_positive() -> None:
+    with pytest.raises(ValueError, match="must be positive"):
+        ProviderObservation(
+            provider="arxiv",
+            provider_id="2408.12345",
+            title="Paper",
+            arxiv_id="2408.12345",
+            preprint=True,
+            preprint_version=0,
+        )
+
+
+def test_related_journal_version_metadata_requires_explicit_preprint_status() -> None:
+    with pytest.raises(ValueError, match="requires preprint=true"):
+        ProviderObservation(
+            provider="arxiv",
+            provider_id="2408.12345v1",
+            title="Paper",
+            arxiv_id="2408.12345",
+            related_journal_doi="10.1000/journal",
+        )
+
+
 def test_federated_candidate_preserves_multiple_provider_observations() -> None:
     candidate = FederatedCandidate(
         canonical_id="candidate-1",
