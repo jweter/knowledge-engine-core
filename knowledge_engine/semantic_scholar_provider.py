@@ -31,9 +31,7 @@ SEMANTIC_SCHOLAR_SEARCH_URL = f"{SEMANTIC_SCHOLAR_GRAPH_URL}/paper/search"
 DEFAULT_TIMEOUT_SECONDS = 10.0
 DEFAULT_MAX_RESPONSE_BYTES = 2_000_000
 DEFAULT_USER_AGENT = "knowledge-engine-core/0.2 federated-discovery"
-_FIELDS = (
-    "title,authors,year,venue,abstract,externalIds,url,openAccessPdf,citationCount"
-)
+_FIELDS = "title,authors,year,venue,abstract,externalIds,url,openAccessPdf,citationCount"
 
 
 class ResponseTooLargeError(OSError):
@@ -276,7 +274,7 @@ def _parse_paper(
         landing_url=_optional_text(payload.get("url")),
         full_text_url=full_text_url,
         citation_count=citation_count,
-        open_access=full_text_url is not None,
+        open_access=True if full_text_url is not None else None,
         open_access_source="semantic_scholar" if full_text_url is not None else None,
         retrieved_at=retrieved_at.astimezone(UTC).isoformat(),
     )
