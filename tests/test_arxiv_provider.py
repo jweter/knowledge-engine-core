@@ -30,6 +30,10 @@ def _entry(
     journal_xml = (
         f"<arxiv:journal_ref>{journal_ref}</arxiv:journal_ref>" if journal_ref is not None else ""
     )
+    pdf_link = (
+        f'<link href="https://arxiv.org/pdf/{identifier}" '
+        'rel="related" type="application/pdf" title="pdf" />'
+    )
     return f"""
     <entry>
       <id>https://arxiv.org/abs/{identifier}</id>
@@ -40,7 +44,7 @@ def _entry(
       <author><name>Ada Example</name></author>
       <author><name>Lin Researcher</name></author>
       <link href="https://arxiv.org/abs/{identifier}" rel="alternate" type="text/html" />
-      <link href="https://arxiv.org/pdf/{identifier}" rel="related" type="application/pdf" title="pdf" />
+      {pdf_link}
       {doi_xml}
       {journal_xml}
       <arxiv:license>https://creativecommons.org/licenses/by/4.0/</arxiv:license>
