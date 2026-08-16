@@ -122,7 +122,8 @@ class CitationSnowballDiscovery:
         traversals: list[CitationTraversalResult] = []
         candidates_by_id: dict[str, FederatedCandidate] = {}
         edges: list[CitationEdge] = []
-        visited_seeds = set(plan.normalized_seed_identifiers)
+        initial_seeds = set(plan.normalized_seed_identifiers)
+        visited_seeds = set(initial_seeds)
         frontier = list(plan.normalized_seed_identifiers)
         truncated = False
 
@@ -148,6 +149,10 @@ class CitationSnowballDiscovery:
                         traversal.edges,
                         strict=True,
                     ):
+                        if edge.related_provider_id in initial_seeds:
+                            edges.append(edge)
+                            continue
+
                         if edge.related_provider_id not in visited_seeds:
                             visited_seeds.add(edge.related_provider_id)
                             next_frontier.append(edge.related_provider_id)
