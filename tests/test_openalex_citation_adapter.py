@@ -72,8 +72,10 @@ def _lookup_result(
     candidate: FederatedCandidate | None = None,
     provider: str = "openalex",
 ) -> FederatedSearchResult:
-    candidates = () if candidate is None and outcome is not ProviderOutcome.SUCCESS else (
-        candidate or _candidate(provider_id),
+    candidates = (
+        ()
+        if candidate is None and outcome is not ProviderOutcome.SUCCESS
+        else (candidate or _candidate(provider_id),)
     )
     return FederatedSearchResult(
         query=DiscoveryQuery(text=f"lookup {provider_id}", limit_per_provider=1),
@@ -83,7 +85,9 @@ def _lookup_result(
                 outcome=outcome,
                 attempted=True,
                 result_count=len(candidates),
-                reason=None if outcome in {ProviderOutcome.SUCCESS, ProviderOutcome.EMPTY} else "failed",
+                reason=None
+                if outcome in {ProviderOutcome.SUCCESS, ProviderOutcome.EMPTY}
+                else "failed",
             ),
         ),
         candidates=candidates,
@@ -118,17 +122,15 @@ def _legacy_references(
             outcome=resolved_outcome,
             attempted=resolved_outcome not in {ProviderOutcome.DISABLED, ProviderOutcome.SKIPPED},
             result_count=len(edges),
-            reason=(
-                "missing_api_key"
-                if resolved_outcome is ProviderOutcome.DISABLED
-                else None
-            ),
+            reason=("missing_api_key" if resolved_outcome is ProviderOutcome.DISABLED else None),
         ),
         edges=edges,
     )
 
 
-def _legacy_citations(seed: str, sources: tuple[str, ...], *, limit: int) -> LegacyCitationTraversalResult:
+def _legacy_citations(
+    seed: str, sources: tuple[str, ...], *, limit: int
+) -> LegacyCitationTraversalResult:
     edges = tuple(
         LegacyCitationEdge(
             provider="openalex",
