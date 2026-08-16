@@ -16,6 +16,12 @@ from json import JSONDecodeError
 from typing import Any, Protocol
 from urllib.parse import quote, urlencode
 
+from knowledge_engine.citation_traversal import (
+    CitationDirection,
+    CitationEdge,
+    CitationTraversalQuery,
+    CitationTraversalResult,
+)
 from knowledge_engine.federated_discovery import (
     DiscoveryQuery,
     FederatedCandidate,
@@ -47,6 +53,12 @@ class TransportResponse:
     headers: Mapping[str, str]
 
 
+@dataclass(frozen=True)
+class _RequestFailure:
+    outcome: ProviderOutcome
+    reason: str
+
+
 class SemanticScholarTransport(Protocol):
     """Minimal transport contract required by the Semantic Scholar adapter."""
 
@@ -62,7 +74,7 @@ class SemanticScholarTransport(Protocol):
 
 
 class SemanticScholarProvider:
-    """Provider-neutral Semantic Scholar paper search and lookup adapter."""
+    """Provider-neutral Semantic Scholar search, lookup, and citation adapter."""
 
     def __init__(
         self,
@@ -129,6 +141,57 @@ class SemanticScholarProvider:
         )
         return self._fetch_single(query=query, url=url)
 
+    def references(
+        self,
+        identifier: str,
+        *,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> CitationTraversalResult:
+        """Return one bounded page of works referenced by the seed paper."""
+
+        return self.traverse(
+            CitationTraversalQuery(
+                seed_identifier=identifier,
+                direction=CitationDirection.REFERENCES,
+                limit=limit,
+                offset=offset,
+            )
+        )
+
+    def citations(
+        self,
+        identifier: str,
+        *,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> CitationTraversalResult:
+        """Return one bounded page of works that cite the seed paper."""
+
+        return self.traverse(
+            CitationTraversalQuery(
+                seed_identifier=identifier,
+                direction=CitationDirection.CITATIONS,
+                limit=limit,
+                offset=offset,
+            )
+        )
+
+    def traverse(self, query: CitationTraversalQuery) -> CitationTraversalResult:
+        """Execute one replayable citation/reference page request."""
+
+        paper_id = _lookup_paper_id(query.normalized_seed_identifier)
+        params = {
+            "offset": str(query.offset),
+            "limit": str(query.limit),
+            "fields": _FIELDS,
+        }
+        url = (
+            f"{SEMANTIC_SCHOLAR_GRAPH_URL}/paper/{quote(paper_id, safe=':')}/"
+            f"{query.direction.value}?{urlencode(params)}"
+        )
+        return self._fetch_traversal_page(query=query, url=url)
+
     def _fetch_single(self, *, query: DiscoveryQuery, url: str) -> FederatedSearchResult:
         response_or_result = self._request(query=query, url=url)
         if isinstance(response_or_result, FederatedSearchResult):
@@ -170,12 +233,126 @@ class SemanticScholarProvider:
             return _empty_result(query)
         return _success_result(query, tuple(candidates))
 
+    def _fetch_traversal_page(
+        self,
+        *,
+        query: CitationTraversalQuery,
+        url: str,
+    ) -> CitationTraversalResult:
+        response_or_failure = self._raw_request(url=url)
+        if isinstance(response_or_failure, _RequestFailure):
+            if response_or_failure.reason == "not_found":
+                return _traversal_failure_result(
+                    query,
+                    ProviderOutcome.FAILED,
+                    "seed_not_found",
+                )
+            return _traversal_failure_result(
+                query,
+                response_or_failure.outcome,
+                response_or_failure.reason,
+            )
+
+        payload = _decode_mapping(response_or_failure.body)
+        if payload is None:
+            return _traversal_failure_result(
+                query,
+                ProviderOutcome.FAILED,
+                "malformed_response",
+            )
+        raw_data = payload.get("data")
+        if not isinstance(raw_data, list):
+            return _traversal_failure_result(
+                query,
+                ProviderOutcome.FAILED,
+                "malformed_response",
+            )
+        if len(raw_data) > query.limit:
+            return _traversal_failure_result(
+                query,
+                ProviderOutcome.FAILED,
+                "oversized_result_page",
+            )
+
+        next_offset = payload.get("next")
+        if next_offset is not None and (
+            not isinstance(next_offset, int) or next_offset < 0
+        ):
+            return _traversal_failure_result(
+                query,
+                ProviderOutcome.FAILED,
+                "malformed_response",
+            )
+
+        retrieved_at = self._clock()
+        retrieved_at_text = retrieved_at.astimezone(UTC).isoformat()
+        paper_key = (
+            "citedPaper"
+            if query.direction is CitationDirection.REFERENCES
+            else "citingPaper"
+        )
+        candidates: list[FederatedCandidate] = []
+        edges: list[CitationEdge] = []
+        for item in raw_data:
+            if not isinstance(item, Mapping):
+                return _traversal_failure_result(
+                    query,
+                    ProviderOutcome.FAILED,
+                    "malformed_response",
+                )
+            raw_paper = item.get(paper_key)
+            if not isinstance(raw_paper, Mapping):
+                return _traversal_failure_result(
+                    query,
+                    ProviderOutcome.FAILED,
+                    "malformed_response",
+                )
+            candidate = _parse_paper(raw_paper, retrieved_at=retrieved_at)
+            if candidate is None:
+                return _traversal_failure_result(
+                    query,
+                    ProviderOutcome.FAILED,
+                    "malformed_response",
+                )
+            related_provider_id = candidate.observations[0].provider_id
+            candidates.append(candidate)
+            edges.append(
+                CitationEdge(
+                    provider="semantic_scholar",
+                    seed_identifier=query.normalized_seed_identifier,
+                    related_provider_id=related_provider_id,
+                    direction=query.direction,
+                    retrieved_at=retrieved_at_text,
+                )
+            )
+
+        if not candidates:
+            return _traversal_empty_result(query, next_offset=next_offset)
+        return _traversal_success_result(
+            query,
+            candidates=tuple(candidates),
+            edges=tuple(edges),
+            next_offset=next_offset,
+        )
+
     def _request(
         self,
         *,
         query: DiscoveryQuery,
         url: str,
     ) -> TransportResponse | FederatedSearchResult:
+        response_or_failure = self._raw_request(url=url)
+        if isinstance(response_or_failure, TransportResponse):
+            return response_or_failure
+        if response_or_failure.reason == "not_found":
+            return _empty_result(query)
+        return _failure_result(
+            query,
+            response_or_failure.outcome,
+            response_or_failure.reason,
+        )
+
+    def _raw_request(self, *, url: str) -> TransportResponse | _RequestFailure:
         headers: dict[str, str] = {
             "Accept": "application/json",
             "User-Agent": self._user_agent,
@@ -191,24 +368,24 @@ class SemanticScholarProvider:
                 max_response_bytes=self._max_response_bytes,
             )
         except ResponseTooLargeError:
-            return _failure_result(query, ProviderOutcome.FAILED, "oversized_response")
+            return _RequestFailure(ProviderOutcome.FAILED, "oversized_response")
         except TimeoutError:
-            return _failure_result(query, ProviderOutcome.UNAVAILABLE, "timeout")
+            return _RequestFailure(ProviderOutcome.UNAVAILABLE, "timeout")
         except OSError:
-            return _failure_result(query, ProviderOutcome.UNAVAILABLE, "transport_error")
+            return _RequestFailure(ProviderOutcome.UNAVAILABLE, "transport_error")
 
         if len(response.body) > self._max_response_bytes:
-            return _failure_result(query, ProviderOutcome.FAILED, "oversized_response")
+            return _RequestFailure(ProviderOutcome.FAILED, "oversized_response")
         if response.status_code == 404:
-            return _empty_result(query)
+            return _RequestFailure(ProviderOutcome.EMPTY, "not_found")
         if response.status_code == 429:
-            return _failure_result(query, ProviderOutcome.RATE_LIMITED, "rate_limited")
+            return _RequestFailure(ProviderOutcome.RATE_LIMITED, "rate_limited")
         if response.status_code in {401, 403}:
-            return _failure_result(query, ProviderOutcome.FAILED, "authentication_failed")
+            return _RequestFailure(ProviderOutcome.FAILED, "authentication_failed")
         if 500 <= response.status_code <= 599:
-            return _failure_result(query, ProviderOutcome.UNAVAILABLE, "provider_unavailable")
+            return _RequestFailure(ProviderOutcome.UNAVAILABLE, "provider_unavailable")
         if response.status_code < 200 or response.status_code >= 300:
-            return _failure_result(query, ProviderOutcome.FAILED, "unsupported_http_status")
+            return _RequestFailure(ProviderOutcome.FAILED, "unsupported_http_status")
         return response
 
 
@@ -363,5 +540,58 @@ def _failure_result(
                 attempted=True,
                 reason=reason,
             ),
+        ),
+    )
+
+
+def _traversal_success_result(
+    query: CitationTraversalQuery,
+    *,
+    candidates: tuple[FederatedCandidate, ...],
+    edges: tuple[CitationEdge, ...],
+    next_offset: int | None,
+) -> CitationTraversalResult:
+    return CitationTraversalResult(
+        query=query,
+        provider_status=ProviderStatus(
+            provider="semantic_scholar",
+            outcome=ProviderOutcome.SUCCESS,
+            attempted=True,
+            result_count=len(candidates),
+        ),
+        candidates=candidates,
+        edges=edges,
+        next_offset=next_offset,
+    )
+
+
+def _traversal_empty_result(
+    query: CitationTraversalQuery,
+    *,
+    next_offset: int | None,
+) -> CitationTraversalResult:
+    return CitationTraversalResult(
+        query=query,
+        provider_status=ProviderStatus(
+            provider="semantic_scholar",
+            outcome=ProviderOutcome.EMPTY,
+            attempted=True,
+        ),
+        next_offset=next_offset,
+    )
+
+
+def _traversal_failure_result(
+    query: CitationTraversalQuery,
+    outcome: ProviderOutcome,
+    reason: str,
+) -> CitationTraversalResult:
+    return CitationTraversalResult(
+        query=query,
+        provider_status=ProviderStatus(
+            provider="semantic_scholar",
+            outcome=outcome,
+            attempted=True,
+            reason=reason,
         ),
     )
