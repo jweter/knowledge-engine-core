@@ -31,15 +31,13 @@ def deduplicate_candidates_by_exact_doi(
         existing_index = doi_indexes.get(doi)
         if existing_index is None:
             doi_indexes[doi] = len(merged)
-            merged.append(_with_normalized_doi(candidate, doi))
+            merged.append(_with_normalized_doi_identity(candidate, doi))
             continue
 
         existing = merged[existing_index]
         merged[existing_index] = replace(
             existing,
-            canonical_id=f"doi:{doi}",
             observations=existing.observations + candidate.observations,
-            doi=doi,
         )
 
     return tuple(merged)
@@ -56,7 +54,8 @@ def _unambiguous_candidate_doi(candidate: FederatedCandidate) -> str | None:
     return next(iter(asserted))
 
 
-def _with_normalized_doi(candidate: FederatedCandidate, doi: str) -> FederatedCandidate:
-    if candidate.doi == doi:
+def _with_normalized_doi_identity(candidate: FederatedCandidate, doi: str) -> FederatedCandidate:
+    canonical_id = f"doi:{doi}"
+    if candidate.canonical_id == canonical_id and candidate.doi == doi:
         return candidate
-    return replace(candidate, doi=doi)
+    return replace(candidate, canonical_id=canonical_id, doi=doi)
