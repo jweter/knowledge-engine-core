@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import UUID
 
 import pytest
@@ -80,7 +81,7 @@ def _result() -> CitationSnowballResult:
     )
 
 
-def test_ledger_round_trip_preserves_replay_and_provenance_facts(tmp_path) -> None:
+def test_ledger_round_trip_preserves_replay_and_provenance_facts(tmp_path: Path) -> None:
     ledger = CitationSnowballLedger(
         tmp_path,
         clock=lambda: datetime(2026, 8, 16, 18, 30, tzinfo=UTC),
@@ -102,7 +103,7 @@ def test_ledger_round_trip_preserves_replay_and_provenance_facts(tmp_path) -> No
     assert loaded.edges[0].related_provider_id == "W2"
 
 
-def test_ledger_json_excludes_credentials_and_raw_provider_payloads(tmp_path) -> None:
+def test_ledger_json_excludes_credentials_and_raw_provider_payloads(tmp_path: Path) -> None:
     ledger = CitationSnowballLedger(
         tmp_path,
         clock=lambda: datetime(2026, 8, 16, 18, 30, tzinfo=UTC),
@@ -118,7 +119,7 @@ def test_ledger_json_excludes_credentials_and_raw_provider_payloads(tmp_path) ->
     assert payload["provider"] == "openalex"
 
 
-def test_ledger_refuses_to_overwrite_existing_run(tmp_path) -> None:
+def test_ledger_refuses_to_overwrite_existing_run(tmp_path: Path) -> None:
     ledger = CitationSnowballLedger(
         tmp_path,
         clock=lambda: datetime(2026, 8, 16, 18, 30, tzinfo=UTC),
@@ -130,7 +131,7 @@ def test_ledger_refuses_to_overwrite_existing_run(tmp_path) -> None:
         ledger.record(_result())
 
 
-def test_ledger_rejects_naive_clock(tmp_path) -> None:
+def test_ledger_rejects_naive_clock(tmp_path: Path) -> None:
     ledger = CitationSnowballLedger(
         tmp_path,
         clock=lambda: datetime(2026, 8, 16, 18, 30),
@@ -141,7 +142,7 @@ def test_ledger_rejects_naive_clock(tmp_path) -> None:
         ledger.record(_result())
 
 
-def test_ledger_rejects_tampered_run_identifier(tmp_path) -> None:
+def test_ledger_rejects_tampered_run_identifier(tmp_path: Path) -> None:
     ledger = CitationSnowballLedger(tmp_path)
     path = tmp_path / f"{_RUN_ID}.json"
     path.write_text(
