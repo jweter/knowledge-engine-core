@@ -7,6 +7,25 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`ke citation-snowball` and `ke citation-snowball-report` (FRD-7)**:
+  the first CLI surface for `citation_snowball.py`/`citation_snowball_ledger.py`,
+  which were built and unit-tested but unreachable outside a test file, the
+  same "built but unreachable" gap previously found and fixed for other FRD
+  providers. `citation-snowball --seeds <ids> --ledger-root <dir>`
+  breadth-first expands seed identifiers through Semantic Scholar's public
+  references/citations graph (bounded by `--max-depth`,
+  `--limit-per-traversal`, `--max-candidates`) and persists a deterministic,
+  replayable run record before returning it, matching `federated-discover`'s
+  persist-before-return discipline. `citation-snowball-report
+  <snowball_run_id> --ledger-root <dir>` re-fetches a persisted run's plan
+  and traversal outcomes by ID, mirroring `federated-coverage-report`'s role
+  for FRD-6. Only Semantic Scholar is wired; OpenAlex's citation adapter
+  needs an additional work-hydration lookup, tracked as a follow-up. See
+  `docs/roadmap/federated_research_discovery_adoption.md`'s FRD-7 section
+  and `docs/core_interface_contract.md`.
+
 ### Changed
 
 - **`scripts/quality_preflight.py` now runs `git diff --check` as a fifth

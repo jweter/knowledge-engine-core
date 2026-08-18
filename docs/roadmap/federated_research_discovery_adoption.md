@@ -591,11 +591,35 @@ Exit criteria:
 
 Add bounded references/citations expansion as a reproducible discovery strategy.
 
+**Status: implemented and reachable for Semantic Scholar; OpenAlex traversal
+still unwired.** `citation_snowball.py`'s `CitationSnowballDiscovery`
+(breadth-first expansion under explicit depth/candidate bounds) and
+`citation_snowball_ledger.py`'s `CitationSnowballLedger` (write-once JSON
+persistence, replayable by ID) already existed but, like FRD-6 before its own
+CLI command shipped, were built and unit-tested with no reachable surface
+outside a test file. `ke citation-snowball --seeds <ids> --ledger-root <dir>`
+is now the first caller, wired to `SemanticScholarProvider`'s existing
+`references`/`citations`/`traverse` methods (already used for federated
+search); `ke citation-snowball-report <snowball_run_id> --ledger-root <dir>`
+re-fetches a persisted run's plan and traversal outcomes by ID, the same
+pattern `federated-coverage-report` established for FRD-6. OpenAlex's
+`OpenAlexCitationAdapter` implements the same `CitationTraversalProvider`
+contract but requires an additional work-hydration lookup not yet wired into
+this command -- a follow-up slice, not a change to the contract already
+exposed. See `docs/core_interface_contract.md`'s FRD-7 entry.
+
 Exit criteria:
 
-- seed papers and expansion depth are explicit;
-- newly discovered works preserve edge provenance;
-- expansion can be replayed and compared later.
+- seed papers and expansion depth are explicit; **met** -- `--seeds`,
+  `--directions`, and `--max-depth` are explicit CLI options, validated by
+  `CitationSnowballPlan`
+- newly discovered works preserve edge provenance; **met** -- every
+  discovered candidate carries a `CitationEdge` (provider, seed, direction,
+  retrieval timestamp), persisted in the ledger and in `--output` JSON
+- expansion can be replayed and compared later. **met for Semantic
+  Scholar** -- `ke citation-snowball-report` re-fetches any persisted run's
+  deterministic plan/outcome by ID; not yet true for OpenAlex, which has no
+  CLI-reachable traversal yet
 
 ### FRD-8 -- Optional Knowledge Engine MCP facade
 

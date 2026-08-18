@@ -6,7 +6,7 @@ import json
 import re
 import sys
 import tempfile
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, cast
@@ -23,6 +23,13 @@ from knowledge_engine.candidate_review import (
     prepare_candidate_review,
 )
 from knowledge_engine.citation_extraction import find_cited_dois
+from knowledge_engine.citation_snowball import (
+    CitationSnowballDiscovery,
+    CitationSnowballPlan,
+    CitationSnowballResult,
+)
+from knowledge_engine.citation_snowball_ledger import CitationSnowballLedger
+from knowledge_engine.citation_traversal import CitationDirection
 from knowledge_engine.cli import ReportFormatOption, console
 from knowledge_engine.cli import app as app
 from knowledge_engine.clinicaltrials_http import UrllibClinicalTrialsTransport
@@ -362,6 +369,69 @@ FederatedDiscoverOutputOption = Annotated[
 FederatedSearchRunIdArgument = Annotated[
     str,
     typer.Argument(help="Search-run UUID returned by `federated-discover`."),
+]
+SnowballSeedsOption = Annotated[
+    str,
+    typer.Option(
+        "--seeds",
+        help=(
+            "Comma-separated seed identifiers (Semantic Scholar paper ID, DOI, "
+            "arXiv ID, or PMID -- anything the provider's own lookup accepts)."
+        ),
+    ),
+]
+SnowballDirectionsOption = Annotated[
+    str,
+    typer.Option(
+        "--directions",
+        help=(
+            "Comma-separated traversal directions: 'references', 'citations', "
+            "or both. Defaults to both."
+        ),
+    ),
+]
+SnowballMaxDepthOption = Annotated[
+    int,
+    typer.Option("--max-depth", min=1, max=3, help="Breadth-first expansion depth from the seeds."),
+]
+SnowballLimitPerTraversalOption = Annotated[
+    int,
+    typer.Option(
+        "--limit-per-traversal",
+        min=1,
+        max=1000,
+        help="Maximum works requested per single provider traversal call.",
+    ),
+]
+SnowballMaxCandidatesOption = Annotated[
+    int,
+    typer.Option(
+        "--max-candidates",
+        min=1,
+        help="Hard cap on total newly discovered candidates before the run truncates.",
+    ),
+]
+SnowballLedgerRootOption = Annotated[
+    Path,
+    typer.Option(
+        "--ledger-root",
+        help="Directory the citation-snowball ledger persists JSON run records to.",
+    ),
+]
+SnowballOutputOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--output",
+        help=(
+            "Optional path to also save the full result (plan, traversal outcomes, "
+            "discovered candidates, and edge provenance) as JSON, for a programmatic "
+            "caller rather than parsing the console table."
+        ),
+    ),
+]
+SnowballRunIdArgument = Annotated[
+    str,
+    typer.Argument(help="Snowball-run UUID returned by `citation-snowball`."),
 ]
 RejectedCandidatesInputOption = Annotated[
     Path,
@@ -5429,3 +5499,208 @@ def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: 
             status = "[yellow]not attempted[/yellow]"
         table.add_row(provider, status)
     console.print(table)
+
+
+_DIRECTION_BY_NAME = {direction.value: direction for direction in CitationDirection}
+
+
+def _parse_snowball_seeds(seeds: str) -> tuple[str, ...]:
+    parsed = tuple(seed.strip() for seed in seeds.split(",") if seed.strip())
+    if not parsed:
+        raise typer.BadParameter("--seeds must name at least one seed identifier.")
+    return parsed
+
+
+def _parse_snowball_directions(directions: str) -> tuple[CitationDirection, ...]:
+    names = tuple(name.strip() for name in directions.split(",") if name.strip())
+    if not names:
+        raise typer.BadParameter("--directions must name at least one direction.")
+    parsed: list[CitationDirection] = []
+    for name in names:
+        direction = _DIRECTION_BY_NAME.get(name)
+        if direction is None:
+            allowed = ", ".join(sorted(_DIRECTION_BY_NAME))
+            raise typer.BadParameter(f"Unknown direction '{name}'. Choose from: {allowed}.")
+        parsed.append(direction)
+    return tuple(parsed)
+
+
+@app.command("citation-snowball")
+def citation_snowball(
+    seeds: SnowballSeedsOption,
+    ledger_root: SnowballLedgerRootOption,
+    directions: SnowballDirectionsOption = "references,citations",
+    max_depth: SnowballMaxDepthOption = 1,
+    limit_per_traversal: SnowballLimitPerTraversalOption = 25,
+    max_candidates: SnowballMaxCandidatesOption = 100,
+    semantic_scholar_api_key: FederatedSemanticScholarApiKeyOption = None,
+    output: SnowballOutputOption = None,
+) -> None:
+    """Run one bounded citation-snowball expansion and durably persist it (FRD-7).
+
+    Breadth-first expands `--seeds` through Semantic Scholar's public
+    references/citations graph (`SemanticScholarProvider.traverse`, already
+    used for federated search -- see `_federated_discovery_registry`), up to
+    `--max-depth` hops, and persists a deterministic, replayable record of
+    the plan, every traversal's provider outcome, discovered candidate IDs,
+    and citation-edge provenance to `--ledger-root` *before* returning,
+    matching `federated-discover`'s persist-before-return discipline. This is
+    the first CLI surface for `citation_snowball.py`/`citation_snowball_ledger.py`
+    (FRD-7); until this command existed that code was built and unit-tested
+    but unreachable outside a test file -- the same "built but unreachable"
+    gap this project has repeatedly found and fixed for other providers. See
+    `docs/roadmap/federated_research_discovery_adoption.md`'s FRD-7 section.
+
+    Only Semantic Scholar is wired today. OpenAlex's citation traversal
+    (`OpenAlexCitationAdapter`) also implements the shared
+    `CitationTraversalProvider` contract but additionally requires a work-
+    hydration lookup this command does not yet wire; adding it is a follow-up
+    slice, not a change to the contract this command already exposes.
+
+    A seed or an intermediate discovered work that the provider cannot
+    resolve is reported as an explicit, labeled traversal outcome, never
+    silently dropped -- completeness must never be inferred from candidate
+    count alone. `--output <path.json>` additionally saves the full result
+    (plan, every traversal's outcome, discovered candidates with their
+    provider observations, and edge provenance) for a programmatic caller;
+    the ledger under `--ledger-root` is the durable, replayable record
+    either way, re-fetchable later via `citation-snowball-report`.
+    """
+
+    try:
+        parsed_seeds = _parse_snowball_seeds(seeds)
+        parsed_directions = _parse_snowball_directions(directions)
+        plan = CitationSnowballPlan(
+            seed_identifiers=parsed_seeds,
+            directions=parsed_directions,
+            max_depth=max_depth,
+            limit_per_traversal=limit_per_traversal,
+            max_candidates=max_candidates,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    provider = SemanticScholarProvider(
+        transport=UrllibSemanticScholarTransport(), api_key=semantic_scholar_api_key
+    )
+    discovery = CitationSnowballDiscovery(provider)
+
+    console.print(
+        "[yellow]Network access:[/yellow] querying Semantic Scholar's public citation "
+        "graph over HTTPS."
+    )
+    result = discovery.run(plan)
+
+    ledger = CitationSnowballLedger(ledger_root)
+    record = ledger.record(result)
+
+    if output is not None:
+        payload: dict[str, Any] = {
+            "snowball_run_id": record.snowball_run_id,
+            "provider": result.provider,
+            "plan": {
+                "seed_identifiers": list(plan.normalized_seed_identifiers),
+                "directions": [direction.value for direction in plan.directions],
+                "max_depth": plan.max_depth,
+                "limit_per_traversal": plan.limit_per_traversal,
+                "max_candidates": plan.max_candidates,
+            },
+            "completeness": result.completeness.value,
+            "truncated": result.truncated,
+            "candidates": [asdict(candidate) for candidate in result.candidates],
+            "edges": [{**asdict(edge), "direction": edge.direction.value} for edge in result.edges],
+        }
+        _write_output(output, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+    _print_snowball_result(record.snowball_run_id, result=result)
+
+
+@app.command("citation-snowball-report")
+def citation_snowball_report(
+    snowball_run_id: SnowballRunIdArgument,
+    ledger_root: SnowballLedgerRootOption,
+) -> None:
+    """Print the persisted plan and outcome for one citation-snowball run (FRD-7).
+
+    Lets a caller re-fetch a snowball run's deterministic replay record after
+    the fact, the "expansion can be replayed and compared later" exit
+    criterion `docs/roadmap/federated_research_discovery_adoption.md`'s FRD-7
+    section names -- mirroring `federated-coverage-report`'s role for
+    `federated-discover`.
+    """
+
+    ledger = CitationSnowballLedger(ledger_root)
+    try:
+        record = ledger.load(snowball_run_id)
+    except FileNotFoundError:
+        console.print(f"[red]No citation-snowball run found:[/red] {escape(snowball_run_id)}")
+        raise typer.Exit(1) from None
+    except ValueError as exc:
+        console.print(f"[red]Malformed citation-snowball run record:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    completeness_color = {
+        "complete": "green",
+        "partial": "yellow",
+        "failed": "red",
+    }.get(record.completeness, "white")
+
+    console.print(f"[bold]Snowball run:[/bold] {record.snowball_run_id}")
+    console.print(f"[bold]Provider:[/bold] {escape(record.provider)}")
+    console.print(
+        f"[bold]Seeds:[/bold] {', '.join(escape(seed) for seed in record.seed_identifiers)}"
+    )
+    console.print(
+        f"[bold]Completeness:[/bold] "
+        f"[{completeness_color}]{record.completeness}[/{completeness_color}] "
+        f"({len(record.candidate_ids)} candidate(s), truncated={record.truncated})"
+    )
+
+    table = Table(title="Traversals")
+    table.add_column("Seed")
+    table.add_column("Direction")
+    table.add_column("Outcome")
+    table.add_column("Results")
+    for traversal in record.traversals:
+        outcome_color = "green" if traversal.outcome in {"success", "empty"} else "red"
+        table.add_row(
+            escape(traversal.seed_identifier),
+            traversal.direction,
+            f"[{outcome_color}]{traversal.outcome}[/{outcome_color}]",
+            str(traversal.result_count),
+        )
+    console.print(table)
+
+
+def _print_snowball_result(snowball_run_id: str, *, result: CitationSnowballResult) -> None:
+    completeness_color = {
+        "complete": "green",
+        "partial": "yellow",
+        "failed": "red",
+    }.get(result.completeness.value, "white")
+
+    console.print(f"[bold]Snowball run:[/bold] {snowball_run_id}")
+    console.print(
+        f"[bold]Completeness:[/bold] "
+        f"[{completeness_color}]{result.completeness.value}[/{completeness_color}] "
+        f"({len(result.candidates)} candidate(s), truncated={result.truncated})"
+    )
+
+    if result.candidates:
+        table = Table(title="Discovered candidates")
+        table.add_column("Title")
+        table.add_column("Year")
+        table.add_column("DOI")
+        for candidate in result.candidates:
+            table.add_row(
+                escape(candidate.title),
+                str(candidate.publication_year) if candidate.publication_year else "",
+                escape(candidate.doi or ""),
+            )
+        console.print(table)
+
+    console.print(
+        "[bold]Discovery only -- these are not Evidence Records and were not acquired. "
+        "Run the same PMC-scoped candidate/acquisition commands for anything meant to "
+        "enter the corpus.[/bold]"
+    )
