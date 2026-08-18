@@ -255,3 +255,18 @@ def test_federated_coverage_report_handles_an_unknown_run_id(tmp_path: Path) -> 
 
     assert result.exit_code != 0
     assert "No federated search run found" in _unwrapped(result.output)
+
+
+def test_production_registry_wires_every_transport_backed_provider() -> None:
+    """No network call -- just proves the real factory composes what it claims to.
+
+    A cheap regression check for the wiring itself (a provider silently
+    dropped, or a constructor argument mismatch) that the CLI tests above
+    can't catch since they replace `_federated_discovery_registry` entirely.
+    """
+
+    registry = entrypoint._federated_discovery_registry(
+        openalex_api_key=None, semantic_scholar_api_key=None
+    )
+
+    assert registry.provider_names == ("pubmed", "crossref", "openalex", "semantic_scholar")

@@ -325,10 +325,12 @@ itself, but may need to trigger for a specific paper):**
   schedulable cycle of discovery + deterministic adjudication + M53
   ledger cross-check, stopping before acquisition (writes a JSON
   worksheet, not an evidence artifact -- see the design doc for why).
-- `ke federated-discover --query <text> --ledger-root <dir>` (FRD-1/FRD-2/FRD-6,
+- `ke federated-discover --query <text> --ledger-root <dir>` (FRD-1/FRD-2/FRD-3/FRD-6,
   `docs/roadmap/federated_research_discovery_adoption.md`): fans one query out
-  across configured discovery providers (PubMed, Crossref, and optionally
-  OpenAlex via `--openalex-api-key`/`KE_OPENALEX_API_KEY`), deduplicates
+  across configured discovery providers (PubMed, Crossref, OpenAlex via
+  `--openalex-api-key`/`KE_OPENALEX_API_KEY`, and Semantic Scholar --
+  key-optional by design, `--semantic-scholar-api-key`/
+  `KE_SEMANTIC_SCHOLAR_API_KEY` only raises its rate limit), deduplicates
   candidates by exact DOI, and persists the run to `--ledger-root` before
   returning it. A separate discovery mode from `discovery-cycle-run` above --
   provider-neutral and not scoped to a single corpus's adjudication rules;
@@ -337,10 +339,11 @@ itself, but may need to trigger for a specific paper):**
   <dir>` re-fetches one persisted run's deterministic coverage facts (which
   providers completed/failed/were disabled, and why) by ID -- the reachable
   form of the "downstream AI/Web can render coverage without guessing"
-  contract that document's FRD-6 exit criterion names. Semantic Scholar and
-  arXiv (FRD-3/FRD-4) are not wired into this command yet -- both currently
-  have only fake-transport unit tests, no concrete HTTPS transport, unlike
-  PubMed/Crossref/OpenAlex.
+  contract that document's FRD-6 exit criterion names. arXiv (FRD-4) is not
+  wired into this command yet -- it currently has only a fake-transport unit
+  test, no concrete HTTPS transport, unlike the four providers above.
+  Semantic Scholar's citation/reference traversal (`references`/`citations`/
+  `traverse`) is implemented and unit-tested but has no CLI command yet.
 - `ke corpus-import`, `ke extraction-review-generate`/`-batch-generate`,
   `ke extraction-review-annotate` (M45), `ke extraction-review-autoclassify`
   (M52, see "The seam" above), `ke extraction-review-promote`.

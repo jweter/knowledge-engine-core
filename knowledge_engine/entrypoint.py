@@ -184,6 +184,8 @@ from knowledge_engine.scientific_scope import (
 )
 from knowledge_engine.search import SearchService
 from knowledge_engine.search_fusion import fuse_rankings
+from knowledge_engine.semantic_scholar_http import UrllibSemanticScholarTransport
+from knowledge_engine.semantic_scholar_provider import SemanticScholarProvider
 from knowledge_engine.uniprot_http import UrllibUniProtTransport
 from knowledge_engine.uniprot_lookup import GetTransport as UniProtLookupGetTransport
 from knowledge_engine.uniprot_lookup import (
@@ -323,6 +325,18 @@ FederatedOpenAlexApiKeyOption = Annotated[
         help=(
             "OpenAlex API key. OpenAlex reports itself 'disabled' without one -- "
             "see OpenAlexProvider; no other provider here requires a credential."
+        ),
+    ),
+]
+FederatedSemanticScholarApiKeyOption = Annotated[
+    str | None,
+    typer.Option(
+        "--semantic-scholar-api-key",
+        envvar="KE_SEMANTIC_SCHOLAR_API_KEY",
+        help=(
+            "Optional Semantic Scholar API key, sent as an x-api-key header. "
+            "Unlike OpenAlex, Semantic Scholar's public Academic Graph search "
+            "works without one -- a key only raises the rate limit."
         ),
     ),
 ]
@@ -5201,24 +5215,33 @@ def fused_search(
     )
 
 
-def _federated_discovery_registry(*, openalex_api_key: str | None) -> DiscoveryProviderRegistry:
-    """Compose the production federated-discovery providers (FRD-1/FRD-2/FRD-6).
+def _federated_discovery_registry(
+    *, openalex_api_key: str | None, semantic_scholar_api_key: str | None = None
+) -> DiscoveryProviderRegistry:
+    """Compose the production federated-discovery providers (FRD-1/FRD-2/FRD-3/FRD-6).
 
     Reuses this project's existing, already-battle-tested PubMed and Crossref
     services (`_pubmed_discovery_service`/`_crossref_provider`) behind their
     FRD adapters rather than building new transports for hosts this project
-    already talks to. OpenAlex is the one genuinely new provider wired here;
-    it is optional and reports itself `disabled` (not an error) when no API
-    key is configured, matching `OpenAlexProvider`'s own graceful-degradation
-    contract. Semantic Scholar and arXiv are FRD-3/FRD-4 and are not wired
-    here yet -- both currently have only fake-transport unit tests, no
-    concrete HTTPS transport, unlike PubMed/Crossref/OpenAlex above.
+    already talks to. OpenAlex and Semantic Scholar are the two genuinely new
+    providers wired here. OpenAlex is optional and reports itself `disabled`
+    (not an error) when no API key is configured, matching `OpenAlexProvider`'s
+    own graceful-degradation contract. Semantic Scholar's public Academic Graph
+    access works without any key by design (`SemanticScholarProvider`'s own
+    contract) -- an optional key only raises its rate limit, sent as an
+    `x-api-key` header, never a hard requirement to search. arXiv is FRD-4 and
+    is not wired here yet -- it currently has only a fake-transport unit test,
+    no concrete HTTPS transport, unlike PubMed/Crossref/OpenAlex/Semantic
+    Scholar above.
     """
 
     providers: list[DiscoveryProvider] = [
         PubmedFederatedAdapter(_pubmed_discovery_service()),
         CrossrefFederatedAdapter(_crossref_provider()),
         OpenAlexProvider(transport=UrllibOpenAlexTransport(), api_key=openalex_api_key),
+        SemanticScholarProvider(
+            transport=UrllibSemanticScholarTransport(), api_key=semantic_scholar_api_key
+        ),
     ]
     return DiscoveryProviderRegistry(providers)
 
@@ -5241,21 +5264,22 @@ def federated_discover(
     year_to: FederatedYearToOption = None,
     providers: FederatedProvidersOption = None,
     openalex_api_key: FederatedOpenAlexApiKeyOption = None,
+    semantic_scholar_api_key: FederatedSemanticScholarApiKeyOption = None,
     initiated_by: FederatedInitiatedByOption = None,
 ) -> None:
     """Run one federated discovery search and durably persist its coverage (FRD-6).
 
     Fans one query out across every configured provider (PubMed, Crossref,
-    OpenAlex today -- see `_federated_discovery_registry`), deduplicates
-    candidates by exact DOI, and -- critically -- persists the run to
-    `--ledger-root` *before* returning it, so coverage can always be
-    re-fetched later via `federated-coverage-report` rather than trusted
-    from memory. This is the first CLI surface for the FRD-1/FRD-2/FRD-6
-    federated-discovery modules (`discovery_broker.py`,
-    `federated_discovery_service.py`, `federated_search_ledger.py`, the
-    provider adapters); until this command existed, that code was built and
-    unit-tested but unreachable from outside a test file. See
-    `docs/roadmap/federated_research_discovery_adoption.md`.
+    OpenAlex, and Semantic Scholar today -- see
+    `_federated_discovery_registry`), deduplicates candidates by exact DOI,
+    and -- critically -- persists the run to `--ledger-root` *before*
+    returning it, so coverage can always be re-fetched later via
+    `federated-coverage-report` rather than trusted from memory. This is the
+    first CLI surface for the FRD-1/FRD-2/FRD-3/FRD-6 federated-discovery
+    modules (`discovery_broker.py`, `federated_discovery_service.py`,
+    `federated_search_ledger.py`, the provider adapters); until this command
+    existed, that code was built and unit-tested but unreachable from outside
+    a test file. See `docs/roadmap/federated_research_discovery_adoption.md`.
 
     A provider that cannot answer a given query (rate-limited, unavailable,
     or -- as with Crossref's DOI-only lookup today -- structurally
@@ -5274,7 +5298,10 @@ def federated_discover(
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
 
-    registry = _federated_discovery_registry(openalex_api_key=openalex_api_key)
+    registry = _federated_discovery_registry(
+        openalex_api_key=openalex_api_key,
+        semantic_scholar_api_key=semantic_scholar_api_key,
+    )
     try:
         provider_names = _parse_federated_providers(providers)
         recorder = FederatedSearchLedger(ledger_root)

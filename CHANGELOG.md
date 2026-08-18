@@ -40,6 +40,31 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Wired Semantic Scholar into `ke federated-discover` (FRD-3), the same
+  "built but unreachable" gap OpenAlex had.** `SemanticScholarProvider`
+  existed with only a fake-transport unit test. New
+  `knowledge_engine/semantic_scholar_http.py` (`UrllibSemanticScholarTransport`,
+  host-allowlisted to `api.semanticscholar.org`) is its first concrete
+  HTTPS transport, following the exact pattern `openalex_http.py` just
+  established. Unlike OpenAlex, Semantic Scholar's public Academic Graph
+  search genuinely requires no credential -- the new optional
+  `--semantic-scholar-api-key`/`KE_SEMANTIC_SCHOLAR_API_KEY` only raises
+  the rate limit, sent as an `x-api-key` header. Live-verified against the
+  real API: a real query hit the public tier's shared rate limit
+  (independently confirmed via a direct `curl` to the same endpoint
+  returning the same `429`), and the transport correctly parsed it into
+  `ProviderOutcome.RATE_LIMITED`, surfaced honestly in the coverage table
+  rather than silently dropped -- exactly the graceful degradation FRD-3's
+  exit criteria require. `ke federated-discover` now searches 3 of 5 named
+  FRD providers live (PubMed, Crossref, OpenAlex, Semantic Scholar; arXiv
+  remains unwired). Semantic Scholar's citation/reference traversal
+  (`references`/`citations`/`traverse`) is implemented and unit-tested but
+  has no CLI command yet. New `tests/test_semantic_scholar_http.py` and a
+  wiring-regression test proving the production registry factory composes
+  all four transport-backed providers. See
+  `docs/roadmap/federated_research_discovery_adoption.md`'s updated FRD-3
+  status line.
+
 - **`ke federated-discover`/`ke federated-coverage-report` -- the first CLI
   surface for the FRD-1/FRD-2/FRD-6 federated-discovery modules.** A
   substantial amount of provider-neutral discovery infrastructure
