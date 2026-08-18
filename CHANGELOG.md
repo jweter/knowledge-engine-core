@@ -40,6 +40,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`ke federated-discover --output` now includes the deterministic `coverage`
+  and `provider_disagreements` blocks (FRD-5).** Core had already built a
+  provenance-safe composition primitive (`federated_result_snapshot.py`'s
+  `build_public_federated_result_payload`, joining a `FederatedSearchResult`
+  to its persisted `SearchCoverageReport` and rejecting mismatched
+  provenance) but the CLI's `--output` path still hand-assembled a narrower
+  payload from `FederatedSearchResult.to_json()` alone, leaving the
+  composition function unreachable outside its own tests -- the same "built
+  but unreachable" gap named for arXiv above. `--output` now calls that
+  function directly, so a programmatic caller receives the same coverage
+  facts as `ke federated-coverage-report` (search timestamp, normalized
+  query, year bounds, per-provider limit, which providers
+  completed/failed) plus `provider_disagreements` (conflicting
+  provider-observed metadata for the same candidate, with no provider
+  treated as authoritative) in one file, without a second CLI call or
+  reading the ledger directly. This closes the FRD-5/FRD-6 handoff gap
+  `knowledge-engine-web`'s WEB-FRD-2 has been waiting on. Live-verified: a
+  real two-provider run's `--output` file matched the console coverage
+  table exactly.
+
 - **Wired arXiv into `ke federated-discover` (FRD-4), the same "built but
   unreachable" gap OpenAlex and Semantic Scholar had.** `ArxivProvider`
   existed with explicit preprint/version semantics (`preprint_version`, a

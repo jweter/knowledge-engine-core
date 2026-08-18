@@ -116,6 +116,7 @@ from knowledge_engine.extraction_review_batch import (
     run_extraction_review_for_paper,
 )
 from knowledge_engine.federated_discovery import DiscoveryQuery
+from knowledge_engine.federated_result_snapshot import build_public_federated_result_payload
 from knowledge_engine.federated_search_ledger import FederatedSearchLedger, SearchCoverageReport
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
@@ -5302,12 +5303,17 @@ def federated_discover(
     provider status, never silently dropped from the result. Coverage must
     never be inferred from the presence of results.
 
-    `--output <path.json>` additionally saves the full result -- the same
-    facts as the console table, in `FederatedSearchResult.to_json()`'s
-    machine-readable shape plus the persisted `search_run_id` -- for a
-    programmatic caller. The ledger under `--ledger-root` is the durable,
-    replayable record either way; `--output` is a convenience snapshot of
-    one run's own result, not a second source of truth.
+    `--output <path.json>` additionally saves the full result for a
+    programmatic caller: the same facts as the console table
+    (`FederatedSearchResult.to_json()`'s candidate/provider shape) plus the
+    persisted `search_run_id`, the deterministic public `coverage` record
+    (search timestamp, normalized query, year bounds, per-provider limit --
+    see `SearchCoverageReport.to_dict()`), and `provider_disagreements`
+    (conflicting provider-observed metadata for the same candidate, with no
+    provider treated as authoritative -- see `build_provider_disagreement_report`).
+    The ledger under `--ledger-root` is the durable, replayable record
+    either way; `--output` is a convenience snapshot of one run's own
+    result, not a second source of truth.
     """
 
     try:
@@ -5338,8 +5344,7 @@ def federated_discover(
     execution = service.search(broker_query, initiated_by=initiated_by)
 
     if output is not None:
-        payload = json.loads(execution.result.to_json())
-        payload["search_run_id"] = execution.record.search_run_id
+        payload = build_public_federated_result_payload(execution.result, execution.coverage)
         _write_output(output, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
     _print_federated_coverage(execution.coverage, search_run_id=execution.record.search_run_id)

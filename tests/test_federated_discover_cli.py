@@ -287,6 +287,10 @@ def test_federated_discover_writes_a_machine_readable_output_file(
     assert payload["candidates"][0]["title"] == "A paper found by alpha"
     assert payload["candidates"][0]["doi"] == "10.1000/alpha-1"
     assert "search_run_id" in payload
+    assert payload["coverage"]["search_run_id"] == payload["search_run_id"]
+    assert payload["coverage"]["query_text"] == "obesity treatment"
+    assert payload["coverage"]["completeness"] == "complete"
+    assert payload["provider_disagreements"] == {"candidates": [], "disagreement_count": 0}
 
 
 def test_production_registry_wires_every_transport_backed_provider() -> None:
