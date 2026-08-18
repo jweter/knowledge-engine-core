@@ -48,6 +48,25 @@ def _result() -> FederatedSearchResult:
     )
 
 
+def _result_with_title_disagreement() -> FederatedSearchResult:
+    result = _result()
+    candidate = result.candidates[0]
+    second_observation = ProviderObservation(
+        provider="OpenAlex",
+        provider_id="W123",
+        title="A different protein folding study",
+    )
+    return replace(
+        result,
+        candidates=(
+            replace(
+                candidate,
+                observations=candidate.observations + (second_observation,),
+            ),
+        ),
+    )
+
+
 def _coverage() -> SearchCoverageReport:
     return SearchCoverageReport(
         search_run_id="11111111-2222-3333-4444-555555555555",
@@ -103,9 +122,43 @@ def test_public_snapshot_includes_safe_coverage_and_result_contract() -> None:
         "providers_completed": ["pubmed"],
         "providers_failed": [],
     }
+    assert payload["provider_disagreements"] == {
+        "candidates": (),
+        "disagreement_count": 0,
+    }
     assert "initiated_by" not in payload["coverage"]
     assert "project_id" not in payload["coverage"]
     assert "research_question_id" not in payload["coverage"]
+
+
+def test_public_snapshot_exposes_provider_disagreement_without_picking_a_winner() -> None:
+    payload = build_public_federated_result_payload(_result_with_title_disagreement(), _coverage())
+
+    assert payload["provider_disagreements"] == {
+        "candidates": (
+            {
+                "canonical_id": "pubmed:12345",
+                "disagreements": (
+                    {
+                        "field": "title",
+                        "assertions": (
+                            {
+                                "provider": "pubmed",
+                                "provider_id": "12345",
+                                "value": "A protein folding study",
+                            },
+                            {
+                                "provider": "openalex",
+                                "provider_id": "W123",
+                                "value": "A different protein folding study",
+                            },
+                        ),
+                    },
+                ),
+            },
+        ),
+        "disagreement_count": 1,
+    }
 
 
 @pytest.mark.parametrize(

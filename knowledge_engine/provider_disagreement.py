@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
+from typing import Any
 
 from knowledge_engine.federated_discovery import (
     FederatedCandidate,
@@ -61,10 +62,15 @@ class ProviderDisagreementReport:
     def disagreement_count(self) -> int:
         return sum(len(candidate.disagreements) for candidate in self.candidates)
 
-    def to_json(self) -> str:
+    def to_dict(self) -> dict[str, Any]:
+        """Return the JSON-ready public disagreement contract."""
+
         payload = asdict(self)
         payload["disagreement_count"] = self.disagreement_count
-        return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        return payload
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
 
 
 _FIELD_ORDER = (
