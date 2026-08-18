@@ -325,6 +325,22 @@ itself, but may need to trigger for a specific paper):**
   schedulable cycle of discovery + deterministic adjudication + M53
   ledger cross-check, stopping before acquisition (writes a JSON
   worksheet, not an evidence artifact -- see the design doc for why).
+- `ke federated-discover --query <text> --ledger-root <dir>` (FRD-1/FRD-2/FRD-6,
+  `docs/roadmap/federated_research_discovery_adoption.md`): fans one query out
+  across configured discovery providers (PubMed, Crossref, and optionally
+  OpenAlex via `--openalex-api-key`/`KE_OPENALEX_API_KEY`), deduplicates
+  candidates by exact DOI, and persists the run to `--ledger-root` before
+  returning it. A separate discovery mode from `discovery-cycle-run` above --
+  provider-neutral and not scoped to a single corpus's adjudication rules;
+  also writes no `ready_for_scope_review` worksheet and performs no
+  acquisition. `ke federated-coverage-report <search_run_id> --ledger-root
+  <dir>` re-fetches one persisted run's deterministic coverage facts (which
+  providers completed/failed/were disabled, and why) by ID -- the reachable
+  form of the "downstream AI/Web can render coverage without guessing"
+  contract that document's FRD-6 exit criterion names. Semantic Scholar and
+  arXiv (FRD-3/FRD-4) are not wired into this command yet -- both currently
+  have only fake-transport unit tests, no concrete HTTPS transport, unlike
+  PubMed/Crossref/OpenAlex.
 - `ke corpus-import`, `ke extraction-review-generate`/`-batch-generate`,
   `ke extraction-review-annotate` (M45), `ke extraction-review-autoclassify`
   (M52, see "The seam" above), `ke extraction-review-promote`.

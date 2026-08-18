@@ -397,25 +397,66 @@ These are ordered by leverage, not necessarily immediate implementation date.
 
 ### FRD-1 -- Federated discovery contract
 
+**Status: implemented, and reachable.** `federated_discovery.py`'s
+`DiscoveryQuery`/`FederatedCandidate`/`FederatedSearchResult`/
+`ProviderStatus`/`ProviderOutcome` contracts, `discovery_broker.py`'s
+`FederatedDiscoveryBroker`, and `discovery_provider_registry.py`'s
+`DiscoveryProviderRegistry` were already built and unit-tested when this
+status line was added, composing PubMed (`pubmed_federated_adapter.py`,
+wrapping the existing `pubmed_discovery.py` service unchanged) and
+Crossref (`crossref_federated_adapter.py`, wrapping the existing
+`crossref_provider.py`, DOI-lookup-only by design) through the common
+contract. The real gap closed here: none of it had a CLI command, so it
+was built and tested but unreachable outside a test file -- the same
+"orchestrator built but nothing calls it" gap this project's own
+`knowledge-engine-ai` AI-O12 milestone named and fixed for its own
+orchestrator. `ke federated-discover`/`ke federated-coverage-report` are
+that CLI surface now. Live-verified: a real
+`semaglutide weight loss randomized trial` query returned 5 real PubMed
+candidates while Crossref correctly, explicitly reported itself
+`failed`/`unsupported_query` for a non-DOI query -- exactly the graceful,
+labeled degradation this milestone's exit criteria require, not a
+contrived test fixture.
+
 Define typed provider, query, result, provider-status, and search-run contracts.
 Do not change existing PubMed/Crossref behavior until parity tests exist.
 
 Exit criteria:
 
-- PubMed and Crossref can be represented through the common contract;
-- provider-native IDs and provenance are preserved;
-- partial provider failure is representable without exception-driven ambiguity.
+- PubMed and Crossref can be represented through the common contract; **met**
+- provider-native IDs and provenance are preserved; **met**
+- partial provider failure is representable without exception-driven ambiguity. **met**
 
 ### FRD-2 -- OpenAlex adapter
+
+**Status: search implemented and live-verified; work lookup and citation
+retrieval not built.** `openalex_provider.py`'s `OpenAlexProvider` (search
+and single-work lookup) existed with only a fake-transport unit test --
+no concrete HTTPS transport, unlike PubMed/Crossref. New
+`openalex_http.py`'s `UrllibOpenAlexTransport` (host-allowlisted to
+`api.openalex.org`, the same bounded-read pattern
+`crossref_http.py`/`uniprot_http.py` already established) is that
+transport, wired into `ke federated-discover`. OpenAlex requires no
+credential in reality (a polite-pool `mailto` param, not a secret), but
+this adapter's existing, unchanged contract gates it behind an optional
+`--openalex-api-key`/`KE_OPENALEX_API_KEY` and reports itself `disabled`
+(not an error) when absent -- not revisited here since changing an
+already-tested provider contract was out of scope for wiring its
+transport. Citation/reference retrieval (this milestone's third exit
+criterion) is not implemented.
 
 Implement OpenAlex search and work lookup behind the broker.
 
 Exit criteria:
 
-- deterministic unit fixtures;
-- live integration test separated from offline tests;
-- citation/reference retrieval bounded and provenance-bearing;
+- deterministic unit fixtures; **met** (pre-existing)
+- live integration test separated from offline tests; **not yet -- `ke
+  federated-discover` was live-verified manually, not from an automated
+  live-tagged test**
+- citation/reference retrieval bounded and provenance-bearing; **not met**
 - federated search succeeds when OpenAlex fails and marks the run degraded.
+  **met** (live-verified: OpenAlex `disabled`, PubMed `success` ->
+  `partial` completeness)
 
 ### FRD-3 -- Semantic Scholar adapter
 
@@ -450,13 +491,30 @@ Exit criteria:
 
 ### FRD-6 -- Search-run ledger and coverage report
 
+**Status: implemented, and reachable.** `federated_search_ledger.py`'s
+`FederatedSearchLedger` (immutable JSON-per-run persistence,
+write-once, `coverage_report` re-derivable from any past run) and
+`federated_discovery_service.py`'s `FederatedDiscoveryService` (guarantees
+a search is persisted before it is ever returned to a caller) already
+existed. `ke federated-discover` is the first caller; `ke
+federated-coverage-report <search_run_id>` lets anyone -- a person, or
+eventually `knowledge-engine-web`/`knowledge-engine-ai` reading this same
+ledger directly, per
+`knowledge-engine-web/docs/federated_discovery_transparency_roadmap.md`'s
+explicit "when Core exposes the data" dependency on this milestone --
+re-fetch a run's coverage deterministically after the fact. Live-verified:
+a real search run's coverage was re-fetched by ID from the persisted JSON
+ledger file and matched the original run exactly.
+
 Persist reproducible federated discovery runs and expose deterministic coverage.
 
 Exit criteria:
 
-- every provider outcome is recorded;
-- a caller can distinguish complete from degraded search;
-- downstream AI/Web can render coverage without guessing.
+- every provider outcome is recorded; **met**
+- a caller can distinguish complete from degraded search; **met**
+- downstream AI/Web can render coverage without guessing. **the data is now
+  exposed and re-fetchable; Web/AI-side rendering is still their own
+  unbuilt work, tracked in their own roadmap docs, not this one**
 
 ### FRD-7 -- Citation snowball discovery
 

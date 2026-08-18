@@ -40,6 +40,45 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`ke federated-discover`/`ke federated-coverage-report` -- the first CLI
+  surface for the FRD-1/FRD-2/FRD-6 federated-discovery modules.** A
+  substantial amount of provider-neutral discovery infrastructure
+  (`federated_discovery.py`'s typed contracts, `discovery_broker.py`,
+  `discovery_provider_registry.py`, `federated_discovery_service.py`,
+  `federated_search_ledger.py`, and PubMed/Crossref/OpenAlex/Semantic
+  Scholar/arXiv provider adapters) already existed, fully unit-tested,
+  but had zero CLI surface -- `ke --help` never mentioned it and
+  `CHANGELOG.md` had no record of it landing. The same "built but nothing
+  calls it" gap `knowledge-engine-ai`'s AI-O12 milestone named and fixed
+  for its own orchestrator, found here by auditing all three sibling
+  repos for the project's highest-leverage next step, not asked for by
+  name. `ke federated-discover --query <text> --ledger-root <dir>` fans
+  one query out across configured providers, deduplicates by exact DOI,
+  and durably persists the run (immutable JSON, write-once) *before*
+  returning it; `ke federated-coverage-report <search_run_id>
+  --ledger-root <dir>` re-fetches any past run's deterministic coverage
+  by ID. New `knowledge_engine/openalex_http.py` (`UrllibOpenAlexTransport`,
+  host-allowlisted to `api.openalex.org`, the same bounded-read pattern
+  `crossref_http.py`/`uniprot_http.py` established) is OpenAlex's first
+  concrete HTTPS transport -- it previously had only a fake-transport unit
+  test. Semantic Scholar and arXiv adapters are in the same
+  transport-less state and are not wired into the new command yet.
+  Live-verified against real PubMed/Crossref/OpenAlex traffic: a real
+  `semaglutide weight loss randomized trial` query returned 5 real PubMed
+  candidates while Crossref explicitly, correctly reported itself
+  `failed`/`unsupported_query` (its existing adapter is DOI-lookup-only
+  by design, not a bug) and OpenAlex explicitly reported `disabled`
+  (no API key configured) -- overall coverage `partial`, not silently
+  hidden behind a clean-looking result. The persisted run was then
+  re-fetched by search-run ID via `federated-coverage-report` and matched
+  exactly, confirming the reproducibility guarantee
+  `FederatedDiscoveryService`'s own docstring names. This is real,
+  reachable groundwork for `knowledge-engine-web`'s already-adopted
+  `docs/federated_discovery_transparency_roadmap.md`, which explicitly
+  names "when Core exposes the data" as its own precondition. See
+  `docs/roadmap/federated_research_discovery_adoption.md`'s updated
+  FRD-1/FRD-2/FRD-6 status lines and `docs/core_interface_contract.md`.
+
 - **Recorded the completed AI-O17 cross-repository launch checkpoint.** The
   real local Web-to-AI-to-Core Research Copilot path was exercised against the
   committed GLP-1 corpus and local Ollama: the canonical semaglutide/body-weight
