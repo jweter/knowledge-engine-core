@@ -353,8 +353,30 @@ itself, but may need to trigger for a specific paper):**
   providers completed/failed/were disabled, and why) by ID -- the reachable
   form of the "downstream AI/Web can render coverage without guessing"
   contract that document's FRD-6 exit criterion names.
-  Semantic Scholar's citation/reference traversal (`references`/`citations`/
-  `traverse`) is implemented and unit-tested but has no CLI command yet.
+- `ke citation-snowball --seeds <ids> --ledger-root <dir>` (FRD-7,
+  `docs/roadmap/federated_research_discovery_adoption.md`): breadth-first
+  expands `--seeds` (comma-separated Semantic Scholar paper IDs, DOIs, arXiv
+  IDs, or PMIDs) through Semantic Scholar's public references/citations
+  graph up to `--max-depth` hops (default 1, max 3), bounded by
+  `--limit-per-traversal` (default 25) and `--max-candidates` (default
+  100), and persists a deterministic, replayable record of the plan, every
+  traversal's provider outcome, discovered candidate IDs, and citation-edge
+  provenance to `--ledger-root` before returning it -- the same
+  persist-before-return discipline as `federated-discover`. This is the
+  first CLI surface for `citation_snowball.py`/`citation_snowball_ledger.py`;
+  Semantic Scholar's own `references`/`citations`/`traverse` methods were
+  already implemented and unit-tested but reachable only from a test file
+  until now. Optional `--directions` (default `references,citations`) and
+  `--output <path.json>` (full result: plan, traversal outcomes, discovered
+  candidates with observations, and edge provenance) follow the same
+  pattern as `federated-discover`. Only Semantic Scholar is wired; OpenAlex's
+  `OpenAlexCitationAdapter` implements the same `CitationTraversalProvider`
+  contract but needs an additional work-hydration lookup not yet wired here.
+  `ke citation-snowball-report <snowball_run_id> --ledger-root <dir>`
+  re-fetches one persisted run's plan and traversal outcomes by ID,
+  mirroring `federated-coverage-report`'s role for `federated-discover` and
+  satisfying FRD-7's "expansion can be replayed and compared later" exit
+  criterion.
 - `ke corpus-import`, `ke extraction-review-generate`/`-batch-generate`,
   `ke extraction-review-annotate` (M45), `ke extraction-review-autoclassify`
   (M52, see "The seam" above), `ke extraction-review-promote`.
