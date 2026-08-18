@@ -13,6 +13,7 @@ from typing import Any, cast
 
 from knowledge_engine.federated_discovery import FederatedSearchResult
 from knowledge_engine.federated_search_ledger import SearchCoverageReport
+from knowledge_engine.provider_disagreement import build_provider_disagreement_report
 
 
 def build_public_federated_result_payload(
@@ -47,4 +48,5 @@ def build_public_federated_result_payload(
     payload = cast(dict[str, Any], json.loads(result.to_json()))
     payload["search_run_id"] = coverage.search_run_id
     payload["coverage"] = coverage.to_dict()
+    payload["provider_disagreements"] = build_provider_disagreement_report(result).to_dict()
     return payload
