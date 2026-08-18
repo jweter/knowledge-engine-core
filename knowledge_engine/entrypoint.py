@@ -45,6 +45,7 @@ from knowledge_engine.corpus_library import (
     import_corpus_library,
     import_corpus_library_compressed,
 )
+from knowledge_engine.crossref_federated_adapter import CrossrefFederatedAdapter
 from knowledge_engine.crossref_http import UrllibCrossrefTransport
 from knowledge_engine.crossref_provider import CrossrefProvider
 from knowledge_engine.database import (
@@ -54,6 +55,7 @@ from knowledge_engine.database import (
     GraphRepository,
     PaperRepository,
 )
+from knowledge_engine.discovery_broker import DiscoveryProvider
 from knowledge_engine.discovery_cycle import (
     DISCOVERY_CYCLE_RULES_VERSION,
     DiscoveryCycleError,
@@ -62,6 +64,7 @@ from knowledge_engine.discovery_cycle import (
     load_discovery_cycle_state,
     save_discovery_cycle_state,
 )
+from knowledge_engine.discovery_provider_registry import DiscoveryProviderRegistry
 from knowledge_engine.europepmc_acquisition import (
     AcquisitionTransport as EuropePmcAcquisitionTransport,
 )
@@ -110,6 +113,8 @@ from knowledge_engine.extraction_review_batch import (
     run_batch_extraction_review,
     run_extraction_review_for_paper,
 )
+from knowledge_engine.federated_discovery import DiscoveryQuery
+from knowledge_engine.federated_search_ledger import FederatedSearchLedger, SearchCoverageReport
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.llm import LocalLLMError, OllamaLLM
@@ -123,6 +128,8 @@ from knowledge_engine.mesh_lookup import MeshLookupError, MeshLookupService
 from knowledge_engine.metadata_enrichment import MetadataProvider, MetadataQuery
 from knowledge_engine.models import GraphCitation, ImportRun, Paper, PaperPage
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
+from knowledge_engine.openalex_http import UrllibOpenAlexTransport
+from knowledge_engine.openalex_provider import OpenAlexProvider
 from knowledge_engine.paper_pages_backfill import backfill_paper
 from knowledge_engine.parser import ParsedPage, PyMuPDFParser
 from knowledge_engine.pmc_acquisition import (
@@ -142,6 +149,7 @@ from knowledge_engine.pubmed_discovery import (
     NcbiDiscoveryError,
     PubmedPmcDiscoveryService,
 )
+from knowledge_engine.pubmed_federated_adapter import PubmedFederatedAdapter
 from knowledge_engine.reference_lookup import (
     GetTransport as ReferenceLookupGetTransport,
 )
@@ -273,6 +281,58 @@ DiscoveryCycleOutputOption = Annotated[
 RejectedLedgerOption = Annotated[
     Path,
     typer.Option("--ledger", help="Rejected-PMID ledger CSV file (created if it doesn't exist)."),
+]
+FederatedQueryOption = Annotated[
+    str,
+    typer.Option("--query", help="Provider-neutral free-text discovery query."),
+]
+FederatedLimitOption = Annotated[
+    int,
+    typer.Option("--limit", min=1, max=100, help="Maximum candidates requested per provider."),
+]
+FederatedYearFromOption = Annotated[
+    int | None,
+    typer.Option("--year-from", help="Optional earliest publication year filter."),
+]
+FederatedYearToOption = Annotated[
+    int | None,
+    typer.Option("--year-to", help="Optional latest publication year filter."),
+]
+FederatedProvidersOption = Annotated[
+    str | None,
+    typer.Option(
+        "--providers",
+        help=(
+            "Comma-separated provider subset (e.g. 'pubmed,openalex'). "
+            "Defaults to every configured provider."
+        ),
+    ),
+]
+FederatedLedgerRootOption = Annotated[
+    Path,
+    typer.Option(
+        "--ledger-root",
+        help="Directory the federated search-run ledger persists JSON run records to.",
+    ),
+]
+FederatedOpenAlexApiKeyOption = Annotated[
+    str | None,
+    typer.Option(
+        "--openalex-api-key",
+        envvar="KE_OPENALEX_API_KEY",
+        help=(
+            "OpenAlex API key. OpenAlex reports itself 'disabled' without one -- "
+            "see OpenAlexProvider; no other provider here requires a credential."
+        ),
+    ),
+]
+FederatedInitiatedByOption = Annotated[
+    str | None,
+    typer.Option("--initiated-by", help="Optional free-text label recorded on the persisted run."),
+]
+FederatedSearchRunIdArgument = Annotated[
+    str,
+    typer.Argument(help="Search-run UUID returned by `federated-discover`."),
 ]
 RejectedCandidatesInputOption = Annotated[
     Path,
@@ -5139,3 +5199,174 @@ def fused_search(
         "[bold]This is combined lexical and semantic retrieval only, not scientific "
         "synthesis.[/bold]"
     )
+
+
+def _federated_discovery_registry(*, openalex_api_key: str | None) -> DiscoveryProviderRegistry:
+    """Compose the production federated-discovery providers (FRD-1/FRD-2/FRD-6).
+
+    Reuses this project's existing, already-battle-tested PubMed and Crossref
+    services (`_pubmed_discovery_service`/`_crossref_provider`) behind their
+    FRD adapters rather than building new transports for hosts this project
+    already talks to. OpenAlex is the one genuinely new provider wired here;
+    it is optional and reports itself `disabled` (not an error) when no API
+    key is configured, matching `OpenAlexProvider`'s own graceful-degradation
+    contract. Semantic Scholar and arXiv are FRD-3/FRD-4 and are not wired
+    here yet -- both currently have only fake-transport unit tests, no
+    concrete HTTPS transport, unlike PubMed/Crossref/OpenAlex above.
+    """
+
+    providers: list[DiscoveryProvider] = [
+        PubmedFederatedAdapter(_pubmed_discovery_service()),
+        CrossrefFederatedAdapter(_crossref_provider()),
+        OpenAlexProvider(transport=UrllibOpenAlexTransport(), api_key=openalex_api_key),
+    ]
+    return DiscoveryProviderRegistry(providers)
+
+
+def _parse_federated_providers(providers: str | None) -> tuple[str, ...] | None:
+    if providers is None:
+        return None
+    names = tuple(name.strip() for name in providers.split(",") if name.strip())
+    if not names:
+        raise typer.BadParameter("--providers must name at least one provider when given.")
+    return names
+
+
+@app.command("federated-discover")
+def federated_discover(
+    query: FederatedQueryOption,
+    ledger_root: FederatedLedgerRootOption,
+    limit: FederatedLimitOption = 20,
+    year_from: FederatedYearFromOption = None,
+    year_to: FederatedYearToOption = None,
+    providers: FederatedProvidersOption = None,
+    openalex_api_key: FederatedOpenAlexApiKeyOption = None,
+    initiated_by: FederatedInitiatedByOption = None,
+) -> None:
+    """Run one federated discovery search and durably persist its coverage (FRD-6).
+
+    Fans one query out across every configured provider (PubMed, Crossref,
+    OpenAlex today -- see `_federated_discovery_registry`), deduplicates
+    candidates by exact DOI, and -- critically -- persists the run to
+    `--ledger-root` *before* returning it, so coverage can always be
+    re-fetched later via `federated-coverage-report` rather than trusted
+    from memory. This is the first CLI surface for the FRD-1/FRD-2/FRD-6
+    federated-discovery modules (`discovery_broker.py`,
+    `federated_discovery_service.py`, `federated_search_ledger.py`, the
+    provider adapters); until this command existed, that code was built and
+    unit-tested but unreachable from outside a test file. See
+    `docs/roadmap/federated_research_discovery_adoption.md`.
+
+    A provider that cannot answer a given query (rate-limited, unavailable,
+    or -- as with Crossref's DOI-only lookup today -- structurally
+    unsupported for a free-text query) is reported as an explicit, labeled
+    provider status, never silently dropped from the result. Coverage must
+    never be inferred from the presence of results.
+    """
+
+    try:
+        broker_query = DiscoveryQuery(
+            text=query,
+            year_from=year_from,
+            year_to=year_to,
+            limit_per_provider=limit,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    registry = _federated_discovery_registry(openalex_api_key=openalex_api_key)
+    try:
+        provider_names = _parse_federated_providers(providers)
+        recorder = FederatedSearchLedger(ledger_root)
+        service = registry.build_recorded_service(recorder, provider_names)
+    except (KeyError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    console.print(
+        "[yellow]Network access:[/yellow] querying configured federated discovery "
+        "providers over HTTPS."
+    )
+    execution = service.search(broker_query, initiated_by=initiated_by)
+
+    _print_federated_coverage(execution.coverage, search_run_id=execution.record.search_run_id)
+
+    if execution.result.candidates:
+        table = Table(title="Deduplicated candidates (exact DOI)")
+        table.add_column("Title")
+        table.add_column("Year")
+        table.add_column("DOI")
+        table.add_column("Providers")
+        for candidate in execution.result.candidates:
+            providers_seen = ", ".join(
+                sorted({observation.provider for observation in candidate.observations})
+            )
+            table.add_row(
+                escape(candidate.title),
+                str(candidate.publication_year) if candidate.publication_year else "",
+                escape(candidate.doi or ""),
+                providers_seen,
+            )
+        console.print(table)
+
+    console.print(
+        "[bold]Discovery only -- these are not Evidence Records and were not acquired. "
+        "Run the same PMC-scoped candidate/acquisition commands for anything meant to "
+        "enter the corpus.[/bold]"
+    )
+
+
+@app.command("federated-coverage-report")
+def federated_coverage_report(
+    search_run_id: FederatedSearchRunIdArgument,
+    ledger_root: FederatedLedgerRootOption,
+) -> None:
+    """Print the persisted coverage facts for one federated search run (FRD-6).
+
+    Lets a caller (a person, or `knowledge-engine-web`/`knowledge-engine-ai`
+    once they read this ledger) re-fetch a run's coverage deterministically
+    after the fact, rather than trusting whatever `federated-discover`
+    printed at search time -- the reproducibility guarantee
+    `FederatedDiscoveryService`'s own docstring names explicitly.
+    """
+
+    recorder = FederatedSearchLedger(ledger_root)
+    try:
+        coverage = recorder.coverage_report(search_run_id)
+    except FileNotFoundError:
+        console.print(f"[red]No federated search run found:[/red] {escape(search_run_id)}")
+        raise typer.Exit(1) from None
+    except ValueError as exc:
+        console.print(f"[red]Malformed federated search-run record:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    _print_federated_coverage(coverage, search_run_id=coverage.search_run_id)
+
+
+def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: str) -> None:
+    providers_completed = set(coverage.providers_completed)
+    providers_failed = set(coverage.providers_failed)
+
+    completeness_color = {
+        "complete": "green",
+        "partial": "yellow",
+        "failed": "red",
+    }.get(coverage.completeness, "white")
+
+    console.print(f"[bold]Search run:[/bold] {search_run_id}")
+    console.print(
+        f"[bold]Coverage:[/bold] "
+        f"[{completeness_color}]{coverage.completeness}[/{completeness_color}] "
+        f"({coverage.candidate_count} deduplicated candidate(s))"
+    )
+    table = Table(title="Provider coverage")
+    table.add_column("Provider")
+    table.add_column("Status")
+    for provider in coverage.providers_requested:
+        if provider in providers_completed:
+            status = "[green]completed[/green]"
+        elif provider in providers_failed:
+            status = "[red]failed/unavailable[/red]"
+        else:
+            status = "[yellow]not attempted[/yellow]"
+        table.add_row(provider, status)
+    console.print(table)
