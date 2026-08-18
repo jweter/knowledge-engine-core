@@ -569,3 +569,54 @@ net-new papers accepted or imported this cycle; corpus remains at 953,
 `next_retstart: 3650` regardless. Google Drive corpus-library backup
 (`docs/corpus_library_drive_backup.md`) was skipped this cycle since
 nothing was imported -- there is nothing new to push.
+
+The `retstart=3650` cycle (2026-08-18) discovered 50 candidates at the
+persisted offset, deterministically accepted 24, 0 already in the
+rejected-PMID ledger (the ledger only tracks rejections, not prior
+acceptances, so it could not have caught these), 24 written to
+`ready_for_scope_review`. The manual scope screen this project has
+always required found the pagination-drift failure mode the
+`retstart=3550`/`retstart=3600` cycles documented, still present and,
+by proportion, worse: cross-checking every accepted PMID against
+`sources.csv` found 17 of the 24 (71%) were exact-PMID duplicates
+already present in the corpus from earlier batches (`inclusion_status=
+included`, `access_date=2026-07-25`) -- PubMed's `sort=pub_date`
+ordering again shifting already-seen records to a new page under
+`retstart=3650`. Of the remaining 7 genuinely new PMIDs, all 7 were
+independently off-target on title/abstract review despite deterministic
+adjudication accepting them: two case reports (a Klebsiella liver
+abscess and a suspected antiphospholipid-syndrome limb-ischemia case
+were among the 17 duplicates already covered above; the 7 new
+exclusions here were a gastric-microbiome characterization study, a
+diabetes-management online-information-seeking scoping review, a
+hemodialysis-frailty latent-class analysis, a diabetic-foot-ulcer
+amputation survival analysis, a Type 1 diabetes-specific
+thymic-bioelectronic-stimulation study, a ketone-bodies-in-kidney-
+disease mechanism review, and a spine-surgery wound-healing
+visceral-fat-ratio prediction study -- none named a therapeutic
+intervention for obesity/T2D/metabolic syndrome with a body-weight,
+glycemic, or metabolic-marker outcome in scope). All 24 recorded in
+`rejected_candidates.csv` with PMID-level provenance (17
+`duplicate_or_already_included`, 2 `mechanism_only_primary_research`, 2
+`no_intervention_named`, 1 `off_target_primary_disease`, 1
+`type1_diabetes_specific`, 1 `diagnostic_or_measurement_only`). Zero
+net-new papers accepted or imported this cycle; corpus remains at 953,
+47 below the 1,000-paper cap. `discovery_state.json` advanced to
+`next_retstart: 3700` regardless. Google Drive corpus-library backup was
+skipped this cycle since nothing was imported.
+
+**Open observation (not acted on this cycle):** several of the 17
+duplicate PMIDs this cycle found already `included` -- the same
+Klebsiella liver-abscess case report, the antiphospholipid-syndrome
+limb-ischemia case report, the two DPP-4-inhibitor-vs-shoulder-surgery
+outcome studies, the ACT-for-diabetes conceptual framework, the
+PCOS adiposity-index diagnostic study, and the DPP-4-inhibitor
+molecular-docking review -- would likely have failed this same manual
+scope screen had they been reviewed today (case report, no in-scope
+outcome, diagnostic-only, or mechanism-only). They were accepted in an
+earlier batch under looser review pressure or an earlier ruleset
+version. This cycle's mandate is corpus growth, not retroactive removal
+of already-included evidence, so nothing was changed; flagging this for
+the project owner's awareness in case a future dedicated review pass
+(similar to the `retstart=3000`/`retstart=3250` correction batches
+described above) is warranted.

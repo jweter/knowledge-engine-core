@@ -1,7 +1,7 @@
 {
-  "cycles_run": 2,
+  "cycles_run": 3,
   "limit": 50,
-  "next_retstart": 3650,
+  "next_retstart": 3700,
   "query": "(obesity OR overweight OR \"type 2 diabetes\" OR \"metabolic syndrome\") AND (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR liraglutide OR tirzepatide OR metformin OR \"SGLT2 inhibitor\") AND pubmed pmc open access[filter]",
-  "updated_at": "2026-08-10T06:27:17+00:00"
+  "updated_at": "2026-08-18T01:05:53+00:00"
 }
