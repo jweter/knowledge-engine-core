@@ -301,4 +301,10 @@ def test_production_registry_wires_every_transport_backed_provider() -> None:
         openalex_api_key=None, semantic_scholar_api_key=None
     )
 
-    assert registry.provider_names == ("pubmed", "crossref", "openalex", "semantic_scholar")
+    assert registry.provider_names == (
+        "pubmed",
+        "crossref",
+        "openalex",
+        "arxiv",
+        "semantic_scholar",
+    )

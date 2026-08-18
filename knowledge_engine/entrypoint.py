@@ -16,6 +16,8 @@ from rich.markup import escape
 from rich.table import Table
 from sqlalchemy.exc import OperationalError
 
+from knowledge_engine.arxiv_http import UrllibArxivTransport
+from knowledge_engine.arxiv_provider import ArxivProvider
 from knowledge_engine.candidate_review import (
     CandidateReviewError,
     prepare_candidate_review,
@@ -5230,21 +5232,20 @@ def fused_search(
 def _federated_discovery_registry(
     *, openalex_api_key: str | None, semantic_scholar_api_key: str | None = None
 ) -> DiscoveryProviderRegistry:
-    """Compose the production federated-discovery providers (FRD-1/FRD-2/FRD-3/FRD-6).
+    """Compose the production federated-discovery providers (FRD-1 through FRD-4/FRD-6).
 
     Reuses this project's existing, already-battle-tested PubMed and Crossref
     services (`_pubmed_discovery_service`/`_crossref_provider`) behind their
     FRD adapters rather than building new transports for hosts this project
-    already talks to. OpenAlex and Semantic Scholar are the two genuinely new
-    providers wired here. OpenAlex is optional and reports itself `disabled`
-    (not an error) when no API key is configured, matching `OpenAlexProvider`'s
-    own graceful-degradation contract. Semantic Scholar's public Academic Graph
-    access works without any key by design (`SemanticScholarProvider`'s own
-    contract) -- an optional key only raises its rate limit, sent as an
-    `x-api-key` header, never a hard requirement to search. arXiv is FRD-4 and
-    is not wired here yet -- it currently has only a fake-transport unit test,
-    no concrete HTTPS transport, unlike PubMed/Crossref/OpenAlex/Semantic
-    Scholar above.
+    already talks to. OpenAlex, Semantic Scholar, and arXiv are the three
+    genuinely new providers wired here. OpenAlex is optional and reports
+    itself `disabled` (not an error) when no API key is configured, matching
+    `OpenAlexProvider`'s own graceful-degradation contract. Semantic Scholar's
+    public Academic Graph access works without any key by design
+    (`SemanticScholarProvider`'s own contract) -- an optional key only raises
+    its rate limit, sent as an `x-api-key` header, never a hard requirement
+    to search. arXiv (FRD-4) is fully public and keyless -- no credential
+    parameter exists for it, matching `ArxivProvider`'s own contract.
     """
 
     providers: list[DiscoveryProvider] = [
@@ -5254,6 +5255,7 @@ def _federated_discovery_registry(
         SemanticScholarProvider(
             transport=UrllibSemanticScholarTransport(), api_key=semantic_scholar_api_key
         ),
+        ArxivProvider(transport=UrllibArxivTransport()),
     ]
     return DiscoveryProviderRegistry(providers)
 
@@ -5283,12 +5285,12 @@ def federated_discover(
     """Run one federated discovery search and durably persist its coverage (FRD-6).
 
     Fans one query out across every configured provider (PubMed, Crossref,
-    OpenAlex, and Semantic Scholar today -- see
+    OpenAlex, Semantic Scholar, and arXiv today -- see
     `_federated_discovery_registry`), deduplicates candidates by exact DOI,
     and -- critically -- persists the run to `--ledger-root` *before*
     returning it, so coverage can always be re-fetched later via
     `federated-coverage-report` rather than trusted from memory. This is the
-    first CLI surface for the FRD-1/FRD-2/FRD-3/FRD-6 federated-discovery
+    first CLI surface for the FRD-1 through FRD-4/FRD-6 federated-discovery
     modules (`discovery_broker.py`, `federated_discovery_service.py`,
     `federated_search_ledger.py`, the provider adapters); until this command
     existed, that code was built and unit-tested but unreachable from outside

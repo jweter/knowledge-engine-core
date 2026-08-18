@@ -40,6 +40,27 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Wired arXiv into `ke federated-discover` (FRD-4), the same "built but
+  unreachable" gap OpenAlex and Semantic Scholar had.** `ArxivProvider`
+  existed with explicit preprint/version semantics (`preprint_version`, a
+  version-qualified `canonical_id` like `arxiv:2301.12345v2` so a later
+  version is a distinct observation rather than a silent overwrite) but only
+  a fake-transport unit test. New `knowledge_engine/arxiv_http.py`
+  (`UrllibArxivTransport`, host-allowlisted to `export.arxiv.org`) is its
+  first concrete HTTPS transport, following the exact pattern
+  `openalex_http.py`/`semantic_scholar_http.py` established. arXiv is fully
+  public and keyless -- no credential parameter exists for it. `ke
+  federated-discover` now searches all 5 named FRD providers live (PubMed,
+  Crossref, OpenAlex, Semantic Scholar, arXiv). Live-verified against the
+  real API: a real query returned 5 real candidates
+  (`completeness: complete`), and a broader 5-provider run showed `arxiv`
+  completing alongside a real `pubmed` success and real
+  `crossref`/`semantic_scholar` degraded conditions in the same run. New
+  `tests/test_arxiv_http.py` and an updated wiring-regression test proving
+  the production registry factory composes all five transport-backed
+  providers. See `docs/roadmap/federated_research_discovery_adoption.md`'s
+  updated FRD-4 status.
+
 - **Wired Semantic Scholar into `ke federated-discover` (FRD-3), the same
   "built but unreachable" gap OpenAlex had.** `SemanticScholarProvider`
   existed with only a fake-transport unit test. New
