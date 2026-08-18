@@ -1,0 +1,89 @@
+schema_version: 1
+project: knowledge-engine-core
+updated_at: "2026-08-18T21:55:00Z"
+status_source: "Verified repository state plus docs/roadmap.md; this file is a continuity cache and never overrides higher-authority evidence (code, CI, live PR state, docs/roadmap.md)."
+
+product:
+  primary_surface: "CLI (`ke`) -- the only supported interface; no HTTP API, no importable knowledge_engine package for other processes"
+  role_in_family: "hub of the three-repository Knowledge Engine family (core, web, ai)"
+  mission: "Open scientific knowledge platform: reproducible ingestion, source-linked evidence, honest coverage of what was and was not searched"
+
+current_milestone:
+  name: "FRD (Federated Research Discovery) adoption sequence"
+  roadmap_file: "docs/roadmap/federated_research_discovery_adoption.md"
+  state: "active"
+  objective: "Fan discovery queries across scholarly providers (PubMed, Crossref, OpenAlex, Semantic Scholar, arXiv) behind one recorded, deduplicated, reproducible search run, and expose that provenance to knowledge-engine-web/knowledge-engine-ai."
+  sub_milestone_status:
+    FRD-1_contract: "implemented and reachable"
+    FRD-2_openalex: "search implemented and live-verified; work lookup/citation traversal not yet wired to a CLI surface"
+    FRD-3_semantic_scholar: "search implemented and live-verified; citation traversal not yet wired to a CLI surface"
+    FRD-4_arxiv: "implemented and live-verified"
+    FRD-5_dedup_disagreement: "implemented and reachable via `ke federated-discover --output`"
+    FRD-6_ledger_coverage: "implemented and reachable via `ke federated-discover` / `ke federated-coverage-report`"
+    FRD-7_citation_snowball: "orchestration and a durable ledger are both implemented (knowledge_engine/citation_snowball.py-family modules, merged), but there is still no `ke` CLI command exposing it -- the roadmap doc's own FRD-7 section has never been given a Status paragraph. This is the same 'built but unreachable' gap this project has repeatedly found and fixed for other providers."
+    FRD-8_mcp_facade: "deliberately deferred; not started"
+
+automation_contract:
+  schedule_role: "repository participant in an hourly portfolio-development loop (owner-managed; not created by this session)"
+  new_roadmap_pr_budget_per_run: 1
+  query_live_github_state_every_run: true
+  newly_opened_pr_requires_fresh_ci_before_merge: true
+  draft_prs: "never -- explicitly rejected by project history; a PR is either not yet opened or opened ready for review"
+  merge_method: "squash"
+  required_pr_workflows:
+    - name: "Quality"
+      file: ".github/workflows/quality.yml"
+      note: "ruff format --check, ruff check, mypy, pytest"
+    - name: "Security - Bandit"
+      file: ".github/workflows/security-bandit.yml"
+    - name: "Security - pip-audit"
+      file: ".github/workflows/security-pip-audit.yml"
+  conditionally_required_pr_workflows:
+    - name: "M14 Mass Discovery"
+      file: ".github/workflows/m14-mass-discovery.yml"
+      note: "path-filtered to pubmed_batch_discovery.py, pubmed_discovery.py, ncbi_http.py, and its own workflow file -- absent on most PRs, which is not a failure"
+  advisory_review_unavailable_is_not_failure: true
+  advisory_review_unavailable_example: "chatgpt-codex-connector[bot] posting a Codex-usage-limit notice is not a review finding"
+
+verified_repository_state:
+  checked_at: "2026-08-18T21:55:00Z"
+  note: "Live PR/check/issue state is intentionally not cached as authoritative counts here. Scheduled runs must query GitHub directly before acting."
+  open_prs: 0
+  corpus:
+    name: "glp1_weight_loss"
+    path: "data/corpora/glp1_weight_loss/"
+    paper_count: 953
+    hard_cap: 1000
+    stop_threshold: 990
+    per_cycle_accept_cap: 10
+  ci_workflows:
+    - ".github/workflows/quality.yml"
+    - ".github/workflows/security-bandit.yml"
+    - ".github/workflows/security-pip-audit.yml"
+    - ".github/workflows/m14-mass-discovery.yml"
+  existing_scheduled_routines_note: "These are content-pipeline Routines, separate from any PR-triage/dev-loop automation. They are not managed by this document."
+  existing_scheduled_routines:
+    - name: "GLP-1 Corpus Growth Cycle"
+      cadence: "weekly, Monday 06:00 UTC"
+    - name: "Evidence Extraction & Auto-Classification Backlog"
+      cadence: "daily 09:00 UTC"
+    - name: "Web Alpha Snapshot Refresh"
+      cadence: "weekly, Wednesday 07:00 UTC"
+      note: "also touches knowledge-engine-web"
+    - name: "Knowledge Engine: scheduled discovery cycle"
+      cadence: "daily 06:30 UTC"
+      note: "pushes to bot/discovery-cycle, opens no PR by design"
+
+next_continuation:
+  priority: "P5-highest-value-authorized-roadmap"
+  action: "Wire FRD-7's existing citation-snowball orchestration/ledger modules into a `ke` CLI command, the same pattern already used for federated-discover. Update docs/roadmap/federated_research_discovery_adoption.md's FRD-7 section with a Status paragraph once done."
+  selection_rule: "Before beginning roadmap work, query live PR state. Handle failed, green, blocked, conflicted, or pending existing work according to docs/agent-development-policy.md."
+
+human_decision_required: null
+
+maintenance_contract:
+  verify_every_scheduled_run: true
+  update_when_project_reality_changes: true
+  update_in_same_pr_as_relevant_change: true
+  stale_status_is_a_defect: true
+  timestamp_age_alone_requires_noop_pr: false
