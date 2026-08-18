@@ -1,0 +1,899 @@
+{
+  "already_in_rejected_ledger": 0,
+  "candidates_discovered": 50,
+  "cycle_number": 3,
+  "deterministically_accepted": 24,
+  "held_for_manual_review": 26,
+  "next_retstart": 3700,
+  "query": "(obesity OR overweight OR \"type 2 diabetes\" OR \"metabolic syndrome\") AND (treatment OR therapy OR intervention OR pharmacotherapy OR semaglutide OR liraglutide OR tirzepatide OR metformin OR \"SGLT2 inhibitor\") AND pubmed pmc open access[filter]",
+  "ready_for_scope_review": [
+    {
+      "abstract": "Type 2 diabetes mellitus is associated with impaired innate immunity and increased susceptibility to invasive infections, which may occasionally represent the first clinical manifestation of underlying metabolic disease. Pyogenic liver abscess (PLA), particularly due to Klebsiella pneumoniae, has a well-established association with diabetes and may unmask previously undiagnosed hyperglycemia. We report the case of a 40-year-old male patient with no known past medical history who presented with four days of fever, lethargy, and vomiting. On admission, he was febrile to 39.4\u00b0C and tachycardic, with laboratory evidence of leukocytosis. Initial evaluation revealed marked hyperglycemia with glucose levels in the 400s and an HbA1c of 13.1%, consistent with previously undiagnosed type 2 diabetes mellitus. Computed tomography (CT) of the abdomen and pelvis demonstrated a necrotic mass in the right hepatic lobe, along with a smaller adjacent lesion, concerning a PLA. Blood cultures grew Klebsiella pneumoniae in multiple sets, confirming bacteremia. The patient underwent CT-guided aspiration and drainage of the hepatic abscess with placement of a pigtail catheter, yielding purulent material that also grew Klebsiella pneumoniae. His hospital course was complicated by sepsis and acute hypoxic respiratory failure requiring intensive care unit admission. He was treated with intravenous ceftriaxone and metronidazole, resulting in gradual clinical improvement and clearance of bacteremia. Concurrently, insulin therapy was initiated, and the patient received diabetes education for the management of newly diagnosed diabetes. This case highlights invasive infection as a potential initial presentation of undiagnosed diabetes mellitus. Hyperglycemia impairs neutrophil function and host defense, predisposing patients to severe infections such as Klebsiella liver abscesses. Recognition of this relationship is essential, as identification and management of underlying diabetes are critical to optimizing outcomes and preventing recurrence. This case underscores the importance of screening for diabetes in patients presenting with severe or atypical infections and illustrates how metabolic disease may first manifest through life-threatening infectious complications.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Jewairia Alajab",
+        "Namrata Vedagarbha",
+        "Mia K Sooch",
+        "Moayyed Hussein",
+        "Abdelwahab Ahmed",
+        "Mustafa Marzoug"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.7759/cureus.110957",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13270909.1/PMC13270909.1.pdf?md5=5bb929e356687571da1ce5a8ad90a90f",
+      "pmcid": "PMC13270909",
+      "pmid": "42312067",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Klebsiella Pyogenic Liver Abscess as the Initial Presentation of Undiagnosed Type 2 Diabetes Mellitus: A Case Report and Review.",
+      "unresolved_ambiguities": [],
+      "venue": "Cureus"
+    },
+    {
+      "abstract": "OBJECTIVE: As patient response to obesity medication can vary, it is crucial to identify both those likely and unlikely to respond to treatment. This post hoc analysis aimed to examine predictive characteristics in patients who achieved weight-related targets with fixed-dose, extended-release combination of naltrexone and bupropion (NB-ER). METHODS: This pooled analysis included patients from three Phase 3, placebo-controlled COR trials (NCT00532779, NCT00567255, NCT00456521). The impact of baseline characteristics in predicting changes in weight-related anthropometric targets at 56 weeks in those who completed treatment and were \u2265 90% adherent to NB-ER was evaluated with univariable and multivariable analyses. RESULTS: Of the 1692 patients analyzed, similar proportions of patients receiving NB-ER versus placebo were female and White. Among patients treated with NB-ER with \u2265 90% adherence, 73.2% achieved \u2265 5% body weight (BW) reduction, 47.6% achieved \u2265 10% BW reduction, 27.8% achieved \u2265 15% BW reduction, 33.7% achieved target body mass index, and 23.7% achieved target waist circumference thresholds. Among the baseline characteristics assessed, female sex and White race most consistently predicted the likelihood of achieving the target outcomes. CONCLUSION: Adherence to NB-ER was associated with achieving anthropometric targets; however, the ability to predict a successful response in advance of NB-ER treatment is still limited.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Donna H Ryan",
+        "Angela Fitch",
+        "Robert F Kushner",
+        "Jena S Tronieri",
+        "Christopher D Still",
+        "Caroline M Apovian"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1002/osp4.70159",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13270069.1/PMC13270069.1.pdf?md5=4f357b7d9efc0cc114429c2ce5d768e8",
+      "pmcid": "PMC13270069",
+      "pmid": "42311561",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Identifying Predictors of Weight-Related Outcomes With Fixed-Dose, Extended-Release Naltrexone and Bupropion Among Treatment-Adherent Patients in Phase 3 COR Trials: A Treatment Target Analysis.",
+      "unresolved_ambiguities": [],
+      "venue": "Obesity science & practice"
+    },
+    {
+      "abstract": "Glucagon-like peptide-1 receptor agonists (GLP-1RAs) are widely used for obesity and type 2 diabetes, yet substantial variability in weight-loss response remains poorly understood. We conducted a retrospective cohort study using de-identified electronic health records and performed 1:1 propensity matching on age, sex, type 2 diabetes status, baseline BMI and weight, index year, and follow-up duration. The matched cohorts included 10,339 tirzepatide-treated and 10,339 semaglutide-treated patients. Patients were categorized by maximum weight loss over 2 years into five response groups. Adverse events were identified through AI-enabled curation of clinical notes. Weight-loss trajectories, demographic patterns, adverse-event profiles, and pre- to posttreatment disease-prevalence changes were compared across drugs. Patients treated with tirzepatide lost more weight than those treated with semaglutide (mean reduction, 14.7 vs. 10.8%; P < 0.001). High-response rates (\u226515% weight loss in year 1) were nearly doubled with tirzepatide (42.6 vs. 21.6%; P < 0.001), accompanied by faster monthly weight-loss velocity (2.54 vs. 2.18%). AI-enabled curation showed that tirzepatide was associated with lower prevalence of gastrointestinal and systemic adverse events. For both tirzepatide and semaglutide, women were more represented among high responders than the minimal weight-loss group (<5% weight loss) and White patients were more represented among high responders, whereas Black and Hispanic patients were more represented among the minimal weight-loss group. In this large, propensity-matched real-world cohort, tirzepatide was associated with greater and faster weight loss than semaglutide, with marked demographic variations in outcomes, highlighting the need for next-generation obesity clinical trials and routine care decisions to incorporate the growing body of evidence from widespread use of incretin therapies across diverse patient populations.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "A J Venkatakrishnan",
+        "Karthik Murugadoss",
+        "Venky Soundararajan"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1093/pnasnexus/pgag171",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13270487.1/PMC13270487.1.pdf?md5=69fc4c3a552039ff28549674cf76fff9",
+      "pmcid": "PMC13270487",
+      "pmid": "42311474",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Weight-loss dynamics with tirzepatide versus semaglutide.",
+      "unresolved_ambiguities": [],
+      "venue": "PNAS nexus"
+    },
+    {
+      "abstract": "Long considered a sterile environment due to its acidity, the stomach is increasingly recognized as a low-biomass but structured microbial ecosystem. Advances in culture-independent sequencing reveal a diverse gastric microbiome shaped by acid secretion, mucosal physiology, diet, medication use, and Helicobacter pylori colonization, although distinguishing metabolically active residents from transient oropharyngeal or dietary microorganisms remains a significant challenge. In healthy individuals, gastric mucosal communities primarily consist of Bacillota, Pseudomonadota, Actinomycetota, Bacteroidota, and Fusobacteriota, with genera such as Streptococcus, Prevotella, Rothia, and Veillonella consistently detected. Obesity is associated with altered gastric physiology, including higher pH, delayed emptying, and increased bile reflux, alongside distinct microbial signatures. Helicobacter pylori remains a dominant ecological factor modifying acidity, inflammation, and niche structure, while proton-pump inhibitors significantly \"oralize\" the gastric microbiome. Although animal models suggest that bariatric surgery can remodel the gastric microbiome, no human study has yet characterized gastric microbial changes following sleeve gastrectomy, gastric bypass, or endoscopic bariatric therapies, leaving the translational relevance of preclinical findings uncertain. Given the central role of the stomach in nutrient sensing and metabolic hormone secretion, its microbial ecosystem warrants dedicated investigation.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Maxime Amoyel",
+        "Andr\u00e9 Bado",
+        "Tigran Poghosyan",
+        "Tiphaine Le Roy",
+        "Maude Le Gall"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1038/s41522-026-01058-9",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13443172.1/PMC13443172.1.pdf?md5=41749f9967e6ac1a2b4b59a45b591220",
+      "pmcid": "PMC13443172",
+      "pmid": "42303620",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "The gastric ecosystem: assessing resident microbiome vs. transient microorganisms in obesity and following bariatric interventions.",
+      "unresolved_ambiguities": [],
+      "venue": "NPJ biofilms and microbiomes"
+    },
+    {
+      "abstract": "BACKGROUND: Online health information seeking (OHIS) has become a central component of chronic disease management within an increasingly interactive, algorithm-mediated digital ecosystem. For individuals with diabetes, ongoing self-management demands create sustained needs for accessible, actionable health information. Although prior reviews have described general information-seeking behaviors, few have integrated technological evolution, multilevel determinants, and equity considerations specific to diabetes. OBJECTIVE: This scoping review maps patterns of OHIS among individuals with diabetes, identifies the types of information sought, synthesizes the multilevel determinants of OHIS, and explores temporal shifts across major phases of digital health development. METHODS: This scoping review was conducted in accordance with the Preferred Reporting Items for Systematic Reviews and Meta-Analyses extension for Scoping Reviews (PRISMA-ScR) and Preferred Reporting Items for Systematic Reviews and Meta-Analyses literature search extension (PRISMA-S) reporting guidelines and was guided by the Sample, Phenomenon of Interest, Design, Evaluation, Research type framework. Five electronic databases (PubMed, Scopus, Web of Science, CINAHL, and Embase) were systematically searched for English-language empirical studies from inception to May 4, 2026. Eligible studies included empirical research investigating OHIS behaviors among individuals with type 1 diabetes, type 2 diabetes, or gestational diabetes. Data were extracted using a standardized charting form and synthesized descriptively. Determinants were organized according to the Social Ecological Model, and qualitative findings were analyzed using content analysis. Studies were stratified into 3 periods reflecting shifts in digital infrastructure: early web environments (2002-2010), expansion of social media and mobile technologies (2011-2018), and integrated digital and artificial intelligence (AI)-enabled ecosystems (2019-2025). RESULTS: Eighty-one studies from 32 countries met the inclusion criteria. The use of digital sources diversified over time. Early studies emphasized search engines and institutional websites, whereas later studies increasingly reported engagement with social media platforms and online communities. Mobile health apps and generative AI chatbots appeared in recent publications, although evidence on AI use remained limited. The most frequently sought content included self-management and lifestyle guidance, general diabetes knowledge, and treatment-related information. Determinants of OHIS operated across multiple levels. At the individual level, younger age, greater educational attainment, higher income, and better eHealth literacy were associated with increased engagement, while psychological factors such as perceived knowledge gaps and a desire for autonomy motivated searching. Interpersonal influences included peer support and clinician communication. Organizational and environmental factors encompassed health care access, digital infrastructure, information quality, and platform characteristics. Persistent disparities were observed among older adults and socioeconomically disadvantaged groups. CONCLUSIONS: This review synthesizes OHIS among individuals with diabetes through the lenses of technological evolution, multilevel determinants, and digital health equity. Unlike previous reviews that focused on specific platforms or general information-seeking behaviors, it maps the transition from web-based resources to social media and emerging AI-enabled ecosystems. This temporally informed synthesis advances understanding of digital engagement in diabetes self-management, identifies key evidence gaps, and informs clinical, organizational, and policy strategies to promote equitable access to trustworthy online health information.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Pin-Heng Tiao",
+        "Hsun-Yu Chan",
+        "Yen-Ming Huang"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.2196/82081",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13320039.1/PMC13320039.1.pdf?md5=ff10ab1b71861d5b5ea5ba410377018b",
+      "pmcid": "PMC13320039",
+      "pmid": "42303245",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Navigating Diabetes Management in the Digital Era: Scoping Review of Online Health Information-Seeking Behavior.",
+      "unresolved_ambiguities": [],
+      "venue": "Journal of medical Internet research"
+    },
+    {
+      "abstract": "BACKGROUND: Elderly patients undergoing maintenance hemodialysis (MHD) exhibit an elevated risk of frailty, which is strongly associated with adverse clinical outcomes, including increased mortality. However, current frailty assessment tools often overlook intrinsic patient heterogeneity, limiting their clinical utility. This study employs latent class analysis to identify distinct frailty profiles in elderly MHD patients, aiming to explore heterogeneity in frailty phenotypes and identify associated factors, thereby informing the development of targeted interventions. METHODS: Data were collected from 227 elderly patients receiving MHD in Guangdong Province, China, from January to April 2023. Participants were assessed using a general information questionnaire and the Fried scale. Latent class analysis was applied to identify subgroups based on frailty characteristics, and Firth logistic regression was used to examine factors associated with frailty class membership. RESULTS: Two distinct frailty subgroups were identified: Class 1 (low physical activity-high frailty group, 55.1%) and Class 2 (high physical activity-low frailty group, 44.9%). Firth logistic regression demonstrated that combined hypertension (odds ratio [OR] = 0.023; 95% confidence interval [CI]: 0.002-0.119; P < 0.001), older age (OR = 0.746; 95% CI: 0.618-0.840; P < 0.001), longer dialysis duration (OR = 0.935; 95% CI: 0.874-0.976; P = 0.001), lower serum albumin concentration (OR = 0.884; 95% CI: 0.775-0.973; P = 0.010), and lower serum creatinine concentration (OR = 0.996; 95% CI: 0.992-0.999; P = 0.017) were significantly associated with belonging to the high-frailty group. Overweight showed a trend toward a protective association but did not reach statistical significance (OR = 5.874; 95% CI: 0.900-55.438; P = 0.065). CONCLUSIONS: This study highlights the heterogeneity of frailty among elderly maintenance hemodialysis patients. Combined hypertension was strongly and inversely associated with the low-frailty group, indicating its predominance in the high-frailty phenotype. Older age, longer dialysis duration, lower serum albumin levels, and lower serum creatinine levels were significantly associated with the high-frailty phenotype. These findings underscore the importance of personalized frailty assessment and interventions, such as blood pressure management, nutritional support, and tailored exercise programs, to improve health outcomes in this vulnerable population. Future multicenter longitudinal studies are warranted to validate these frailty phenotypes and evaluate their predictive value for clinical outcomes.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Fangping Chen",
+        "Xingyue Guo",
+        "Dingyuan Wei",
+        "Mengxing Wang",
+        "Jiayan Wang",
+        "Didi Xu",
+        "Luyang Jin",
+        "Surui Liang",
+        "Siyi Li",
+        "Xuemei Xian"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1371/journal.pone.0351155",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13271483.1/PMC13271483.1.pdf?md5=b2491124cdf45f45894aebc80202708d",
+      "pmcid": "PMC13271483",
+      "pmid": "42302024",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Frailty in older maintenance hemodialysis patients: A latent class analysis revealing personalized management.",
+      "unresolved_ambiguities": [],
+      "venue": "PloS one"
+    },
+    {
+      "abstract": "BACKGROUND: Diabetic foot ulcer (DFU) is a severe complication of diabetes that often leads to amputation and high mortality, yet survival outcomes and risk factors after DFU-related amputation remain poorly understood particularly in Indonesia. This study aims to determine the incidence rate (IR), survival rate and to identify factors associated with the survival of amputation among patients having DFU in Indonesia. METHODS: This retrospective cohort study included Type 2 Diabetes Mellitus (T2DM) patients with DFU admitted to the Margono Hospital in Central Java Indonesia. The primary outcome of this study was the times since diagnosis of DFU to amputation. This study outcome was conducted for 5-year survival (2019-2024), IR and survival rate of amputation. Multiple cox regression was performed to investigate factors associated with survival, quantified by adjusted hazard ratios (AHR) and their 95% CIs. RESULTS: This cohort comprised 878 DFU patients and followed up for 1,350.55 person-year within the study period. The overall amputation IR was 14.22 per 100 person-year (95% CI: 12.34-16.38) with the highest IR/100 population was 85.68 (95% CI: 73.49-99.90) occurred in the gangrene group. The overall survival rate within 1-year, 3-year and 5-year was 76.14% (95%CI: 72.82-79.11), 72.77% (95%CI: 69.08-76.10) and 71.18% (95% CI: 67.22-74.75) respectively with the highest five-year survival rates were observed among patients with cardiovascular disease (94.37%, 95% CI: 85.17-97.93). Factors that were associated with survival included patients who receiving insulin therapy (AHR: 5.51; 95% CI: 3.73-8.14), residing in rural areas (AHR: 4.14; 95% CI: 1.70-10.12), patients without neuropathy (AHR: 2.40; 95% CI: 1.30-4.42), those with underweight or normal BMI (AHR: 2.04; 95% CI: 1.40-2.98), and those without hypertension (AHR: 1.52; 95% CI: 1.03-2.22). CONCLUSIONS: The study revealed that the rate of amputations was relatively high and highest survival rate was patients with cardiovascular disease. Receiving insulin therapy, staying in rural area, no-neuropathy, underweight and normal weight and no-hypertension showed more likely to amputation. Early detection of comorbidities is recommended to prevent amputation among patients with DFU.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Lianawati",
+        "Wongsa Laohasiriwong",
+        "Kyaw Min Htike",
+        "Kavin Thinkhamrop",
+        "Roshan Kumar Mahato"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1371/journal.pone.0343399",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13271469.1/PMC13271469.1.pdf?md5=446406ba6150e0f5bb0e00aa06ecfcff",
+      "pmcid": "PMC13271469",
+      "pmid": "42302016",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Survival analysis of time to amputation following diabetic foot ulcer diagnosis among Indonesians.",
+      "unresolved_ambiguities": [],
+      "venue": "PloS one"
+    },
+    {
+      "abstract": "Chronic kidney disease (CKD) is a common complication of type 2 diabetes, characterized by reduced kidney function and/or albuminuria, yet its progression varies widely among individuals. While sodium-glucose cotransporter-2 (SGLT2) inhibitors are known to protect against kidney decline, the molecular mechanisms underlying their renoprotective effects remain incompletely understood. Circulating small non-coding RNAs (sncRNAs), particularly microRNAs, have been linked to CKD but the contribution of other sncRNA classes is less explored. We profiled plasma sncRNAs in 263 participants with type 2 diabetes from the Hoorn DCS cohort without CKD at baseline, followed for \u223c9 years (n control = 122, n case = 141). sncRNA profiling was also performed before and after treatment of SGLT2 inhibitors in three trials (n = 65, total) to assess drug-induced molecular changes in the circulation. Eleven sncRNAs were nominally associated with incident CKD, most strongly SNORD12C and SNORD105B. In an independent SGLT2 inhibitor trial, exploratory analyses identified 34 sncRNAs that changed following treatment, including SNORD105B. Preliminary analyses linked these snoRNAs to co-regulated proteins, suggesting potential functional relevance. Our results identify snoRNAs, particularly SNORD105B, as potential novel markers of CKD risk and SGLT2 inhibitor response in type 2 diabetes, revealing an unexplored sncRNA axis and providing a foundation for future functional studies into their mechanistic role in CKD progression.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Juliette A de Klerk",
+        "Roderick C Slieker",
+        "Joline W J Beulens",
+        "Janneke H D Peerlings",
+        "Hailiang Mei",
+        "Petra J M Elders",
+        "Anton Jan van Zonneveld",
+        "Dani\u00ebl H van Raalte",
+        "Roel Bijkerk",
+        "Leen M 't Hart"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1016/j.omtn.2026.102947",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13223920.1/PMC13223920.1.pdf?md5=76dd5e5a157d7782f3eb6b6e4486efbb",
+      "pmcid": "PMC13223920",
+      "pmid": "42233107",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "sncRNA levels predict SNORD105B is a novel biomarker of chronic kidney disease risk and SGLT2 inhibitor response in type 2 diabetes.",
+      "unresolved_ambiguities": [],
+      "venue": "Molecular therapy. Nucleic acids"
+    },
+    {
+      "abstract": "BACKGROUND AND AIMS: Atrial fibrillation (AF) disease burden is increasing. Pharmacotherapy of cardio-renal-metabolic diseases may prevent incident AF. This meta-analysis estimates the effect of different pharmacotherapies on risk of incident AF across cardio-renal-metabolic diseases. METHODS: The Medline, Embase, and Cochrane Central databases were searched to 7 October 2025 for randomized clinical trials (RCTs) comparing the effect of a non-antiarrhythmic cardio-renal-metabolic medication with control or another agent for incident AF. Random-effects meta-analysis using the Mantel-Haenszel method, with between-study variance estimated using the DerSimonian-Laird method, was performed to synthesize risk ratios (RR) with 95% confidence intervals (CI). RESULTS: Two hundred and forty-nine RCTs involving 745 041 patients were included, of which 207 identified AF through adverse event reports, 161 were placebo-controlled, and 15 had AF as a pre-specified endpoint. In placebo-controlled trials, significant differences in incident AF were observed with treatment of heart failure with reduced ejection fraction with angiotensin-converting enzyme inhibitors and angiotensin receptor blockers (RR 0.69, 95% CI 0.60-0.80), mineralocorticoid receptor antagonists (RR 0.62, 95% CI 0.43-0.90), and sodium-glucose co-transporter 2 (SGLT2) inhibitors (RR 0.62, 95% CI 0.44-0.87); treatment of chronic kidney disease with SGLT2 inhibitors (RR 0.53, 95% CI 0.33-0.85); and treatment of obesity with glucagon-like peptide-1 receptor agonists (RR 0.79, 95% CI 0.63-0.99). However, the number of AF events per trial was low and none were adequately powered for incident AF. CONCLUSIONS: Prospective RCTs with AF as a pre-specified outcome should be integrated into the design of future trials of cardio-renal-metabolic medications to determine whether they reduce incident AF.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Keerthenan Raveendra",
+        "Ramesh Nadarajah",
+        "Harriet Larvin",
+        "Maryum Farooq",
+        "Mohammad Haris",
+        "Uther Cutting",
+        "Jing Kang",
+        "Chris Wilkinson",
+        "Mayank Dalakoti",
+        "Dipak Kotecha",
+        "Gregory Y H Lip",
+        "Giuseppe Boriani",
+        "Alan John Camm",
+        "Isabelle C Van Gelder",
+        "Jianhua Wu",
+        "Chris P Gale"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.1093/eurheartj/ehag021",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13268693.1/PMC13268693.1.pdf?md5=717b637fd9d1948273dba1153ab757fb",
+      "pmcid": "PMC13268693",
+      "pmid": "41603358",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Non-antiarrhythmic pharmacotherapy in cardio-renal-metabolic disease and incident atrial fibrillation: a trial meta-analysis.",
+      "unresolved_ambiguities": [],
+      "venue": "European heart journal"
+    },
+    {
+      "abstract": "A 61-year-old man with newly diagnosed type 2 diabetes (T2D), obesity by Asian-specific body mass index (BMI) criteria (28.8 kg/m\u00b2), dyslipidemia, and hypertension enrolled in a three-month intensive lifestyle intervention (ILI) at the Freedom from Diabetes Clinic, India. The ILI comprised a whole-food, plant-based, vegan diet, daily structured exercise (aerobic, resistance, and yoga), and stress reduction through meditation and journaling. At the four-month assessment following completion of the three-month ILI, body weight decreased from 79 kg to 68.6 kg, and glycated hemoglobin (HbA1c) fell from 10.7% to 5.7% without the use of glucose-lowering medication. The lipid profile improved markedly (low-density lipoprotein: 141 \u2192 107 mg/dL; triglycerides: 192 \u2192 81 mg/dL; and high-density lipoprotein: 41 \u2192 52 mg/dL). By eight months, the HbA1c level reached 5.5%, fulfilling the consensus criteria for T2D remission. The patient maintained remission for nine consecutive years, as confirmed annually by a 75 g oral glucose tolerance test (OGTT). The annual OGTT demonstrated normal glucose tolerance on all nine occasions. This case illustrates that sustained T2D remission and broad metabolic improvement are achievable through intensive lifestyle modifications alone, even in a patient aged 61 years at diagnosis. This reinforces the role of structured lifestyle interventions as a viable first-line strategy for newly diagnosed T2D.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Baby Sharma",
+        "Pramod Tripathi",
+        "Nidhi S Kadam",
+        "Malhar Ganla"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.7759/cureus.110884",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13372201.1/PMC13372201.1.pdf?md5=744f344f7310180e753326e51a7fb3e1",
+      "pmcid": "PMC13372201",
+      "pmid": "42460222",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Sustained Type 2 Diabetes Remission and Metabolic Health Through Intensive Lifestyle Intervention: A Case Report With a Nine-Year Follow-Up.",
+      "unresolved_ambiguities": [],
+      "venue": "Cureus"
+    },
+    {
+      "abstract": "Acute limb ischemia is a vascular emergency that requires prompt diagnosis and treatment to avoid permanent tissue loss and possible amputation. Recurrent arterial thrombosis in a relatively young patient, especially while on anticoagulation, should raise concern for an underlying hypercoagulable state. We present the case of a 40-year-old woman with type 2 diabetes mellitus, hyperlipidemia, and heavy tobacco use who developed acute right lower extremity ischemia after sitting with her legs crossed for several hours during an episode of severe vomiting and diarrhea. She underwent emergent thromboembolectomy and was discharged on apixaban and aspirin. About two weeks later, she returned with recurrent right lower extremity ischemia despite reported compliance with anticoagulation and was found to have multifocal arterial thrombosis requiring repeat thromboembolectomy and pedal arch angioplasty. Her postoperative leukocytosis was felt to be reactive and related to ischemia-reperfusion injury rather than infection. Because of recurrent arterial thrombosis despite apixaban therapy, further workup for antiphospholipid syndrome was initiated, and she was transitioned to heparin with recommendation for long-term warfarin therapy. This case highlights that mechanical compression may have contributed to the initial lower extremity ischemic event; however, the subsequent recurrent arterial thromboses, particularly at anatomically distinct sites despite direct oral anticoagulant (DOAC) therapy, were more concerning for an underlying systemic hypercoagulable state such as antiphospholipid syndrome in the setting of additional vascular risk factors.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Sara Almaradweh",
+        "Murali K Manikkavelu",
+        "Herbert Oye"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.7759/cureus.110899",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13372008.1/PMC13372008.1.pdf?md5=1cc73e4e2ba092acc7a3321fc2ac6919",
+      "pmcid": "PMC13372008",
+      "pmid": "42460214",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Recurrent Acute Limb Ischemia and Direct Oral Anticoagulant Failure: A Case of Suspected Antiphospholipid Syndrome Triggered by Mechanical Compression.",
+      "unresolved_ambiguities": [],
+      "venue": "Cureus"
+    },
+    {
+      "abstract": "BACKGROUND: Diabetes mellitus is an independent risk factor for complications following orthopedic shoulder procedures. Dipeptidyl peptidase-4 (DPP-4) inhibitors and glucagon-like peptide-1 (GLP-1) receptor agonists are effective agents that manage type 2 diabetes, but their differential effects on perioperative and long-term shoulder outcomes remain unclear. METHODS: We conducted a retrospective cohort study using the TriNetX Research Network, identifying adults (\u226518 years) with type 2 diabetes who underwent orthopedic shoulder procedures and were prescribed either a DPP-4 inhibitor or a GLP-1 receptor agonist. Propensity score matching was performed (1:1), adjusting for demographics, comorbidities, and procedure type, yielding 632 patients per cohort. Outcomes included rates of reoperation at one and two years postoperatively and postoperative opioid use. RESULTS: At one- and two-year follow-up, rates of reoperation were similar between cohorts. DPP-4 users had significantly higher early postoperative opioid use compared with GLP-1 users (RR: 1.754; 95% CI: 1.440-2.137; p < 0.001), whereas prolonged and chronic postoperative opioid use were similar between cohorts. CONCLUSION: In patients with type 2 diabetes undergoing orthopedic shoulder procedures, DPP-4 inhibitors and GLP-1 receptor agonists demonstrated comparable long-term surgical outcomes, including reoperation rates at one and two years postoperatively. However, early postoperative opioid use was significantly higher among DPP-4 users, while prolonged and chronic opioid utilization were similar between cohorts. These findings support the perioperative safety of both incretin-based therapies and suggest that GLP-1 receptor agonists may confer additional benefit through potential central pain-modulating effects that reduce early postoperative opioid requirements.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Ronak J Mahatme",
+        "Shawn A Moore",
+        "Anish Gangavaram",
+        "Nishanth Muthusamy",
+        "David L Bernholt",
+        "Brian M Grawe"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.7759/cureus.110874",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13370761.1/PMC13370761.1.pdf?md5=a9c0901266b5ae25fb05d6c6fceadb9d",
+      "pmcid": "PMC13370761",
+      "pmid": "42460175",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Dipeptidyl Peptidase-4 (DPP-4) Inhibitors Versus Glucagon-Like Peptide-1 (GLP-1) Receptor Agonists Following Orthopedic Shoulder Surgery: A Comparative Analysis.",
+      "unresolved_ambiguities": [],
+      "venue": "Cureus"
+    },
+    {
+      "abstract": "Background Diabetes mellitus increases the risk of postoperative complications following orthopedic shoulder surgery. Dipeptidyl peptidase-4 (DPP-4) inhibitors are widely prescribed for glycemic control in type 2 diabetes mellitus, yet their influence on perioperative and long-term postoperative outcomes remains unclear. Methods A retrospective cohort study was conducted using the TriNetX Research Network to identify adults (\u226518 years) with type 2 diabetes who underwent orthopedic shoulder procedures and were either prescribed or not prescribed a DPP-4 inhibitor. After 1:1 propensity score matching for demographics, comorbidities, and procedure type, 834 patients were included in each cohort. Outcomes included 30-day emergency department (ED) visits, one- and two-year reoperation rates, and postoperative opioid use. Results ED visits and reoperation rates at one and two years were similar between cohorts. DPP-4 inhibitor users demonstrated significantly lower rates of early postoperative opioid use compared with non-users (33.6% vs. 45.3%; RR: 0.741; 95% CI: 0.656-0.836; p < 0.001). No significant difference was observed in prolonged opioid use (21.5% vs. 21.2%; RR: 1.011; 95% CI: 0.841-1.216; p = 0.952). However, DPP-4 users had significantly higher rates of chronic postoperative opioid use (21.2% vs. 13.7%; RR: 1.553; 95% CI: 1.252-1.925; p < 0.001). Conclusion DPP-4 inhibitor exposure within six months prior to shoulder surgery was not associated with differences in long-term surgical outcomes or early emergency medical utilization among patients with type 2 diabetes. However, DPP-4 users demonstrated lower early but higher chronic postoperative opioid use, suggesting that incretin pathway modulation may have time-dependent effects on postoperative pain physiology. These findings suggest a potential link between metabolic therapy and postoperative pain adaptation and warrant further investigation into the underlying mechanisms.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Ronak J Mahatme",
+        "Shawn A Moore",
+        "Anish Gangavaram",
+        "Nishanth Muthusamy",
+        "Esha Reddy",
+        "David L Bernholt",
+        "Brian M Grawe"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.7759/cureus.110873",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13370762.1/PMC13370762.1.pdf?md5=55038dd8a6e8e75743d57d2be26ac35a",
+      "pmcid": "PMC13370762",
+      "pmid": "42460168",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Dipeptidyl Peptidase-4 (DPP-4) Inhibitors Are Associated With Reduced Early but Increased Chronic Postoperative Opioid Use After Shoulder Surgery.",
+      "unresolved_ambiguities": [],
+      "venue": "Cureus"
+    },
+    {
+      "abstract": "Self-care in type 2 diabetes mellitus (T2DM) remains suboptimal despite evidence for the effectiveness of Acceptance and Commitment Therapy (ACT) in chronic illness management. This conceptual paper integrates ACT-based psychological flexibility processes with Steps 1-4 of the Intervention Mapping framework to develop a brief, replicable group intervention for primary care. Acceptance, cognitive defusion, and values clarification are specified as modifiable determinants of barriers in self-monitoring, diet, exercise, and medication adherence, organized into performance-determinant matrices to guide method selection. Theory-based methods are operationalized through culturally adaptable metaphors and experiential exercises. This framework addresses methodological gaps in translating ACT to diabetes care, aligns with biopsychosocial models in health psychology, and offers a testable foundation for future randomized trials on multicultural efficacy.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Paula Helena Gomes de Moraes Ruiz",
+        "Luziane de F\u00e1tima Kirchner",
+        "Elisa Kern de Castro"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fpsyg.2026.1822037",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13310919.1/PMC13310919.1.pdf?md5=ce86e34d23e4a87243a6f6c7e9f4b00f",
+      "pmcid": "PMC13310919",
+      "pmid": "42376152",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Integrating Acceptance and Commitment Therapy with intervention mapping to enhance self-care in type 2 diabetes: a conceptual framework.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in psychology"
+    },
+    {
+      "abstract": "OBJECTIVE: To systematically evaluate the prevalence and influencing factors of vitamin D deficiency in women with polycystic ovary syndrome (PCOS), providing an evidence-based basis for vitamin D screening, nutritional intervention, and metabolic management in this population. Methods: Systematic searches were conducted in PubMed, Embase, Cochrane Library, Web of Science, and Scopus databases to identify studies on the prevalence and influencing factors of vitamin D deficiency in women with PCOS published from database inception until April 24, 2026. Two researchers independently performed literature screening, data extraction, and quality assessment. Meta-analysis was conducted using Stata 18.0 software. RESULTS: Thirty studies involving 4,773 women with PCOS were included, of whom 2,745 had vitamin D deficiency. Meta-analysis demonstrated a pooled prevalence of vitamin D deficiency of 58% in women with PCOS, with substantial heterogeneity among studies (I 2 = 97.06%, p < 0.001). Subgroup analysis indicated that the prevalence was higher in developing countries than in developed countries (65% vs. 46%) and higher in the Asian region than in the European region (67% vs. 48%). Although the difference in the BMI subgroup did not reach statistical significance, the obese subgroup exhibited a higher prevalence (68%) than the normal-weight subgroup (57%) and the overweight subgroup (55%). Meta-regression identified geographical region (\u03b2 = 0.123, 95% CI = 0.042-0.204, p = 0.004) and national development level (\u03b2 = 0.198, 95% CI = 0.057-0.340, p = 0.008) as the primary sources of heterogeneity. Sensitivity analysis and publication bias tests indicated that the results were stable, with no obvious publication bias. Influencing factors indicated that elevated BMI, increased WHR, insulin resistance, dyslipidemia, inflammatory status, hyperandrogenism, and relevant genetic polymorphisms may be associated with an increased risk of vitamin D deficiency, whereas higher HDL-C levels and regular outdoor exercise may exert protective effects. CONCLUSION: Women with PCOS demonstrate significantly higher prevalence of vitamin D deficiency, particularly prominent in populations from developing countries. Vitamin D deficiency may be closely associated with factors such as obesity, insulin resistance, chronic inflammation, and dyslipidemia. Clinical practice should prioritize screening 25(OH)D levels in women with PCOS. Combined with weight management, dietary optimization, outdoor activities, and necessary vitamin D supplementation, this may help improve nutritional status and metabolic risk management in the PCOS population. SYSTEMATIC REVIEW REGISTRATION: https://www.crd.york.ac.uk/PROSPERO/view/CRD420261377549, identifier CRD420261377549.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Manman Yao",
+        "Liya Ma",
+        "Xiao Li",
+        "Xuan Zhou",
+        "Dawei Zhang"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fnut.2026.1865564",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13311376.1/PMC13311376.1.pdf?md5=7eac802a303fc320cc9be7cfb0dbdb7b",
+      "pmcid": "PMC13311376",
+      "pmid": "42375776",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Prevalence and influencing factors of vitamin D deficiency in women with polycystic ovary syndrome: a systematic review and meta-analysis.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in nutrition"
+    },
+    {
+      "abstract": "OBJECTIVE: This study aimed to comprehensively evaluate and compare the predictive performance of seven adiposity indices-both traditional (waist-to-hip ratio, WHR; waist-to-height ratio, WHtR) and novel (visceral adiposity index, VAI; Chinese visceral adiposity index, CVAI; lipid accumulation product, LAP; triglyceride-glucose index, TyG; cardiometabolic index, CMI)-for identifying insulin resistance (IR) and metabolic syndrome (MetS) in a large cohort of Chinese women with polycystic ovary syndrome (PCOS). METHODS: This secondary analysis enrolled 944 Chinese women with PCOS from the PCOSAct trial. IR was defined as homeostasis model assessment of insulin resistance (HOMA-IR) \u2265 2.69, and MetS was diagnosed in accordance with Chinese female-specific criteria. Receiver operating characteristic (ROC) curve analysis was applied to assess the discriminatory ability of each adiposity index, and correlations between these indices and metabolic, reproductive, hepatic as well as renal parameters were analyzed. RESULTS: The prevalence of IR and MetS in this cohort was 50 and 15.68%, respectively. All adiposity indices were significantly correlated with key metabolic parameters (all p < 0.001). For predicting IR, LAP (AUC = 0.815) and CVAI (AUC = 0.813) showed the highest diagnostic accuracy. For predicting MetS, CMI (AUC = 0.905), LAP (AUC = 0.898) and VAI (AUC = 0.893) presented the optimal predictive efficacy. Additionally, these adiposity indices were significantly correlated with sex hormone-binding globulin, free androgen index, liver enzymes and bilirubin levels. CONCLUSION: Novel adiposity indices, especially CVAI, LAP and CMI, are effective and non-invasive tools for the early identification of IR and MetS in Chinese women with PCOS. The integration of these indices into clinical practice can improve risk stratification and guide timely interventions for metabolic comorbidities in this high-risk population. TRIAL REGISTRATION: ClinicalTrials.gov, identifier: NCT01573858; Chictr.org.cn, identifier: ChiCTR-TRC-12002081.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Huichao Qin",
+        "Baichao Shi",
+        "Yabing Li",
+        "Fengjuan Lu",
+        "Muxin Guan",
+        "Jiannan Yu",
+        "Zhuwei Gao",
+        "Mengyi Zhu",
+        "Yang Liu",
+        "Hang Ge",
+        "Xiaoke Wu",
+        "Yuehui Zhang"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fnut.2026.1835729",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13311076.1/PMC13311076.1.pdf?md5=14f1050ef6bdc35d7491d08ff994cbbe",
+      "pmcid": "PMC13311076",
+      "pmid": "42375770",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Comparative performance of traditional and novel adiposity indices for predicting insulin resistance and metabolic syndrome in Chinese women with polycystic ovary syndrome.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in nutrition"
+    },
+    {
+      "abstract": "BACKGROUND: This study systematically evaluated the effects of nutritional supplementation combined with exercise on BMI and lipid profiles in individuals with overweight or obesity. METHODS: A systematic search was conducted in PubMed, Embase, Web of Science, and the Cochrane Library databases from their inception to January 10, 2026, to identify randomized controlled trials (RCTs) comparing \"nutritional supplementation combined with exercise\" with \"placebo.\" The primary outcome measure was BMI; secondary outcomes included total cholesterol (TC), triglycerides (TG), low-density lipoprotein cholesterol (LDL-C), and high-density lipoprotein cholesterol (HDL-C). Weight-adjusted mean differences (WMD) and 95% confidence intervals (CI) were calculated using a random-effects model. Data analysis was performed using Stata 15. Study reporting followed the PRISMA statement, and the risk of bias of included randomized controlled trials was assessed using the Cochrane RoB 2.0 tool. RESULTS: Twelve RCTs involving 315 participants (161 in the intervention group and 154 in the control group) were included. Compared with placebo/control conditions, combined exercise and supplement-based interventions significantly reduced BMI (WMD = -1.72, 95% CI: -2.61 to -0.83; I 2 = 68.7%) and LDL-C (WMD = -15.20, 95% CI: -17.12 to -13.27; I 2 = 0%), increased HDL-C (WMD = 5.74, 95% CI: 3.66-7.83; I 2 = 84.7%), and reduced TG (WMD = -16.54, 95% CI: -25.11 to -7.97; I 2 = 83.1%) and TC (WMD = -15.30, 95% CI: -25.72 to -4.88; I 2 = 92.7%). Subgroup analyses suggested that interventions incorporating aerobic exercise and those lasting 8-12 weeks, particularly 12 weeks, were associated with more favorable outcomes. However, substantial heterogeneity was observed for several lipid outcomes. CONCLUSION: Nutritional supplementation combined with exercise may be associated with improvements in BMI and lipid profiles in individuals with overweight or obesity. However, because the included studies varied in supplement type, exercise protocol, intervention duration, and participant characteristics, the findings should be interpreted cautiously. Larger, well-designed randomized trials with standardized intervention protocols and longer follow-up are needed to confirm these effects.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Hongling Cheng",
+        "Chengyu Zhou",
+        "Siwei Song",
+        "Bo Wang",
+        "Diandong Lang",
+        "Peng Sun"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fnut.2026.1818949",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13312902.1/PMC13312902.1.pdf?md5=8830452dda48c2d81f71aa4924d17cea",
+      "pmcid": "PMC13312902",
+      "pmid": "42375769",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Effects of nutritional supplementation combined with exercise on BMI and lipid profiles in individuals with overweight or obesity: a systematic review and meta-analysis.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in nutrition"
+    },
+    {
+      "abstract": "BACKGROUND: Type 1 Diabetes Mellitus (T1DM) arises from a fundamental breakdown of central immune tolerance within the thymus. Medullary thymic epithelial cells (mTECs) express the Autoimmune Regulator (AIRE) protein, which drives the promiscuous transcription of peripheral tissue-restricted antigens - including insulin - thereby creating a \"genetic mirror\" essential for the clonal deletion of autoreactive T-cells. Genetic susceptibility loci that reduce intrathymic insulin expression allow high-affinity insulin-reactive T-cells to escape negative selection and enter the periphery, where they ultimately orchestrate the progressive destruction of pancreatic \u03b2-cells. Despite decades of research, no therapeutic strategy has yet succeeded in restoring this upstream tolerogenic defect at its source. HYPOTHESIS: I hypothesise that the thymic microenvironment can be bioelectronically reprogrammed to re-establish central immune tolerance in T1DM. Specifically, I propose that non-invasive application of 448 kHz radiofrequency (RF) fields, delivered via a wearable smart patch using subthermal Capacitive-Resistive Electric Transfer (CRET), can selectively upregulate AIRE-dependent insulin expression in mTECs, thereby restoring the intrathymic \"immunological shadow\" of the pancreatic \u03b2-cell. PROPOSED MECHANISM: The 448 kHz RF field is hypothesised to interact with L-type voltage-gated calcium channels (Cav1.2/Cav1.3) on mTEC membranes, inducing a controlled, subthermal Ca\u00b2+ influx. This calcium signal is proposed to activate two parallel intracellular cascades: the MAPK/ERK pathway and the calcineurin/NFAT-NF-\u03baB axis, both of which converge on transcriptional upregulation of AIRE and, consequently, enhanced intrathymic insulin (Ins2) expression. Strengthened negative selection and the preferential generation of epigenetically stable Helios+Foxp3+ thymus-derived regulatory T-cells (tTregs) are predicted as downstream immunological outcomes. The hypothesis is testable and falsifiable through a structured programme of preclinical experiments in the Non-Obese Diabetic (NOD) mouse model, incorporating pharmacological pathway dissection, live-cell calcium imaging and longitudinal immune phenotyping. SIGNIFICANCE: This approach represents a conceptual shift from peripheral immunosuppression or symptomatic glycaemic management towards upstream, disease-modifying bioelectronic intervention. By targeting the embryologically conserved thymic-pancreatic axis, the 448 kHz CRET strategy offers a non-invasive, paediatric-compatible platform to arrest the autoimmune cascade at its immunological origin, with potential implications for the prevention and early interception of T1DM.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Natasha Yaneva"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fimmu.2026.1851942",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13310697.1/PMC13310697.1.pdf?md5=4ec0aed4334248dc2a7d64d280a8387e",
+      "pmcid": "PMC13310697",
+      "pmid": "42375376",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Bioelectronic modulation of the thymic \"genetic mirror\": 448 kHz radiofrequency stimulation as a novel strategy for immune tolerance induction in type 1 diabetes.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in immunology"
+    },
+    {
+      "abstract": "Ketone bodies (KBs) are important energy fuels and play complex roles in the occurrence and development of diseases by regulating metabolism, inflammation, and multi-organ cellular crosstalk. The high mortality and morbidity of kidney diseases is an urgent global public health problem. The pathogenesis of kidney diseases is complex, with metabolic disorders underlying. Ketone body metabolism has recently become a hot spot, and ketogenic diets (KDs), sodium-glucose cotransporter 2 inhibitors (SGLT2i) along with exogenous ketone body supplements have drawn much attention for their role in treating obesity and type 2 diabetes. Therefore, it is essential to clarify the effects of KBs on kidney diseases to understand the occurrence and development of kidney diseases correctly and guide clinical treatment. This review aims to summarize the current findings on the impact of ketone body metabolism, KDs, SGLT2i and exogenous ketone body supplements on kidney diseases.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Wenni Dai",
+        "Weiying Zhang",
+        "Hao Li",
+        "Yang Gao",
+        "Li Xiao",
+        "Yinyin Chen",
+        "Liyu He"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fimmu.2026.1738916",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13310786.1/PMC13310786.1.pdf?md5=3a47968c09a2dcbc572512b7700e54bc",
+      "pmcid": "PMC13310786",
+      "pmid": "42375347",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Ketone bodies in kidney diseases: novel insights.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in immunology"
+    },
+    {
+      "abstract": "OBJECTIVE: This study aimed to systematically assess perioperative clinical safety, medium-term weight loss outcomes, multidisciplinary management challenges, and the clinical applicability of laparoscopic sleeve gastrectomy (LSG) in adults with Prader-Willi syndrome (PWS) and super-morbid obesity (body mass index [BMI] \u2265 50 kg/m\u00b2), with the objective of identifying appropriate candidates for surgical intervention and establishing standardized perioperative management strategies. CASE REPORT: A 24-year-old male with PWS and super-morbid obesity (BMI: 64.44 kg/m\u00b2) underwent LSG following comprehensive multidisciplinary team (MDT) evaluation. Short-term postoperative recovery was uneventful; however, long-term weight reduction outcomes and the risk of postoperative complications remained uncertain. A review of the literature suggested that although LSG was associated with modest weight reduction in patients with PWS, significant postoperative management challenges remained, including behavioral issues, nutritional monitoring requirements, and the need for long-term multidisciplinary support. CONCLUSION: LSG should not be considered a first-line intervention for patients with PWS. Surgical intervention should be restricted to carefully selected patients following comprehensive MDT evaluation. Optimized perioperative behavioral management, together with emerging pharmacological therapies and non-invasive ventilatory support, may expand surgical eligibility within this patient population.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Ji Li",
+        "Linhua Hao",
+        "Yuan-Hui Jiang",
+        "Lei Chen"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fendo.2026.1781163",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13310702.1/PMC13310702.1.pdf?md5=f3548eabb54ad01b9119456ae43e75d7",
+      "pmcid": "PMC13310702",
+      "pmid": "42375337",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Laparoscopic sleeve gastrectomy in adults with Prader-Willi syndrome and super-morbid obesity: a case report and literature review.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in endocrinology"
+    },
+    {
+      "abstract": "BACKGROUND: Although guidelines recommend lower blood pressure targets for patients with type 2 diabetes (T2D), evidence from randomized controlled trials (RCTs) remains inconsistent regarding the balance between reducing major adverse cardiovascular events (MACE) and the risk of adverse events. METHODS: This meta-analysis included RCTs comparing intensive versus conventional blood pressure control in patients with T2D. The primary outcome was MACE, and secondary outcomes included adverse events. Data were synthesized using a random-effects model. Subgroup analyses were conducted to assess the influence of different blood pressure targets and concomitant intensive glucose or lipid management. RESULTS: Nine trials comprising 34,260 participants with T2D were included. Intensive blood pressure control was associated with a significantly lower risk of MACE compared with conventional control [7.9% vs 9.7%; risk ratio (RR), 0.80; 95% CI, 0.73-0.89; P < 0.001]. Among individual MACE components, intensive treatment significantly lowered the risk of stroke (RR, 0.73; 95% CI, 0.60-0.87; P = 0.008), whereas no significant differences were observed for heart failure, myocardial infarction and cardiovascular death risk. Subgroup analyses suggested a potentially treatment benefit in trials aiming for a systolic blood pressure (SBP) target of <130 mm Hg and incorporating an explicit diastolic blood pressure (DBP) target Concomitant intensive glucose or lipid control did not significantly modify the treatment effect. Regarding safety, intensive treatment was associated with a borderline increased risk of hypotension (RR, 4.61; 95% CI, 1.01-20.99; P = 0.05) but not with other adverse events. CONCLUSIONS: Intensive blood pressure control significantly reduces the risk of MACE in patients with T2D. Strategies incorporating explicit DBP targets may offer substantial benefits. However, it should be paid attention to monitoring and preventing adverse events. SYSTEMATIC REVIEW REGISTRATION: https://www.crd.york.ac.uk/PROSPERO/, identifier CRD420251266814.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Zeguang Liu",
+        "Junfeng Wang",
+        "Chenguang Niu"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fendo.2026.1850865",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13310730.1/PMC13310730.1.pdf?md5=3263660ddb796728295d53b0d7c3c7b4",
+      "pmcid": "PMC13310730",
+      "pmid": "42375334",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Intensive blood pressure control in type 2 diabetes: a meta-analysis of randomized controlled trials.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in endocrinology"
+    },
+    {
+      "abstract": "Pathological remodeling of extracellular matrix was observed in the course of obesity; however, the detailed role of matrix metalloproteinases (MMPs) in the development of obesity and its metabolic complications remain unclear. The aim of the study was to evaluate plasma activity of selected MMPs in individuals with morbid obesity, as well as the impact of laparoscopic sleeve gastrectomy on MMPs' activity. MMPs' metabolism between obese individuals without and with metabolic syndrome was compared. The activities of MMPs were measured fluorometrically. Plasma activities of collagenases (MMP-1, MMP-8, and MMP-13), gelatinases (MMP-9), stromelysins (MMP-3 and MMP-10), metalloelastase (MMP-12) and membrane types MMP (MMP-14) was increased in morbidly obese women without metabolic syndrome before bariatric surgery, whereas activities of MMP-1, MMP-3, MMP-10, and MMP-12 were higher in morbidly obese women with metabolic syndrome than in the lean controls. After bariatric treatment, only the activity of some plasma MMPs partially normalized in both obese groups studied. Obesity is associated with increased activities of plasma MMPs. Although bariatric treatment improves MMPs homeostasis of individuals with obesity, it remained disturbed even 12 months after surgery. In general, the MMPs activity MMPs did not differ between obese individuals without and with metabolic syndrome. However, in individuals with metabolic syndrome, disturbances in the activity of MMPs persisted longer after bariatric surgery. Further long-term studies are needed to validate our findings.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Barbara Choroma\u0144ska",
+        "Piotr My\u015bliwiec",
+        "Jacek Dadan",
+        "Alan Tkaczuk",
+        "Konrad Wi\u015bniewski",
+        "Almantas Maleckas",
+        "Anna Zalewska",
+        "Ma\u0142gorzata \u017bendzian-Piotrowska",
+        "Mateusz Maciejczyk"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fmed.2026.1836747",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13310760.1/PMC13310760.1.pdf?md5=eca4e3b69f4dbf4af3ed39cffdbc7fda",
+      "pmcid": "PMC13310760",
+      "pmid": "42375203",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Effect of bariatric surgery on matrix metalloproteinase activity in patients with morbid obesity.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in medicine"
+    },
+    {
+      "abstract": "BACKGROUND: Obesity is a recognized risk factor for postoperative complications after spine surgery, but body mass index (BMI) does not capture regional fat distribution. The visceral-to-subcutaneous fat area (VFA/SFA) ratio measured on CT reflects an unfavorable fat distribution pattern, yet its role in wound healing after posterior lumbar fusion (PLF) is unclear. METHODS: We retrospectively analyzed 526 adults who underwent instrumented PLF for degenerative lumbar pathology and had preoperative non-contrast abdominal CT including the L4-L5 level. On a single axial slice at L4-L5, visceral fat area (VFA) and subcutaneous fat area (SFA) were segmented using a semi-automated protocol and the VFA/SFA ratio was calculated and grouped into quartiles. The primary outcome was impaired wound healing within 30 days, defined as persistent erythema or swelling, fat liquefaction, prolonged serous/serosanguinous exudation, partial wound edge necrosis or superficial dehiscence, or the need for negative-pressure therapy, delayed suture removal, additional antibiotics, or surgical debridement. Group comparisons used t tests and \u03c7 2 tests. Univariable and multivariable logistic regression were performed, and discrimination of BMI, VFA, SFA, VFA/SFA, and clinical prediction models was assessed using receiver operating characteristic curves. RESULTS: Impaired wound healing occurred in 59 patients (11.2%). Compared with patients with good healing, those with impaired wound healing had higher BMI (25.4 \u00b1 4.0 vs. 23.1 \u00b1 3.8 kg/m2, p < 0.001) and higher VFA/SFA ratio (1.063 \u00b1 0.246 vs 0.895 \u00b1 0.259, p < 0.001), whereas SFA did not differ. Each 0.1 increase in VFA/SFA ratio was associated with an adjusted odds ratio of 1.32 (95% CI 1.16-1.50; p < 0.001) for impaired wound healing, independent of age, sex, BMI, diabetes, ASA class, albumin, multilevel fusion, operative time, and blood loss. The AUC was 0.66 for BMI and 0.70 for VFA/SFA; adding VFA/SFA to a clinical model increased the AUC from 0.70 to 0.77. CONCLUSION: The preoperative VFA/SFA ratio at L4-L5 is an independent predictor of impaired wound healing after PLF and provides incremental discriminative value beyond BMI and conventional clinical risk factors.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Jinwang Liu",
+        "Xiaoping Xu",
+        "Shaoxing Li",
+        "Hua Yu"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3389/fsurg.2026.1757071",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13310561.1/PMC13310561.1.pdf?md5=3110630e3e4c566986c6368a7fd66bfa",
+      "pmcid": "PMC13310561",
+      "pmid": "42371573",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Beyond BMI: L4-L5 visceral-to-subcutaneous fat ratio on CT predicts impaired wound healing after posterior lumbar fusion-A retrospective study.",
+      "unresolved_ambiguities": [],
+      "venue": "Frontiers in surgery"
+    },
+    {
+      "abstract": "Dipeptidyl peptidase-4 (DPP-4) is an established therapeutic target in the treatment of type 2 diabetes mellitus (T2DM), primarily due to its role in regulating incretin activity and glucose homeostasis. Although clinically approved DPP-4 inhibitors are widely used, their moderate efficacy has driven the search for novel compounds with improved properties. In this context, natural products have attracted considerable attention as a source of structurally diverse and biologically active molecules. At the same time, molecular docking has emerged as a key computational tool for the identification and evaluation of potential DPP-4 inhibitors. This review summarizes and critically analyzes current molecular docking studies of natural compounds targeting DPP-4. Over 150 studies were evaluated with respect to docking methodologies, selection of protein structures, and validation strategies. The results reveal substantial variability in computational protocols. Frequently used protein structures include ligand-bound DPP-4 models such as 1X70 and 6B1E. Among the investigated compounds, flavonoids represent the most extensively studied class, followed by alkaloids, phenolics, terpenoids, and peptides. Despite numerous reports of favorable binding interactions within the DPP-4 active site, many studies rely solely on docking results without further validation. The limited use of molecular dynamics simulations and experimental assays highlights a significant gap in the current literature. Overall, while molecular docking provides valuable preliminary insights, improved standardization and integration with complementary approaches are essential to enhance the reliability and translational relevance of in silico findings.",
+      "adjudicated_at": "2026-08-18T01:05:53.484883+00:00",
+      "authors": [
+        "Justyna Baranowska",
+        "Anna Kiss",
+        "\u0141ukasz Szeleszczuk"
+      ],
+      "decision": "accepted",
+      "discovery_status": "oa_verified",
+      "doi": "10.3390/pharmaceutics18060741",
+      "duplicate_rule_result": "passed_exact_identifier_uniqueness",
+      "evidence_provenance": [
+        "pubmed_metadata",
+        "pmc_cloud_service"
+      ],
+      "full_text_rule_result": "passed",
+      "identity_rule_result": "passed",
+      "inclusion_rule_result": "passed",
+      "license_rule_result": "passed",
+      "open_access": true,
+      "pdf_url": "https://pmc-oa-opendata.s3.amazonaws.com/PMC13306514.1/PMC13306514.1.pdf?md5=afed803bc4a44c136f7c245cadd4deba",
+      "pmcid": "PMC13306514",
+      "pmid": "42357357",
+      "publication_year": 2026,
+      "reason_codes": [
+        "ALL_REQUIRED_RULES_PASSED"
+      ],
+      "reported_license": "CC BY",
+      "rules_version": "m14-candidate-adjudication-v9",
+      "title": "Molecular Docking of Natural Compounds as DPP-4 Inhibitors in Type 2 Diabetes: A Comprehensive Review.",
+      "unresolved_ambiguities": [],
+      "venue": "Pharmaceutics"
+    }
+  ],
+  "rejected_by_adjudication": 0,
+  "retstart_used": 3650,
+  "rules_version": "m55-discovery-cycle-v1"
+}
