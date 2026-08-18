@@ -106,6 +106,30 @@ class SearchCoverageReport:
     providers_completed: tuple[str, ...]
     providers_failed: tuple[str, ...]
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return the public coverage contract as JSON-ready primitives.
+
+        This intentionally serializes only fields already exposed by the
+        public coverage view. Internal run context such as ``initiated_by``,
+        project IDs, research-question IDs, credentials, transport state, and
+        provider-native responses never enter this payload.
+        """
+
+        return {
+            "search_run_id": self.search_run_id,
+            "created_at": self.created_at,
+            "query_text": self.query_text,
+            "year_from": self.year_from,
+            "year_to": self.year_to,
+            "limit_per_provider": self.limit_per_provider,
+            "completeness": self.completeness,
+            "candidate_count": self.candidate_count,
+            "providers_requested": list(self.providers_requested),
+            "providers_attempted": list(self.providers_attempted),
+            "providers_completed": list(self.providers_completed),
+            "providers_failed": list(self.providers_failed),
+        }
+
 
 class FederatedSearchLedger:
     """Persist immutable federated search-run facts as local JSON records."""
