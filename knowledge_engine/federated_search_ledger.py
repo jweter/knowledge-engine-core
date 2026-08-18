@@ -91,9 +91,14 @@ class SearchRunRecord:
 
 @dataclass(frozen=True)
 class SearchCoverageReport:
-    """Deterministic coverage view suitable for later AI/Web rendering."""
+    """Deterministic public coverage/provenance view for later AI/Web rendering."""
 
     search_run_id: str
+    created_at: str
+    query_text: str
+    year_from: int | None
+    year_to: int | None
+    limit_per_provider: int
     completeness: str
     candidate_count: int
     providers_requested: tuple[str, ...]
@@ -174,11 +179,16 @@ class FederatedSearchLedger:
         return _record_from_payload(payload, expected_run_id=normalized_id)
 
     def coverage_report(self, search_run_id: str) -> SearchCoverageReport:
-        """Return deterministic coverage facts without inference or LLM involvement."""
+        """Return deterministic coverage and search-method facts without inference."""
 
         record = self.load(search_run_id)
         return SearchCoverageReport(
             search_run_id=record.search_run_id,
+            created_at=record.created_at,
+            query_text=record.query_text,
+            year_from=record.year_from,
+            year_to=record.year_to,
+            limit_per_provider=record.limit_per_provider,
             completeness=record.completeness,
             candidate_count=record.candidate_count,
             providers_requested=record.providers_requested,
