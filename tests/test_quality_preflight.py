@@ -10,11 +10,18 @@ from scripts.quality_preflight import QualityGate, quality_gates, run_preflight
 def test_quality_gates_match_ci_order() -> None:
     gates = quality_gates("python-test")
 
-    assert [gate.name for gate in gates] == ["format", "lint", "typing", "tests"]
+    assert [gate.name for gate in gates] == [
+        "format",
+        "lint",
+        "typing",
+        "tests",
+        "diff_hygiene",
+    ]
     assert gates[0].args == ("python-test", "-m", "ruff", "format", "--check", ".")
     assert gates[1].args == ("python-test", "-m", "ruff", "check", ".")
     assert gates[2].args == ("python-test", "-m", "mypy", "knowledge_engine", "tests")
     assert gates[3].args == ("python-test", "-m", "pytest")
+    assert gates[4].args == ("git", "diff", "--check")
 
 
 def test_preflight_stops_at_first_failure(monkeypatch: pytest.MonkeyPatch) -> None:

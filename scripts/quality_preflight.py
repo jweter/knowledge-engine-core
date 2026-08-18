@@ -43,6 +43,10 @@ def quality_gates(python_executable: str = sys.executable) -> tuple[QualityGate,
             "tests",
             (python_executable, "-m", "pytest"),
         ),
+        QualityGate(
+            "diff_hygiene",
+            ("git", "diff", "--check"),
+        ),
     )
 
 

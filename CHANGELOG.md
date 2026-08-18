@@ -7,6 +7,17 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`scripts/quality_preflight.py` now runs `git diff --check` as a fifth
+  gate**, mirroring the `Check diff hygiene` step in
+  `.github/workflows/quality.yml`. The local preflight previously stopped
+  after `pytest` and could report clean while CI's diff-hygiene gate was
+  still untested locally. `docs/quality_preflight.md` documents why Bandit
+  and pip-audit remain out of the preflight script (both run outside the
+  Poetry-managed environment in CI) and gives the direct commands to run
+  them by hand. See issue #371.
+
 ### Fixed
 
 - **`ke relationship-classify-automate` generated `relationship_id` values

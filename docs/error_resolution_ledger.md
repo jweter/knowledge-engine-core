@@ -309,6 +309,18 @@ Use one entry per distinct failure. Record the first failing command, the exact 
 - **Prevention / fast path:** A dry run's "0 failures" is only as strong as the paths it actually exercises -- when most rows short-circuit on an `already_present_verified` check, a genuinely fresh-state failure mode can hide behind a passing aggregate result. Before declaring a recovery/acquisition tool fully verified, test it against a target that starts in the same state a real fresh consumer will (zero local files here), not just the state the verifying environment happens to already have cached.
 - **Status:** resolved
 
+## 2026-08-18 — Local quality preflight silently skipped CI's diff-hygiene gate
+
+- **Area:** CI / tooling
+- **First failing command:** none locally — the gap was that `poetry run python scripts/quality_preflight.py` could report "Quality preflight passed" while `.github/workflows/quality.yml`'s separate `Check diff hygiene` step (`git diff --check`) had never been exercised.
+- **Symptom:** Issue #371 recorded repeated connector-authored PRs that reached CI clean on formatting/lint/typing/tests locally, then failed a later CI-only gate (import-order corner cases, mypy strictness on newly added code, and a missing trailing newline on PR #386). The local preflight script (`scripts/quality_preflight.py`, introduced after issue #356/PR #355) only ran the four gates it was written with — `ruff format --check`, `ruff check`, `mypy`, `pytest` — and stopped there, even though `quality.yml`'s `checks` job also enforces `git diff --check` on the same commit before merge.
+- **Affected files:** `scripts/quality_preflight.py`, `tests/test_quality_preflight.py`, `docs/quality_preflight.md`
+- **Root cause:** The preflight script was written to mirror the state of `quality.yml` at the time it was introduced, then never updated as the workflow gained the `Check diff hygiene` step. There was no mechanism keeping the local script and the CI workflow's gate list in sync.
+- **Fix:** Added a fifth `QualityGate("diff_hygiene", ("git", "diff", "--check"))` to `quality_gates()`, run after `pytest` in the same order as `quality.yml`. Documented in `docs/quality_preflight.md` why Bandit and pip-audit are deliberately *not* mirrored into this script (both run outside the Poetry-managed environment in CI) with the direct commands to run them by hand instead.
+- **Validation:** `poetry run python scripts/quality_preflight.py` passes end-to-end on a clean tree (all five gates); `poetry run pytest tests/test_quality_preflight.py -q` passes with the updated gate-order assertions; full local suite (`ruff format --check .`, `ruff check .`, `mypy knowledge_engine tests`, `pytest`) is clean — see this change's own PR description for the exact command output.
+- **Prevention / fast path:** When `.github/workflows/quality.yml`'s `checks` job gains or reorders a step, update `scripts/quality_preflight.py`'s `quality_gates()` in the same PR. Issue #371 stays open: this entry closes only the diff-hygiene gap; the broader pattern of connector-authored PRs skipping the preflight entirely (not a tooling gap) is a process-compliance problem this script cannot fix by itself.
+- **Status:** resolved
+
 ## Operating rule
 
 When CI fails:
