@@ -500,13 +500,36 @@ Exit criteria:
 
 ### FRD-4 -- arXiv adapter and version identity
 
+**Status: implemented and live-verified.** `arxiv_provider.py`'s
+`ArxivProvider` (Atom-feed search, explicit `preprint`/`preprint_version`
+fields, `_normalize_arxiv_identifier` stripping `/abs/`, `/pdf/`, and
+`.pdf` suffixes into a canonical `arxiv:<base>v<version>` identity) already
+existed with only a fake-transport unit test -- the same gap OpenAlex and
+Semantic Scholar had before FRD-2/FRD-3. New `arxiv_http.py`'s
+`UrllibArxivTransport` (host-allowlisted to `export.arxiv.org`, the same
+bounded-read, no-redirect pattern this project's other HTTP transports use)
+is that transport, now wired into `ke federated-discover`'s production
+registry -- fully public and keyless, so it takes no credential parameter,
+unlike OpenAlex or Semantic Scholar. Live-verified against the real API: a
+real `GLP-1 receptor agonist weight loss` query returned 5 real candidates
+(`completeness: complete`), and a broader 5-provider run correctly showed
+`arxiv` as `completed` alongside a real `pubmed` success and real
+`crossref`/`semantic_scholar` degraded conditions in the same run --
+exactly the graceful, per-provider labeled coverage this milestone's own
+adoption plan requires, not a contrived single-provider fixture.
+
 Implement arXiv discovery with explicit preprint identity/version semantics.
 
 Exit criteria:
 
-- preprint status retained;
-- arXiv ID normalized;
-- later-version linking is explicit rather than silent replacement.
+- preprint status retained; **met** (pre-existing -- every candidate carries
+  `preprint=True`)
+- arXiv ID normalized; **met** (pre-existing --
+  `_normalize_arxiv_identifier`)
+- later-version linking is explicit rather than silent replacement. **met**
+  (pre-existing -- `preprint_version` and a version-qualified
+  `canonical_id`/`provider_id`, e.g. `arxiv:2301.12345v2`, so a later
+  version is a distinct observation rather than an overwrite)
 
 ### FRD-5 -- Federated deduplication and provider disagreement
 
