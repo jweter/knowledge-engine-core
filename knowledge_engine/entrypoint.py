@@ -344,6 +344,18 @@ FederatedInitiatedByOption = Annotated[
     str | None,
     typer.Option("--initiated-by", help="Optional free-text label recorded on the persisted run."),
 ]
+FederatedDiscoverOutputOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--output",
+        help=(
+            "Optional path to also save the full result (query, coverage, "
+            "deduplicated candidates with per-provider observations) as JSON, "
+            "for a programmatic caller -- e.g. knowledge-engine-web -- rather "
+            "than parsing the console table."
+        ),
+    ),
+]
 FederatedSearchRunIdArgument = Annotated[
     str,
     typer.Argument(help="Search-run UUID returned by `federated-discover`."),
@@ -5266,6 +5278,7 @@ def federated_discover(
     openalex_api_key: FederatedOpenAlexApiKeyOption = None,
     semantic_scholar_api_key: FederatedSemanticScholarApiKeyOption = None,
     initiated_by: FederatedInitiatedByOption = None,
+    output: FederatedDiscoverOutputOption = None,
 ) -> None:
     """Run one federated discovery search and durably persist its coverage (FRD-6).
 
@@ -5286,6 +5299,13 @@ def federated_discover(
     unsupported for a free-text query) is reported as an explicit, labeled
     provider status, never silently dropped from the result. Coverage must
     never be inferred from the presence of results.
+
+    `--output <path.json>` additionally saves the full result -- the same
+    facts as the console table, in `FederatedSearchResult.to_json()`'s
+    machine-readable shape plus the persisted `search_run_id` -- for a
+    programmatic caller. The ledger under `--ledger-root` is the durable,
+    replayable record either way; `--output` is a convenience snapshot of
+    one run's own result, not a second source of truth.
     """
 
     try:
@@ -5314,6 +5334,11 @@ def federated_discover(
         "providers over HTTPS."
     )
     execution = service.search(broker_query, initiated_by=initiated_by)
+
+    if output is not None:
+        payload = json.loads(execution.result.to_json())
+        payload["search_run_id"] = execution.record.search_run_id
+        _write_output(output, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
     _print_federated_coverage(execution.coverage, search_run_id=execution.record.search_run_id)
 

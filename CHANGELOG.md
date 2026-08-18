@@ -55,7 +55,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   returning the same `429`), and the transport correctly parsed it into
   `ProviderOutcome.RATE_LIMITED`, surfaced honestly in the coverage table
   rather than silently dropped -- exactly the graceful degradation FRD-3's
-  exit criteria require. `ke federated-discover` now searches 3 of 5 named
+  exit criteria require. `ke federated-discover` now searches 4 of 5 named
   FRD providers live (PubMed, Crossref, OpenAlex, Semantic Scholar; arXiv
   remains unwired). Semantic Scholar's citation/reference traversal
   (`references`/`citations`/`traverse`) is implemented and unit-tested but
@@ -64,6 +64,17 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   all four transport-backed providers. See
   `docs/roadmap/federated_research_discovery_adoption.md`'s updated FRD-3
   status line.
+
+  Also added `ke federated-discover --output <path.json>`, saving the full
+  result (query, coverage, deduplicated candidates with per-provider
+  observations, and the persisted `search_run_id`) as machine-readable
+  JSON. The command previously only printed Rich console tables, with no
+  way for a programmatic caller -- e.g. `knowledge-engine-web`, which needs
+  this next -- to consume its output without scraping terminal text.
+  Live-verified: a real `metformin type 2 diabetes` query wrote a complete,
+  well-formed JSON result including full provider observations (abstract,
+  authors, PMID, etc.) for each deduplicated candidate. New CLI test
+  (`test_federated_discover_writes_a_machine_readable_output_file`).
 
 - **`ke federated-discover`/`ke federated-coverage-report` -- the first CLI
   surface for the FRD-1/FRD-2/FRD-6 federated-discovery modules.** A

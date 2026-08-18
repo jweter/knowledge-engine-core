@@ -257,6 +257,38 @@ def test_federated_coverage_report_handles_an_unknown_run_id(tmp_path: Path) -> 
     assert "No federated search run found" in _unwrapped(result.output)
 
 
+def test_federated_discover_writes_a_machine_readable_output_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider_a = FakeProvider(
+        "alpha", _success_result("alpha", candidate_id="A1", doi="10.1000/alpha-1")
+    )
+    monkeypatch.setattr(
+        entrypoint, "_federated_discovery_registry", lambda **kwargs: _registry_with(provider_a)
+    )
+
+    output_path = tmp_path / "result.json"
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "federated-discover",
+            "--query",
+            "obesity treatment",
+            "--ledger-root",
+            str(tmp_path / "ledger"),
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["completeness"] == "complete"
+    assert payload["candidates"][0]["title"] == "A paper found by alpha"
+    assert payload["candidates"][0]["doi"] == "10.1000/alpha-1"
+    assert "search_run_id" in payload
+
+
 def test_production_registry_wires_every_transport_backed_provider() -> None:
     """No network call -- just proves the real factory composes what it claims to.
 
