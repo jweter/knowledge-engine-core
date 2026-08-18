@@ -460,14 +460,43 @@ Exit criteria:
 
 ### FRD-3 -- Semantic Scholar adapter
 
+**Status: search implemented and live-verified; citation traversal not wired
+into the CLI.** `semantic_scholar_provider.py`'s `SemanticScholarProvider`
+(search, single-work lookup, and `references`/`citations`/`traverse`
+citation traversal via `citation_traversal.py`) existed with only a
+fake-transport unit test -- no concrete HTTPS transport, the same gap
+OpenAlex had. New `semantic_scholar_http.py`'s
+`UrllibSemanticScholarTransport` (host-allowlisted to
+`api.semanticscholar.org`, the same bounded-read pattern this project's
+other HTTP transports use) is that transport, wired into `ke
+federated-discover`. Unlike OpenAlex, Semantic Scholar's public Academic
+Graph search genuinely requires no credential by design -- an optional
+`--semantic-scholar-api-key`/`KE_SEMANTIC_SCHOLAR_API_KEY` only raises the
+rate limit, sent as an `x-api-key` header, never gating search itself.
+Live-verified against the real API: a real query hit the public tier's
+rate limit (confirmed independently via a direct `curl` to the same
+endpoint returning the same `429`/`"Too Many Requests"` body) and the
+transport correctly parsed it into `ProviderOutcome.RATE_LIMITED`,
+surfaced in `ke federated-discover`'s coverage table as
+`failed/unavailable` -- exactly the graceful, labeled degradation this
+milestone's fourth exit criterion requires, a real external condition,
+not a contrived test fixture. Citation/reference traversal
+(`references`/`citations`/`traverse`) is implemented and unit-tested but
+has no CLI command yet -- named as real, unfinished follow-up.
+
 Implement optional Semantic Scholar discovery and citation traversal.
 
 Exit criteria:
 
-- no-key degraded/basic behavior defined;
-- optional key supported through secret boundary;
-- provider TLDRs never treated as source text;
-- rate-limit behavior visible in provider status.
+- no-key degraded/basic behavior defined; **met** (pre-existing --
+  `SemanticScholarProvider` never required a key for search)
+- optional key supported through secret boundary; **met**
+  (`--semantic-scholar-api-key`/`KE_SEMANTIC_SCHOLAR_API_KEY`, sent only as
+  a header, never logged)
+- provider TLDRs never treated as source text; **met** (pre-existing --
+  `_FIELDS` never requests `tldr`)
+- rate-limit behavior visible in provider status. **met, live-verified**
+  (see above)
 
 ### FRD-4 -- arXiv adapter and version identity
 
