@@ -333,12 +333,18 @@ itself, but may need to trigger for a specific paper):**
   `KE_SEMANTIC_SCHOLAR_API_KEY` only raises its rate limit -- and arXiv,
   fully public and keyless), deduplicates candidates by exact DOI, and
   persists the run to `--ledger-root` before returning it. Optional
-  `--output <path.json>` also saves the full result (query, coverage,
-  deduplicated candidates with per-provider observations, and the persisted
-  `search_run_id`) as JSON, for a programmatic caller (e.g.
-  `knowledge-engine-web`) to parse instead of the console table -- the
-  same "structured, machine-readable sibling" pattern `ke evidence-report
-  --format json` already established. A separate discovery mode from
+  `--output <path.json>` also saves the full result as JSON, for a
+  programmatic caller (e.g. `knowledge-engine-web`) to parse instead of the
+  console table -- the same "structured, machine-readable sibling" pattern
+  `ke evidence-report --format json` already established. The payload is
+  `federated_result_snapshot.py`'s provenance-safe composition: the query,
+  deduplicated candidates with per-provider observations, the persisted
+  `search_run_id`, a deterministic `coverage` block (search timestamp,
+  normalized query, year bounds, per-provider limit, which providers
+  completed/failed -- FRD-5/FRD-6), and a `provider_disagreements` block
+  (conflicting provider-observed metadata for the same candidate, with no
+  provider treated as authoritative -- FRD-5). No credentials, internal
+  ledger context, or provider-native raw responses are included. A separate discovery mode from
   `discovery-cycle-run` above --
   provider-neutral and not scoped to a single corpus's adjudication rules;
   also writes no `ready_for_scope_review` worksheet and performs no

@@ -535,11 +535,28 @@ Exit criteria:
 
 Use canonical scholarly-work identity while preserving provider observations.
 
+**Status: implemented, and reachable.** Deduplication by exact DOI has been
+in place since FRD-1. `provider_disagreement.py`'s
+`build_provider_disagreement_report` (deterministic, no provider treated as
+authoritative) and `federated_result_snapshot.py`'s
+`build_public_federated_result_payload` (the provenance-safe join of a
+result to its persisted coverage record, rejecting mismatched provenance)
+are now wired into `ke federated-discover --output`'s
+`provider_disagreements`/`coverage` fields -- not just unit-tested in
+isolation. Live-verified: a real two-provider run (`pubmed`, `crossref`)
+produced an `--output` file whose `coverage` block matched the console
+table exactly and whose `provider_disagreements` block was the deterministic
+empty-candidates shape (no candidate had two differing provider
+observations in that run, which is itself the correct, non-inferred state,
+not a placeholder).
+
 Exit criteria:
 
-- DOI duplicates collapse to one candidate without losing provider provenance;
-- conflicting provider metadata is inspectable;
-- weak matches do not silently merge.
+- DOI duplicates collapse to one candidate without losing provider provenance; **met**
+- conflicting provider metadata is inspectable; **met -- exposed through
+  `ke federated-discover --output`'s `provider_disagreements` field**
+- weak matches do not silently merge. **met (exact-DOI only; no fuzzy-match
+  merging exists to silently misfire)**
 
 ### FRD-6 -- Search-run ledger and coverage report
 
@@ -565,8 +582,10 @@ Exit criteria:
 - every provider outcome is recorded; **met**
 - a caller can distinguish complete from degraded search; **met**
 - downstream AI/Web can render coverage without guessing. **the data is now
-  exposed and re-fetchable; Web/AI-side rendering is still their own
-  unbuilt work, tracked in their own roadmap docs, not this one**
+  exposed and re-fetchable both via `federated-coverage-report <id>` and
+  directly in `federated-discover --output`'s `coverage` field on the same
+  run that produced it; Web/AI-side rendering is still their own unbuilt
+  work, tracked in their own roadmap docs, not this one**
 
 ### FRD-7 -- Citation snowball discovery
 
