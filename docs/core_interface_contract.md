@@ -355,8 +355,8 @@ itself, but may need to trigger for a specific paper):**
   contract that document's FRD-6 exit criterion names.
 - `ke citation-snowball --seeds <ids> --ledger-root <dir>` (FRD-7,
   `docs/roadmap/federated_research_discovery_adoption.md`): breadth-first
-  expands `--seeds` (comma-separated Semantic Scholar paper IDs, DOIs, arXiv
-  IDs, or PMIDs) through Semantic Scholar's public references/citations
+  expands `--seeds` (comma-separated provider paper/work IDs, DOIs, arXiv
+  IDs, or PMIDs) through `--provider`'s public references/citations
   graph up to `--max-depth` hops (default 1, max 3), bounded by
   `--limit-per-traversal` (default 25) and `--max-candidates` (default
   100), and persists a deterministic, replayable record of the plan, every
@@ -369,9 +369,14 @@ itself, but may need to trigger for a specific paper):**
   until now. Optional `--directions` (default `references,citations`) and
   `--output <path.json>` (full result: plan, traversal outcomes, discovered
   candidates with observations, and edge provenance) follow the same
-  pattern as `federated-discover`. Only Semantic Scholar is wired; OpenAlex's
-  `OpenAlexCitationAdapter` implements the same `CitationTraversalProvider`
-  contract but needs an additional work-hydration lookup not yet wired here.
+  pattern as `federated-discover`. `--provider` selects the traversal
+  provider: `semantic_scholar` (default, no credential required) or
+  `openalex` (via `OpenAlexCitationAdapter`, requires
+  `--openalex-api-key`/`KE_OPENALEX_API_KEY` -- reports itself `disabled`,
+  not an error, without one, matching `OpenAlexProvider`'s existing
+  federated-discover behavior). Each run traverses exactly one provider;
+  `CitationSnowballDiscovery` validates every traversal's reported provider
+  identity stays constant for the run.
   `ke citation-snowball-report <snowball_run_id> --ledger-root <dir>`
   re-fetches one persisted run's plan and traversal outcomes by ID,
   mirroring `federated-coverage-report`'s role for `federated-discover` and

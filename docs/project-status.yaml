@@ -1,6 +1,6 @@
 schema_version: 1
 project: knowledge-engine-core
-updated_at: "2026-08-18T23:15:00Z"
+updated_at: "2026-08-19T00:00:00Z"
 status_source: "Verified repository state plus docs/roadmap.md; this file is a continuity cache and never overrides higher-authority evidence (code, CI, live PR state, docs/roadmap.md)."
 
 product:
@@ -20,7 +20,7 @@ current_milestone:
     FRD-4_arxiv: "implemented and live-verified"
     FRD-5_dedup_disagreement: "implemented and reachable via `ke federated-discover --output`"
     FRD-6_ledger_coverage: "implemented and reachable via `ke federated-discover` / `ke federated-coverage-report`"
-    FRD-7_citation_snowball: "reachable for Semantic Scholar via `ke citation-snowball` / `ke citation-snowball-report` (this session, unmerged -- see PR). OpenAlex's citation adapter (OpenAlexCitationAdapter) still needs its work-hydration lookup wired before it can join this command as a second provider."
+    FRD-7_citation_snowball: "reachable for both Semantic Scholar (default) and OpenAlex via `ke citation-snowball --provider <semantic_scholar|openalex>` / `ke citation-snowball-report` (OpenAlex wiring this session, unmerged -- see PR). --provider defaults to semantic_scholar, so this is additive and does not change any existing caller's behavior."
     FRD-8_mcp_facade: "deliberately deferred; not started"
 
 automation_contract:
@@ -76,7 +76,7 @@ verified_repository_state:
 
 next_continuation:
   priority: "P5-highest-value-authorized-roadmap"
-  action: "Review/merge the open `ke citation-snowball`/`ke citation-snowball-report` PR once fresh CI is green. After that, wire OpenAlex's OpenAlexCitationAdapter (needs a work-hydration lookup) into citation-snowball as a second --provider option, the same multi-provider pattern federated-discover already uses. FRD-8 (optional MCP facade) remains deliberately deferred behind it."
+  action: "Review/merge the open `ke citation-snowball --provider openalex` PR once fresh CI is green -- this completes FRD-7 for both Semantic Scholar and OpenAlex (the --provider default stays semantic_scholar, so no consumer's existing invocation changes). FRD-8 (optional MCP facade) remains deliberately deferred behind it; there is no other currently-authorized FRD-# slice. Re-read docs/roadmap.md for the next milestone worth starting once FRD-7/8 are settled."
   selection_rule: "Before beginning roadmap work, query live PR state. Handle failed, green, blocked, conflicted, or pending existing work according to docs/agent-development-policy.md."
 
 human_decision_required: null
