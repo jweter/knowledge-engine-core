@@ -27,6 +27,7 @@ from knowledge_engine.citation_snowball import (
     CitationSnowballDiscovery,
     CitationSnowballPlan,
     CitationSnowballResult,
+    CitationTraversalProvider,
 )
 from knowledge_engine.citation_snowball_ledger import CitationSnowballLedger
 from knowledge_engine.citation_traversal import CitationDirection
@@ -138,6 +139,8 @@ from knowledge_engine.mesh_lookup import MeshLookupError, MeshLookupService
 from knowledge_engine.metadata_enrichment import MetadataProvider, MetadataQuery
 from knowledge_engine.models import GraphCitation, ImportRun, Paper, PaperPage
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
+from knowledge_engine.openalex_citation_adapter import OpenAlexCitationAdapter
+from knowledge_engine.openalex_citations import OpenAlexCitationProvider
 from knowledge_engine.openalex_http import UrllibOpenAlexTransport
 from knowledge_engine.openalex_provider import OpenAlexProvider
 from knowledge_engine.paper_pages_backfill import backfill_paper
@@ -416,6 +419,19 @@ SnowballLedgerRootOption = Annotated[
     typer.Option(
         "--ledger-root",
         help="Directory the citation-snowball ledger persists JSON run records to.",
+    ),
+]
+SnowballProviderOption = Annotated[
+    str,
+    typer.Option(
+        "--provider",
+        help=(
+            "Which citation-graph provider to traverse: 'semantic_scholar' "
+            "(default, no credential required) or 'openalex' (requires "
+            "--openalex-api-key/KE_OPENALEX_API_KEY; reports itself "
+            "'disabled' -- not an error -- without one, matching "
+            "OpenAlexProvider's existing federated-discover behavior)."
+        ),
     ),
 ]
 SnowballOutputOption = Annotated[
@@ -5502,6 +5518,33 @@ def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: 
 
 
 _DIRECTION_BY_NAME = {direction.value: direction for direction in CitationDirection}
+_SNOWBALL_PROVIDERS = ("semantic_scholar", "openalex")
+
+
+def _parse_snowball_provider(provider: str) -> str:
+    normalized = provider.strip().lower().replace("-", "_")
+    if normalized not in _SNOWBALL_PROVIDERS:
+        allowed = ", ".join(_SNOWBALL_PROVIDERS)
+        raise typer.BadParameter(f"Unknown provider '{provider}'. Choose from: {allowed}.")
+    return normalized
+
+
+def _build_snowball_provider(
+    provider: str,
+    *,
+    semantic_scholar_api_key: str | None,
+    openalex_api_key: str | None,
+) -> CitationTraversalProvider:
+    if provider == "semantic_scholar":
+        return SemanticScholarProvider(
+            transport=UrllibSemanticScholarTransport(), api_key=semantic_scholar_api_key
+        )
+    return OpenAlexCitationAdapter(
+        citation_source=OpenAlexCitationProvider(
+            transport=UrllibOpenAlexTransport(), api_key=openalex_api_key
+        ),
+        work_lookup=OpenAlexProvider(transport=UrllibOpenAlexTransport(), api_key=openalex_api_key),
+    )
 
 
 def _parse_snowball_seeds(seeds: str) -> tuple[str, ...]:
@@ -5529,33 +5572,42 @@ def _parse_snowball_directions(directions: str) -> tuple[CitationDirection, ...]
 def citation_snowball(
     seeds: SnowballSeedsOption,
     ledger_root: SnowballLedgerRootOption,
+    provider: SnowballProviderOption = "semantic_scholar",
     directions: SnowballDirectionsOption = "references,citations",
     max_depth: SnowballMaxDepthOption = 1,
     limit_per_traversal: SnowballLimitPerTraversalOption = 25,
     max_candidates: SnowballMaxCandidatesOption = 100,
     semantic_scholar_api_key: FederatedSemanticScholarApiKeyOption = None,
+    openalex_api_key: FederatedOpenAlexApiKeyOption = None,
     output: SnowballOutputOption = None,
 ) -> None:
     """Run one bounded citation-snowball expansion and durably persist it (FRD-7).
 
-    Breadth-first expands `--seeds` through Semantic Scholar's public
-    references/citations graph (`SemanticScholarProvider.traverse`, already
-    used for federated search -- see `_federated_discovery_registry`), up to
-    `--max-depth` hops, and persists a deterministic, replayable record of
-    the plan, every traversal's provider outcome, discovered candidate IDs,
-    and citation-edge provenance to `--ledger-root` *before* returning,
-    matching `federated-discover`'s persist-before-return discipline. This is
-    the first CLI surface for `citation_snowball.py`/`citation_snowball_ledger.py`
-    (FRD-7); until this command existed that code was built and unit-tested
-    but unreachable outside a test file -- the same "built but unreachable"
-    gap this project has repeatedly found and fixed for other providers. See
+    Breadth-first expands `--seeds` through `--provider`'s public
+    references/citations graph, up to `--max-depth` hops, and persists a
+    deterministic, replayable record of the plan, every traversal's provider
+    outcome, discovered candidate IDs, and citation-edge provenance to
+    `--ledger-root` *before* returning, matching `federated-discover`'s
+    persist-before-return discipline. This is the first CLI surface for
+    `citation_snowball.py`/`citation_snowball_ledger.py` (FRD-7); until this
+    command existed that code was built and unit-tested but unreachable
+    outside a test file -- the same "built but unreachable" gap this project
+    has repeatedly found and fixed for other providers. See
     `docs/roadmap/federated_research_discovery_adoption.md`'s FRD-7 section.
 
-    Only Semantic Scholar is wired today. OpenAlex's citation traversal
-    (`OpenAlexCitationAdapter`) also implements the shared
-    `CitationTraversalProvider` contract but additionally requires a work-
-    hydration lookup this command does not yet wire; adding it is a follow-up
-    slice, not a change to the contract this command already exposes.
+    `--provider semantic_scholar` (the default) uses
+    `SemanticScholarProvider.traverse`, already used for federated search --
+    see `_federated_discovery_registry`. `--provider openalex` uses
+    `OpenAlexCitationAdapter`, which wraps the same `OpenAlexCitationProvider`
+    and `OpenAlexProvider` (work-hydration lookup) instances
+    `federated-discover` already constructs, and requires
+    `--openalex-api-key`/`KE_OPENALEX_API_KEY` -- without one it reports
+    itself `disabled`, matching `OpenAlexProvider`'s existing federated-search
+    behavior, never a silent empty result. A run traverses exactly one
+    provider -- `CitationSnowballDiscovery` validates every traversal's
+    reported provider identity stays constant for the run, the same
+    discipline `federated-discover` fans out across providers instead of
+    relying on.
 
     A seed or an intermediate discovered work that the provider cannot
     resolve is reported as an explicit, labeled traversal outcome, never
@@ -5580,13 +5632,17 @@ def citation_snowball(
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
 
-    provider = SemanticScholarProvider(
-        transport=UrllibSemanticScholarTransport(), api_key=semantic_scholar_api_key
+    parsed_provider = _parse_snowball_provider(provider)
+    traversal_provider = _build_snowball_provider(
+        parsed_provider,
+        semantic_scholar_api_key=semantic_scholar_api_key,
+        openalex_api_key=openalex_api_key,
     )
-    discovery = CitationSnowballDiscovery(provider)
+    discovery = CitationSnowballDiscovery(traversal_provider)
 
+    provider_label = "Semantic Scholar" if parsed_provider == "semantic_scholar" else "OpenAlex"
     console.print(
-        "[yellow]Network access:[/yellow] querying Semantic Scholar's public citation "
+        f"[yellow]Network access:[/yellow] querying {provider_label}'s public citation "
         "graph over HTTPS."
     )
     result = discovery.run(plan)

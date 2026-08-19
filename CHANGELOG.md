@@ -14,17 +14,27 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   which were built and unit-tested but unreachable outside a test file, the
   same "built but unreachable" gap previously found and fixed for other FRD
   providers. `citation-snowball --seeds <ids> --ledger-root <dir>`
-  breadth-first expands seed identifiers through Semantic Scholar's public
+  breadth-first expands seed identifiers through a provider's public
   references/citations graph (bounded by `--max-depth`,
   `--limit-per-traversal`, `--max-candidates`) and persists a deterministic,
   replayable run record before returning it, matching `federated-discover`'s
   persist-before-return discipline. `citation-snowball-report
   <snowball_run_id> --ledger-root <dir>` re-fetches a persisted run's plan
   and traversal outcomes by ID, mirroring `federated-coverage-report`'s role
-  for FRD-6. Only Semantic Scholar is wired; OpenAlex's citation adapter
-  needs an additional work-hydration lookup, tracked as a follow-up. See
-  `docs/roadmap/federated_research_discovery_adoption.md`'s FRD-7 section
-  and `docs/core_interface_contract.md`.
+  for FRD-6. See `docs/roadmap/federated_research_discovery_adoption.md`'s
+  FRD-7 section and `docs/core_interface_contract.md`.
+- **`ke citation-snowball --provider openalex` (FRD-7 follow-up)**: a new
+  `--provider` option (`semantic_scholar`, the pre-existing default, or
+  `openalex`) wires `OpenAlexCitationAdapter` -- which already implemented
+  the shared `CitationTraversalProvider` contract but had no CLI caller --
+  as a second citation-snowball provider, reusing the same
+  `OpenAlexCitationProvider`/`OpenAlexProvider` (work-hydration lookup)
+  construction `federated-discover` already performs. `--openalex-api-key`/
+  `KE_OPENALEX_API_KEY` configures it; without a key it reports itself
+  `disabled` (not an error), matching `OpenAlexProvider`'s existing
+  federated-discover degradation contract. This is purely additive --
+  `--provider` defaults to `semantic_scholar`, so every existing
+  `citation-snowball` invocation and consumer keeps its current behavior.
 
 ### Changed
 
