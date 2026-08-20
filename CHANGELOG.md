@@ -75,6 +75,28 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   never recorded -- the ledger's `schema_version` did not change. See
   `docs/roadmap/federated_research_discovery_adoption.md`'s FRD-6 section
   and `docs/core_interface_contract.md`.
+- **`ProviderObservation` gains `corrected`/`expression_of_concern`/
+  `withdrawn` fields (FRD-5 follow-up)**: three new optional, independent
+  boolean flags alongside the existing `retracted`, on both
+  `federated_discovery.ProviderObservation` and its ledger mirror,
+  `federated_search_ledger.CandidateObservationRecord`, following this
+  project's own adopted "correction, expression-of-concern, withdrawal,
+  and retraction states should be modeled distinctly where provider data
+  permits" direction. `provider_disagreement.py`'s field-order tuple
+  gained the same three entries. This is the concrete Core-side schema
+  gap `knowledge-engine-web`'s WEB-FRD-4/WEB-FRD-5 sections named as
+  blocking their remaining publication-status exit criteria ("Core's
+  `ProviderObservation` does not yet carry those fields"). No provider
+  adapter populates the three new fields yet -- unlike `retracted`
+  (populated from OpenAlex's `is_retracted`), wiring a real provider
+  (e.g. Crossref's `update-to` relation types) is separate, not-yet-scoped
+  follow-up work; this change only makes the schema able to represent the
+  states once a provider does. Purely additive: all three fields default
+  to `None`, the ledger's `schema_version` is unchanged, and a candidate
+  observation persisted before this change loads with an honest `None`
+  for each rather than a fabricated value. See
+  `docs/roadmap/federated_research_discovery_adoption.md`'s FRD-5 section
+  and `docs/core_interface_contract.md`.
 
 ### Changed
 

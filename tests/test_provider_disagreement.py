@@ -26,6 +26,9 @@ def _observation(
     doi: str | None = "10.1000/example",
     open_access: bool | None = True,
     retracted: bool | None = False,
+    corrected: bool | None = None,
+    expression_of_concern: bool | None = None,
+    withdrawn: bool | None = None,
     citation_count: int | None = 10,
 ) -> ProviderObservation:
     return ProviderObservation(
@@ -37,6 +40,9 @@ def _observation(
         doi=doi,
         open_access=open_access,
         retracted=retracted,
+        corrected=corrected,
+        expression_of_concern=expression_of_concern,
+        withdrawn=withdrawn,
         citation_count=citation_count,
     )
 
@@ -80,6 +86,37 @@ def test_conflicting_observed_metadata_is_reported_in_stable_field_order() -> No
         ("pubmed", "1", 2024),
         ("openalex", "W1", 2025),
     )
+
+
+def test_publication_status_disagreement_is_reported_field_by_field() -> None:
+    candidate = _candidate(
+        _observation("PubMed", "1", corrected=False, withdrawn=False),
+        _observation(
+            "Crossref",
+            "10.1000/example",
+            corrected=True,
+            expression_of_concern=True,
+            withdrawn=False,
+        ),
+    )
+
+    disagreements = inspect_provider_disagreements(candidate)
+
+    assert tuple(item.field for item in disagreements) == ("corrected",)
+    assertions = disagreements[0].assertions
+    assert tuple((item.provider, item.value) for item in assertions) == (
+        ("pubmed", False),
+        ("crossref", True),
+    )
+
+
+def test_publication_status_flags_unreported_by_either_provider_are_not_disagreements() -> None:
+    candidate = _candidate(
+        _observation("PubMed", "1"),
+        _observation("Crossref", "10.1000/example"),
+    )
+
+    assert inspect_provider_disagreements(candidate) == ()
 
 
 def test_cosmetic_text_and_normalized_doi_differences_are_not_disagreements() -> None:

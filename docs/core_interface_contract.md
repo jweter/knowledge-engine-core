@@ -427,6 +427,43 @@ itself, but may need to trigger for a specific paper):**
   `schema_version` is unchanged (candidates is an optional field older
   records simply omit), so every existing invocation, consumer, and
   previously persisted run keeps working exactly as before.
+- **`ProviderObservation` publication-status fields (FRD-5 follow-up):**
+  `knowledge_engine.federated_discovery.ProviderObservation` -- and its
+  ledger mirror, `federated_search_ledger.CandidateObservationRecord` --
+  gained three new optional fields alongside the existing `retracted: bool
+  | None`: `corrected: bool | None`, `expression_of_concern: bool | None`,
+  `withdrawn: bool | None`. Each is an independent, non-exclusive flag (the
+  same per-flag pattern `open_access`/`retracted`/`preprint` already
+  established, not one combined status enum), following this project's
+  adopted "correction, expression-of-concern, withdrawal, and retraction
+  states should be modeled distinctly where provider data permits"
+  direction (`docs/roadmap/federated_research_discovery_adoption.md`'s
+  idea 5). `None` means "this provider did not report this flag," never an
+  affirmative "false" -- the same distinction `retracted` already required
+  a caller to preserve, and the reason `knowledge-engine-web`'s WEB-FRD-4
+  renders a candidate's status as `"not_checked"` (zero providers reported
+  it) separately from `"clear"` (at least one provider explicitly reported
+  `false`), rather than defaulting a missing value to `false`. **No
+  provider adapter populates these three new fields yet** -- unlike
+  `retracted` (populated from OpenAlex's `is_retracted`), no currently
+  configured provider transport in this repository parses a
+  correction/expression-of-concern/withdrawal signal; wiring a real
+  provider (e.g. Crossref's `update-to` relation types) to actually set
+  them is separate, not-yet-scoped follow-up work. This change unblocks
+  only the Core-side schema gap `knowledge-engine-web`'s WEB-FRD-4 and
+  WEB-FRD-5 sections named explicitly ("Core's `ProviderObservation` does
+  not yet carry those fields") -- it does not itself make any provider
+  report a real correction/expression-of-concern/withdrawal, and
+  `knowledge-engine-ai`/`knowledge-engine-web` still need their own
+  changes to parse and render these fields once a provider populates them.
+  Purely additive: three new fields default to `None` on both dataclasses,
+  `provider_disagreement.py`'s field-order tuple gained the same three
+  entries (so disagreement inspection extends to them without new code),
+  the ledger's `schema_version` is unchanged, and a candidate observation
+  persisted before this change loads with an honest `None` for all three
+  (`_optional_bool` already returns `None` for an absent key) rather than
+  a fabricated value. Every existing caller, CLI invocation, and
+  previously persisted ledger record keeps working exactly as before.
 - `ke corpus-import`, `ke extraction-review-generate`/`-batch-generate`,
   `ke extraction-review-annotate` (M45), `ke extraction-review-autoclassify`
   (M52, see "The seam" above), `ke extraction-review-promote`.
