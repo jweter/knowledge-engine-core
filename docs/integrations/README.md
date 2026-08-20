@@ -20,6 +20,10 @@ This directory is the canonical planning surface for third-party systems being e
 |---|---|---|---|
 | Docling | Structured document parser | Python adapter behind `DocumentParser` | Evaluate first |
 | MinerU | Alternate parser/OCR benchmark and fallback candidate | Adapter or isolated service | Benchmark |
+| Marker | Additional structured parser candidate | Adapter behind canonical parser contract | Benchmark |
+| MORE | Parser benchmark methodology | Reference-only | Adopt useful methodology |
+| Provenance | Source-span provenance / verifier architecture | Reference architecture first | High-priority study |
+| Ethos | Citation-region validation and staleness concepts | Reference/optional verifier adapter | High-priority study |
 | Stirling-PDF | PDF repair/OCR/preprocessing utility | External local REST/process service | Optional preprocessing |
 | n8n | Cross-project orchestration | External self-hosted control plane | Architecture evaluation |
 
