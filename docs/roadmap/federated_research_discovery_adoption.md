@@ -609,6 +609,33 @@ corresponding `knowledge-engine-ai` `ke_client` wrapper and Web's own
 tracked-question/diff-rendering work remain out of scope for this repo and
 are tracked in their own repositories.
 
+**Second follow-up (still FRD-6): candidate-snapshot persistence and
+`federated-coverage-report --output`.** After the above follow-up merged,
+`knowledge-engine-web` implemented WEB-FRD-5 design doc items 5-6 in full
+and confirmed (its own project-status ledger and design doc section 9) that
+its last two exit criteria -- specific newly discovered works, specific
+newly retracted candidates -- stayed genuinely unmet, because
+`ke_client.federated_discover_history()` deliberately returns only each
+past run's aggregate `SearchCoverageReport` (candidate *count*, not the
+candidates themselves), and the underlying gap was in this repository:
+`FederatedSearchLedger` never persisted a run's candidate list at all, only
+`candidate_count`. `federated-coverage-report`'s point lookup by
+`search_run_id` had the same gap. Both are now closed:
+`FederatedSearchLedger.record` also persists `result.candidates` (each
+candidate's canonical ID, title, DOI, publication year, and every
+provider's full observation -- the same shape `federated-discover --output`
+already serialized at request time) on `SearchRunRecord.candidates`, and
+`ke federated-coverage-report <search_run_id> --ledger-root <dir> --output
+<path.json>` writes that specific past run's coverage plus its full
+candidate snapshot as JSON. Purely additive: `candidates` is a new optional
+field on the on-disk record, so runs persisted before this change load with an
+honest empty candidate list rather than failing to parse or fabricating
+data that was never recorded; the ledger's `schema_version` did not need to
+change. This is the concrete Core ask WEB-FRD-5's design doc section 9
+named as the remaining unblock; the corresponding `knowledge-engine-ai`
+`ke_client` wrapper and Web's candidate-level diff rendering remain out of
+scope for this repo and are tracked in their own repositories.
+
 ### FRD-7 -- Citation snowball discovery
 
 Add bounded references/citations expansion as a reproducible discovery strategy.

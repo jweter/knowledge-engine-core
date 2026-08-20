@@ -1,9 +1,13 @@
 """Durable local ledger for reproducible federated discovery coverage.
 
 FRD-6 starts by preserving the facts needed to answer what was searched and
-whether coverage degraded. The ledger intentionally stores query/run/provider
-facts only; provider credentials, transport headers, and provider-native raw
-responses are outside this boundary.
+whether coverage degraded. The ledger stores query/run/provider facts and
+(as of the FRD-6 candidate-snapshot follow-up) each run's own deduplicated
+candidate list with per-provider observations -- the same public shape
+`federated-discover --output` already serializes at request time, now also
+durable and re-fetchable after the fact via `SearchRunRecord.candidates`.
+Provider credentials, transport headers, and provider-native raw responses
+remain outside this boundary.
 """
 
 from __future__ import annotations
@@ -19,6 +23,7 @@ from uuid import UUID, uuid4
 
 from knowledge_engine.federated_discovery import (
     FederatedSearchResult,
+    ProviderObservation,
     ProviderOutcome,
     SearchCompleteness,
 )
@@ -40,6 +45,73 @@ class ProviderCoverageRecord:
 
 
 @dataclass(frozen=True)
+class CandidateObservationRecord:
+    """One provider's persisted observation of one candidate, for later replay.
+
+    Mirrors `federated_discovery.ProviderObservation` field-for-field: the
+    same public shape `federated-discover --output` already serializes at
+    request time, now also durable in the ledger.
+    """
+
+    provider: str
+    provider_id: str
+    title: str
+    authors: tuple[str, ...] = ()
+    publication_year: int | None = None
+    venue: str | None = None
+    abstract: str | None = None
+    doi: str | None = None
+    pmid: str | None = None
+    pmcid: str | None = None
+    arxiv_id: str | None = None
+    openalex_id: str | None = None
+    semantic_scholar_id: str | None = None
+    landing_url: str | None = None
+    full_text_url: str | None = None
+    xml_url: str | None = None
+    license: str | None = None
+    metadata_source: str | None = None
+    pmcid_source: str | None = None
+    open_access_source: str | None = None
+    citation_count: int | None = None
+    open_access: bool | None = None
+    retracted: bool | None = None
+    preprint: bool | None = None
+    preprint_version: int | None = None
+    related_journal_doi: str | None = None
+    related_journal_reference: str | None = None
+    retrieved_at: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["authors"] = list(self.authors)
+        return payload
+
+
+@dataclass(frozen=True)
+class CandidateRecord:
+    """One persisted deduplicated candidate, with every provider's observation.
+
+    Mirrors `federated_discovery.FederatedCandidate` field-for-field.
+    """
+
+    canonical_id: str
+    title: str
+    observations: tuple[CandidateObservationRecord, ...]
+    doi: str | None = None
+    publication_year: int | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "canonical_id": self.canonical_id,
+            "title": self.title,
+            "observations": [observation.to_dict() for observation in self.observations],
+            "doi": self.doi,
+            "publication_year": self.publication_year,
+        }
+
+
+@dataclass(frozen=True)
 class SearchRunRecord:
     """Immutable local record of one federated discovery run."""
 
@@ -56,6 +128,7 @@ class SearchRunRecord:
     initiated_by: str | None = None
     project_id: str | None = None
     research_question_id: str | None = None
+    candidates: tuple[CandidateRecord, ...] = ()
 
     @property
     def providers_requested(self) -> tuple[str, ...]:
@@ -86,6 +159,7 @@ class SearchRunRecord:
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["providers"] = [asdict(provider) for provider in self.providers]
+        payload["candidates"] = [candidate.to_dict() for candidate in self.candidates]
         return payload
 
 
@@ -171,6 +245,19 @@ class FederatedSearchLedger:
             )
             for status in result.provider_statuses
         )
+        candidates = tuple(
+            CandidateRecord(
+                canonical_id=candidate.canonical_id,
+                title=candidate.title,
+                observations=tuple(
+                    _observation_record_from_domain(observation)
+                    for observation in candidate.observations
+                ),
+                doi=candidate.doi,
+                publication_year=candidate.publication_year,
+            )
+            for candidate in result.candidates
+        )
         record = SearchRunRecord(
             schema_version=LEDGER_SCHEMA_VERSION,
             search_run_id=search_run_id,
@@ -185,6 +272,7 @@ class FederatedSearchLedger:
             initiated_by=_optional_text(initiated_by),
             project_id=_optional_text(project_id),
             research_question_id=_optional_text(research_question_id),
+            candidates=candidates,
         )
         self._write_once(record)
         return record
@@ -239,21 +327,7 @@ class FederatedSearchLedger:
     def coverage_report(self, search_run_id: str) -> SearchCoverageReport:
         """Return deterministic coverage and search-method facts without inference."""
 
-        record = self.load(search_run_id)
-        return SearchCoverageReport(
-            search_run_id=record.search_run_id,
-            created_at=record.created_at,
-            query_text=record.query_text,
-            year_from=record.year_from,
-            year_to=record.year_to,
-            limit_per_provider=record.limit_per_provider,
-            completeness=record.completeness,
-            candidate_count=record.candidate_count,
-            providers_requested=record.providers_requested,
-            providers_attempted=record.providers_attempted,
-            providers_completed=record.providers_completed,
-            providers_failed=record.providers_failed,
-        )
+        return build_search_coverage_report(self.load(search_run_id))
 
     def _write_once(self, record: SearchRunRecord) -> None:
         self._root.mkdir(parents=True, exist_ok=True)
@@ -282,6 +356,30 @@ class FederatedSearchLedger:
         return self._root / f"{search_run_id}.json"
 
 
+def build_search_coverage_report(record: SearchRunRecord) -> SearchCoverageReport:
+    """Derive the deterministic public coverage view from an already-loaded record.
+
+    Exposed at module level (not just as `FederatedSearchLedger.coverage_report`'s
+    internal step) so a caller that already holds a `SearchRunRecord` -- e.g. to
+    also read its `candidates` -- can derive coverage without a second ledger read.
+    """
+
+    return SearchCoverageReport(
+        search_run_id=record.search_run_id,
+        created_at=record.created_at,
+        query_text=record.query_text,
+        year_from=record.year_from,
+        year_to=record.year_to,
+        limit_per_provider=record.limit_per_provider,
+        completeness=record.completeness,
+        candidate_count=record.candidate_count,
+        providers_requested=record.providers_requested,
+        providers_attempted=record.providers_attempted,
+        providers_completed=record.providers_completed,
+        providers_failed=record.providers_failed,
+    )
+
+
 def _record_from_payload(payload: object, *, expected_run_id: str) -> SearchRunRecord:
     if not isinstance(payload, dict):
         raise ValueError("Federated search-run record must be a JSON object.")
@@ -299,6 +397,17 @@ def _record_from_payload(payload: object, *, expected_run_id: str) -> SearchRunR
     if completeness not in {item.value for item in SearchCompleteness}:
         raise ValueError("Federated search-run completeness is invalid.")
 
+    # `candidates` postdates schema_version 1's original shape: records written
+    # before this field existed simply omit the key. Defaulting to an empty
+    # tuple keeps every previously persisted run readable rather than
+    # rejecting it -- coverage facts (candidate_count included) still load
+    # correctly either way; only the candidate-level snapshot is unavailable
+    # for runs recorded before this capability existed.
+    candidates_payload = payload.get("candidates", [])
+    if not isinstance(candidates_payload, list):
+        raise ValueError("Federated search-run candidates must be a JSON array.")
+    candidates = tuple(_candidate_from_payload(item) for item in candidates_payload)
+
     return SearchRunRecord(
         schema_version=LEDGER_SCHEMA_VERSION,
         search_run_id=expected_run_id,
@@ -313,6 +422,7 @@ def _record_from_payload(payload: object, *, expected_run_id: str) -> SearchRunR
         initiated_by=_payload_optional_string(payload, "initiated_by"),
         project_id=_payload_optional_string(payload, "project_id"),
         research_question_id=_payload_optional_string(payload, "research_question_id"),
+        candidates=candidates,
     )
 
 
@@ -333,6 +443,96 @@ def _provider_from_payload(payload: object) -> ProviderCoverageRecord:
         result_count=_required_nonnegative_int(payload, "result_count"),
         latency_ms=_optional_nonnegative_int(payload, "latency_ms"),
         reason=_payload_optional_string(payload, "reason"),
+    )
+
+
+def _observation_record_from_domain(observation: ProviderObservation) -> CandidateObservationRecord:
+    return CandidateObservationRecord(
+        provider=observation.provider,
+        provider_id=observation.provider_id,
+        title=observation.title,
+        authors=observation.authors,
+        publication_year=observation.publication_year,
+        venue=observation.venue,
+        abstract=observation.abstract,
+        doi=observation.doi,
+        pmid=observation.pmid,
+        pmcid=observation.pmcid,
+        arxiv_id=observation.arxiv_id,
+        openalex_id=observation.openalex_id,
+        semantic_scholar_id=observation.semantic_scholar_id,
+        landing_url=observation.landing_url,
+        full_text_url=observation.full_text_url,
+        xml_url=observation.xml_url,
+        license=observation.license,
+        metadata_source=observation.metadata_source,
+        pmcid_source=observation.pmcid_source,
+        open_access_source=observation.open_access_source,
+        citation_count=observation.citation_count,
+        open_access=observation.open_access,
+        retracted=observation.retracted,
+        preprint=observation.preprint,
+        preprint_version=observation.preprint_version,
+        related_journal_doi=observation.related_journal_doi,
+        related_journal_reference=observation.related_journal_reference,
+        retrieved_at=observation.retrieved_at,
+    )
+
+
+def _candidate_from_payload(payload: object) -> CandidateRecord:
+    if not isinstance(payload, dict):
+        raise ValueError("Federated search-run candidate must be a JSON object.")
+    observations_payload = payload.get("observations")
+    if not isinstance(observations_payload, list) or not observations_payload:
+        raise ValueError("Federated search-run candidate observations must be a non-empty array.")
+    observations = tuple(_candidate_observation_from_payload(item) for item in observations_payload)
+    return CandidateRecord(
+        canonical_id=_required_string(payload, "canonical_id"),
+        title=_required_string(payload, "title"),
+        observations=observations,
+        doi=_payload_optional_string(payload, "doi"),
+        publication_year=_optional_int(payload, "publication_year"),
+    )
+
+
+def _candidate_observation_from_payload(payload: object) -> CandidateObservationRecord:
+    if not isinstance(payload, dict):
+        raise ValueError("Federated search-run candidate observation must be a JSON object.")
+    authors_payload = payload.get("authors", [])
+    if not isinstance(authors_payload, list) or not all(
+        isinstance(author, str) for author in authors_payload
+    ):
+        raise ValueError("Federated search-run candidate authors must be a JSON array of strings.")
+
+    return CandidateObservationRecord(
+        provider=_required_string(payload, "provider"),
+        provider_id=_required_string(payload, "provider_id"),
+        title=_required_string(payload, "title"),
+        authors=tuple(authors_payload),
+        publication_year=_optional_int(payload, "publication_year"),
+        venue=_payload_optional_string(payload, "venue"),
+        abstract=_payload_optional_string(payload, "abstract"),
+        doi=_payload_optional_string(payload, "doi"),
+        pmid=_payload_optional_string(payload, "pmid"),
+        pmcid=_payload_optional_string(payload, "pmcid"),
+        arxiv_id=_payload_optional_string(payload, "arxiv_id"),
+        openalex_id=_payload_optional_string(payload, "openalex_id"),
+        semantic_scholar_id=_payload_optional_string(payload, "semantic_scholar_id"),
+        landing_url=_payload_optional_string(payload, "landing_url"),
+        full_text_url=_payload_optional_string(payload, "full_text_url"),
+        xml_url=_payload_optional_string(payload, "xml_url"),
+        license=_payload_optional_string(payload, "license"),
+        metadata_source=_payload_optional_string(payload, "metadata_source"),
+        pmcid_source=_payload_optional_string(payload, "pmcid_source"),
+        open_access_source=_payload_optional_string(payload, "open_access_source"),
+        citation_count=_optional_nonnegative_int(payload, "citation_count"),
+        open_access=_optional_bool(payload, "open_access"),
+        retracted=_optional_bool(payload, "retracted"),
+        preprint=_optional_bool(payload, "preprint"),
+        preprint_version=_optional_int(payload, "preprint_version"),
+        related_journal_doi=_payload_optional_string(payload, "related_journal_doi"),
+        related_journal_reference=_payload_optional_string(payload, "related_journal_reference"),
+        retrieved_at=_payload_optional_string(payload, "retrieved_at"),
     )
 
 
@@ -373,6 +573,15 @@ def _optional_int(payload: dict[str, Any], field: str) -> int | None:
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"Federated search-run field {field} is invalid.")
+    return value
+
+
+def _optional_bool(payload: dict[str, Any], field: str) -> bool | None:
+    value = payload.get(field)
+    if value is None:
+        return None
+    if not isinstance(value, bool):
         raise ValueError(f"Federated search-run field {field} is invalid.")
     return value
 
