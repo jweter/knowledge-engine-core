@@ -83,14 +83,14 @@ class CandidateObservationRecord:
     citation_count: int | None = None
     open_access: bool | None = None
     retracted: bool | None = None
-    corrected: bool | None = None
-    expression_of_concern: bool | None = None
-    withdrawn: bool | None = None
     preprint: bool | None = None
     preprint_version: int | None = None
     related_journal_doi: str | None = None
     related_journal_reference: str | None = None
     retrieved_at: str | None = None
+    corrected: bool | None = None
+    expression_of_concern: bool | None = None
+    withdrawn: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
