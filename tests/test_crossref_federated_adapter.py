@@ -10,6 +10,7 @@ from knowledge_engine.metadata_enrichment import (
     MetadataProviderResult,
     MetadataQuery,
     ProviderDiagnostic,
+    PublicationStatusSignal,
     normalize_candidate_value,
 )
 
@@ -82,6 +83,69 @@ def test_crossref_adapter_maps_exact_doi_metadata_without_losing_provenance() ->
     assert observation.venue == "Example Journal"
     assert observation.metadata_source == "crossref"
     assert observation.retrieved_at == _RETRIEVED_AT.isoformat()
+
+
+def test_crossref_adapter_carries_publication_status_flags_onto_observation() -> None:
+    provider = FakeCrossrefProvider(
+        MetadataProviderResult(
+            candidates=(
+                _candidate("doi", "10.1000/example"),
+                _candidate("title", "Example Paper"),
+            ),
+            publication_status=PublicationStatusSignal(
+                provider="crossref",
+                retracted=True,
+                expression_of_concern=None,
+                corrected=None,
+                withdrawn=None,
+            ),
+        )
+    )
+
+    result = CrossrefFederatedAdapter(provider).search(DiscoveryQuery(text="10.1000/example"))
+
+    observation = result.candidates[0].observations[0]
+    assert observation.retracted is True
+    assert observation.corrected is None
+    assert observation.expression_of_concern is None
+    assert observation.withdrawn is None
+
+
+def test_crossref_adapter_defaults_publication_status_flags_to_none_when_absent() -> None:
+    provider = FakeCrossrefProvider(
+        MetadataProviderResult(
+            candidates=(
+                _candidate("doi", "10.1000/example"),
+                _candidate("title", "Example Paper"),
+            )
+        )
+    )
+
+    result = CrossrefFederatedAdapter(provider).search(DiscoveryQuery(text="10.1000/example"))
+
+    observation = result.candidates[0].observations[0]
+    assert observation.retracted is None
+    assert observation.corrected is None
+    assert observation.expression_of_concern is None
+    assert observation.withdrawn is None
+
+
+def test_crossref_adapter_fails_closed_on_mismatched_publication_status_provider() -> None:
+    provider = FakeCrossrefProvider(
+        MetadataProviderResult(
+            candidates=(
+                _candidate("doi", "10.1000/example"),
+                _candidate("title", "Example Paper"),
+            ),
+            publication_status=PublicationStatusSignal(provider="openalex", retracted=True),
+        )
+    )
+
+    result = CrossrefFederatedAdapter(provider).search(DiscoveryQuery(text="10.1000/example"))
+
+    assert result.provider_statuses[0].outcome == ProviderOutcome.FAILED
+    assert result.provider_statuses[0].reason == "candidate_contract_mismatch"
+    assert result.candidates == ()
 
 
 def test_crossref_adapter_rejects_free_text_without_calling_doi_provider() -> None:

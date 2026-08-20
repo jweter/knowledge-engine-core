@@ -81,11 +81,32 @@ class ProviderDiagnostic:
 
 
 @dataclass(frozen=True)
+class PublicationStatusSignal:
+    """One provider's explicit publication-status assertions for one work.
+
+    Mirrors `federated_discovery.ProviderObservation`'s independent,
+    non-exclusive `retracted`/`corrected`/`expression_of_concern`/`withdrawn`
+    flags. `None` means "this provider did not report this flag," never an
+    affirmative "false" -- a provider's silence is not evidence of a clean
+    status. A field is only ever set `True` when the provider explicitly
+    reported a matching status; this module never infers `False` from an
+    absent or partial signal.
+    """
+
+    provider: str
+    retracted: bool | None = None
+    corrected: bool | None = None
+    expression_of_concern: bool | None = None
+    withdrawn: bool | None = None
+
+
+@dataclass(frozen=True)
 class MetadataProviderResult:
     """Candidates and diagnostics returned by one provider lookup."""
 
     candidates: tuple[MetadataCandidate, ...] = ()
     diagnostics: tuple[ProviderDiagnostic, ...] = ()
+    publication_status: PublicationStatusSignal | None = None
 
 
 class MetadataProvider(Protocol):

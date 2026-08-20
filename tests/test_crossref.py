@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from knowledge_engine.crossref import parse_crossref_work
+from knowledge_engine.crossref import parse_crossref_publication_status, parse_crossref_work
 from knowledge_engine.metadata_enrichment import MetadataQuery
 
 
@@ -111,6 +111,109 @@ def test_parse_crossref_work_reports_missing_message() -> None:
     assert result.candidates == ()
     assert result.diagnostics[0].code == "malformed_response"
     assert result.diagnostics[0].message == "Crossref response is missing a work object."
+
+
+def test_parse_crossref_work_attaches_publication_status_from_update_to() -> None:
+    payload = {
+        "message": {
+            "DOI": "10.1000/example",
+            "title": ["Example Paper"],
+            "update-to": [{"type": "retraction", "DOI": "10.1000/other"}],
+        }
+    }
+
+    result = parse_crossref_work(
+        payload,
+        query=MetadataQuery(doi="10.1000/example"),
+        retrieved_at=datetime(2026, 7, 18, tzinfo=UTC),
+    )
+
+    assert result.publication_status is not None
+    assert result.publication_status.provider == "crossref"
+    assert result.publication_status.retracted is True
+    assert result.publication_status.corrected is None
+    assert result.publication_status.expression_of_concern is None
+    assert result.publication_status.withdrawn is None
+
+
+def test_parse_crossref_work_reports_no_publication_status_signal_without_update_to() -> None:
+    payload = {"message": {"DOI": "10.1000/example", "title": ["Example Paper"]}}
+
+    result = parse_crossref_work(
+        payload,
+        query=MetadataQuery(doi="10.1000/example"),
+        retrieved_at=datetime(2026, 7, 18, tzinfo=UTC),
+    )
+
+    assert result.publication_status is not None
+    assert result.publication_status == parse_crossref_publication_status(payload["message"])
+    assert result.publication_status.retracted is None
+    assert result.publication_status.corrected is None
+    assert result.publication_status.expression_of_concern is None
+    assert result.publication_status.withdrawn is None
+
+
+def test_parse_crossref_publication_status_maps_recognized_types() -> None:
+    cases = {
+        "retraction": "retracted",
+        "PARTIAL_RETRACTION": "retracted",
+        "correction": "corrected",
+        "corrigendum": "corrected",
+        "erratum": "corrected",
+        "expression_of_concern": "expression_of_concern",
+        "withdrawal": "withdrawn",
+        "removal": "withdrawn",
+    }
+    for update_type, expected_field in cases.items():
+        signal = parse_crossref_publication_status(
+            {"update-to": [{"type": update_type}]},
+        )
+        assert getattr(signal, expected_field) is True
+        other_fields = {"retracted", "corrected", "expression_of_concern", "withdrawn"} - {
+            expected_field
+        }
+        for field in other_fields:
+            assert getattr(signal, field) is None
+
+
+def test_parse_crossref_publication_status_ignores_unrecognized_types() -> None:
+    signal = parse_crossref_publication_status(
+        {"update-to": [{"type": "addendum"}, {"type": "new_edition"}]},
+    )
+
+    assert signal.retracted is None
+    assert signal.corrected is None
+    assert signal.expression_of_concern is None
+    assert signal.withdrawn is None
+
+
+def test_parse_crossref_publication_status_combines_multiple_entries() -> None:
+    signal = parse_crossref_publication_status(
+        {
+            "update-to": [
+                {"type": "expression_of_concern"},
+                {"type": "retraction"},
+            ]
+        },
+    )
+
+    assert signal.expression_of_concern is True
+    assert signal.retracted is True
+    assert signal.corrected is None
+    assert signal.withdrawn is None
+
+
+def test_parse_crossref_publication_status_handles_malformed_update_to() -> None:
+    assert parse_crossref_publication_status({}) == parse_crossref_publication_status(
+        {"update-to": "not-a-list"}
+    )
+    assert parse_crossref_publication_status({"update-to": []}).retracted is None
+    signal = parse_crossref_publication_status({"update-to": [None, {"type": None}, "junk"]})
+    assert signal.retracted is None
+    assert signal.corrected is None
+    assert signal.expression_of_concern is None
+    assert signal.withdrawn is None
+    assert parse_crossref_publication_status("not-a-mapping").retracted is None
 
 
 def test_parse_crossref_work_bounds_repeated_values() -> None:

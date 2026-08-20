@@ -87,12 +87,17 @@ class ProviderObservation:
     this flag," never "this provider affirmatively found this false" --
     callers must not collapse missing and false into the same rendering (see
     `knowledge-engine-web`'s WEB-FRD-4 `not_checked`/`clear` distinction for
-    ``retracted``, extended by the same reasoning to these three). No adapter
-    currently populates ``corrected``/``expression_of_concern``/``withdrawn``
-    (no configured provider transport exposes those specific statuses yet,
-    unlike OpenAlex's ``is_retracted``); they exist so the schema can
-    represent them the moment provider data does, without a later breaking
-    change.
+    ``retracted``, extended by the same reasoning to these three).
+    `crossref_federated_adapter.py` now populates all four flags from
+    Crossref's ``update-to`` relation (via
+    `crossref.parse_crossref_publication_status`) when Crossref reports a
+    recognized relation type; a flag is only ever set ``True`` there, never
+    an inferred ``False``, because Crossref crossmark participation is not
+    universal. No other adapter populates ``corrected``/
+    ``expression_of_concern``/``withdrawn`` yet (OpenAlex's ``is_retracted``
+    remains the only source for plain ``retracted``); they exist so the
+    schema can represent them the moment a provider reports them, without a
+    later breaking change.
     """
 
     provider: str

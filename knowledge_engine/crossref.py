@@ -17,9 +17,31 @@ from knowledge_engine.metadata_enrichment import (
     MetadataProviderResult,
     MetadataQuery,
     ProviderDiagnostic,
+    PublicationStatusSignal,
     normalize_candidate_value,
     validate_candidates,
 )
+
+# Crossref's `update-to` relation reports a controlled-vocabulary `type` for
+# each linked update record (see
+# https://www.crossref.org/documentation/schema-library/markup-guide-metadata-segments/relations/).
+# Only types with an unambiguous mapping onto Knowledge Engine's four
+# independent publication-status flags are mapped; every other type (for
+# example `addendum`, `clarification`, `new_edition`, or `editorial_note`) is
+# deliberately left unmapped rather than guessed. A type is mapped to at most
+# one flag -- `retraction` and `partial_retraction` both mean "this provider
+# is asserting a retraction," matching `retracted`'s existing coarse
+# semantics elsewhere in this project.
+_UPDATE_TO_STATUS_FIELDS: dict[str, str] = {
+    "retraction": "retracted",
+    "partial_retraction": "retracted",
+    "removal": "withdrawn",
+    "withdrawal": "withdrawn",
+    "correction": "corrected",
+    "corrigendum": "corrected",
+    "erratum": "corrected",
+    "expression_of_concern": "expression_of_concern",
+}
 
 
 def parse_crossref_work(
@@ -76,7 +98,39 @@ def parse_crossref_work(
         for field, value in candidate_values
     ]
 
-    return MetadataProviderResult(candidates=validate_candidates(candidates))
+    return MetadataProviderResult(
+        candidates=validate_candidates(candidates),
+        publication_status=parse_crossref_publication_status(message),
+    )
+
+
+def parse_crossref_publication_status(message: object) -> PublicationStatusSignal:
+    """Derive independent publication-status flags from a Crossref `update-to` list.
+
+    A flag is only ever set `True`, and only when Crossref reports a
+    recognized `update-to` relation type (see `_UPDATE_TO_STATUS_FIELDS`).
+    An absent `update-to` list, an empty one, or one containing only
+    unrecognized types leaves every flag `None` -- Crossref's crossmark
+    participation is not universal, so the absence of a signal is never
+    treated as an affirmative "clear" status.
+    """
+
+    flags: dict[str, bool] = {}
+    entries = _mapping(message)
+    update_to = entries.get("update-to") if entries is not None else None
+    if isinstance(update_to, list):
+        for entry in update_to:
+            entry_mapping = _mapping(entry)
+            if entry_mapping is None:
+                continue
+            entry_type = _text(entry_mapping.get("type"))
+            if entry_type is None:
+                continue
+            field_name = _UPDATE_TO_STATUS_FIELDS.get(entry_type.strip().casefold())
+            if field_name is not None:
+                flags[field_name] = True
+
+    return PublicationStatusSignal(provider="crossref", **flags)
 
 
 def _mapping(value: object) -> Mapping[str, object] | None:
