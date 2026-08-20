@@ -406,6 +406,27 @@ itself, but may need to trigger for a specific paper):**
   freshness-history design depends on. No matching runs is reported
   plainly (exit `0`), never as an error: a tracked question with no prior
   recorded search is an expected, honest state.
+- `ke federated-coverage-report <search_run_id> --ledger-root <dir>
+  [--output <path.json>]` (FRD-6 candidate-snapshot follow-up):
+  `federated-coverage-report` now also accepts `--output`, which writes
+  `{"search_run_id", "coverage": SearchCoverageReport.to_dict(), "candidates":
+  [...]}` -- that run's own deduplicated candidate list (canonical ID,
+  title, DOI, publication year, and every provider's full observation, the
+  same shape `federated-discover --output`'s `candidates` field already
+  serializes at request time), now durable in `FederatedSearchLedger` and
+  re-fetchable for one specific past run by ID. This closes the point-lookup
+  gap `knowledge-engine-web`'s WEB-FRD-5 freshness-history design identified
+  (its design doc section 9): `federated-discover-history` above returns
+  only each matched run's aggregate `SearchCoverageReport`, not any run's
+  candidate list, because until now the ledger never persisted candidates at
+  all -- only their count. `FederatedSearchLedger.record` now also captures
+  `result.candidates` on every new run; runs persisted before this change
+  have no candidate snapshot, and load with an honest empty `candidates`
+  list rather than a fabricated or reconstructed one. Purely additive: the
+  new `--output` flag defaults to `None` and the ledger's on-disk
+  `schema_version` is unchanged (candidates is an optional field older
+  records simply omit), so every existing invocation, consumer, and
+  previously persisted run keeps working exactly as before.
 - `ke corpus-import`, `ke extraction-review-generate`/`-batch-generate`,
   `ke extraction-review-annotate` (M45), `ke extraction-review-autoclassify`
   (M52, see "The seam" above), `ke extraction-review-promote`.

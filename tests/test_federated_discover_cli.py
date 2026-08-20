@@ -274,6 +274,89 @@ def test_federated_coverage_report_reads_back_a_persisted_run(
     assert "Coverage: complete" in unwrapped
 
 
+def test_federated_coverage_report_output_includes_candidate_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider_a = FakeProvider(
+        "alpha", _success_result("alpha", candidate_id="A1", doi="10.1000/alpha-1")
+    )
+    monkeypatch.setattr(
+        entrypoint, "_federated_discovery_registry", lambda **kwargs: _registry_with(provider_a)
+    )
+
+    ledger_root = tmp_path / "ledger"
+    discover_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "federated-discover",
+            "--query",
+            "obesity treatment",
+            "--ledger-root",
+            str(ledger_root),
+        ],
+    )
+    assert discover_result.exit_code == 0, discover_result.output
+    search_run_id = list(ledger_root.glob("*.json"))[0].stem
+
+    output_path = tmp_path / "coverage.json"
+    report_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "federated-coverage-report",
+            search_run_id,
+            "--ledger-root",
+            str(ledger_root),
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert report_result.exit_code == 0, report_result.output
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["search_run_id"] == search_run_id
+    assert payload["coverage"]["candidate_count"] == 1
+    assert len(payload["candidates"]) == 1
+    candidate = payload["candidates"][0]
+    assert candidate["doi"] == "10.1000/alpha-1"
+    assert candidate["observations"][0]["provider"] == "alpha"
+    assert candidate["observations"][0]["title"] == "A paper found by alpha"
+    # Internal run context never enters this public payload.
+    assert "initiated_by" not in payload["coverage"]
+    assert "project_id" not in payload["coverage"]
+
+
+def test_federated_coverage_report_without_output_flag_writes_no_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider_a = FakeProvider(
+        "alpha", _success_result("alpha", candidate_id="A1", doi="10.1000/alpha-1")
+    )
+    monkeypatch.setattr(
+        entrypoint, "_federated_discovery_registry", lambda **kwargs: _registry_with(provider_a)
+    )
+
+    ledger_root = tmp_path / "ledger"
+    CliRunner().invoke(
+        entrypoint.app,
+        [
+            "federated-discover",
+            "--query",
+            "obesity treatment",
+            "--ledger-root",
+            str(ledger_root),
+        ],
+    )
+    search_run_id = list(ledger_root.glob("*.json"))[0].stem
+
+    report_result = CliRunner().invoke(
+        entrypoint.app,
+        ["federated-coverage-report", search_run_id, "--ledger-root", str(ledger_root)],
+    )
+
+    assert report_result.exit_code == 0, report_result.output
+    assert not (tmp_path / "coverage.json").exists()
+
+
 def test_federated_coverage_report_handles_an_unknown_run_id(tmp_path: Path) -> None:
     result = CliRunner().invoke(
         entrypoint.app,

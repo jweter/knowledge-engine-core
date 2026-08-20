@@ -234,6 +234,77 @@ def test_list_by_research_question_id_rejects_blank_input(tmp_path: Path) -> Non
         ledger.list_by_research_question_id("   ")
 
 
+def test_record_persists_full_candidate_snapshot_with_provider_observations(
+    tmp_path: Path,
+) -> None:
+    ledger = _ledger(tmp_path / "search-runs")
+
+    record = ledger.record(_result())
+
+    assert len(record.candidates) == 1
+    candidate = record.candidates[0]
+    assert candidate.canonical_id == "pubmed:12345"
+    assert candidate.title == "A protein folding study"
+    assert candidate.doi is None
+    assert len(candidate.observations) == 1
+    observation = candidate.observations[0]
+    assert observation.provider == "PubMed"
+    assert observation.provider_id == "12345"
+    assert observation.pmid == "12345"
+    assert observation.retrieved_at == "2026-08-16T02:44:00+00:00"
+
+    persisted = json.loads(
+        (tmp_path / "search-runs" / f"{_RUN_ID}.json").read_text(encoding="utf-8")
+    )
+    assert persisted["candidates"][0]["canonical_id"] == "pubmed:12345"
+    assert persisted["candidates"][0]["observations"][0]["provider"] == "PubMed"
+
+
+def test_load_defaults_candidates_to_empty_tuple_for_pre_existing_records(
+    tmp_path: Path,
+) -> None:
+    """Records persisted before candidate-snapshot support must remain readable.
+
+    The ledger is a durable, replayable record; a run recorded before this
+    field existed must load with an honest empty candidate list rather than
+    fail to parse or fabricate candidates that were never persisted.
+    """
+
+    root = tmp_path / "search-runs"
+    root.mkdir()
+    payload = {
+        "schema_version": LEDGER_SCHEMA_VERSION,
+        "search_run_id": str(_RUN_ID),
+        "created_at": "2026-08-16T02:45:00+00:00",
+        "query_text": "protein folding",
+        "year_from": 2020,
+        "year_to": 2026,
+        "limit_per_provider": 25,
+        "completeness": "partial",
+        "candidate_count": 1,
+        "providers": [
+            {
+                "provider": "pubmed",
+                "outcome": "success",
+                "attempted": True,
+                "result_count": 1,
+                "latency_ms": 120,
+                "reason": None,
+            }
+        ],
+        "initiated_by": None,
+        "project_id": None,
+        "research_question_id": None,
+        # deliberately no "candidates" key -- pre-existing record shape
+    }
+    (root / f"{_RUN_ID}.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = FederatedSearchLedger(root).load(str(_RUN_ID))
+
+    assert loaded.candidates == ()
+    assert loaded.candidate_count == 1
+
+
 def test_load_rejects_malformed_or_wrong_schema_record(tmp_path: Path) -> None:
     root = tmp_path / "runs"
     root.mkdir()

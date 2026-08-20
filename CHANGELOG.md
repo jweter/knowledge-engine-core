@@ -54,6 +54,27 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   freshness history") design identified. See
   `docs/roadmap/federated_research_discovery_adoption.md`'s FRD-6 section
   and `docs/core_interface_contract.md`.
+- **`ke federated-coverage-report --output` and ledger candidate-snapshot
+  persistence (FRD-6 second follow-up)**: `FederatedSearchLedger.record`
+  now also persists each run's own deduplicated candidate list (canonical
+  ID, title, DOI, publication year, and every provider's full observation)
+  on `SearchRunRecord.candidates`, closing a gap where the ledger recorded
+  only `candidate_count`, never the candidates themselves.
+  `federated-coverage-report <search_run_id> --ledger-root <dir> --output
+  <path.json>` is the new read surface: it writes that one past run's
+  coverage plus its full candidate snapshot as JSON, the same shape
+  `federated-discover --output`'s `candidates` field already serializes at
+  request time -- letting a caller look up a *specific past run's*
+  candidates without re-running the search. This is the concrete Core gap
+  `knowledge-engine-web`'s WEB-FRD-5 design doc (section 9) identified as
+  the remaining blocker for its "newly discovered works" and "new
+  corrections/retractions" exit criteria. Purely additive: `--output`
+  defaults to `None`, `candidates` is a new optional field on the on-disk
+  record, and runs persisted before this change load with an honest empty
+  candidate list rather than failing to parse or fabricating data that was
+  never recorded -- the ledger's `schema_version` did not change. See
+  `docs/roadmap/federated_research_discovery_adoption.md`'s FRD-6 section
+  and `docs/core_interface_contract.md`.
 
 ### Changed
 

@@ -125,7 +125,11 @@ from knowledge_engine.extraction_review_batch import (
 )
 from knowledge_engine.federated_discovery import DiscoveryQuery
 from knowledge_engine.federated_result_snapshot import build_public_federated_result_payload
-from knowledge_engine.federated_search_ledger import FederatedSearchLedger, SearchCoverageReport
+from knowledge_engine.federated_search_ledger import (
+    FederatedSearchLedger,
+    SearchCoverageReport,
+    build_search_coverage_report,
+)
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.llm import LocalLLMError, OllamaLLM
@@ -413,6 +417,20 @@ FederatedHistoryOutputOption = Annotated[
             "count, and each matched run's public coverage record) as JSON, for a "
             "programmatic caller -- e.g. knowledge-engine-web -- rather than parsing "
             "the console table."
+        ),
+    ),
+]
+FederatedCoverageReportOutputOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--output",
+        help=(
+            "Optional path to also save this run's public coverage record plus its "
+            "full deduplicated candidate list (with per-provider observations) as "
+            "JSON, for a programmatic caller -- e.g. knowledge-engine-web's "
+            "freshness-history view -- rather than parsing the console table. Runs "
+            "persisted before this option existed have no candidate snapshot; "
+            "`candidates` is an empty list for those, never fabricated."
         ),
     ),
 ]
@@ -5523,6 +5541,7 @@ def federated_discover(
 def federated_coverage_report(
     search_run_id: FederatedSearchRunIdArgument,
     ledger_root: FederatedLedgerRootOption,
+    output: FederatedCoverageReportOutputOption = None,
 ) -> None:
     """Print the persisted coverage facts for one federated search run (FRD-6).
 
@@ -5531,17 +5550,39 @@ def federated_coverage_report(
     after the fact, rather than trusting whatever `federated-discover`
     printed at search time -- the reproducibility guarantee
     `FederatedDiscoveryService`'s own docstring names explicitly.
+
+    `--output <path.json>` additionally saves this run's own deduplicated
+    candidate list (title, DOI, year, and every provider's full observation
+    -- the same shape `federated-discover --output` already serializes at
+    request time) alongside its coverage record, so a caller can look up a
+    *specific past run's* candidates without re-running the search --
+    closing the point-lookup gap `knowledge-engine-web`'s WEB-FRD-5
+    freshness-history design identified (see
+    `docs/roadmap/federated_research_discovery_adoption.md`'s FRD-6
+    section). Runs persisted before this capability existed carry no
+    candidate snapshot in the ledger; `candidates` is an honest empty list
+    for those, never reconstructed or approximated.
     """
 
     recorder = FederatedSearchLedger(ledger_root)
     try:
-        coverage = recorder.coverage_report(search_run_id)
+        record = recorder.load(search_run_id)
     except FileNotFoundError:
         console.print(f"[red]No federated search run found:[/red] {escape(search_run_id)}")
         raise typer.Exit(1) from None
     except ValueError as exc:
         console.print(f"[red]Malformed federated search-run record:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
+
+    coverage = build_search_coverage_report(record)
+
+    if output is not None:
+        payload = {
+            "search_run_id": coverage.search_run_id,
+            "coverage": coverage.to_dict(),
+            "candidates": [candidate.to_dict() for candidate in record.candidates],
+        }
+        _write_output(output, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
     _print_federated_coverage(coverage, search_run_id=coverage.search_run_id)
 
