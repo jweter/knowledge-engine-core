@@ -50,7 +50,14 @@ class CandidateObservationRecord:
 
     Mirrors `federated_discovery.ProviderObservation` field-for-field: the
     same public shape `federated-discover --output` already serializes at
-    request time, now also durable in the ledger.
+    request time, now also durable in the ledger. `corrected`/
+    `expression_of_concern`/`withdrawn` postdate this record's original
+    field set (FRD-5 publication-status follow-up), added the same way
+    `candidates` itself postdated `LEDGER_SCHEMA_VERSION` 1's original shape:
+    a run persisted before these fields existed simply omits the keys, and
+    `_optional_bool` already loads a missing key as `None` -- an honest
+    "not recorded" rather than a fabricated `False` -- so no schema-version
+    bump or special-cased loader branch was needed.
     """
 
     provider: str
@@ -76,6 +83,9 @@ class CandidateObservationRecord:
     citation_count: int | None = None
     open_access: bool | None = None
     retracted: bool | None = None
+    corrected: bool | None = None
+    expression_of_concern: bool | None = None
+    withdrawn: bool | None = None
     preprint: bool | None = None
     preprint_version: int | None = None
     related_journal_doi: str | None = None
@@ -471,6 +481,9 @@ def _observation_record_from_domain(observation: ProviderObservation) -> Candida
         citation_count=observation.citation_count,
         open_access=observation.open_access,
         retracted=observation.retracted,
+        corrected=observation.corrected,
+        expression_of_concern=observation.expression_of_concern,
+        withdrawn=observation.withdrawn,
         preprint=observation.preprint,
         preprint_version=observation.preprint_version,
         related_journal_doi=observation.related_journal_doi,
@@ -528,6 +541,9 @@ def _candidate_observation_from_payload(payload: object) -> CandidateObservation
         citation_count=_optional_nonnegative_int(payload, "citation_count"),
         open_access=_optional_bool(payload, "open_access"),
         retracted=_optional_bool(payload, "retracted"),
+        corrected=_optional_bool(payload, "corrected"),
+        expression_of_concern=_optional_bool(payload, "expression_of_concern"),
+        withdrawn=_optional_bool(payload, "withdrawn"),
         preprint=_optional_bool(payload, "preprint"),
         preprint_version=_optional_int(payload, "preprint_version"),
         related_journal_doi=_payload_optional_string(payload, "related_journal_doi"),

@@ -558,6 +558,49 @@ Exit criteria:
 - weak matches do not silently merge. **met (exact-DOI only; no fuzzy-match
   merging exists to silently misfire)**
 
+**Follow-up (still FRD-5): distinct correction/expression-of-concern/
+withdrawal fields on `ProviderObservation`.** Idea 5 above ("Retraction and
+resolution checks belong in source validation") already named the target:
+"correction, expression-of-concern, withdrawal, and retraction states
+should be modeled distinctly where provider data permits." Only
+`retracted` existed on `ProviderObservation` until now.
+`knowledge-engine-web`'s WEB-FRD-4 ("Publication-status warnings") and
+WEB-FRD-5 sections both implemented the retraction/preprint slice already
+representable, then explicitly named the concrete Core gap blocking the
+rest: "Core's `ProviderObservation` does not yet carry those fields, so
+rendering them would require a Core (and then AI) change first, not a
+Web-only slice." This follow-up closes that specific schema gap:
+`corrected: bool | None`, `expression_of_concern: bool | None`, and
+`withdrawn: bool | None` are new fields on `ProviderObservation` (and its
+ledger mirror, `CandidateObservationRecord`), each an independent,
+non-exclusive flag matching the existing `retracted`/`open_access`/
+`preprint` per-flag pattern rather than one combined enum -- a work can
+genuinely carry more than one at once (e.g. an expression of concern that
+later becomes a retraction), and no provider is treated as authoritative
+over another's differing assertion. `provider_disagreement.py`'s
+field-order tuple gained the same three entries, so cross-provider
+disagreement on these flags is inspectable the same way `retracted`
+disagreement already is. See `docs/core_interface_contract.md`'s matching
+entry for the full backward-compatibility account (purely additive, no
+`schema_version` change, pre-existing ledger records load the three new
+fields as `None`).
+
+**What this follow-up deliberately does not do:** no provider adapter
+populates these three fields yet. `retracted` is populated today because
+OpenAlex's Works API reports `is_retracted` directly; no currently
+configured provider transport in this repository parses a
+correction/expression-of-concern/withdrawal signal (a candidate for this
+in a future follow-up: Crossref's `update-to` relation carries typed
+values including `retraction`/`correction`/`expression_of_concern`/
+`withdrawal`, but wiring a Crossref adapter to parse and populate these
+fields from real API responses -- with its own offline-fixture-plus-live-
+verification pass, per this repository's own new-network-code discipline
+-- is separate, not-yet-scoped work, not bundled into this schema-only
+change). This closes only the Core-side blocker WEB-FRD-4/WEB-FRD-5 named;
+`knowledge-engine-ai`'s `ke_client` parsing layer and
+`knowledge-engine-web`'s rendering for these three specific fields remain
+that project's own future work, tracked in its own roadmap docs.
+
 ### FRD-6 -- Search-run ledger and coverage report
 
 **Status: implemented, and reachable.** `federated_search_ledger.py`'s

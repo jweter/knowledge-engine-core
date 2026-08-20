@@ -72,6 +72,27 @@ class ProviderObservation:
     intentionally not part of this scientific-evidence contract. Preprint
     relationships remain explicit provider observations: a related journal DOI
     is not automatically the DOI identity of the preprint itself.
+
+    ``retracted``/``corrected``/``expression_of_concern``/``withdrawn`` are
+    four independent, non-exclusive publication-status flags -- following
+    `docs/roadmap/federated_research_discovery_adoption.md`'s adopted
+    "correction, expression-of-concern, withdrawal, and retraction states
+    should be modeled distinctly where provider data permits" direction --
+    rather than one combined status enum, matching this dataclass's existing
+    per-flag pattern (``open_access``, ``retracted``, ``preprint``). A work
+    can genuinely carry more than one at once (e.g. an expression of concern
+    that precedes a later retraction), and no provider is treated as
+    authoritative over another's differing assertion (see
+    `provider_disagreement.py`). `None` means "this provider did not report
+    this flag," never "this provider affirmatively found this false" --
+    callers must not collapse missing and false into the same rendering (see
+    `knowledge-engine-web`'s WEB-FRD-4 `not_checked`/`clear` distinction for
+    ``retracted``, extended by the same reasoning to these three). No adapter
+    currently populates ``corrected``/``expression_of_concern``/``withdrawn``
+    (no configured provider transport exposes those specific statuses yet,
+    unlike OpenAlex's ``is_retracted``); they exist so the schema can
+    represent them the moment provider data does, without a later breaking
+    change.
     """
 
     provider: str
@@ -97,6 +118,9 @@ class ProviderObservation:
     citation_count: int | None = None
     open_access: bool | None = None
     retracted: bool | None = None
+    corrected: bool | None = None
+    expression_of_concern: bool | None = None
+    withdrawn: bool | None = None
     preprint: bool | None = None
     preprint_version: int | None = None
     related_journal_doi: str | None = None

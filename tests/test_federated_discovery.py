@@ -87,6 +87,33 @@ def test_related_journal_version_metadata_requires_explicit_preprint_status() ->
         )
 
 
+def test_provider_observation_publication_status_flags_default_unreported() -> None:
+    observation = _observation()
+
+    assert observation.retracted is None
+    assert observation.corrected is None
+    assert observation.expression_of_concern is None
+    assert observation.withdrawn is None
+
+
+def test_provider_observation_publication_status_flags_are_independent() -> None:
+    observation = ProviderObservation(
+        provider="crossref",
+        provider_id="10.1000/example",
+        title="Paper",
+        doi="10.1000/example",
+        corrected=True,
+        expression_of_concern=True,
+        withdrawn=False,
+        retracted=False,
+    )
+
+    assert observation.corrected is True
+    assert observation.expression_of_concern is True
+    assert observation.withdrawn is False
+    assert observation.retracted is False
+
+
 def test_federated_candidate_preserves_multiple_provider_observations() -> None:
     candidate = FederatedCandidate(
         canonical_id="candidate-1",

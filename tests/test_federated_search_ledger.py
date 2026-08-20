@@ -260,6 +260,141 @@ def test_record_persists_full_candidate_snapshot_with_provider_observations(
     assert persisted["candidates"][0]["observations"][0]["provider"] == "PubMed"
 
 
+def test_record_persists_publication_status_flags_on_observations(tmp_path: Path) -> None:
+    ledger = _ledger(tmp_path / "search-runs")
+    observation = ProviderObservation(
+        provider="Crossref",
+        provider_id="10.1000/example",
+        title="A retracted study",
+        doi="10.1000/example",
+        retracted=True,
+        corrected=False,
+        expression_of_concern=True,
+        withdrawn=False,
+        retrieved_at="2026-08-16T02:44:00+00:00",
+    )
+    candidate = FederatedCandidate(
+        canonical_id="doi:10.1000/example",
+        title=observation.title,
+        doi="10.1000/example",
+        observations=(observation,),
+    )
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="publication status"),
+        provider_statuses=(
+            ProviderStatus(
+                provider="Crossref", outcome=ProviderOutcome.SUCCESS, attempted=True, result_count=1
+            ),
+        ),
+        candidates=(candidate,),
+    )
+
+    record = ledger.record(result)
+
+    persisted_observation = record.candidates[0].observations[0]
+    assert persisted_observation.retracted is True
+    assert persisted_observation.corrected is False
+    assert persisted_observation.expression_of_concern is True
+    assert persisted_observation.withdrawn is False
+
+    loaded = ledger.load(record.search_run_id)
+    reloaded_observation = loaded.candidates[0].observations[0]
+    assert reloaded_observation.retracted is True
+    assert reloaded_observation.corrected is False
+    assert reloaded_observation.expression_of_concern is True
+    assert reloaded_observation.withdrawn is False
+
+
+def test_load_defaults_publication_status_flags_to_none_for_pre_existing_records(
+    tmp_path: Path,
+) -> None:
+    """Candidate observations persisted before these flags existed must stay loadable.
+
+    Mirrors `test_load_defaults_candidates_to_empty_tuple_for_pre_existing_records`:
+    a record written before `corrected`/`expression_of_concern`/`withdrawn` existed
+    simply omits those keys, and must load with an honest `None` ("not recorded")
+    rather than fail to parse or fabricate a `False`.
+    """
+
+    root = tmp_path / "search-runs"
+    root.mkdir()
+    payload = {
+        "schema_version": LEDGER_SCHEMA_VERSION,
+        "search_run_id": str(_RUN_ID),
+        "created_at": "2026-08-16T02:45:00+00:00",
+        "query_text": "protein folding",
+        "year_from": None,
+        "year_to": None,
+        "limit_per_provider": 20,
+        "completeness": "complete",
+        "candidate_count": 1,
+        "providers": [
+            {
+                "provider": "pubmed",
+                "outcome": "success",
+                "attempted": True,
+                "result_count": 1,
+                "latency_ms": None,
+                "reason": None,
+            }
+        ],
+        "initiated_by": None,
+        "project_id": None,
+        "research_question_id": None,
+        "candidates": [
+            {
+                "canonical_id": "pubmed:12345",
+                "title": "A protein folding study",
+                "doi": None,
+                "publication_year": None,
+                "observations": [
+                    {
+                        "provider": "pubmed",
+                        "provider_id": "12345",
+                        "title": "A protein folding study",
+                        "authors": [],
+                        "publication_year": None,
+                        "venue": None,
+                        "abstract": None,
+                        "doi": None,
+                        "pmid": "12345",
+                        "pmcid": None,
+                        "arxiv_id": None,
+                        "openalex_id": None,
+                        "semantic_scholar_id": None,
+                        "landing_url": None,
+                        "full_text_url": None,
+                        "xml_url": None,
+                        "license": None,
+                        "metadata_source": None,
+                        "pmcid_source": None,
+                        "open_access_source": None,
+                        "citation_count": None,
+                        "open_access": None,
+                        "retracted": True,
+                        "preprint": None,
+                        "preprint_version": None,
+                        "related_journal_doi": None,
+                        "related_journal_reference": None,
+                        "retrieved_at": None,
+                        # deliberately no "corrected"/"expression_of_concern"/
+                        # "withdrawn" keys -- pre-existing record shape
+                    }
+                ],
+            }
+        ],
+    }
+    (root / f"{_RUN_ID}.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = FederatedSearchLedger(root).load(str(_RUN_ID))
+
+    observation = loaded.candidates[0].observations[0]
+    assert observation.retracted is True
+    assert observation.corrected is None
+    assert observation.expression_of_concern is None
+    assert observation.withdrawn is None
+
+
 def test_load_defaults_candidates_to_empty_tuple_for_pre_existing_records(
     tmp_path: Path,
 ) -> None:

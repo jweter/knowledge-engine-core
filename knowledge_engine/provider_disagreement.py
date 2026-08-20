@@ -80,6 +80,9 @@ _FIELD_ORDER = (
     "doi",
     "open_access",
     "retracted",
+    "corrected",
+    "expression_of_concern",
+    "withdrawn",
     "citation_count",
 )
 
