@@ -17,6 +17,7 @@ from knowledge_engine.metadata_enrichment import (
     MetadataCandidate,
     MetadataProviderResult,
     MetadataQuery,
+    PublicationStatusSignal,
 )
 from knowledge_engine.utils import normalize_doi
 
@@ -70,7 +71,11 @@ class CrossrefFederatedAdapter:
             return _failure_result(query, ProviderOutcome.FAILED, "candidate_contract_mismatch")
 
         try:
-            candidate = _to_federated_candidate(result.candidates, queried_doi=doi)
+            candidate = _to_federated_candidate(
+                result.candidates,
+                queried_doi=doi,
+                publication_status=result.publication_status,
+            )
         except (TypeError, ValueError):
             return _failure_result(query, ProviderOutcome.FAILED, "candidate_contract_mismatch")
 
@@ -113,6 +118,7 @@ def _to_federated_candidate(
     candidates: tuple[MetadataCandidate, ...],
     *,
     queried_doi: str,
+    publication_status: PublicationStatusSignal | None = None,
 ) -> FederatedCandidate:
     provider_ids: set[str] = set()
     retrieved_at_values: set[str] = set()
@@ -161,6 +167,12 @@ def _to_federated_candidate(
             raise ValueError("Crossref publication year is invalid.")
 
     retrieved_at = next(iter(retrieved_at_values))
+    if publication_status is not None:
+        if publication_status.provider.strip().lower() != "crossref":
+            raise ValueError("Crossref publication status provider does not match.")
+        status = publication_status
+    else:
+        status = PublicationStatusSignal(provider="crossref")
     observation = ProviderObservation(
         provider="crossref",
         provider_id=queried_doi,
@@ -171,6 +183,10 @@ def _to_federated_candidate(
         doi=queried_doi,
         metadata_source="crossref",
         retrieved_at=retrieved_at,
+        retracted=status.retracted,
+        corrected=status.corrected,
+        expression_of_concern=status.expression_of_concern,
+        withdrawn=status.withdrawn,
     )
     return FederatedCandidate(
         canonical_id=f"crossref:{queried_doi}",

@@ -601,6 +601,41 @@ change). This closes only the Core-side blocker WEB-FRD-4/WEB-FRD-5 named;
 `knowledge-engine-web`'s rendering for these three specific fields remain
 that project's own future work, tracked in its own roadmap docs.
 
+**Second follow-up (still FRD-5): Crossref `update-to` wiring for all four
+publication-status flags.** The candidate this session's own handoff
+named above is now implemented, offline-fixture-tested (no live network
+call was made or is needed -- Crossref's response shape is already fully
+documented and covered by deterministic fixtures the same way
+`parse_crossref_work`'s existing candidate parsing is). `crossref.py`'s
+new `parse_crossref_publication_status` reads a Crossref work's
+`update-to` relation list and maps a fixed, deliberately incomplete
+subset of its controlled `type` vocabulary onto the four independent
+`ProviderObservation` flags: `retraction`/`partial_retraction` ->
+`retracted`, `correction`/`corrigendum`/`erratum` -> `corrected`,
+`expression_of_concern` -> `expression_of_concern`,
+`withdrawal`/`removal` -> `withdrawn`. Every other Crossref `update-to`
+type (`addendum`, `clarification`, `new_edition`, and others) is left
+unmapped -- this project's "missing field stays missing; providers must
+not fabricate substitutes" rule extends to never guessing a flag from an
+ambiguous or unrecognized type. Consistent with that rule, a flag is only
+ever set `True`; an absent or empty `update-to` list (or one containing
+only unrecognized types) leaves every flag `None`, because Crossref
+crossmark participation is not universal and the absence of a signal is
+not evidence of a clean status. `crossref_federated_adapter.py` threads
+this through `ProviderObservation` for Crossref-sourced candidates only
+(mismatched-provider publication-status data fails closed, the same
+"fail closed on provenance mismatch" pattern this adapter already applies
+to candidate metadata). The carrier type,
+`metadata_enrichment.PublicationStatusSignal`, and the new optional
+`MetadataProviderResult.publication_status` field are both additive and
+provider-neutral, so `ke metadata-preview`'s unrelated Crossref-review CLI
+path is unaffected. This closes the specific gap the first follow-up
+named; `knowledge-engine-ai`'s `ke_client` parsing layer and
+`knowledge-engine-web`'s rendering for these fields remain that project's
+own future work. Wiring a second provider's correction/retraction data
+(for example a future PubMed `CommentsCorrectionsList` parse) remains
+separate, not-yet-scoped follow-up work.
+
 ### FRD-6 -- Search-run ledger and coverage report
 
 **Status: implemented, and reachable.** `federated_search_ledger.py`'s

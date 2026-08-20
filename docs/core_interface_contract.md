@@ -464,6 +464,36 @@ itself, but may need to trigger for a specific paper):**
   (`_optional_bool` already returns `None` for an absent key) rather than
   a fabricated value. Every existing caller, CLI invocation, and
   previously persisted ledger record keeps working exactly as before.
+- **Crossref `update-to` publication-status wiring (FRD-5 follow-up):**
+  `crossref_federated_adapter.py` now populates all four
+  `ProviderObservation` publication-status flags
+  (`retracted`/`corrected`/`expression_of_concern`/`withdrawn`) from
+  Crossref's `update-to` relation, closing the specific gap the previous
+  entry named as separate, not-yet-scoped work. `crossref.py`'s new
+  `parse_crossref_publication_status` maps a fixed, documented subset of
+  Crossref's controlled `update-to.type` vocabulary onto the four flags
+  (`retraction`/`partial_retraction` -> `retracted`,
+  `correction`/`corrigendum`/`erratum` -> `corrected`,
+  `expression_of_concern` -> `expression_of_concern`,
+  `withdrawal`/`removal` -> `withdrawn`); every other `update-to` type
+  (for example `addendum`, `clarification`, `new_edition`) is left
+  unmapped rather than guessed. A flag is only ever set `True`, never an
+  inferred `False`: Crossref crossmark participation is not universal, so
+  an absent or empty `update-to` list leaves every flag `None` (unknown),
+  matching the existing "missing stays missing" contract rather than
+  asserting a "clear" status Crossref never actually confirmed. This is
+  carried through a new, provider-neutral
+  `metadata_enrichment.PublicationStatusSignal` type and a new optional
+  `MetadataProviderResult.publication_status` field -- both purely
+  additive (default `None`/absent), so `ke metadata-preview`'s existing
+  Crossref-review CLI command and its tests are unaffected. No other
+  provider transport in this repository parses a correction/expression-
+  of-concern/withdrawal signal yet; OpenAlex's `is_retracted` remains the
+  only other populated flag. `knowledge-engine-ai`'s `ke_client` parsing
+  layer and `knowledge-engine-web`'s rendering for these three fields
+  (`corrected`/`expression_of_concern`/`withdrawn`) are now unblocked by
+  real provider data for Crossref-sourced candidates, but implementing
+  that parsing/rendering remains that project's own future work.
 - `ke corpus-import`, `ke extraction-review-generate`/`-batch-generate`,
   `ke extraction-review-annotate` (M45), `ke extraction-review-autoclassify`
   (M52, see "The seam" above), `ke extraction-review-promote`.

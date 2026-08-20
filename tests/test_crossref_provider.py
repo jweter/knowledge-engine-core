@@ -63,6 +63,9 @@ def test_crossref_provider_returns_candidates_and_bounded_request() -> None:
         ("doi", "10.1000/example"),
         ("title", "example paper"),
     ]
+    assert result.publication_status is not None
+    assert result.publication_status.provider == "crossref"
+    assert result.publication_status.retracted is None
     url, headers, timeout_seconds, max_response_bytes = transport.calls[0]
     assert url == "https://api.crossref.org/works/10.1000%2Fexample"
     assert headers == {
@@ -71,6 +74,27 @@ def test_crossref_provider_returns_candidates_and_bounded_request() -> None:
     }
     assert timeout_seconds == 3.0
     assert max_response_bytes == 100
+
+
+def test_crossref_provider_populates_publication_status_from_update_to() -> None:
+    body = (
+        b'{"message":{"DOI":"10.1000/example","title":["Example Paper"],'
+        b'"update-to":[{"type":"retraction"}]}}'
+    )
+    transport = FakeTransport(_response(200, body))
+    provider = CrossrefProvider(
+        transport=transport,
+        clock=lambda: datetime(2026, 7, 18, tzinfo=UTC),
+        timeout_seconds=3.0,
+        max_response_bytes=len(body) + 1,
+        user_agent="knowledge-engine-test/1",
+    )
+
+    result = provider.lookup(MetadataQuery(doi="10.1000/example"))
+
+    assert result.publication_status is not None
+    assert result.publication_status.retracted is True
+    assert result.publication_status.corrected is None
 
 
 @pytest.mark.parametrize(
