@@ -382,6 +382,30 @@ itself, but may need to trigger for a specific paper):**
   mirroring `federated-coverage-report`'s role for `federated-discover` and
   satisfying FRD-7's "expansion can be replayed and compared later" exit
   criterion.
+- `ke federated-discover --research-question-id <id> --project-id <id>`
+  (FRD-6 follow-up): `federated-discover` now also accepts optional
+  `--project-id`/`--research-question-id` flags, threaded straight through
+  to `FederatedDiscoveryService.search(...)` and persisted on the ledger
+  record -- both were already accepted by every layer beneath the CLI
+  (`FederatedSearchLedger.record`, `federated_discovery_service.py`) but,
+  like `research_question_id` before this change, unreachable from the CLI.
+  Neither value enters the public coverage payload
+  (`SearchCoverageReport`/`--output`'s `coverage` field) -- see that type's
+  own docstring. Purely additive: both flags default to `None`, so every
+  existing invocation and consumer keeps its current behavior.
+  `ke federated-discover-history <research_question_id> --ledger-root <dir>
+  [--output <path.json>]` is a new read command: it lists every persisted
+  run tagged with that `research_question_id` via
+  `FederatedSearchLedger.list_by_research_question_id`, newest first, each
+  rendered through the same `SearchCoverageReport` shape
+  `federated-coverage-report` already exposes.
+  `federated-coverage-report`/`load` are point lookups by exact
+  `search_run_id`; this is the first ledger read that discovers which runs
+  exist for a tracked question at all, without the caller already knowing
+  their UUIDs -- the capability `knowledge-engine-web`'s WEB-FRD-5
+  freshness-history design depends on. No matching runs is reported
+  plainly (exit `0`), never as an error: a tracked question with no prior
+  recorded search is an expected, honest state.
 - `ke corpus-import`, `ke extraction-review-generate`/`-batch-generate`,
   `ke extraction-review-annotate` (M45), `ke extraction-review-autoclassify`
   (M52, see "The seam" above), `ke extraction-review-promote`.

@@ -202,6 +202,40 @@ class FederatedSearchLedger:
             raise ValueError("Federated search-run record is malformed.") from exc
         return _record_from_payload(payload, expected_run_id=normalized_id)
 
+    def list_by_research_question_id(
+        self, research_question_id: str
+    ) -> tuple[SearchRunRecord, ...]:
+        """List every persisted run tagged with `research_question_id`, newest first.
+
+        `load`/`coverage_report` above are point lookups by exact
+        `search_run_id`; this is the first ledger read that discovers which
+        runs exist for a given tracked question at all -- the capability
+        `knowledge-engine-web`'s WEB-FRD-5 freshness-history design depends
+        on (`docs/roadmap/federated_research_discovery_adoption.md`'s FRD-6
+        section). Scans every `*.json` record under this ledger's root
+        (each written exactly once by `record`); a root that does not exist
+        yet returns an empty tuple rather than raising, matching "no runs
+        recorded for this question yet." Ordered by `created_at` descending
+        (newest first); identical timestamps break deterministically by
+        `search_run_id` so repeated calls return a stable order.
+        """
+
+        normalized = research_question_id.strip()
+        if not normalized:
+            raise ValueError(
+                "Federated search-run history requires a non-blank research_question_id."
+            )
+        if not self._root.exists():
+            return ()
+
+        matches = [
+            record
+            for record in (self.load(path.stem) for path in sorted(self._root.glob("*.json")))
+            if record.research_question_id == normalized
+        ]
+        matches.sort(key=lambda record: (record.created_at, record.search_run_id), reverse=True)
+        return tuple(matches)
+
     def coverage_report(self, search_run_id: str) -> SearchCoverageReport:
         """Return deterministic coverage and search-method facts without inference."""
 

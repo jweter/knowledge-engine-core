@@ -147,6 +147,38 @@ def test_federated_discover_persists_a_run_and_reports_coverage(
     assert provider_outcomes == {"alpha": "success", "beta": "failed"}
 
 
+def test_federated_discover_persists_project_and_research_question_ids(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider_a = FakeProvider(
+        "alpha", _success_result("alpha", candidate_id="A1", doi="10.1000/alpha-1")
+    )
+    monkeypatch.setattr(
+        entrypoint, "_federated_discovery_registry", lambda **kwargs: _registry_with(provider_a)
+    )
+
+    ledger_root = tmp_path / "ledger"
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "federated-discover",
+            "--query",
+            "semaglutide weight loss",
+            "--ledger-root",
+            str(ledger_root),
+            "--project-id",
+            "project-7",
+            "--research-question-id",
+            "rq-42",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(list(ledger_root.glob("*.json"))[0].read_text(encoding="utf-8"))
+    assert payload["project_id"] == "project-7"
+    assert payload["research_question_id"] == "rq-42"
+
+
 def test_federated_discover_respects_a_provider_subset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -255,6 +287,106 @@ def test_federated_coverage_report_handles_an_unknown_run_id(tmp_path: Path) -> 
 
     assert result.exit_code != 0
     assert "No federated search run found" in _unwrapped(result.output)
+
+
+def test_federated_discover_history_lists_runs_for_a_tracked_question(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider_a = FakeProvider(
+        "alpha", _success_result("alpha", candidate_id="A1", doi="10.1000/alpha-1")
+    )
+    monkeypatch.setattr(
+        entrypoint, "_federated_discovery_registry", lambda **kwargs: _registry_with(provider_a)
+    )
+
+    ledger_root = tmp_path / "ledger"
+    runner = CliRunner()
+    for query in ("semaglutide weight loss", "semaglutide weight loss follow-up"):
+        first_run = runner.invoke(
+            entrypoint.app,
+            [
+                "federated-discover",
+                "--query",
+                query,
+                "--ledger-root",
+                str(ledger_root),
+                "--research-question-id",
+                "rq-42",
+            ],
+        )
+        assert first_run.exit_code == 0, first_run.output
+
+    other_question_run = runner.invoke(
+        entrypoint.app,
+        [
+            "federated-discover",
+            "--query",
+            "unrelated question",
+            "--ledger-root",
+            str(ledger_root),
+            "--research-question-id",
+            "rq-other",
+        ],
+    )
+    assert other_question_run.exit_code == 0, other_question_run.output
+
+    output_path = tmp_path / "history.json"
+    history_result = runner.invoke(
+        entrypoint.app,
+        [
+            "federated-discover-history",
+            "rq-42",
+            "--ledger-root",
+            str(ledger_root),
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert history_result.exit_code == 0, history_result.output
+    unwrapped = _unwrapped(history_result.output)
+    assert "2 run(s)" in unwrapped
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["research_question_id"] == "rq-42"
+    assert payload["run_count"] == 2
+    assert len(payload["runs"]) == 2
+    for run in payload["runs"]:
+        assert "initiated_by" not in run
+        assert "project_id" not in run
+        assert "research_question_id" not in run
+    # Newest first: created_at is non-increasing across the listed runs.
+    created_at_values = [run["created_at"] for run in payload["runs"]]
+    assert created_at_values == sorted(created_at_values, reverse=True)
+
+
+def test_federated_discover_history_reports_no_runs_without_erroring(tmp_path: Path) -> None:
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "federated-discover-history",
+            "rq-never-searched",
+            "--ledger-root",
+            str(tmp_path / "ledger"),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "No federated-discover runs found" in _unwrapped(result.output)
+
+
+def test_federated_discover_history_rejects_blank_research_question_id(tmp_path: Path) -> None:
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "federated-discover-history",
+            "   ",
+            "--ledger-root",
+            str(tmp_path / "ledger"),
+        ],
+    )
+
+    assert result.exit_code != 0
 
 
 def test_federated_discover_writes_a_machine_readable_output_file(

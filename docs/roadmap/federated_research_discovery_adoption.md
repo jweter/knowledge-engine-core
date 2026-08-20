@@ -587,6 +587,28 @@ Exit criteria:
   run that produced it; Web/AI-side rendering is still their own unbuilt
   work, tracked in their own roadmap docs, not this one**
 
+**Follow-up (still FRD-6): `--research-question-id`/`--project-id` CLI
+exposure and `ke federated-discover-history`.**
+`knowledge-engine-web`'s `docs/roadmap/web_frd5_freshness_history_design.md`
+(WEB-FRD-5, "research freshness history") identified two concrete gaps in
+this milestone's own CLI surface: `research_question_id` was already
+threaded through `FederatedSearchLedger.record`/
+`FederatedDiscoveryService.search` but never exposed as a
+`federated-discover` flag, and `FederatedSearchLedger` supported only
+point lookup by exact `search_run_id` (`load`/`coverage_report`) -- no way
+to list which runs exist for a given tracked question at all. Both are now
+closed: `federated-discover --research-question-id <id> --project-id <id>`
+tags a run at search time, and `ke federated-discover-history
+<research_question_id> --ledger-root <dir> [--output <path.json>]` lists
+every run tagged with that ID, newest first, via the new
+`FederatedSearchLedger.list_by_research_question_id`. Both changes are
+purely additive (new optional flags default to `None`; the new command is
+a new command), so no existing caller's behavior changes. This unblocks
+WEB-FRD-5's Core-side dependencies (its section 5, items 1-2); the
+corresponding `knowledge-engine-ai` `ke_client` wrapper and Web's own
+tracked-question/diff-rendering work remain out of scope for this repo and
+are tracked in their own repositories.
+
 ### FRD-7 -- Citation snowball discovery
 
 Add bounded references/citations expansion as a reproducible discovery strategy.
