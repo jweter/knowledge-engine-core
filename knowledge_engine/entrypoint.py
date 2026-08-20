@@ -357,6 +357,28 @@ FederatedInitiatedByOption = Annotated[
     str | None,
     typer.Option("--initiated-by", help="Optional free-text label recorded on the persisted run."),
 ]
+FederatedProjectIdOption = Annotated[
+    str | None,
+    typer.Option(
+        "--project-id",
+        help=(
+            "Optional project identifier recorded on the persisted run. Internal run "
+            "context, not part of the public coverage payload -- see SearchCoverageReport."
+        ),
+    ),
+]
+FederatedResearchQuestionIdOption = Annotated[
+    str | None,
+    typer.Option(
+        "--research-question-id",
+        help=(
+            "Optional caller-supplied identifier tying this run to a tracked research "
+            "question, so later runs for the same question can be listed together via "
+            "`ke federated-discover-history`. Internal run context, not part of the "
+            "public coverage payload -- see SearchCoverageReport."
+        ),
+    ),
+]
 FederatedDiscoverOutputOption = Annotated[
     Path | None,
     typer.Option(
@@ -372,6 +394,27 @@ FederatedDiscoverOutputOption = Annotated[
 FederatedSearchRunIdArgument = Annotated[
     str,
     typer.Argument(help="Search-run UUID returned by `federated-discover`."),
+]
+FederatedHistoryResearchQuestionIdArgument = Annotated[
+    str,
+    typer.Argument(
+        help=(
+            "The research_question_id previously supplied to `federated-discover "
+            "--research-question-id` -- lists every run tagged with it, newest first."
+        )
+    ),
+]
+FederatedHistoryOutputOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--output",
+        help=(
+            "Optional path to also save the full history (research_question_id, run "
+            "count, and each matched run's public coverage record) as JSON, for a "
+            "programmatic caller -- e.g. knowledge-engine-web -- rather than parsing "
+            "the console table."
+        ),
+    ),
 ]
 SnowballSeedsOption = Annotated[
     str,
@@ -5367,6 +5410,8 @@ def federated_discover(
     openalex_api_key: FederatedOpenAlexApiKeyOption = None,
     semantic_scholar_api_key: FederatedSemanticScholarApiKeyOption = None,
     initiated_by: FederatedInitiatedByOption = None,
+    project_id: FederatedProjectIdOption = None,
+    research_question_id: FederatedResearchQuestionIdOption = None,
     output: FederatedDiscoverOutputOption = None,
 ) -> None:
     """Run one federated discovery search and durably persist its coverage (FRD-6).
@@ -5400,6 +5445,15 @@ def federated_discover(
     The ledger under `--ledger-root` is the durable, replayable record
     either way; `--output` is a convenience snapshot of one run's own
     result, not a second source of truth.
+
+    `--project-id` and `--research-question-id` are optional internal run
+    context, threaded straight through to `FederatedDiscoveryService.search`
+    and persisted on the ledger record -- they were already accepted by
+    every layer beneath this command, only unreachable from the CLI until
+    now. `--research-question-id` is what later lets `ke
+    federated-discover-history <id>` list every run for the same tracked
+    question together; neither value enters the public coverage payload
+    (`SearchCoverageReport`) `--output`/`federated-coverage-report` expose.
     """
 
     try:
@@ -5427,7 +5481,12 @@ def federated_discover(
         "[yellow]Network access:[/yellow] querying configured federated discovery "
         "providers over HTTPS."
     )
-    execution = service.search(broker_query, initiated_by=initiated_by)
+    execution = service.search(
+        broker_query,
+        initiated_by=initiated_by,
+        project_id=project_id,
+        research_question_id=research_question_id,
+    )
 
     if output is not None:
         payload = build_public_federated_result_payload(execution.result, execution.coverage)
@@ -5485,6 +5544,73 @@ def federated_coverage_report(
         raise typer.Exit(1) from exc
 
     _print_federated_coverage(coverage, search_run_id=coverage.search_run_id)
+
+
+@app.command("federated-discover-history")
+def federated_discover_history(
+    research_question_id: FederatedHistoryResearchQuestionIdArgument,
+    ledger_root: FederatedLedgerRootOption,
+    output: FederatedHistoryOutputOption = None,
+) -> None:
+    """List every persisted `federated-discover` run for one tracked question (FRD-6).
+
+    `federated-coverage-report` above is a point lookup: it requires the
+    caller to already know one run's exact `search_run_id`. This command is
+    the first ledger read that discovers which runs exist at all for a
+    tracked question -- `FederatedSearchLedger.list_by_research_question_id`
+    -- letting a caller (e.g. `knowledge-engine-web`'s planned freshness-
+    history view) fetch every past run for the same
+    `research_question_id` a caller previously passed to `ke
+    federated-discover --research-question-id`, newest first, and diff them.
+
+    Each listed run is rendered through the same public,
+    provenance-safe `SearchCoverageReport` shape `federated-coverage-report`
+    and `federated-discover --output`'s `coverage` field already expose --
+    `initiated_by`/`project_id` never enter this payload either. No matching
+    runs is reported plainly, never as an error: a tracked question with no
+    prior recorded search is an expected, honest state, not a failure.
+    """
+
+    recorder = FederatedSearchLedger(ledger_root)
+    try:
+        records = recorder.list_by_research_question_id(research_question_id)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    coverage_reports = [recorder.coverage_report(record.search_run_id) for record in records]
+
+    if output is not None:
+        payload = {
+            "research_question_id": research_question_id.strip(),
+            "run_count": len(coverage_reports),
+            "runs": [report.to_dict() for report in coverage_reports],
+        }
+        _write_output(output, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+    if not coverage_reports:
+        console.print(
+            "[yellow]No federated-discover runs found for research_question_id:[/yellow] "
+            f"{escape(research_question_id)}"
+        )
+        return
+
+    console.print(
+        f"[bold]Federated-discover history:[/bold] {escape(research_question_id)} "
+        f"({len(coverage_reports)} run(s), newest first)"
+    )
+    table = Table(title="Search runs")
+    table.add_column("search_run_id")
+    table.add_column("created_at")
+    table.add_column("completeness")
+    table.add_column("candidates")
+    for report in coverage_reports:
+        table.add_row(
+            report.search_run_id,
+            report.created_at,
+            report.completeness,
+            str(report.candidate_count),
+        )
+    console.print(table)
 
 
 def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: str) -> None:

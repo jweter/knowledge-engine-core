@@ -35,6 +35,25 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   federated-discover degradation contract. This is purely additive --
   `--provider` defaults to `semantic_scholar`, so every existing
   `citation-snowball` invocation and consumer keeps its current behavior.
+- **`ke federated-discover --research-question-id`/`--project-id` and `ke
+  federated-discover-history` (FRD-6 follow-up)**: `federated-discover`
+  now accepts optional `--project-id`/`--research-question-id` flags,
+  threaded through to `FederatedDiscoveryService.search` and persisted on
+  the ledger record -- both were already accepted by every layer beneath
+  the CLI but unreachable from it. New
+  `FederatedSearchLedger.list_by_research_question_id` lists every
+  persisted run tagged with a given `research_question_id`, newest first
+  -- the ledger's first read capability beyond point lookup by exact
+  `search_run_id`. `ke federated-discover-history <research_question_id>
+  --ledger-root <dir> [--output <path.json>]` is the new CLI surface for
+  it, rendering each matched run through the same public
+  `SearchCoverageReport` shape `federated-coverage-report` already
+  exposes. Purely additive: the new flags default to `None` and the new
+  command is new, so no existing caller's behavior changes. Unblocks the
+  Core-side dependencies `knowledge-engine-web`'s WEB-FRD-5 ("research
+  freshness history") design identified. See
+  `docs/roadmap/federated_research_discovery_adoption.md`'s FRD-6 section
+  and `docs/core_interface_contract.md`.
 
 ### Changed
 

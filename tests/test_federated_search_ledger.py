@@ -179,6 +179,61 @@ def test_load_rejects_path_traversal_as_invalid_uuid(tmp_path: Path) -> None:
         ledger.load("../outside")
 
 
+def test_list_by_research_question_id_returns_matches_newest_first(tmp_path: Path) -> None:
+    root = tmp_path / "search-runs"
+    run_a_id = UUID("11111111-1111-1111-1111-111111111111")
+    run_b_id = UUID("22222222-2222-2222-2222-222222222222")
+    run_c_id = UUID("33333333-3333-3333-3333-333333333333")
+
+    ledger_a = FederatedSearchLedger(
+        root,
+        clock=lambda: datetime(2026, 8, 1, tzinfo=UTC),
+        id_factory=lambda: run_a_id,
+    )
+    ledger_a.record(_result(), research_question_id="rq-1")
+
+    ledger_b = FederatedSearchLedger(
+        root,
+        clock=lambda: datetime(2026, 8, 16, tzinfo=UTC),
+        id_factory=lambda: run_b_id,
+    )
+    ledger_b.record(_result(), research_question_id="rq-1")
+
+    ledger_c = FederatedSearchLedger(
+        root,
+        clock=lambda: datetime(2026, 8, 10, tzinfo=UTC),
+        id_factory=lambda: run_c_id,
+    )
+    ledger_c.record(_result(), research_question_id="rq-other")
+
+    matches = FederatedSearchLedger(root).list_by_research_question_id("rq-1")
+
+    assert [record.search_run_id for record in matches] == [str(run_b_id), str(run_a_id)]
+    assert all(record.research_question_id == "rq-1" for record in matches)
+
+
+def test_list_by_research_question_id_returns_empty_for_unknown_question(tmp_path: Path) -> None:
+    ledger = _ledger(tmp_path / "search-runs")
+    ledger.record(_result(), research_question_id="rq-1")
+
+    assert ledger.list_by_research_question_id("rq-does-not-exist") == ()
+
+
+def test_list_by_research_question_id_returns_empty_for_missing_ledger_root(
+    tmp_path: Path,
+) -> None:
+    ledger = FederatedSearchLedger(tmp_path / "never-created")
+
+    assert ledger.list_by_research_question_id("rq-1") == ()
+
+
+def test_list_by_research_question_id_rejects_blank_input(tmp_path: Path) -> None:
+    ledger = _ledger(tmp_path / "search-runs")
+
+    with pytest.raises(ValueError, match="non-blank"):
+        ledger.list_by_research_question_id("   ")
+
+
 def test_load_rejects_malformed_or_wrong_schema_record(tmp_path: Path) -> None:
     root = tmp_path / "runs"
     root.mkdir()
