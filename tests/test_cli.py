@@ -792,6 +792,8 @@ def test_evidence_report_writes_structured_json_output(
     paper = payload["papers"][0]
     assert paper["title"] == "Curated STEP 5 Trial"
     assert paper["metadata_source"] == "corpus sources.csv"
+    assert paper["evidence_alignment_score"] > 0
+    assert "Evidence Record question-alignment score" in paper["why_matched"]
     assert len(paper["evidence_records"]) == 1
     record = paper["evidence_records"][0]
     assert record["evidence_record_id"] == "ev-1"

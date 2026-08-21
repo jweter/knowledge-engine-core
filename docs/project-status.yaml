@@ -1,6 +1,6 @@
 schema_version: 1
 project: knowledge-engine-core
-updated_at: "2026-08-20T01:00:00Z"
+updated_at: "2026-08-21T19:10:00Z"
 status_source: "Verified repository state plus docs/roadmap.md; this file is a continuity cache and never overrides higher-authority evidence (code, CI, live PR state, docs/roadmap.md)."
 
 product:
@@ -74,9 +74,14 @@ verified_repository_state:
       cadence: "daily 06:30 UTC"
       note: "pushes to bot/discovery-cycle, opens no PR by design"
 
+active_work:
+  branch: "retrieval/evidence-aware-report-ranking"
+  objective: "Align Core's authoritative evidence-report ordering with Web's deterministic evidence-aware retrieval contract, preserving FTS candidate generation and exposing the inspectable alignment score."
+  cross_repository_compatibility: "Backward-compatible ranking correction for AI's existing ke evidence-report subprocess consumer; JSON gains one additive field. Web's independent read-only implementation is unchanged."
+
 next_continuation:
   priority: "P5-highest-value-authorized-roadmap"
-  action: "This session opened a PR wiring Crossref's `update-to` relation to populate `ProviderObservation`'s `retracted`/`corrected`/`expression_of_concern`/`withdrawn` flags for Crossref-sourced FRD candidates (see the FRD-5_dedup_disagreement entry above) -- purely additive (new optional `PublicationStatusSignal` type and `MetadataProviderResult.publication_status` field, `ke metadata-preview` unaffected, no schema_version bump). This was the concrete follow-up the prior session's own continuation note named as a reasonable next slice, evaluated against the actual code (crossref.py/crossref_federated_adapter.py/metadata_enrichment.py) before implementing, and kept deliberately narrow: only types with an unambiguous mapping are recognized, and a flag is only ever set `True`, never an inferred `False`, given Crossref's crossmark participation is not universal. Remaining, not yet scoped: (1) a second provider's correction/retraction signal (e.g. a future PubMed `CommentsCorrectionsList` parse -- no such XML element is parsed anywhere in this repository today, a materially bigger and riskier slice than the Crossref case); (2) `knowledge-engine-ai`'s `ke_client`/`FederatedCandidateSummary` parsing layer for these fields, now working against real (Crossref-sourced) data rather than only a schema gap; (3) `knowledge-engine-web`'s `PublicationStatusView` rendering for them -- (2) and (3) are out of scope for this repo. FRD-8 (optional MCP facade) remains deliberately deferred; there is no other currently-authorized FRD-# slice. Re-read docs/roadmap.md for the next milestone worth starting once FRD-8 is settled."
+  action: "After fresh CI verifies the evidence-aware authoritative ranking change, rerun knowledge-engine-ai's unchanged cross-domain Research Copilot evaluator against the reviewed schema-v2 benchmark. Do not weaken the gold set or prompt-tune around retrieval failures; use the resulting Evidence Record recall to decide the next retrieval slice."
   selection_rule: "Before beginning roadmap work, query live PR state. Handle failed, green, blocked, conflicted, or pending existing work according to docs/agent-development-policy.md."
 
 human_decision_required: null

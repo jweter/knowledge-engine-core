@@ -137,6 +137,63 @@ def test_answer_retrieval_accepts_natural_language_questions(tmp_path: Path) -> 
     assert "body" in results[0].matched_query
 
 
+def test_answer_retrieval_reranks_candidates_by_question_aligned_evidence(
+    tmp_path: Path,
+) -> None:
+    database = build_database(tmp_path)
+    incidental = parsed_paper(tmp_path).model_copy(
+        update={
+            "source_path": tmp_path / "incidental.pdf",
+            "content_hash": "b" * 64,
+            "title": "Body weight and semaglutide background",
+            "abstract": "Semaglutide body weight obesity placebo trial review.",
+            "doi": "10.1234/incidental",
+            "raw_text": "Semaglutide body weight obesity placebo trial review.",
+            "body_text": "Semaglutide body weight obesity placebo trial review.",
+        }
+    )
+    direct = parsed_paper(tmp_path).model_copy(
+        update={
+            "source_path": tmp_path / "direct.pdf",
+            "content_hash": "c" * 64,
+            "title": "Semaglutide trial",
+            "abstract": "A randomized trial in adults.",
+            "doi": "10.1234/direct",
+            "raw_text": "A randomized semaglutide trial in adults with obesity.",
+            "body_text": "A randomized semaglutide trial in adults with obesity.",
+        }
+    )
+    with database.session() as session:
+        PaperRepository(session).add_parsed_paper(incidental)
+        PaperRepository(session).add_parsed_paper(direct)
+
+    evidence_records = [
+        {
+            "source_doi": "https://doi.org/10.1234/direct",
+            "research_question": "Does semaglutide reduce body weight?",
+            "claim_text": "Semaglutide reduced body weight compared with placebo.",
+            "population": "Adults with overweight or obesity.",
+            "intervention": "Semaglutide.",
+            "comparator": "Placebo.",
+            "outcome": "Body weight change.",
+            "result_summary": "Greater body-weight reduction with semaglutide.",
+        }
+    ]
+    with database.session() as session:
+        lexical = SearchService(session).answer_retrieval(
+            "Does semaglutide reduce body weight?", limit=1
+        )
+        reranked = SearchService(session).answer_retrieval(
+            "Does semaglutide reduce body weight?",
+            limit=1,
+            evidence_records=evidence_records,
+        )
+
+    assert lexical[0].doi == "10.1234/incidental"
+    assert reranked[0].doi == "10.1234/direct"
+    assert reranked[0].evidence_alignment_score > 0
+
+
 def test_natural_language_query_removes_punctuation_and_stopwords() -> None:
     query = build_natural_language_fts_query("Do GLP-1 receptor agonists reduce body weight?")
 
