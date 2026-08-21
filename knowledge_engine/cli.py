@@ -451,7 +451,11 @@ def answer(
     evidence_summary = _evidence_status_summary(evidence_records) if evidence else None
 
     with database.session() as session:
-        results = SearchService(session).answer_retrieval(question, limit=limit)
+        results = SearchService(session).answer_retrieval(
+            question,
+            limit=limit,
+            evidence_records=evidence_records,
+        )
 
     console.print(f"[bold]Question:[/bold] {_safe_text(question)}")
     if fts_query:
@@ -591,7 +595,11 @@ def evidence_report(
     evidence_summary = _evidence_status_summary(evidence_records)
 
     with database.session() as session:
-        results = SearchService(session).answer_retrieval(question, limit=limit)
+        results = SearchService(session).answer_retrieval(
+            question,
+            limit=limit,
+            evidence_records=evidence_records,
+        )
 
     if not results:
         raise typer.BadParameter("No relevant papers found in the indexed corpus.")
@@ -1537,7 +1545,12 @@ def _best_snippet(result: SearchResult) -> str:
 def _why_matched(result: SearchResult) -> str:
     """Explain why a paper appeared in answer retrieval."""
 
-    return f"Matched indexed title, abstract, or body text using: {result.matched_query}"
+    reason = f"Matched indexed title, abstract, or body text using: {result.matched_query}"
+    if result.evidence_alignment_score > 0:
+        reason += (
+            f"; Evidence Record question-alignment score: {result.evidence_alignment_score:.3f}"
+        )
+    return reason
 
 
 def _display_title(result: SearchResult, curated: CorpusSourceMetadata | None) -> str:
@@ -2257,6 +2270,7 @@ def _build_evidence_report_json(
                 "license_type": _report_license(curated),
                 "metadata_source": _report_metadata_source(curated),
                 "retrieval_score": result.score,
+                "evidence_alignment_score": result.evidence_alignment_score,
                 "retrieval_snippet": _best_snippet(result),
                 "why_matched": _why_matched(result),
                 "citation": _citation(result, curated),

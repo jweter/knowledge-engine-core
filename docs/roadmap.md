@@ -39,7 +39,10 @@ temporary detour:
    benchmark with expected relevant papers, evidence records, study types, and
    citations. Use the measured failures to make source-linked evidence outrank
    incidental keyword mentions. Do not hide poor retrieval behind better prose
-   or more LLM output.
+   or more LLM output. Core's authoritative `ke answer --evidence` and
+   `ke evidence-report` paths now apply the same bounded, deterministic,
+   rarity-weighted Evidence Record reranking contract used by Web's measured
+   Ask path, so AI subprocess consumers no longer fall back to raw FTS order.
 3. **Complete one golden scientific evidence map.** Make the GLP-1/body-weight
    question defensible end to end: landmark trials and reviews, population and
    comparator differences, limitations, contradictory or qualifying evidence,

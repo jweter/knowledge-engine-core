@@ -195,7 +195,12 @@ most likely to actually call:
   consumer (e.g. a future `knowledge-engine-ai` layer) that needs to
   parse retrieval + matched-evidence results programmatically instead of
   scraping Markdown or Rich console text; see
-  `docs/ai_layer_architecture.md`.
+  `docs/ai_layer_architecture.md`. FTS5 generates a bounded candidate set;
+  when validated Evidence Records are supplied, deterministic rarity-weighted
+  question coverage over the records' research question, claim, PICO, and
+  result fields reranks those candidates. JSON output exposes the resulting
+  `evidence_alignment_score`; it never uses Evidence Quality, confidence,
+  consensus, or an LLM.
 - `ke evidence-map-report <map.json> --evidence <records.jsonl> --relationships
   <relationships.jsonl> --sources <sources.csv> [--output <path.md>]` -- render
   the reviewed map's stored PICO, results, limitations, citations, and

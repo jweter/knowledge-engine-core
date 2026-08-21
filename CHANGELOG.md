@@ -7,6 +7,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Evidence-aware authoritative retrieval**: `ke answer --evidence` and
+  `ke evidence-report` now use FTS5 for a bounded candidate set and
+  deterministically rerank it by rarity-weighted question coverage in the
+  supplied Evidence Records. Structured reports expose
+  `evidence_alignment_score`, aligning Core's subprocess contract with Web's
+  measured Ask retrieval without using model output or evidence-quality scores.
+
 ### Added
 
 - **`ke citation-snowball` and `ke citation-snowball-report` (FRD-7)**:
