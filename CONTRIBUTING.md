@@ -40,10 +40,23 @@ Use Conventional Commits:
 
 ## Quality Checks
 
-Run these before opening a pull request:
+Run the canonical local preflight before opening a pull request:
 
 ```bash
-poetry run black --check .
+poetry install
+poetry run python scripts/quality_preflight.py
+```
+
+This runs the same gates CI enforces, in the same order: `ruff format --check
+.`, `ruff check .`, `mypy knowledge_engine tests`, `pytest`, and `git diff
+--check`. See `docs/quality_preflight.md` for details, including the security
+scans (`Bandit`, `pip-audit`) that run outside the Poetry environment and are
+not part of this script.
+
+If you need to run an individual gate directly:
+
+```bash
+poetry run ruff format --check --diff .
 poetry run ruff check .
 poetry run mypy knowledge_engine tests
 poetry run pytest
