@@ -1,6 +1,6 @@
 schema_version: 1
 project: knowledge-engine-core
-updated_at: "2026-08-21T19:10:00Z"
+updated_at: "2026-08-22T21:30:00Z"
 status_source: "Verified repository state plus docs/roadmap.md; this file is a continuity cache and never overrides higher-authority evidence (code, CI, live PR state, docs/roadmap.md)."
 
 product:
@@ -15,8 +15,8 @@ current_milestone:
   objective: "Fan discovery queries across scholarly providers (PubMed, Crossref, OpenAlex, Semantic Scholar, arXiv) behind one recorded, deduplicated, reproducible search run, and expose that provenance to knowledge-engine-web/knowledge-engine-ai."
   sub_milestone_status:
     FRD-1_contract: "implemented and reachable"
-    FRD-2_openalex: "search implemented and live-verified; work lookup/citation traversal not yet wired to a CLI surface"
-    FRD-3_semantic_scholar: "search implemented and live-verified; citation traversal not yet wired to a CLI surface"
+    FRD-2_openalex: "search implemented and live-verified; citation retrieval reachable via `ke citation-snowball --provider openalex` (FRD-7, merged 2026-08-19). This session (2026-08-22) is a documentation-only correction: this line and the roadmap doc's own FRD-2 section previously said work lookup/citation retrieval was 'not built', which was stale -- FRD-7 already closed it days earlier and the FRD-2 section simply was not updated at the time."
+    FRD-3_semantic_scholar: "search implemented and live-verified; citation traversal reachable via `ke citation-snowball` (default provider, FRD-7). This session (2026-08-22) is a documentation-only correction of the same staleness as FRD-2 above."
     FRD-4_arxiv: "implemented and live-verified"
     FRD-5_dedup_disagreement: "implemented and reachable via `ke federated-discover --output`. Earlier follow-up (merged): `ProviderObservation`/`CandidateObservationRecord` gained `corrected`/`expression_of_concern`/`withdrawn` optional boolean fields alongside the existing `retracted`, closing the concrete Core-side schema gap `knowledge-engine-web`'s WEB-FRD-4/WEB-FRD-5 sections named as blocking their remaining publication-status exit criteria. Purely additive (new optional fields default to `None`, `provider_disagreement.py`'s field-order tuple extended to match, ledger `schema_version` unchanged, pre-existing ledger records load the new fields as `None`). This session's follow-up (see PR): `crossref_federated_adapter.py` now populates all four flags from Crossref's `update-to` relation via new `crossref.parse_crossref_publication_status` -- a flag is only ever set `True` (never an inferred `False`) from a fixed, documented subset of Crossref's `update-to.type` vocabulary; unmapped types and an absent/empty `update-to` list leave every flag `None`. Carried through additive, provider-neutral `metadata_enrichment.PublicationStatusSignal`/`MetadataProviderResult.publication_status` (both optional, so `ke metadata-preview`'s unrelated Crossref-review path is unaffected). No other provider transport populates these three fields yet; OpenAlex's `is_retracted` remains the only other populated flag. `knowledge-engine-ai`'s parsing layer and `knowledge-engine-web`'s rendering for these fields remain that project's own future work, now unblocked by real (Crossref-sourced) data rather than only a schema gap."
     FRD-6_ledger_coverage: "implemented and reachable via `ke federated-discover` / `ke federated-coverage-report` / `ke federated-discover-history` (both prior follow-ups now merged to main). This session's follow-up (also merged): `FederatedSearchLedger.record` now persists each run's full deduplicated candidate list (not just `candidate_count`) on `SearchRunRecord.candidates`, and `ke federated-coverage-report --output` writes a specific past run's coverage plus that candidate snapshot as JSON -- the concrete Core ask `knowledge-engine-web`'s WEB-FRD-5 design doc section 9 named as its remaining unblock. Purely additive (new optional field, pre-existing records load with an empty candidate list, `schema_version` unchanged)."
@@ -46,7 +46,7 @@ automation_contract:
   advisory_review_unavailable_example: "chatgpt-codex-connector[bot] posting a Codex-usage-limit notice is not a review finding"
 
 verified_repository_state:
-  checked_at: "2026-08-18T21:55:00Z"
+  checked_at: "2026-08-22T21:30:00Z"
   note: "Live PR/check/issue state is intentionally not cached as authoritative counts here. Scheduled runs must query GitHub directly before acting."
   open_prs: 0
   corpus:
@@ -74,14 +74,11 @@ verified_repository_state:
       cadence: "daily 06:30 UTC"
       note: "pushes to bot/discovery-cycle, opens no PR by design"
 
-active_work:
-  branch: "retrieval/evidence-aware-report-ranking"
-  objective: "Align Core's authoritative evidence-report ordering with Web's deterministic evidence-aware retrieval contract, preserving FTS candidate generation and exposing the inspectable alignment score."
-  cross_repository_compatibility: "Backward-compatible ranking correction for AI's existing ke evidence-report subprocess consumer; JSON gains one additive field. Web's independent read-only implementation is unchanged."
+active_work: null
 
 next_continuation:
   priority: "P5-highest-value-authorized-roadmap"
-  action: "After fresh CI verifies the evidence-aware authoritative ranking change, rerun knowledge-engine-ai's unchanged cross-domain Research Copilot evaluator against the reviewed schema-v2 benchmark. Do not weaken the gold set or prompt-tune around retrieval failures; use the resulting Evidence Record recall to decide the next retrieval slice."
+  action: "The prior active_work (retrieval/evidence-aware-report-ranking, PR #399, plus its CONTRIBUTING.md follow-up PR #400) merged to main 2026-08-21; open_prs is 0 as of this session. This session (2026-08-22) made no code change: it corrected stale FRD-2/FRD-3 roadmap status text (both sections claimed OpenAlex/Semantic Scholar citation retrieval was 'not built'/'not wired to a CLI surface', which FRD-7's `ke citation-snowball` had already closed for both providers on 2026-08-19 -- see docs/roadmap/federated_research_discovery_adoption.md's FRD-2/FRD-3 sections and this file's sub_milestone_status above for the corrected account) and did not touch code, so no test/lint run was needed for this change beyond confirming it is prose-only. The still-open substantive continuation from the prior session remains: after fresh CI verifies the evidence-aware authoritative ranking change (merged, CI should now be green), rerun knowledge-engine-ai's unchanged cross-domain Research Copilot evaluator against the reviewed schema-v2 benchmark. Do not weaken the gold set or prompt-tune around retrieval failures; use the resulting Evidence Record recall to decide the next retrieval slice. This was not attempted in this session: it requires a working local Ollama/LLM setup and the full glp1_weight_loss/oncology/mental-health corpora wired to knowledge-engine-ai's retrieval_baseline_cli.py, neither of which was verified available in this sandboxed session -- a future run with that infrastructure confirmed available should attempt it rather than fabricate a result. FRD-8 (MCP facade) remains deliberately deferred per its own roadmap section; not a candidate slice absent a measured integration use case."
   selection_rule: "Before beginning roadmap work, query live PR state. Handle failed, green, blocked, conflicted, or pending existing work according to docs/agent-development-policy.md."
 
 human_decision_required: null
