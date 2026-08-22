@@ -429,21 +429,32 @@ Exit criteria:
 
 ### FRD-2 -- OpenAlex adapter
 
-**Status: search implemented and live-verified; work lookup and citation
-retrieval not built.** `openalex_provider.py`'s `OpenAlexProvider` (search
-and single-work lookup) existed with only a fake-transport unit test --
-no concrete HTTPS transport, unlike PubMed/Crossref. New
-`openalex_http.py`'s `UrllibOpenAlexTransport` (host-allowlisted to
-`api.openalex.org`, the same bounded-read pattern
-`crossref_http.py`/`uniprot_http.py` already established) is that
-transport, wired into `ke federated-discover`. OpenAlex requires no
-credential in reality (a polite-pool `mailto` param, not a secret), but
-this adapter's existing, unchanged contract gates it behind an optional
-`--openalex-api-key`/`KE_OPENALEX_API_KEY` and reports itself `disabled`
-(not an error) when absent -- not revisited here since changing an
-already-tested provider contract was out of scope for wiring its
-transport. Citation/reference retrieval (this milestone's third exit
-criterion) is not implemented.
+**Status: search implemented and live-verified; citation retrieval implemented
+via FRD-7.** `openalex_provider.py`'s `OpenAlexProvider` (search and
+single-work lookup) existed with only a fake-transport unit test -- no
+concrete HTTPS transport, unlike PubMed/Crossref. New `openalex_http.py`'s
+`UrllibOpenAlexTransport` (host-allowlisted to `api.openalex.org`, the same
+bounded-read pattern `crossref_http.py`/`uniprot_http.py` already
+established) is that transport, wired into `ke federated-discover`. OpenAlex
+requires no credential in reality (a polite-pool `mailto` param, not a
+secret), but this adapter's existing, unchanged contract gates it behind an
+optional `--openalex-api-key`/`KE_OPENALEX_API_KEY` and reports itself
+`disabled` (not an error) when absent -- not revisited here since changing
+an already-tested provider contract was out of scope for wiring its
+transport. **Status correction, 2026-08-22: this section's own "work lookup
+and citation retrieval not built" claim was stale.** Citation/reference
+retrieval (this milestone's third exit criterion) was already closed by
+FRD-7 (`ke citation-snowball --provider openalex`, merged 2026-08-19) --
+this section's status paragraph and exit-criteria table simply were not
+updated at the time to reflect that closure; this is a documentation
+correction, not new implementation work. `openalex_citation_adapter.py`'s
+`OpenAlexCitationAdapter` wraps `OpenAlexProvider.lookup()` (the same
+single-work lookup this status paragraph previously called "not built" --
+it is built, and is exercised here) together with `OpenAlexCitationProvider`
+to hydrate each discovered candidate's full metadata, reachable via `ke
+citation-snowball --provider openalex --seeds <ids> --ledger-root <dir>`.
+See FRD-7's own section below for the bounded/provenance-bearing account
+that satisfies this milestone's third exit criterion.
 
 Implement OpenAlex search and work lookup behind the broker.
 
@@ -453,15 +464,20 @@ Exit criteria:
 - live integration test separated from offline tests; **not yet -- `ke
   federated-discover` was live-verified manually, not from an automated
   live-tagged test**
-- citation/reference retrieval bounded and provenance-bearing; **not met**
+- citation/reference retrieval bounded and provenance-bearing; **met (via
+  FRD-7)** -- `ke citation-snowball --provider openalex` traverses under
+  explicit `--max-depth`/`--limit-per-traversal`/`--max-candidates` bounds
+  and persists a `CitationEdge` (provider, seed, direction, retrieval
+  timestamp) per discovered candidate, the same provenance discipline
+  FRD-7's exit criteria already require of the Semantic Scholar path
 - federated search succeeds when OpenAlex fails and marks the run degraded.
   **met** (live-verified: OpenAlex `disabled`, PubMed `success` ->
   `partial` completeness)
 
 ### FRD-3 -- Semantic Scholar adapter
 
-**Status: search implemented and live-verified; citation traversal not wired
-into the CLI.** `semantic_scholar_provider.py`'s `SemanticScholarProvider`
+**Status: search implemented and live-verified; citation traversal wired via
+FRD-7.** `semantic_scholar_provider.py`'s `SemanticScholarProvider`
 (search, single-work lookup, and `references`/`citations`/`traverse`
 citation traversal via `citation_traversal.py`) existed with only a
 fake-transport unit test -- no concrete HTTPS transport, the same gap
@@ -480,9 +496,15 @@ transport correctly parsed it into `ProviderOutcome.RATE_LIMITED`,
 surfaced in `ke federated-discover`'s coverage table as
 `failed/unavailable` -- exactly the graceful, labeled degradation this
 milestone's fourth exit criterion requires, a real external condition,
-not a contrived test fixture. Citation/reference traversal
-(`references`/`citations`/`traverse`) is implemented and unit-tested but
-has no CLI command yet -- named as real, unfinished follow-up.
+not a contrived test fixture. **Status correction, 2026-08-22: this
+section's own "citation traversal not wired into the CLI" claim was
+stale.** `references`/`citations`/`traverse` traversal was already given a
+CLI command by FRD-7 (`ke citation-snowball --seeds <ids> --ledger-root
+<dir>`, defaulting to `SemanticScholarProvider`'s existing traversal
+methods via `--provider semantic_scholar`, merged before this section was
+last edited) -- this is a documentation correction, not new implementation
+work; see FRD-7's own section below for the bounded/provenance-bearing
+account.
 
 Implement optional Semantic Scholar discovery and citation traversal.
 
