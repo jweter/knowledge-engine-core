@@ -13,8 +13,9 @@ the project still being healthy in 10 years.
 2. Create a branch from `main`.
 3. Make a focused change.
 4. Add or update tests.
-5. Run the quality checks.
-6. Open a pull request.
+5. Run the canonical autofix + quality preflight until it passes.
+6. Review generated diffs.
+7. Open or update the pull request.
 
 After the initial bootstrap, avoid committing directly to `main`. Use feature
 branches and pull requests even for small changes.
@@ -40,18 +41,27 @@ Use Conventional Commits:
 
 ## Quality Checks
 
-Run the canonical local preflight before opening a pull request:
+Run the canonical local preflight before opening or updating a pull request:
 
 ```bash
 poetry install
+poetry run python scripts/quality_preflight.py --fix
+```
+
+The `--fix` phase applies the repository's deterministic Ruff formatter and safe
+lint fixes first, then runs the same check-only gates CI enforces: `ruff format
+--check .`, `ruff check .`, `mypy knowledge_engine tests`, `pytest`, and `git
+diff --check`. Unsafe Ruff fixes are not enabled.
+
+If you only want to verify the tree without modifying it:
+
+```bash
 poetry run python scripts/quality_preflight.py
 ```
 
-This runs the same gates CI enforces, in the same order: `ruff format --check
-.`, `ruff check .`, `mypy knowledge_engine tests`, `pytest`, and `git diff
---check`. See `docs/quality_preflight.md` for details, including the security
-scans (`Bandit`, `pip-audit`) that run outside the Poetry environment and are
-not part of this script.
+See `docs/quality_preflight.md` for details, including the security scans
+(`Bandit`, `pip-audit`) that run outside the Poetry environment and are not part
+of this script.
 
 If you need to run an individual gate directly:
 
@@ -61,6 +71,10 @@ poetry run ruff check .
 poetry run mypy knowledge_engine tests
 poetry run pytest
 ```
+
+For Python changes, do not describe a branch as ready for review until the full
+preflight exits successfully. This rule applies equally to human-authored,
+automated, and agent-authored code.
 
 If Poetry is blocked by the known local certificate issue, use the pip fallback
 from `README.md` and run the same tools through `.venv`.
