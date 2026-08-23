@@ -1,0 +1,153 @@
+# General Question Research Loop v1 - Core responsibilities
+
+Status: active cross-repository build plan  
+Tracking issue: #402  
+Parent AI tracking issue: `knowledge-engine-ai` #69
+
+## Purpose
+
+Core must support a general-purpose research loop, not a fixed-question corpus workflow. The GLP-1/body-weight data remains a golden regression corpus, but new user questions must be able to discover, acquire, validate, and reuse evidence outside that corpus.
+
+Core remains the deterministic evidence authority. It does not decide what evidence means for the user; it provides validated, traceable material that the AI layer can reason over.
+
+## Required pipeline
+
+```text
+federated discovery run
+  -> normalized candidates
+  -> bounded acquisition queue
+  -> identity/deduplication
+  -> access/license checks
+  -> acquisition receipt
+  -> paper/source persistence
+  -> parsing
+  -> grounded evidence extraction
+  -> validation/promotion
+  -> reusable evidence store
+```
+
+## Existing components to reuse
+
+The repository already contains substantial pieces required by this feature:
+
+- federated discovery providers and persisted search-run ledgers;
+- PubMed/PMC and Europe PMC discovery/acquisition services;
+- CORE discovery;
+- Unpaywall lookup;
+- paper/source persistence and import-run provenance;
+- PDF parsing;
+- grounded local-LLM extraction with source verification;
+- Evidence Record validation;
+- graph and retrieval infrastructure.
+
+General Question v1 is primarily a composition and contract problem: connect these pieces behind one bounded acquisition path without weakening provenance or access rules.
+
+## New Core contract
+
+A new acquisition bridge should consume a persisted federated search run and an explicit bounded selection policy. It must not accept arbitrary model-authored full text or bypass source eligibility checks.
+
+### Request
+
+Minimum logical fields:
+
+```json
+{
+  "schema_version": 1,
+  "search_run_id": "uuid",
+  "research_question_id": "stable-thread-id",
+  "candidate_ids": ["provider-neutral-id"],
+  "max_candidates": 10,
+  "max_full_text_acquisitions": 5,
+  "max_elapsed_seconds": 120,
+  "allow_metadata_only": true
+}
+```
+
+Candidate selection may be performed by the AI layer, but every selected candidate must resolve back to the persisted search-run snapshot.
+
+### Result
+
+Per candidate:
+
+- stable candidate identity;
+- DOI/PMID/arXiv/provider IDs when available;
+- existing paper/source match if already indexed;
+- acquisition status;
+- access/license provenance;
+- local persisted paper ID when acquired;
+- parser/import-run identity;
+- evidence extraction result count;
+- validation/rejection reason.
+
+Stable statuses:
+
+- `already_indexed`
+- `acquired_full_text`
+- `metadata_only`
+- `license_or_access_unavailable`
+- `duplicate`
+- `failed`
+- `skipped_budget`
+
+These statuses describe acquisition, not scientific support.
+
+## Safety and scientific invariants
+
+1. Never treat a discovery candidate as an Evidence Record.
+2. Never download non-permitted full text merely because a provider returned a URL.
+3. Never bypass stable identity/deduplication.
+4. Never promote ungrounded extracted fields.
+5. Never silently mutate or replace existing reviewed Evidence Records.
+6. Every acquisition must produce a durable receipt.
+7. Every newly promoted Evidence Record must retain source-span provenance.
+8. Unknown domains use the domain-general grounded extraction path, not a GLP-1-specific regex fallback.
+
+## Build slices
+
+### CORE-GQR-1 - Acquisition request/result schema
+- define typed request/result models;
+- stable JSON serialization;
+- schema-version tests;
+- persisted search-run candidate resolution.
+
+### CORE-GQR-2 - Candidate identity and reuse
+- DOI/PMID/arXiv/provider identity resolution;
+- detect already indexed sources;
+- return `already_indexed` instead of reacquiring;
+- idempotency tests.
+
+### CORE-GQR-3 - Acquisition routing
+Route eligible candidates through existing mechanisms where possible:
+- PMC OA acquisition;
+- Europe PMC OA acquisition;
+- CORE-accessible material;
+- Unpaywall-resolved OA locations;
+- metadata-only fallback when full text cannot be acquired.
+
+No provider gets an implicit trust exemption.
+
+### CORE-GQR-4 - Persist and parse
+- create/import paper/source records;
+- parse newly acquired full text;
+- attach import-run/acquisition receipt provenance;
+- keep failures independently inspectable.
+
+### CORE-GQR-5 - Grounded extraction and promotion
+- invoke domain-general grounded extraction;
+- verify proposed fields against source text;
+- validate Evidence Record schema;
+- append/promote only valid records;
+- persist rejection reasons for failed proposals.
+
+### CORE-GQR-6 - Reuse and query visibility
+- newly promoted evidence becomes visible to normal retrieval immediately or through one explicit documented refresh step;
+- repeat-question tests prove no duplicate acquisition;
+- corpus-library export/import preserves the newly acquired evidence.
+
+## Acceptance test
+
+Starting with no indexed creatine/strength evidence, a persisted federated discovery run containing eligible creatine papers can be passed to the acquisition bridge. At least one accessible source is acquired, parsed, grounded, promoted to a valid Evidence Record, and becomes retrievable by the normal evidence search path. Re-running the same acquisition request reuses the persisted paper instead of duplicating it.
+
+## Definition of done
+
+Core's portion is complete when a federated discovery lead can become reusable, validated evidence through one bounded, auditable command/API contract while preserving all existing provenance, access, and grounding rules.
