@@ -334,6 +334,19 @@ Use one entry per distinct failure. Record the first failing command, the exact 
 - **Tracked as:** [issue #371](https://github.com/jweter/knowledge-engine-core/issues/371)
 - **Status:** open — this entry closes only the `CONTRIBUTING.md` doc/compliance gap. Issue #371's broader process-compliance problem (connector-authored PRs skipping the preflight entirely, not merely being told the wrong command) remains open and is not resolved by this doc fix alone.
 
+## 2026-08-23 — Local preflight was check-only, so contributors still hand-fixed one Ruff gate at a time
+
+- **Area:** CI / tooling
+- **First failing command:** `poetry run ruff format --check --diff .` on PR #404, followed immediately by `poetry run ruff check .` (Ruff `UP037`, a Python-version modernization diagnostic) on the very next run after the formatting failure was corrected.
+- **Symptom:** PR #404 reproduced the exact recurring class issue #356 tracks: a formatting failure was fixed, then the next CI run exposed an independently deterministic lint failure that formatting alone did not surface. This is the same two-step "staircase" shape as PR #355's original `I001` import-order recurrence that first opened #356, and issue #356 was reopened because of it. The existing `scripts/quality_preflight.py` was check-only -- it correctly detected each gate's failure locally, but a contributor or agent still had to fix one gate by hand, rerun, hit the next gate, and fix that too, consuming an avoidable extra CI cycle each time.
+- **Affected files:** `scripts/quality_preflight.py`, `tests/test_quality_preflight.py`, `docs/quality_preflight.md`, `CONTRIBUTING.md`
+- **Root cause:** The preflight script validated CI's exact gate sequence but never applied any correction itself, so every deterministic, repository-authorized Ruff fix still required a manual round trip before the check-only gates could pass.
+- **Fix:** PR #405 added a `--fix` mode via `fix_gates()`: `ruff format .`, then `ruff check --fix .`, then `ruff format .` again (lint fixes can change layout), always followed by the complete check-only sequence (`ruff format --check`, `ruff check`, `mypy`, `pytest`, `git diff --check`). `poetry run python scripts/quality_preflight.py --fix` now collapses the historical staircase into one command; unsafe Ruff fixes remain disabled. `CONTRIBUTING.md` and `docs/quality_preflight.md` were updated so `--fix` is the documented default developer/agent workflow, with the plain check-only invocation kept as the verify-without-modifying option.
+- **Validation:** `tests/test_quality_preflight.py` gained `test_fix_gates_apply_safe_ruff_changes_in_stable_order`, `test_fix_mode_runs_fixes_before_checks`, and `test_fix_failure_prevents_check_phase`, covering fix-gate ordering, fix-then-check sequencing, and fix-failure short-circuiting. PR #405's `Python quality checks`, `Python security scan`, and `Python dependency vulnerability scan` workflow runs all completed successfully before merge.
+- **Prevention / fast path:** Run `poetry run python scripts/quality_preflight.py --fix`, not the check-only form, before opening or updating any PR that changes Python -- it now performs the same safe corrections a contributor previously had to apply by hand between CI cycles.
+- **Tracked as:** [issue #356](https://github.com/jweter/knowledge-engine-core/issues/356)
+- **Status:** resolved
+
 ## Operating rule
 
 When CI fails:
