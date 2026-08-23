@@ -15,6 +15,9 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy.orm import Session
+
+from knowledge_engine.duplicate_queries import DuplicateQueryRepository
 from knowledge_engine.federated_search_ledger import (
     CandidateObservationRecord,
     CandidateRecord,
@@ -22,6 +25,7 @@ from knowledge_engine.federated_search_ledger import (
     SearchRunRecord,
 )
 from knowledge_engine.license_rules import evaluate_license
+from knowledge_engine.models import Paper
 
 ACQUISITION_SCHEMA_VERSION = 1
 
@@ -29,6 +33,7 @@ ACQUISITION_SCHEMA_VERSION = 1
 class AcquisitionDisposition(StrEnum):
     """Stable pre-acquisition disposition for one selected candidate."""
 
+    ALREADY_INDEXED = "already_indexed"
     ELIGIBLE_FULL_TEXT = "eligible_full_text"
     METADATA_ONLY = "metadata_only"
     SKIPPED_BUDGET = "skipped_budget"
@@ -117,6 +122,7 @@ class AcquisitionPlanItem:
     xml_url: str | None
     license: str | None
     open_access: bool | None
+    existing_paper_id: int | None
     reason: str | None
 
     def to_dict(self) -> dict[str, Any]:
@@ -133,6 +139,7 @@ class GeneralQuestionAcquisitionPlan:
     query_text: str
     requested_candidate_count: int
     resolved_candidate_count: int
+    already_indexed_count: int
     full_text_selected_count: int
     metadata_only_count: int
     skipped_budget_count: int
@@ -154,8 +161,19 @@ def build_acquisition_plan(
     request: GeneralQuestionAcquisitionRequest,
     *,
     ledger_root: Path,
+    session: Session | None = None,
 ) -> GeneralQuestionAcquisitionPlan:
-    """Resolve selected IDs strictly against one persisted federated-search run."""
+    """Resolve selected IDs strictly against one persisted federated-search run.
+
+    ``session``, when provided, is used to detect candidates that already
+    exist in Core's persisted corpus (by normalized DOI) so they are reported
+    as ``already_indexed`` instead of being queued for reacquisition. This
+    check happens before -- and is not bound by -- the acquisition budget:
+    reusing an already-indexed source costs nothing to acquire, so it must
+    never compete with genuinely new candidates for a budget slot. Omitting
+    ``session`` preserves this function's prior snapshot-only behavior
+    unchanged.
+    """
 
     record = FederatedSearchLedger(ledger_root).load(request.search_run_id)
     _validate_request_against_run(request, record)
@@ -164,6 +182,7 @@ def build_acquisition_plan(
     items: list[AcquisitionPlanItem] = []
     full_text_selected = 0
     resolved = 0
+    already_indexed = 0
     metadata_only = 0
     skipped = 0
     missing = 0
@@ -183,19 +202,40 @@ def build_acquisition_plan(
                     xml_url=None,
                     license=None,
                     open_access=None,
+                    existing_paper_id=None,
                     reason="candidate_not_present_in_persisted_search_snapshot",
                 )
             )
             continue
 
         resolved += 1
+        identity = _identity(candidate)
+        existing_paper = _find_existing_paper(session, identity) if session is not None else None
+        if existing_paper is not None:
+            already_indexed += 1
+            items.append(
+                AcquisitionPlanItem(
+                    candidate_id=candidate.canonical_id,
+                    title=candidate.title,
+                    disposition=AcquisitionDisposition.ALREADY_INDEXED.value,
+                    identity=identity,
+                    selected_observation_provider=None,
+                    full_text_url=None,
+                    xml_url=None,
+                    license=None,
+                    open_access=None,
+                    existing_paper_id=existing_paper.id,
+                    reason="candidate_doi_matches_existing_indexed_paper",
+                )
+            )
+            continue
+
         if ordinal >= request.max_candidates:
             skipped += 1
-            items.append(_budget_item(candidate))
+            items.append(_budget_item(candidate, identity))
             continue
 
         observation = _best_acquisition_observation(candidate)
-        identity = _identity(candidate)
         has_full_text = observation is not None and bool(
             observation.full_text_url or observation.xml_url
         )
@@ -262,6 +302,7 @@ def build_acquisition_plan(
         query_text=record.query_text,
         requested_candidate_count=len(request.candidate_ids),
         resolved_candidate_count=resolved,
+        already_indexed_count=already_indexed,
         full_text_selected_count=full_text_selected,
         metadata_only_count=metadata_only,
         skipped_budget_count=skipped,
@@ -349,17 +390,18 @@ def _first_text(observations: tuple[CandidateObservationRecord, ...], field: str
     return None
 
 
-def _budget_item(candidate: CandidateRecord) -> AcquisitionPlanItem:
+def _budget_item(candidate: CandidateRecord, identity: AcquisitionIdentity) -> AcquisitionPlanItem:
     return AcquisitionPlanItem(
         candidate_id=candidate.canonical_id,
         title=candidate.title,
         disposition=AcquisitionDisposition.SKIPPED_BUDGET.value,
-        identity=_identity(candidate),
+        identity=identity,
         selected_observation_provider=None,
         full_text_url=None,
         xml_url=None,
         license=None,
         open_access=None,
+        existing_paper_id=None,
         reason="candidate_budget_exhausted",
     )
 
@@ -382,8 +424,22 @@ def _item_from_observation(
         xml_url=observation.xml_url if observation else None,
         license=observation.license if observation else None,
         open_access=observation.open_access if observation else None,
+        existing_paper_id=None,
         reason=reason,
     )
+
+
+def _find_existing_paper(session: Session, identity: AcquisitionIdentity) -> Paper | None:
+    """Resolve stable identity against Core's already-persisted corpus.
+
+    Only DOI is currently a persisted, uniquely indexed identity column on
+    ``Paper``; PMID/PMCID/arXiv-based reuse detection remains future work
+    once an equivalent persisted column exists (see CORE-GQR-2 in
+    docs/general_question_research_loop_v1.md).
+    """
+    if not identity.doi:
+        return None
+    return DuplicateQueryRepository(session).paper_by_normalized_doi(identity.doi)
 
 
 def _required_str(payload: dict[str, object], key: str) -> str:
