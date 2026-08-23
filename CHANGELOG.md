@@ -33,6 +33,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   yet -- see `docs/general_question_research_loop_v1.md`'s CORE-GQR-2
   section for what remains.
 
+- **Ingestion-time PMID/arXiv-ID population (CORE-GQR-2)**: the real corpus
+  manifest ingestion path (`CorpusIngestionService`/
+  `LinkedCorpusIngestionService`, used by `ke corpus-import`) now normalizes
+  and persists `sources.csv`'s existing `pmid`/`arxiv_id` columns into
+  `papers.pmid`/`papers.arxiv_id`, mirroring how `manifest_doi` already
+  populates `papers.doi`. Schema version 14 adds nullable, non-uniquely
+  indexed `import_items.normalized_pmid`/`.normalized_arxiv_id` columns to
+  carry the normalized values from manifest row to persisted paper
+  (additive migration, existing rows load as `NULL`). Closes the gap the
+  schema version 13 entry above and CORE-GQR-2's status note left open: the
+  PMID/arXiv-ID already-indexed detection added there now has real data to
+  match against for newly imported papers, not only in tests. Backfilling
+  already-persisted papers, and PMCID-based reuse detection, remain future
+  work.
+
 - **`already_indexed` acquisition disposition (CORE-GQR-2)**:
   `general_question_acquisition.build_acquisition_plan` now accepts an
   optional SQLAlchemy `session`. When supplied, each candidate's DOI is

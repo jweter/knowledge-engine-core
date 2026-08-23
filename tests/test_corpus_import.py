@@ -264,6 +264,93 @@ def test_ingestion_prefers_manifest_doi_over_parsed_doi(tmp_path: Path) -> None:
         assert paper.doi == "10.1172/jci.insight.198707"
 
 
+def test_ingestion_populates_pmid_and_arxiv_id_from_manifest(tmp_path: Path) -> None:
+    """CORE-GQR-2 continuation: `sources.csv` already carries `pmid`/
+
+    `arxiv_id` columns (see `docs/core_interface_contract.md`), but nothing
+    wired them into `papers.pmid`/`papers.arxiv_id` -- schema version 13
+    added the columns, but only tests populated them. This confirms the
+    real corpus-manifest ingestion path (`CorpusIngestionService`, used by
+    `ke corpus-import`) now normalizes and persists both, mirroring how
+    `manifest_doi` already flows into `papers.doi`.
+    """
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(
+        tmp_path,
+        rows=[source_row(pmid="12345678", arxiv_id="arXiv:2101.00001v3")],
+        header=[
+            "source_id",
+            "title",
+            "publication_year",
+            "doi",
+            "pmid",
+            "arxiv_id",
+            "usage_status",
+            "inclusion_status",
+            "source_url",
+            "access_date",
+            "inclusion_reason",
+            "license_type",
+            "license_url",
+            "local_path",
+        ],
+    )
+    pdf_path = declare_pdf(tmp_path, "paper.pdf")
+    parser = StubParser(
+        {
+            "paper.pdf": parsed_paper(
+                pdf_path,
+                title="Imported",
+                doi="10.1234/source-1",
+                content_hash="a" * 64,
+            )
+        }
+    )
+
+    with database.session() as session:
+        CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
+            corpus_path
+        )
+
+    with database.session() as session:
+        paper = session.query(Paper).filter_by(content_hash="a" * 64).one()
+        assert paper.pmid == "12345678"
+        assert paper.arxiv_id == "2101.00001"
+
+
+def test_ingestion_leaves_pmid_and_arxiv_id_null_without_manifest_values(
+    tmp_path: Path,
+) -> None:
+    """No manifest `pmid`/`arxiv_id` (columns absent entirely, the common
+
+    case today) must not synthesize a value -- `papers.pmid`/`.arxiv_id`
+    stay `NULL`, exactly like a manifest row with no `doi`.
+    """
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(tmp_path)
+    pdf_path = declare_pdf(tmp_path, "paper.pdf")
+    parser = StubParser(
+        {
+            "paper.pdf": parsed_paper(
+                pdf_path,
+                title="Imported",
+                doi="10.1234/source-1",
+                content_hash="a" * 64,
+            )
+        }
+    )
+
+    with database.session() as session:
+        CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
+            corpus_path
+        )
+
+    with database.session() as session:
+        paper = session.query(Paper).filter_by(content_hash="a" * 64).one()
+        assert paper.pmid is None
+        assert paper.arxiv_id is None
+
+
 def test_add_parsed_paper_falls_back_to_parsed_title_without_manifest_title(
     tmp_path: Path,
 ) -> None:

@@ -277,6 +277,8 @@ def _build_items(
                 csv_line_number=row.line_number,
                 title=row.title or None,
                 normalized_doi=row.normalized_doi or None,
+                normalized_pmid=row.normalized_pmid or None,
+                normalized_arxiv_id=row.normalized_arxiv_id or None,
                 inclusion_status=row.inclusion_status or None,
                 usage_status=row.usage_status or None,
                 local_path=row.local_path or None,

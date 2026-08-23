@@ -241,7 +241,11 @@ class CorpusIngestionService:
                     # Isolate one paper import so persistence/FTS failures roll back this
                     # item completely without aborting the rest of the run.
                     paper = ClassifiedPaperRepository(self.session).add_parsed_paper(
-                        parsed, manifest_title=item.title, manifest_doi=item.normalized_doi
+                        parsed,
+                        manifest_title=item.title,
+                        manifest_doi=item.normalized_doi,
+                        manifest_pmid=item.normalized_pmid,
+                        manifest_arxiv_id=item.normalized_arxiv_id,
                     )
             except PaperPersistenceError as exc:
                 failed_count += 1

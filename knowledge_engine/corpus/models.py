@@ -63,6 +63,10 @@ class CorpusSourceRow:
     title: str
     doi: str
     normalized_doi: str
+    pmid: str
+    normalized_pmid: str
+    arxiv_id: str
+    normalized_arxiv_id: str
     inclusion_status: str
     usage_status: str
     local_path: str
