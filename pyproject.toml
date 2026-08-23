@@ -19,7 +19,7 @@ click = ">=8.0,<8.5"
 cryptography = "^50.0.0"
 h2 = "^4.4.1"
 faiss-cpu = "^1.14.3"
-sentence-transformers = "^5.6.1"
+sentence-transformers = ">=5.6.1,<7.0.0"
 # pytorch-cpu publishes no macOS wheels; macOS resolves torch from the
 # default index instead, which already ships CPU/Metal-only wheels there.
 torch = [
