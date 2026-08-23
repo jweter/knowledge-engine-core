@@ -485,6 +485,129 @@ def test_already_indexed_candidate_does_not_consume_full_text_budget(tmp_path: P
     assert plan.full_text_selected_count == 1
 
 
+def test_already_indexed_candidate_matches_by_pmid_when_no_doi(tmp_path: Path) -> None:
+    candidate = FederatedCandidate(
+        canonical_id="pmid:99999",
+        title="A creatine trial known only by PMID",
+        doi=None,
+        observations=(
+            ProviderObservation(
+                provider="pubmed",
+                provider_id="99999",
+                title="A creatine trial known only by PMID",
+                pmid="99999",
+                full_text_url="https://pmc.ncbi.nlm.nih.gov/articles/PMC99999/pdf/test.pdf",
+                license="CC BY 4.0",
+                open_access=True,
+            ),
+        ),
+    )
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="creatine", limit_per_provider=10),
+        candidates=(candidate,),
+        provider_statuses=(
+            ProviderStatus(
+                provider="pubmed",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+                latency_ms=1,
+                reason=None,
+            ),
+        ),
+    )
+    ledger = FederatedSearchLedger(tmp_path)
+    run_id = ledger.record(result, research_question_id="rq").search_run_id
+    request = GeneralQuestionAcquisitionRequest(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq",
+        candidate_ids=("pmid:99999",),
+    )
+
+    with _in_memory_session() as session:
+        existing = Paper(
+            title="A creatine trial known only by PMID",
+            doi=None,
+            pmid="99999",
+            source_path="pmid-only.pdf",
+            content_hash="b" * 64,
+            page_count=1,
+            word_count=10,
+        )
+        session.add(existing)
+        session.flush()
+
+        plan = build_acquisition_plan(request, ledger_root=tmp_path, session=session)
+
+        assert plan.items[0].disposition == AcquisitionDisposition.ALREADY_INDEXED.value
+        assert plan.items[0].existing_paper_id == existing.id
+        assert plan.items[0].reason == "candidate_pmid_matches_existing_indexed_paper"
+        assert plan.already_indexed_count == 1
+
+
+def test_already_indexed_candidate_matches_by_arxiv_id_when_no_doi_or_pmid(
+    tmp_path: Path,
+) -> None:
+    candidate = FederatedCandidate(
+        canonical_id="arxiv:2301.12345",
+        title="A preprint known only by arXiv ID",
+        doi=None,
+        observations=(
+            ProviderObservation(
+                provider="arxiv",
+                provider_id="2301.12345",
+                title="A preprint known only by arXiv ID",
+                arxiv_id="2301.12345",
+                full_text_url="https://arxiv.org/pdf/2301.12345",
+                open_access=True,
+            ),
+        ),
+    )
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="creatine", limit_per_provider=10),
+        candidates=(candidate,),
+        provider_statuses=(
+            ProviderStatus(
+                provider="arxiv",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+                latency_ms=1,
+                reason=None,
+            ),
+        ),
+    )
+    ledger = FederatedSearchLedger(tmp_path)
+    run_id = ledger.record(result, research_question_id="rq").search_run_id
+    request = GeneralQuestionAcquisitionRequest(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq",
+        candidate_ids=("arxiv:2301.12345",),
+    )
+
+    with _in_memory_session() as session:
+        existing = Paper(
+            title="A preprint known only by arXiv ID",
+            doi=None,
+            arxiv_id="2301.12345",
+            source_path="arxiv-only.pdf",
+            content_hash="c" * 64,
+            page_count=1,
+            word_count=10,
+        )
+        session.add(existing)
+        session.flush()
+
+        plan = build_acquisition_plan(request, ledger_root=tmp_path, session=session)
+
+        assert plan.items[0].disposition == AcquisitionDisposition.ALREADY_INDEXED.value
+        assert plan.items[0].existing_paper_id == existing.id
+        assert plan.items[0].reason == "candidate_arxiv_id_matches_existing_indexed_paper"
+        assert plan.already_indexed_count == 1
+
+
 def test_no_session_preserves_prior_snapshot_only_behavior(tmp_path: Path) -> None:
     run_id = _record_run(tmp_path)
     request = GeneralQuestionAcquisitionRequest(
@@ -501,16 +624,16 @@ def test_no_session_preserves_prior_snapshot_only_behavior(tmp_path: Path) -> No
     assert plan.already_indexed_count == 0
 
 
-def test_already_indexed_lookup_requires_a_doi(tmp_path: Path) -> None:
+def test_already_indexed_lookup_requires_some_known_identity(tmp_path: Path) -> None:
     candidate = FederatedCandidate(
         canonical_id="no-doi:local-1",
-        title="A candidate without any DOI",
+        title="A candidate without any DOI, PMID, or arXiv ID",
         doi=None,
         observations=(
             ProviderObservation(
                 provider="arxiv",
                 provider_id="local-1",
-                title="A candidate without any DOI",
+                title="A candidate without any DOI, PMID, or arXiv ID",
             ),
         ),
     )

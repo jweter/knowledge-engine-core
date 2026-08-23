@@ -9,6 +9,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **PMID/arXiv-ID already-indexed detection (CORE-GQR-2)**: schema version 13
+  adds nullable, uniquely indexed `papers.pmid`/`papers.arxiv_id` columns
+  (additive migration, existing rows load as `NULL`), plus
+  `DuplicateQueryRepository.paper_by_pmid`/`.paper_by_arxiv_id`.
+  `general_question_acquisition._find_existing_paper` now checks DOI, then
+  PMID, then arXiv ID in order, so a candidate known only by PMID or arXiv
+  ID (no DOI) can still be reported as `already_indexed` instead of queued
+  for reacquisition; the disposition's `reason` names which identity
+  matched. No ingestion path populates these new columns for real papers
+  yet -- see `docs/general_question_research_loop_v1.md`'s CORE-GQR-2
+  section for what remains.
+
 - **`already_indexed` acquisition disposition (CORE-GQR-2)**:
   `general_question_acquisition.build_acquisition_plan` now accepts an
   optional SQLAlchemy `session`. When supplied, each candidate's DOI is

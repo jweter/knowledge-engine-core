@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from knowledge_engine.models import ImportItem, Paper
-from knowledge_engine.utils import normalize_doi
+from knowledge_engine.utils import normalize_arxiv_id, normalize_doi, normalize_pmid
 
 
 class DuplicateQueryRepository:
@@ -36,6 +36,38 @@ class DuplicateQueryRepository:
                 paper
                 for paper in self.session.scalars(statement)
                 if normalize_doi(paper.doi or "") == target
+            ),
+            None,
+        )
+
+    def paper_by_pmid(self, pmid: str | None) -> Paper | None:
+        """Return the first paper whose PMID normalizes to the requested value."""
+
+        if not pmid:
+            return None
+        target = normalize_pmid(pmid)
+        statement = select(Paper).where(Paper.pmid.is_not(None)).order_by(Paper.id)
+        return next(
+            (
+                paper
+                for paper in self.session.scalars(statement)
+                if normalize_pmid(paper.pmid or "") == target
+            ),
+            None,
+        )
+
+    def paper_by_arxiv_id(self, arxiv_id: str | None) -> Paper | None:
+        """Return the first paper whose arXiv ID normalizes to the requested value."""
+
+        if not arxiv_id:
+            return None
+        target = normalize_arxiv_id(arxiv_id)
+        statement = select(Paper).where(Paper.arxiv_id.is_not(None)).order_by(Paper.id)
+        return next(
+            (
+                paper
+                for paper in self.session.scalars(statement)
+                if normalize_arxiv_id(paper.arxiv_id or "") == target
             ),
             None,
         )

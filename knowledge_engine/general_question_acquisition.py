@@ -166,8 +166,10 @@ def build_acquisition_plan(
     """Resolve selected IDs strictly against one persisted federated-search run.
 
     ``session``, when provided, is used to detect candidates that already
-    exist in Core's persisted corpus (by normalized DOI) so they are reported
-    as ``already_indexed`` instead of being queued for reacquisition. This
+    exist in Core's persisted corpus (by normalized DOI, then PMID, then
+    arXiv ID -- whichever identity is both known for the candidate and
+    persisted on an existing ``Paper``) so they are reported as
+    ``already_indexed`` instead of being queued for reacquisition. This
     check happens before -- and is not bound by -- the acquisition budget:
     reusing an already-indexed source costs nothing to acquire, so it must
     never compete with genuinely new candidates for a budget slot. Omitting
@@ -210,8 +212,9 @@ def build_acquisition_plan(
 
         resolved += 1
         identity = _identity(candidate)
-        existing_paper = _find_existing_paper(session, identity) if session is not None else None
-        if existing_paper is not None:
+        existing_match = _find_existing_paper(session, identity) if session is not None else None
+        if existing_match is not None:
+            existing_paper, match_reason = existing_match
             already_indexed += 1
             items.append(
                 AcquisitionPlanItem(
@@ -225,7 +228,7 @@ def build_acquisition_plan(
                     license=None,
                     open_access=None,
                     existing_paper_id=existing_paper.id,
-                    reason="candidate_doi_matches_existing_indexed_paper",
+                    reason=match_reason,
                 )
             )
             continue
@@ -429,17 +432,31 @@ def _item_from_observation(
     )
 
 
-def _find_existing_paper(session: Session, identity: AcquisitionIdentity) -> Paper | None:
+def _find_existing_paper(
+    session: Session, identity: AcquisitionIdentity
+) -> tuple[Paper, str] | None:
     """Resolve stable identity against Core's already-persisted corpus.
 
-    Only DOI is currently a persisted, uniquely indexed identity column on
-    ``Paper``; PMID/PMCID/arXiv-based reuse detection remains future work
-    once an equivalent persisted column exists (see CORE-GQR-2 in
-    docs/general_question_research_loop_v1.md).
+    Checked in order -- DOI, then PMID, then arXiv ID -- against whichever
+    of those columns ``Paper`` persists and indexes today; the first match
+    wins and its reason string names which identity matched. PMCID-based
+    reuse detection remains future work once an equivalent persisted
+    column exists (see CORE-GQR-2 in docs/general_question_research_loop_v1.md).
     """
-    if not identity.doi:
-        return None
-    return DuplicateQueryRepository(session).paper_by_normalized_doi(identity.doi)
+    repository = DuplicateQueryRepository(session)
+    if identity.doi:
+        paper = repository.paper_by_normalized_doi(identity.doi)
+        if paper is not None:
+            return paper, "candidate_doi_matches_existing_indexed_paper"
+    if identity.pmid:
+        paper = repository.paper_by_pmid(identity.pmid)
+        if paper is not None:
+            return paper, "candidate_pmid_matches_existing_indexed_paper"
+    if identity.arxiv_id:
+        paper = repository.paper_by_arxiv_id(identity.arxiv_id)
+        if paper is not None:
+            return paper, "candidate_arxiv_id_matches_existing_indexed_paper"
+    return None
 
 
 def _required_str(payload: dict[str, object], key: str) -> str:

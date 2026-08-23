@@ -34,7 +34,7 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 12
+CURRENT_SCHEMA_VERSION = 13
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
@@ -78,6 +78,18 @@ _SCHEMA_V12_COLUMNS: dict[str, dict[str, str]] = {
     "graph_claims": {
         "corpus_id": "VARCHAR(128)",
     },
+}
+
+_SCHEMA_V13_COLUMNS: dict[str, dict[str, str]] = {
+    "papers": {
+        "pmid": "VARCHAR(32)",
+        "arxiv_id": "VARCHAR(64)",
+    },
+}
+
+_SCHEMA_V13_INDEXES: dict[str, tuple[str, str]] = {
+    "ix_papers_pmid": ("papers", "pmid"),
+    "ix_papers_arxiv_id": ("papers", "arxiv_id"),
 }
 
 _TABLES_INTRODUCED_AT_VERSION: dict[int, frozenset[str]] = {
@@ -217,6 +229,8 @@ def migrate_schema(engine: Engine) -> None:
             _migrate_schema_v11(connection)
         if existing_version < 12:
             _migrate_schema_v12(connection)
+        if existing_version < 13:
+            _migrate_schema_v13(connection)
 
         _verify_schema_complete(connection)
 
@@ -393,6 +407,44 @@ def _migrate_schema_v12(connection: Connection) -> None:
             connection.execute(
                 text(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {definition}')
             )
+
+
+def _migrate_schema_v13(connection: Connection) -> None:
+    """Add `papers.pmid`/`papers.arxiv_id` so reuse detection can key on them.
+
+    Additive and nullable, same shape as the v6/v7/v11/v12 migrations above.
+    Until a caller backfills these for already-persisted papers, existing
+    rows simply have `pmid`/`arxiv_id = NULL` -- exactly like `paper_pages
+    .table_text` after v11, this does not attempt to derive a value that
+    was never captured at import time. Populating these for newly imported
+    papers, and backfilling existing ones, is separate follow-up work (see
+    CORE-GQR-2 in docs/general_question_research_loop_v1.md); this
+    migration only adds the queryable columns and their unique indexes so
+    `DuplicateQueryRepository.paper_by_pmid`/`paper_by_arxiv_id` and
+    `general_question_acquisition._find_existing_paper` have something to
+    query against once that data exists. The unique indexes are created
+    with `IF NOT EXISTS` because a fresh database's `Base.metadata
+    .create_all` call earlier in `migrate_schema` already created them from
+    the current model -- this is a no-op there, and only does real work
+    when upgrading a database that predates this migration.
+    """
+
+    for table_name, columns in _SCHEMA_V13_COLUMNS.items():
+        existing_columns = _table_columns(connection, table_name)
+        for column_name, definition in columns.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(
+                text(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {definition}')
+            )
+
+    for index_name, (table_name, column_name) in _SCHEMA_V13_INDEXES.items():
+        connection.execute(
+            text(
+                f'CREATE UNIQUE INDEX IF NOT EXISTS "{index_name}" '
+                f'ON "{table_name}" ("{column_name}")'
+            )
+        )
 
 
 def _current_schema_version(connection: Connection) -> int:
