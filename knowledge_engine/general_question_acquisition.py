@@ -66,7 +66,7 @@ class GeneralQuestionAcquisitionRequest:
             raise ValueError("max_elapsed_seconds must be between 1 and 3600.")
 
     @classmethod
-    def from_json(cls, text: str) -> "GeneralQuestionAcquisitionRequest":
+    def from_json(cls, text: str) -> GeneralQuestionAcquisitionRequest:
         payload = json.loads(text)
         if not isinstance(payload, dict):
             raise ValueError("Acquisition request must be a JSON object.")
