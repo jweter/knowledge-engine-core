@@ -121,6 +121,8 @@ class ImportItem(Base):
     csv_line_number: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
     normalized_doi: Mapped[str | None] = mapped_column(String(512), nullable=True, index=True)
+    normalized_pmid: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    normalized_arxiv_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     inclusion_status: Mapped[str | None] = mapped_column(String(64), nullable=True)
     usage_status: Mapped[str | None] = mapped_column(String(64), nullable=True)
     local_path: Mapped[str | None] = mapped_column(Text, nullable=True)

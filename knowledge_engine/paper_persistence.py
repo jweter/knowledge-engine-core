@@ -26,11 +26,18 @@ class ClassifiedPaperRepository(PaperRepository):
         *,
         manifest_title: str | None = None,
         manifest_doi: str | None = None,
+        manifest_pmid: str | None = None,
+        manifest_arxiv_id: str | None = None,
     ) -> Paper:
         """Store one paper and classify expected relational and FTS failures."""
 
         paper = self._build_paper(
-            parsed, keywords, manifest_title=manifest_title, manifest_doi=manifest_doi
+            parsed,
+            keywords,
+            manifest_title=manifest_title,
+            manifest_doi=manifest_doi,
+            manifest_pmid=manifest_pmid,
+            manifest_arxiv_id=manifest_arxiv_id,
         )
 
         try:

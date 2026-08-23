@@ -138,18 +138,30 @@ Schema version 13 (`knowledge_engine/database.py`) added `papers.pmid` and
 `papers.arxiv_id` as nullable, uniquely indexed columns so those lookups have
 something to query; the migration is purely additive (existing rows have
 `NULL` for both until backfilled). PMCID-based reuse detection remains future
-work: `Paper` still has no persisted PMCID column. Also still open: no
-ingestion path yet writes real values into `papers.pmid`/`papers.arxiv_id`
-for newly imported papers (mirroring how `manifest_doi` populates `papers
-.doi` in `PaperRepository._build_paper`) or backfills them for
-already-persisted papers, so today this reuse detection has schema and query
-support but no populated data outside tests until that wiring lands. A real
-database session is now wired into the CLI caller (`ke
+work: `Paper` still has no persisted PMCID column.
+
+The real ingestion-time caller gap is now closed: `sources.csv` already
+documents `pmid`/`arxiv_id` columns (see `docs/core_interface_contract.md`),
+and `CorpusIngestionService`/`LinkedCorpusIngestionService` -- the corpus
+manifest ingestion path behind `ke corpus-import`, the only caller that
+persists real `Paper` rows with manifest-sourced metadata -- now read,
+normalize (`normalize_pmid`/`normalize_arxiv_id`), and pass them through as
+`manifest_pmid`/`manifest_arxiv_id` to `PaperRepository._build_paper`,
+mirroring exactly how `manifest_doi` already populates `papers.doi`. Schema
+version 14 added the carrier columns this needed:
+`import_items.normalized_pmid`/`.normalized_arxiv_id` (nullable,
+non-uniquely indexed, additive). A manifest row with no `pmid`/`arxiv_id`
+value behaves exactly as before (`NULL`, same as a row with no `doi`).
+Backfilling `papers.pmid`/`papers.arxiv_id` for *already*-persisted papers
+(imported before this change) is separate follow-up work, not attempted
+here -- same as `papers.doi` was never backfilled for pre-existing rows
+either. A real database session is now wired into the CLI caller (`ke
 general-question-acquisition-plan`, on by default, `--no-database` to
-opt out); backfilling `papers.pmid`/`papers.arxiv_id` for newly imported and
-already-persisted papers arrives with CORE-GQR-4 (persist and parse), which
-is also where an `acquired_full_text` disposition and durable acquisition
-receipt first become meaningful.
+opt out); wiring a session into `build_acquisition_plan()` for a real
+acquisition-bridge caller (as opposed to the CLI's already-existing wiring)
+arrives with CORE-GQR-4 (persist and parse), which is also where an
+`acquired_full_text` disposition and durable acquisition receipt first
+become meaningful.
 
 ### CORE-GQR-3 - Acquisition routing
 Route eligible candidates through existing mechanisms where possible:

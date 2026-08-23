@@ -24,7 +24,7 @@ from knowledge_engine.corpus.path_safety import (
     resolve_under,
 )
 from knowledge_engine.license_rules import evaluate_license
-from knowledge_engine.utils import normalize_doi
+from knowledge_engine.utils import normalize_arxiv_id, normalize_doi, normalize_pmid
 
 MANIFEST_VERSION = 1
 IDENTIFIER_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
@@ -428,6 +428,8 @@ def _validate_rows(
         normalized_doi = normalize_doi(doi) if doi else ""
         if doi:
             dois_by_normalized[normalized_doi].append((source_id or "unknown", line_number))
+        pmid = _row_text(row, "pmid")
+        arxiv_id = _row_text(row, "arxiv_id")
         result.source_rows.append(
             CorpusSourceRow(
                 line_number=line_number,
@@ -435,6 +437,10 @@ def _validate_rows(
                 title=_row_text(row, "title"),
                 doi=doi,
                 normalized_doi=normalized_doi,
+                pmid=pmid,
+                normalized_pmid=normalize_pmid(pmid) if pmid else "",
+                arxiv_id=arxiv_id,
+                normalized_arxiv_id=normalize_arxiv_id(arxiv_id) if arxiv_id else "",
                 inclusion_status=inclusion_status,
                 usage_status=usage_status,
                 local_path=_row_text(row, "local_path"),

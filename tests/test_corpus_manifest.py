@@ -433,6 +433,65 @@ def test_missing_doi_is_allowed(tmp_path: Path) -> None:
     assert codes(corpus_path) == []
 
 
+def test_pmid_and_arxiv_id_are_normalized_onto_source_rows(tmp_path: Path) -> None:
+    """CORE-GQR-2 continuation: `sources.csv` already documents `pmid`/
+
+    `arxiv_id` columns (see `docs/core_interface_contract.md`), but until
+    now `CorpusSourceRow` never surfaced them, so nothing downstream could
+    populate `papers.pmid`/`papers.arxiv_id` at ingestion time. Confirms
+    the raw and normalized values (via `normalize_pmid`/`normalize_arxiv_id`)
+    both reach the parsed row, and that a manifest without these columns at
+    all still validates cleanly (see `test_missing_doi_is_allowed` for the
+    equivalent DOI case).
+    """
+    header = [
+        "source_id",
+        "title",
+        "publication_year",
+        "doi",
+        "pmid",
+        "arxiv_id",
+        "source_url",
+        "local_path",
+        "access_date",
+        "license_type",
+        "license_url",
+        "usage_status",
+        "inclusion_status",
+        "inclusion_reason",
+        "exclusion_reason",
+        "expected_content_hash",
+    ]
+    corpus_path = write_manifest(
+        tmp_path,
+        header=header,
+        rows=[
+            valid_row(pmid="12345678", arxiv_id="arXiv:2101.00001v2"),
+        ],
+    )
+
+    result = validate_corpus_manifest(corpus_path, project_root=tmp_path)
+
+    assert result.manifest_validity == ValidityState.VALID
+    row = result.source_rows[0]
+    assert row.pmid == "12345678"
+    assert row.normalized_pmid == "12345678"
+    assert row.arxiv_id == "arXiv:2101.00001v2"
+    assert row.normalized_arxiv_id == "2101.00001"
+
+
+def test_source_row_without_pmid_or_arxiv_columns_normalizes_empty(tmp_path: Path) -> None:
+    corpus_path = write_manifest(tmp_path, rows=[valid_row()])
+
+    result = validate_corpus_manifest(corpus_path, project_root=tmp_path)
+
+    row = result.source_rows[0]
+    assert row.pmid == ""
+    assert row.normalized_pmid == ""
+    assert row.arxiv_id == ""
+    assert row.normalized_arxiv_id == ""
+
+
 def test_check_files_missing_pdf_blocks_readiness_not_validity(tmp_path: Path) -> None:
     corpus_path = write_manifest(tmp_path)
 
