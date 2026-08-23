@@ -116,6 +116,19 @@ These statuses describe acquisition, not scientific support.
 - return `already_indexed` instead of reacquiring;
 - idempotency tests.
 
+**Status:** first slice implemented. `build_acquisition_plan` now accepts an
+optional SQLAlchemy `session`; when supplied, each candidate's DOI is checked
+against the persisted corpus (`DuplicateQueryRepository.paper_by_normalized_doi`)
+before any budget/eligibility logic runs, and a match is reported as
+`already_indexed` with the existing `Paper.id` attached — it never competes
+with genuinely new candidates for the full-text acquisition budget, and
+omitting `session` preserves the prior snapshot-only behavior exactly.
+PMID/arXiv-based reuse detection remains future work: `Paper` does not yet
+persist those identifiers as queryable columns, only DOI. No CLI/API caller
+wires a real database session into this function yet — that lands with
+CORE-GQR-4 (persist and parse), which is also where an `acquired_full_text`
+disposition and durable acquisition receipt first become meaningful.
+
 ### CORE-GQR-3 - Acquisition routing
 Route eligible candidates through existing mechanisms where possible:
 - PMC OA acquisition;

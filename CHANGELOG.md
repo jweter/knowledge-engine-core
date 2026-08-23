@@ -7,6 +7,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`already_indexed` acquisition disposition (CORE-GQR-2)**:
+  `general_question_acquisition.build_acquisition_plan` now accepts an
+  optional SQLAlchemy `session`. When supplied, each candidate's DOI is
+  checked against the persisted corpus before any budget/eligibility logic
+  runs; a match is reported as `already_indexed` (with the existing
+  `Paper.id`) instead of being queued for reacquisition, and does not count
+  against the full-text acquisition budget. Omitting `session` is fully
+  backward compatible with the prior snapshot-only planning behavior. See
+  `docs/general_question_research_loop_v1.md`'s CORE-GQR-2 section.
+
 ### Changed
 
 - **Evidence-aware authoritative retrieval**: `ke answer --evidence` and

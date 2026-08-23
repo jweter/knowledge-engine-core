@@ -5,6 +5,8 @@ from pathlib import Path
 from uuid import UUID
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 from knowledge_engine.federated_discovery import (
     DiscoveryQuery,
@@ -20,6 +22,13 @@ from knowledge_engine.general_question_acquisition import (
     GeneralQuestionAcquisitionRequest,
     build_acquisition_plan,
 )
+from knowledge_engine.models import Base, Paper
+
+
+def _in_memory_session() -> Session:
+    engine = create_engine("sqlite:///:memory:", future=True)
+    Base.metadata.create_all(engine)
+    return Session(engine)
 
 
 def _record_run(tmp_path: Path, *, research_question_id: str | None = "rq-creatine") -> str:
@@ -354,3 +363,182 @@ def test_run_without_a_bound_research_question_id_is_rejected(tmp_path: Path) ->
 
     with pytest.raises(ValueError, match="does not match"):
         build_acquisition_plan(request, ledger_root=tmp_path)
+
+
+def test_already_indexed_candidate_is_reported_instead_of_reacquired(tmp_path: Path) -> None:
+    run_id = _record_run(tmp_path)
+    request = GeneralQuestionAcquisitionRequest(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq-creatine",
+        candidate_ids=("doi:10.1000/creatine",),
+    )
+
+    with _in_memory_session() as session:
+        existing = Paper(
+            title="Creatine supplementation and maximal strength",
+            doi="10.1000/creatine",
+            source_path="creatine.pdf",
+            content_hash="a" * 64,
+            publication_year=2025,
+            page_count=1,
+            word_count=10,
+        )
+        session.add(existing)
+        session.flush()
+
+        plan = build_acquisition_plan(request, ledger_root=tmp_path, session=session)
+
+        assert plan.items[0].disposition == AcquisitionDisposition.ALREADY_INDEXED.value
+        assert plan.items[0].existing_paper_id == existing.id
+        assert plan.items[0].reason == "candidate_doi_matches_existing_indexed_paper"
+        assert plan.already_indexed_count == 1
+        assert plan.full_text_selected_count == 0
+        assert plan.resolved_candidate_count == 1
+
+
+def test_already_indexed_candidate_does_not_consume_full_text_budget(tmp_path: Path) -> None:
+    # Two candidates are each independently full-text eligible, but only one
+    # full-text acquisition is budgeted. The first is already indexed; if
+    # that consumed the full-text budget slot, the genuinely new second
+    # candidate would be starved (skipped_budget) even though nothing new
+    # actually needed to be acquired for the first.
+    already_indexed_candidate = FederatedCandidate(
+        canonical_id="doi:10.1000/creatine",
+        title="Creatine supplementation and maximal strength",
+        doi="10.1000/creatine",
+        observations=(
+            ProviderObservation(
+                provider="pubmed",
+                provider_id="12345",
+                title="Creatine supplementation and maximal strength",
+                doi="10.1000/creatine",
+                pmcid="PMC12345",
+                full_text_url="https://pmc.ncbi.nlm.nih.gov/articles/PMC12345/pdf/test.pdf",
+                license="CC BY 4.0",
+                open_access=True,
+            ),
+        ),
+    )
+    new_candidate = FederatedCandidate(
+        canonical_id="doi:10.1000/new-creatine-trial",
+        title="A new creatine trial",
+        doi="10.1000/new-creatine-trial",
+        observations=(
+            ProviderObservation(
+                provider="pubmed",
+                provider_id="67890",
+                title="A new creatine trial",
+                doi="10.1000/new-creatine-trial",
+                pmcid="PMC67890",
+                full_text_url="https://pmc.ncbi.nlm.nih.gov/articles/PMC67890/pdf/test.pdf",
+                license="CC BY 4.0",
+                open_access=True,
+            ),
+        ),
+    )
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="creatine", limit_per_provider=10),
+        candidates=(already_indexed_candidate, new_candidate),
+        provider_statuses=(
+            ProviderStatus(
+                provider="pubmed",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=2,
+                latency_ms=1,
+                reason=None,
+            ),
+        ),
+    )
+    ledger = FederatedSearchLedger(tmp_path)
+    run_id = ledger.record(result, research_question_id="rq").search_run_id
+    request = GeneralQuestionAcquisitionRequest(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq",
+        candidate_ids=("doi:10.1000/creatine", "doi:10.1000/new-creatine-trial"),
+        max_candidates=2,
+        max_full_text_acquisitions=1,
+    )
+
+    with _in_memory_session() as session:
+        existing = Paper(
+            title="Creatine supplementation and maximal strength",
+            doi="10.1000/creatine",
+            source_path="creatine.pdf",
+            content_hash="a" * 64,
+            publication_year=2025,
+            page_count=1,
+            word_count=10,
+        )
+        session.add(existing)
+        session.flush()
+
+        plan = build_acquisition_plan(request, ledger_root=tmp_path, session=session)
+
+    assert [item.disposition for item in plan.items] == [
+        AcquisitionDisposition.ALREADY_INDEXED.value,
+        AcquisitionDisposition.ELIGIBLE_FULL_TEXT.value,
+    ]
+    assert plan.already_indexed_count == 1
+    assert plan.full_text_selected_count == 1
+
+
+def test_no_session_preserves_prior_snapshot_only_behavior(tmp_path: Path) -> None:
+    run_id = _record_run(tmp_path)
+    request = GeneralQuestionAcquisitionRequest(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq-creatine",
+        candidate_ids=("doi:10.1000/creatine",),
+    )
+
+    plan = build_acquisition_plan(request, ledger_root=tmp_path)
+
+    assert plan.items[0].disposition == AcquisitionDisposition.ELIGIBLE_FULL_TEXT.value
+    assert plan.items[0].existing_paper_id is None
+    assert plan.already_indexed_count == 0
+
+
+def test_already_indexed_lookup_requires_a_doi(tmp_path: Path) -> None:
+    candidate = FederatedCandidate(
+        canonical_id="no-doi:local-1",
+        title="A candidate without any DOI",
+        doi=None,
+        observations=(
+            ProviderObservation(
+                provider="arxiv",
+                provider_id="local-1",
+                title="A candidate without any DOI",
+            ),
+        ),
+    )
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="no doi", limit_per_provider=10),
+        candidates=(candidate,),
+        provider_statuses=(
+            ProviderStatus(
+                provider="arxiv",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+                latency_ms=1,
+                reason=None,
+            ),
+        ),
+    )
+    ledger = FederatedSearchLedger(tmp_path)
+    run_id = ledger.record(result, research_question_id="rq").search_run_id
+    request = GeneralQuestionAcquisitionRequest(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq",
+        candidate_ids=("no-doi:local-1",),
+    )
+
+    with _in_memory_session() as session:
+        plan = build_acquisition_plan(request, ledger_root=tmp_path, session=session)
+
+    assert plan.items[0].disposition != AcquisitionDisposition.ALREADY_INDEXED.value
+    assert plan.already_indexed_count == 0
