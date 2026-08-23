@@ -52,7 +52,7 @@ def test_fresh_database_initializes_at_current_schema_version(tmp_path: Path) ->
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
         foreign_keys_enabled = connection.execute(text("PRAGMA foreign_keys")).scalar_one()
 
-    assert version == CURRENT_SCHEMA_VERSION == 12
+    assert version == CURRENT_SCHEMA_VERSION == 13
     assert "review_status" in _column_names(database, "import_runs")
     assert foreign_keys_enabled == 1
     assert "run_mode" in _column_names(database, "import_runs")
@@ -169,7 +169,7 @@ def test_upgrading_older_database_adds_new_table_without_error(tmp_path: Path) -
     assert "paper_pages" in _table_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 12
+    assert version == CURRENT_SCHEMA_VERSION == 13
 
 
 def test_dropping_paper_pages_at_current_version_is_not_silently_repaired(
@@ -211,7 +211,7 @@ def test_upgrading_older_database_adds_extraction_runs_table_without_error(
     assert "extraction_runs" in _table_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 12
+    assert version == CURRENT_SCHEMA_VERSION == 13
 
 
 def test_dropping_extraction_runs_at_current_version_is_not_silently_repaired(
@@ -256,7 +256,7 @@ def test_upgrading_older_database_adds_study_design_rules_version_column(
     assert "study_design_rules_version" in _column_names(database, "extraction_runs")
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 12
+    assert version == CURRENT_SCHEMA_VERSION == 13
 
 
 def test_upgrading_older_database_adds_pico_extraction_rules_version_column(
@@ -282,7 +282,7 @@ def test_upgrading_older_database_adds_pico_extraction_rules_version_column(
     assert "pico_extraction_rules_version" in _column_names(database, "extraction_runs")
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 12
+    assert version == CURRENT_SCHEMA_VERSION == 13
 
 
 def test_upgrading_older_database_adds_paper_pages_table_text_column(
@@ -311,7 +311,7 @@ def test_upgrading_older_database_adds_paper_pages_table_text_column(
     assert "table_text" in _column_names(database, "paper_pages")
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 12
+    assert version == CURRENT_SCHEMA_VERSION == 13
 
 
 def test_upgrading_older_database_adds_graph_citations_table_without_error(
@@ -335,7 +335,7 @@ def test_upgrading_older_database_adds_graph_citations_table_without_error(
     assert "graph_citations" in _table_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 12
+    assert version == CURRENT_SCHEMA_VERSION == 13
 
 
 def test_upgrading_older_database_widens_relationship_type_constraint(
@@ -431,4 +431,40 @@ def test_upgrading_older_database_widens_relationship_type_constraint(
     } <= _index_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 12
+    assert version == CURRENT_SCHEMA_VERSION == 13
+
+
+def test_upgrading_older_database_adds_papers_pmid_arxiv_id_columns(
+    tmp_path: Path,
+) -> None:
+    """Adds `papers.pmid`/`papers.arxiv_id` (version 13) to a table that
+    already existed at version 12, mirroring the v11 `paper_pages.table_text`
+    migration above: both new columns are nullable with no DEFAULT, since an
+    already-persisted paper has no re-derivable PMID/arXiv-ID signal until a
+    separate backfill supplies one (see CORE-GQR-2 in
+    docs/general_question_research_loop_v1.md). Also confirms the unique
+    indexes needed for `DuplicateQueryRepository.paper_by_pmid`/
+    `paper_by_arxiv_id` are (re)created on upgrade, not only on a fresh
+    database."""
+
+    database = _database(tmp_path)
+    database.initialize()
+
+    with database.engine.begin() as connection:
+        connection.execute(text("DROP INDEX ix_papers_pmid"))
+        connection.execute(text("DROP INDEX ix_papers_arxiv_id"))
+        connection.execute(text('ALTER TABLE papers DROP COLUMN "pmid"'))
+        connection.execute(text('ALTER TABLE papers DROP COLUMN "arxiv_id"'))
+        connection.execute(
+            text(
+                f"UPDATE schema_versions SET version = 12 WHERE version = {CURRENT_SCHEMA_VERSION}"
+            )
+        )
+
+    database.initialize()
+
+    assert {"pmid", "arxiv_id"} <= _column_names(database, "papers")
+    assert {"ix_papers_pmid", "ix_papers_arxiv_id"} <= _index_names(database)
+    with database.engine.connect() as connection:
+        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+    assert version == CURRENT_SCHEMA_VERSION == 13

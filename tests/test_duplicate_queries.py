@@ -111,6 +111,48 @@ def test_paper_hash_and_doi_lookups_normalize_deterministically() -> None:
         assert repository.paper_by_normalized_doi(None) is None
 
 
+def test_paper_pmid_lookup_normalizes_and_requires_a_value() -> None:
+    with _session() as session:
+        paper = Paper(
+            title="A Paper",
+            doi=None,
+            pmid="12345",
+            source_path="paper.pdf",
+            content_hash="a" * 64,
+            publication_year=2024,
+            page_count=1,
+            word_count=10,
+        )
+        session.add(paper)
+        session.flush()
+        repository = DuplicateQueryRepository(session)
+
+        assert repository.paper_by_pmid("  12345  ") is paper
+        assert repository.paper_by_pmid("67890") is None
+        assert repository.paper_by_pmid(None) is None
+
+
+def test_paper_arxiv_id_lookup_normalizes_prefix_case_and_version() -> None:
+    with _session() as session:
+        paper = Paper(
+            title="A Paper",
+            doi=None,
+            arxiv_id="2301.12345",
+            source_path="paper.pdf",
+            content_hash="a" * 64,
+            publication_year=2024,
+            page_count=1,
+            word_count=10,
+        )
+        session.add(paper)
+        session.flush()
+        repository = DuplicateQueryRepository(session)
+
+        assert repository.paper_by_arxiv_id("arXiv:2301.12345v2") is paper
+        assert repository.paper_by_arxiv_id("2301.99999") is None
+        assert repository.paper_by_arxiv_id(None) is None
+
+
 def test_title_year_lookup_is_unicode_case_whitespace_normalized_and_ordered() -> None:
     with _session() as session:
         session.add_all(

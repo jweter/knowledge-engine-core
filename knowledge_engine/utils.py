@@ -33,3 +33,30 @@ def normalize_doi(doi: str) -> str:
     """Normalize a DOI for deterministic comparison."""
 
     return doi.strip().lower().removeprefix("https://doi.org/").removeprefix("doi:")
+
+
+def normalize_pmid(pmid: str) -> str:
+    """Normalize a PubMed ID for deterministic comparison.
+
+    Provider APIs return PMIDs as plain digit strings, so only whitespace
+    trimming is needed today; this exists as its own function (rather than
+    comparing raw strings) so a future provider-specific quirk has one place
+    to be handled without touching every caller.
+    """
+
+    return pmid.strip()
+
+
+def normalize_arxiv_id(arxiv_id: str) -> str:
+    """Normalize an arXiv identifier for deterministic comparison.
+
+    Strips a leading ``arXiv:`` prefix (case-insensitive) and a trailing
+    version suffix (``v2``) so the same work is recognized regardless of
+    which version a provider happened to report.
+    """
+
+    normalized = arxiv_id.strip()
+    if normalized.lower().startswith("arxiv:"):
+        normalized = normalized[len("arxiv:") :]
+    normalized = re.sub(r"v\d+$", "", normalized)
+    return normalized.strip().lower()

@@ -116,18 +116,30 @@ These statuses describe acquisition, not scientific support.
 - return `already_indexed` instead of reacquiring;
 - idempotency tests.
 
-**Status:** first slice implemented. `build_acquisition_plan` now accepts an
-optional SQLAlchemy `session`; when supplied, each candidate's DOI is checked
-against the persisted corpus (`DuplicateQueryRepository.paper_by_normalized_doi`)
-before any budget/eligibility logic runs, and a match is reported as
-`already_indexed` with the existing `Paper.id` attached — it never competes
-with genuinely new candidates for the full-text acquisition budget, and
-omitting `session` preserves the prior snapshot-only behavior exactly.
-PMID/arXiv-based reuse detection remains future work: `Paper` does not yet
-persist those identifiers as queryable columns, only DOI. No CLI/API caller
-wires a real database session into this function yet — that lands with
-CORE-GQR-4 (persist and parse), which is also where an `acquired_full_text`
-disposition and durable acquisition receipt first become meaningful.
+**Status:** identity resolution now covers DOI, PMID, and arXiv ID.
+`build_acquisition_plan` accepts an optional SQLAlchemy `session`; when
+supplied, each candidate's DOI, then PMID, then arXiv ID (whichever is known
+for the candidate) is checked against the persisted corpus
+(`DuplicateQueryRepository.paper_by_normalized_doi` /
+`.paper_by_pmid` / `.paper_by_arxiv_id`) before any budget/eligibility logic
+runs, and the first match is reported as `already_indexed` with the existing
+`Paper.id` attached and a reason naming which identity matched — it never
+competes with genuinely new candidates for the full-text acquisition budget,
+and omitting `session` preserves the prior snapshot-only behavior exactly.
+Schema version 13 (`knowledge_engine/database.py`) added `papers.pmid` and
+`papers.arxiv_id` as nullable, uniquely indexed columns so those lookups have
+something to query; the migration is purely additive (existing rows have
+`NULL` for both until backfilled). PMCID-based reuse detection remains future
+work: `Paper` still has no persisted PMCID column. Also still open: no
+ingestion path yet writes real values into `papers.pmid`/`papers.arxiv_id`
+for newly imported papers (mirroring how `manifest_doi` populates `papers
+.doi` in `PaperRepository._build_paper`) or backfills them for
+already-persisted papers, so today this reuse detection has schema and query
+support but no populated data outside tests until that wiring lands — that,
+plus wiring a real database session into a CLI/API caller, arrives together
+with CORE-GQR-4 (persist and parse), which is also where an
+`acquired_full_text` disposition and durable acquisition receipt first
+become meaningful.
 
 ### CORE-GQR-3 - Acquisition routing
 Route eligible candidates through existing mechanisms where possible:

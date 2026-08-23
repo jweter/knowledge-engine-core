@@ -266,6 +266,8 @@ class Paper(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(1024), nullable=False, index=True)
     doi: Mapped[str | None] = mapped_column(String(256), nullable=True, unique=True, index=True)
+    pmid: Mapped[str | None] = mapped_column(String(32), nullable=True, unique=True, index=True)
+    arxiv_id: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
     abstract: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_path: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
