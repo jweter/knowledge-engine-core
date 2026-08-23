@@ -61,9 +61,7 @@ class GeneralQuestionAcquisitionRequest:
         if not 1 <= self.max_candidates <= 100:
             raise ValueError("max_candidates must be between 1 and 100.")
         if not 0 <= self.max_full_text_acquisitions <= self.max_candidates:
-            raise ValueError(
-                "max_full_text_acquisitions must be between 0 and max_candidates."
-            )
+            raise ValueError("max_full_text_acquisitions must be between 0 and max_candidates.")
         if not 1 <= self.max_elapsed_seconds <= 3600:
             raise ValueError("max_elapsed_seconds must be between 1 and 3600.")
 
@@ -81,9 +79,7 @@ class GeneralQuestionAcquisitionRequest:
             research_question_id=_required_str(payload, "research_question_id"),
             candidate_ids=tuple(item.strip() for item in raw_ids),
             max_candidates=_optional_int(payload, "max_candidates", 10),
-            max_full_text_acquisitions=_optional_int(
-                payload, "max_full_text_acquisitions", 5
-            ),
+            max_full_text_acquisitions=_optional_int(payload, "max_full_text_acquisitions", 5),
             max_elapsed_seconds=_optional_int(payload, "max_elapsed_seconds", 120),
             allow_metadata_only=_optional_bool(payload, "allow_metadata_only", True),
         )
@@ -323,9 +319,7 @@ def _identity(candidate: CandidateRecord) -> AcquisitionIdentity:
     )
 
 
-def _first_text(
-    observations: tuple[CandidateObservationRecord, ...], field: str
-) -> str | None:
+def _first_text(observations: tuple[CandidateObservationRecord, ...], field: str) -> str | None:
     for observation in observations:
         value = getattr(observation, field)
         if isinstance(value, str) and value.strip():
