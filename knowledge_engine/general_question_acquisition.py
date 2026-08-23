@@ -21,6 +21,7 @@ from knowledge_engine.federated_search_ledger import (
     FederatedSearchLedger,
     SearchRunRecord,
 )
+from knowledge_engine.license_rules import evaluate_license
 
 ACQUISITION_SCHEMA_VERSION = 1
 
@@ -198,7 +199,12 @@ def build_acquisition_plan(
         has_full_text = observation is not None and bool(
             observation.full_text_url or observation.xml_url
         )
-        full_text_allowed = has_full_text and _observation_is_oa_eligible(observation)
+        full_text_allowed = (
+            has_full_text
+            and observation is not None
+            and not _candidate_has_retraction_signal(candidate)
+            and _observation_is_license_or_oa_eligible(observation)
+        )
 
         if full_text_allowed and full_text_selected < request.max_full_text_acquisitions:
             full_text_selected += 1
@@ -268,10 +274,11 @@ def build_acquisition_plan(
 def _validate_request_against_run(
     request: GeneralQuestionAcquisitionRequest, record: SearchRunRecord
 ) -> None:
-    if (
-        record.research_question_id is not None
-        and record.research_question_id != request.research_question_id
-    ):
+    if record.research_question_id != request.research_question_id:
+        # A run persisted with no bound research_question_id (None) must not
+        # be silently annexed to whatever question the request names -- that
+        # would let an acquisition plan attach an arbitrary question ID to an
+        # unbound run, breaking evidence traceability back to its origin.
         raise ValueError(
             "Acquisition request research_question_id does not match the persisted search run."
         )
@@ -289,8 +296,10 @@ def _best_acquisition_observation(
     return min(
         candidate.observations,
         key=lambda item: (
+            0
+            if _observation_is_license_or_oa_eligible(item) and (item.full_text_url or item.xml_url)
+            else 1,
             0 if item.pmcid and (item.full_text_url or item.xml_url) else 1,
-            0 if item.open_access is True and (item.full_text_url or item.xml_url) else 1,
             0 if item.full_text_url or item.xml_url else 1,
             item.provider,
             item.provider_id,
@@ -298,12 +307,25 @@ def _best_acquisition_observation(
     )
 
 
-def _observation_is_oa_eligible(observation: CandidateObservationRecord) -> bool:
-    if observation.retracted is True or observation.withdrawn is True:
-        return False
-    # Positive provider OA evidence or an explicit license is required. Merely
-    # receiving a URL is not sufficient authorization to acquire full text.
-    return observation.open_access is True or bool(observation.license)
+def _candidate_has_retraction_signal(candidate: CandidateRecord) -> bool:
+    # Retraction/withdrawal is a fact about the underlying work, not about
+    # which provider happened to be selected as the acquisition source, so
+    # every provider's observation of this candidate must be checked -- not
+    # just the one `_best_acquisition_observation` picked for its URL/license.
+    return any(
+        observation.retracted is True or observation.withdrawn is True
+        for observation in candidate.observations
+    )
+
+
+def _observation_is_license_or_oa_eligible(observation: CandidateObservationRecord) -> bool:
+    # Positive provider OA evidence or a reusable (e.g. CC BY/CC0) license is
+    # required. Merely receiving a URL, or a non-blank but restrictive license
+    # string such as "CC BY-NC-ND", is not sufficient authorization to acquire
+    # full text -- reuse the same license policy the rest of the corpus does.
+    if observation.open_access is True:
+        return True
+    return evaluate_license(observation.license) == "passed"
 
 
 def _identity(candidate: CandidateRecord) -> AcquisitionIdentity:

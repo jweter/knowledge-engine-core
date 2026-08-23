@@ -13,7 +13,6 @@ from knowledge_engine.federated_discovery import (
     ProviderObservation,
     ProviderOutcome,
     ProviderStatus,
-    SearchCompleteness,
 )
 from knowledge_engine.federated_search_ledger import FederatedSearchLedger
 from knowledge_engine.general_question_acquisition import (
@@ -23,7 +22,7 @@ from knowledge_engine.general_question_acquisition import (
 )
 
 
-def _record_run(tmp_path: Path, *, research_question_id: str = "rq-creatine") -> str:
+def _record_run(tmp_path: Path, *, research_question_id: str | None = "rq-creatine") -> str:
     candidate = FederatedCandidate(
         canonical_id="doi:10.1000/creatine",
         title="Creatine supplementation and maximal strength",
@@ -72,14 +71,13 @@ def _record_run(tmp_path: Path, *, research_question_id: str = "rq-creatine") ->
             ),
             ProviderStatus(
                 provider="openalex",
-                outcome=ProviderOutcome.ERROR,
+                outcome=ProviderOutcome.FAILED,
                 attempted=True,
                 result_count=0,
                 latency_ms=20,
                 reason="provider unavailable",
             ),
         ),
-        completeness=SearchCompleteness.PARTIAL,
     )
     ledger = FederatedSearchLedger(
         tmp_path,
@@ -203,7 +201,6 @@ def test_retracted_or_withdrawn_candidate_is_not_full_text_eligible(tmp_path: Pa
                 reason=None,
             ),
         ),
-        completeness=SearchCompleteness.COMPLETE,
     )
     ledger = FederatedSearchLedger(tmp_path)
     run_id = ledger.record(result, research_question_id="rq").search_run_id
@@ -226,6 +223,132 @@ def test_request_cannot_cross_research_question_boundary(tmp_path: Path) -> None
         schema_version=1,
         search_run_id=run_id,
         research_question_id="rq-other",
+        candidate_ids=("doi:10.1000/creatine",),
+    )
+
+    with pytest.raises(ValueError, match="does not match"):
+        build_acquisition_plan(request, ledger_root=tmp_path)
+
+
+def test_restrictive_license_is_not_full_text_eligible(tmp_path: Path) -> None:
+    candidate = FederatedCandidate(
+        canonical_id="doi:10.1000/nc-nd",
+        title="Non-commercial no-derivatives paper",
+        doi="10.1000/nc-nd",
+        observations=(
+            ProviderObservation(
+                provider="crossref",
+                provider_id="10.1000/nc-nd",
+                title="Non-commercial no-derivatives paper",
+                doi="10.1000/nc-nd",
+                full_text_url="https://example.org/paper.pdf",
+                license="CC BY-NC-ND 4.0",
+            ),
+        ),
+    )
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="creatine", limit_per_provider=10),
+        candidates=(candidate,),
+        provider_statuses=(
+            ProviderStatus(
+                provider="crossref",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+                latency_ms=1,
+                reason=None,
+            ),
+        ),
+    )
+    ledger = FederatedSearchLedger(tmp_path)
+    run_id = ledger.record(result, research_question_id="rq").search_run_id
+    request = GeneralQuestionAcquisitionRequest(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq",
+        candidate_ids=("doi:10.1000/nc-nd",),
+    )
+
+    plan = build_acquisition_plan(request, ledger_root=tmp_path)
+
+    assert plan.items[0].disposition == AcquisitionDisposition.METADATA_ONLY.value
+    assert plan.items[0].reason == "no_eligible_open_full_text_location"
+
+
+def test_retraction_reported_by_a_different_observation_blocks_eligibility(
+    tmp_path: Path,
+) -> None:
+    candidate = FederatedCandidate(
+        canonical_id="doi:10.1000/cross-provider-retraction",
+        title="Cross-provider retraction paper",
+        doi="10.1000/cross-provider-retraction",
+        observations=(
+            # This is the observation `_best_acquisition_observation` selects
+            # (PMCID + full text + OA) and it does not itself report retracted.
+            ProviderObservation(
+                provider="pubmed",
+                provider_id="99999",
+                title="Cross-provider retraction paper",
+                doi="10.1000/cross-provider-retraction",
+                pmcid="PMC99999",
+                full_text_url="https://pmc.ncbi.nlm.nih.gov/articles/PMC99999/pdf/test.pdf",
+                license="CC BY 4.0",
+                open_access=True,
+            ),
+            # A different provider's observation of the same work reports the
+            # retraction. The candidate as a whole must still be blocked.
+            ProviderObservation(
+                provider="crossref",
+                provider_id="10.1000/cross-provider-retraction",
+                title="Cross-provider retraction paper",
+                doi="10.1000/cross-provider-retraction",
+                retracted=True,
+            ),
+        ),
+    )
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="creatine", limit_per_provider=10),
+        candidates=(candidate,),
+        provider_statuses=(
+            ProviderStatus(
+                provider="pubmed",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+                latency_ms=1,
+                reason=None,
+            ),
+            ProviderStatus(
+                provider="crossref",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+                latency_ms=1,
+                reason=None,
+            ),
+        ),
+    )
+    ledger = FederatedSearchLedger(tmp_path)
+    run_id = ledger.record(result, research_question_id="rq").search_run_id
+    request = GeneralQuestionAcquisitionRequest(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq",
+        candidate_ids=("doi:10.1000/cross-provider-retraction",),
+    )
+
+    plan = build_acquisition_plan(request, ledger_root=tmp_path)
+
+    assert plan.items[0].disposition == AcquisitionDisposition.METADATA_ONLY.value
+    assert plan.items[0].reason == "no_eligible_open_full_text_location"
+
+
+def test_run_without_a_bound_research_question_id_is_rejected(tmp_path: Path) -> None:
+    run_id = _record_run(tmp_path, research_question_id=None)
+    request = GeneralQuestionAcquisitionRequest(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq-creatine",
         candidate_ids=("doi:10.1000/creatine",),
     )
 
