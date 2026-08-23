@@ -130,6 +130,12 @@ from knowledge_engine.federated_search_ledger import (
     SearchCoverageReport,
     build_search_coverage_report,
 )
+from knowledge_engine.general_question_acquisition import (
+    AcquisitionDisposition,
+    GeneralQuestionAcquisitionPlan,
+    GeneralQuestionAcquisitionRequest,
+    build_acquisition_plan,
+)
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.llm import LocalLLMError, OllamaLLM
@@ -431,6 +437,42 @@ FederatedCoverageReportOutputOption = Annotated[
             "freshness-history view -- rather than parsing the console table. Runs "
             "persisted before this option existed have no candidate snapshot; "
             "`candidates` is an empty list for those, never fabricated."
+        ),
+    ),
+]
+GeneralQuestionAcquisitionRequestArgument = Annotated[
+    Path,
+    typer.Argument(
+        help=(
+            "JSON acquisition request file (schema_version, search_run_id, "
+            "research_question_id, candidate_ids, budget fields -- see "
+            "GeneralQuestionAcquisitionRequest.from_json)."
+        ),
+        exists=True,
+        dir_okay=False,
+        readable=True,
+    ),
+]
+GeneralQuestionAcquisitionOutputOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--output",
+        help=(
+            "Optional path to also save the full acquisition plan (per-candidate "
+            "disposition, identity, and budget reconciliation) as JSON, for a "
+            "programmatic caller -- e.g. knowledge-engine-ai -- rather than "
+            "parsing the console table."
+        ),
+    ),
+]
+GeneralQuestionAcquisitionNoDatabaseOption = Annotated[
+    bool,
+    typer.Option(
+        "--no-database",
+        help=(
+            "Skip the local already-indexed lookup (DOI/PMID/arXiv ID against the "
+            "persisted corpus) and report every resolved candidate purely against "
+            "the search-run snapshot, ignoring what Core has already acquired."
         ),
     ),
 ]
@@ -5585,6 +5627,123 @@ def federated_coverage_report(
         _write_output(output, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
     _print_federated_coverage(coverage, search_run_id=coverage.search_run_id)
+
+
+@app.command("general-question-acquisition-plan")
+def general_question_acquisition_plan(
+    request_path: GeneralQuestionAcquisitionRequestArgument,
+    ledger_root: FederatedLedgerRootOption,
+    output: GeneralQuestionAcquisitionOutputOption = None,
+    no_database: GeneralQuestionAcquisitionNoDatabaseOption = False,
+) -> None:
+    """Resolve a bounded General Question Research Loop v1 acquisition request (CORE-GQR-1/GQR-2).
+
+    Reads a JSON `GeneralQuestionAcquisitionRequest` from `REQUEST_PATH`,
+    resolves its `candidate_ids` strictly against the persisted
+    `federated-discover` snapshot named by `search_run_id` under
+    `--ledger-root`, and reconciles explicit acquisition/full-text budgets
+    into a stable, auditable `GeneralQuestionAcquisitionPlan`
+    (`knowledge_engine/general_question_acquisition.py`). This is the first
+    CLI surface for that module -- until now it was built and unit-tested
+    but reachable only from a test file, the same gap `federated-discover`
+    closed for the FRD-1 through FRD-4/FRD-6 modules. See
+    `docs/general_question_research_loop_v1.md`.
+
+    Every returned item's disposition (`already_indexed`,
+    `eligible_full_text`, `metadata_only`, `skipped_budget`, or
+    `not_found_in_run`) describes acquisition eligibility, never scientific
+    support -- this command plans and reuses; it does not download full
+    text, ingest anything, or produce an Evidence Record (CORE-GQR-3/4/5
+    remain future work, tracked on `docs/general_question_research_loop_v1.md`).
+
+    By default the local database is opened read-only-in-effect (nothing is
+    added, so its commit is a no-op) to detect candidates that already
+    match an existing `Paper` by DOI, then PMID, then arXiv ID, reporting
+    them `already_indexed` instead of re-queuing them for acquisition --
+    reuse never competes with genuinely new candidates for the full-text
+    budget. `--no-database` skips that lookup entirely, matching
+    `build_acquisition_plan`'s own `session=None` snapshot-only contract,
+    for a caller that only wants the search-run resolution and budget
+    reconciliation without touching local state.
+
+    `--output <path.json>` additionally saves the full plan
+    (`GeneralQuestionAcquisitionPlan.to_dict()`) for a programmatic caller
+    -- e.g. `knowledge-engine-ai`, which consumes Core only through this
+    CLI JSON boundary -- rather than parsing the console table.
+    """
+
+    try:
+        request = GeneralQuestionAcquisitionRequest.from_json(
+            request_path.read_text(encoding="utf-8")
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    try:
+        if no_database:
+            plan = build_acquisition_plan(request, ledger_root=ledger_root)
+        else:
+            database = _local_database()
+            database.initialize()
+            with database.session() as session:
+                plan = build_acquisition_plan(request, ledger_root=ledger_root, session=session)
+    except FileNotFoundError:
+        console.print(f"[red]No federated search run found:[/red] {escape(request.search_run_id)}")
+        raise typer.Exit(1) from None
+    except ValueError as exc:
+        console.print(f"[red]Acquisition request could not be resolved:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    if output is not None:
+        _write_output(output, plan.to_json())
+
+    _print_acquisition_plan(plan)
+
+
+def _print_acquisition_plan(plan: GeneralQuestionAcquisitionPlan) -> None:
+    console.print(f"[bold]Search run:[/bold] {plan.search_run_id}")
+    console.print(f"[bold]Research question:[/bold] {escape(plan.research_question_id)}")
+    console.print(
+        f"[bold]Requested:[/bold] {plan.requested_candidate_count}  "
+        f"[bold]Resolved:[/bold] {plan.resolved_candidate_count}  "
+        f"[green]Already indexed:[/green] {plan.already_indexed_count}  "
+        f"[cyan]Full text eligible:[/cyan] {plan.full_text_selected_count}  "
+        f"[blue]Metadata only:[/blue] {plan.metadata_only_count}  "
+        f"[yellow]Skipped (budget):[/yellow] {plan.skipped_budget_count}  "
+        f"[red]Not in run:[/red] {plan.missing_candidate_count}"
+    )
+    if plan.provider_failures:
+        console.print(
+            "[red]Provider failures on the underlying search run:[/red] "
+            f"{', '.join(plan.provider_failures)}"
+        )
+
+    disposition_color = {
+        AcquisitionDisposition.ALREADY_INDEXED.value: "green",
+        AcquisitionDisposition.ELIGIBLE_FULL_TEXT.value: "cyan",
+        AcquisitionDisposition.METADATA_ONLY.value: "blue",
+        AcquisitionDisposition.SKIPPED_BUDGET.value: "yellow",
+        AcquisitionDisposition.NOT_FOUND_IN_RUN.value: "red",
+    }
+    table = Table(title="Acquisition plan")
+    table.add_column("Candidate")
+    table.add_column("Title")
+    table.add_column("Disposition")
+    table.add_column("Reason")
+    for item in plan.items:
+        color = disposition_color.get(item.disposition, "white")
+        table.add_row(
+            escape(item.candidate_id),
+            escape(item.title or ""),
+            f"[{color}]{item.disposition}[/{color}]",
+            escape(item.reason or ""),
+        )
+    console.print(table)
+
+    console.print(
+        "[bold]Plan only -- no full text was downloaded and nothing was ingested. "
+        "Dispositions describe acquisition eligibility, not scientific support.[/bold]"
+    )
 
 
 @app.command("federated-discover-history")

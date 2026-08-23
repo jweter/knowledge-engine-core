@@ -432,6 +432,42 @@ itself, but may need to trigger for a specific paper):**
   `schema_version` is unchanged (candidates is an optional field older
   records simply omit), so every existing invocation, consumer, and
   previously persisted run keeps working exactly as before.
+- `ke general-question-acquisition-plan <request.json> --ledger-root <dir>
+  [--output <path.json>] [--no-database]` (CORE-GQR-1/GQR-2,
+  `docs/general_question_research_loop_v1.md`): the first CLI surface for
+  `general_question_acquisition.py`'s bounded acquisition planner --
+  previously built and unit-tested but, like `federated-discover` before
+  it, reachable only from a test file. Reads a JSON
+  `GeneralQuestionAcquisitionRequest` (`schema_version`, `search_run_id`,
+  `research_question_id`, `candidate_ids`, and budget fields --
+  `max_candidates`, `max_full_text_acquisitions`, `max_elapsed_seconds`,
+  `allow_metadata_only`), resolves `candidate_ids` strictly against the
+  persisted `federated-discover` snapshot named by `search_run_id` under
+  `--ledger-root`, and reconciles explicit budgets into a stable
+  `GeneralQuestionAcquisitionPlan`: a per-candidate disposition
+  (`already_indexed`, `eligible_full_text`, `metadata_only`,
+  `skipped_budget`, or `not_found_in_run`), preserved DOI/PMID/PMCID/arXiv/
+  OpenAlex/Semantic Scholar identity, the selected observation's provider/
+  URL/license/OA facts, and an `existing_paper_id` when already indexed.
+  Every disposition describes acquisition eligibility, never scientific
+  support -- this command plans and reuses candidate resolution; it does
+  not download full text, ingest anything, or produce an Evidence Record
+  (CORE-GQR-3 acquisition routing and CORE-GQR-4 persist/parse remain
+  future work). By default the local database is opened to detect
+  candidates already matching an existing `Paper` by DOI, then PMID, then
+  arXiv ID -- reported `already_indexed` instead of re-queuing them, and
+  never competing with genuinely new candidates for the full-text budget
+  (see CORE-GQR-2 above). `--no-database` skips that lookup entirely,
+  matching `build_acquisition_plan`'s own `session=None` snapshot-only
+  contract. `--output <path.json>` additionally saves the full plan
+  (`GeneralQuestionAcquisitionPlan.to_dict()`) for a programmatic caller --
+  `knowledge-engine-ai`, which consumes Core only through this CLI JSON
+  boundary, is the intended caller once its own orchestration
+  (`knowledge-engine-ai` issue #69) lands -- rather than parsing the
+  console table. An unresolvable `search_run_id`, a malformed request, or a
+  `research_question_id` mismatch against the persisted run each exit `1`
+  with a plain console error, never a stack trace or a silently-adjusted
+  plan.
 - **`ProviderObservation` publication-status fields (FRD-5 follow-up):**
   `knowledge_engine.federated_discovery.ProviderObservation` -- and its
   ledger mirror, `federated_search_ledger.CandidateObservationRecord` --

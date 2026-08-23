@@ -9,6 +9,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`ke general-question-acquisition-plan` CLI command (CORE-GQR-1/GQR-2)**:
+  the first CLI surface for `general_question_acquisition.py`'s bounded
+  acquisition planner. Reads a JSON `GeneralQuestionAcquisitionRequest`,
+  resolves `candidate_ids` against a persisted `federated-discover`
+  snapshot, and prints/optionally saves (`--output`) the resulting
+  `GeneralQuestionAcquisitionPlan` -- per-candidate disposition, preserved
+  identity, and budget reconciliation. Opens the local database by default
+  to detect already-indexed candidates (DOI/PMID/arXiv ID); `--no-database`
+  preserves the prior snapshot-only planning behavior. Plans only -- no
+  full text is downloaded and nothing is ingested. See
+  `docs/general_question_research_loop_v1.md`'s CORE-GQR-1 status note.
+
 - **PMID/arXiv-ID already-indexed detection (CORE-GQR-2)**: schema version 13
   adds nullable, uniquely indexed `papers.pmid`/`papers.arxiv_id` columns
   (additive migration, existing rows load as `NULL`), plus

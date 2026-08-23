@@ -110,6 +110,14 @@ These statuses describe acquisition, not scientific support.
 - schema-version tests;
 - persisted search-run candidate resolution.
 
+**Status:** complete, including the CLI boundary. `ke
+general-question-acquisition-plan <request.json> --ledger-root <dir>
+[--output <path.json>] [--no-database]` is now the reachable surface for
+`build_acquisition_plan` (see `docs/core_interface_contract.md`) — until
+this command existed, the schema/planner were built and unit-tested but
+callable only from a test file, unreachable to `knowledge-engine-ai` even
+though that layer consumes Core strictly through this CLI's JSON boundary.
+
 ### CORE-GQR-2 - Candidate identity and reuse
 - DOI/PMID/arXiv/provider identity resolution;
 - detect already indexed sources;
@@ -135,11 +143,13 @@ ingestion path yet writes real values into `papers.pmid`/`papers.arxiv_id`
 for newly imported papers (mirroring how `manifest_doi` populates `papers
 .doi` in `PaperRepository._build_paper`) or backfills them for
 already-persisted papers, so today this reuse detection has schema and query
-support but no populated data outside tests until that wiring lands — that,
-plus wiring a real database session into a CLI/API caller, arrives together
-with CORE-GQR-4 (persist and parse), which is also where an
-`acquired_full_text` disposition and durable acquisition receipt first
-become meaningful.
+support but no populated data outside tests until that wiring lands. A real
+database session is now wired into the CLI caller (`ke
+general-question-acquisition-plan`, on by default, `--no-database` to
+opt out); backfilling `papers.pmid`/`papers.arxiv_id` for newly imported and
+already-persisted papers arrives with CORE-GQR-4 (persist and parse), which
+is also where an `acquired_full_text` disposition and durable acquisition
+receipt first become meaningful.
 
 ### CORE-GQR-3 - Acquisition routing
 Route eligible candidates through existing mechanisms where possible:
