@@ -105,8 +105,8 @@ class GeneralQuestionPmcPersistenceReceiptItem:
     filename: str
     sha256: str
     paper_id: int
-    import_item_id: str
     persistence_status: str
+    import_item_id: str | None = None
 
 
 @dataclass(frozen=True)
