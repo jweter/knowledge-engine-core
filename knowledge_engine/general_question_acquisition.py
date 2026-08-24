@@ -382,10 +382,10 @@ def _acquisition_route(observation: CandidateObservationRecord) -> AcquisitionRo
 
     # A PMCID is routed back through the dedicated PMC OA service, which
     # independently verifies approval evidence and its official download host.
-    if observation.pmcid and hostname in {
+    if hostname in {
         "pmc.ncbi.nlm.nih.gov",
         "pmc-oa-opendata.s3.amazonaws.com",
-    }:
+    } and (observation.pmcid or provider == "pubmed"):
         return AcquisitionRoute.PMC_OA
     if provider in {"europepmc", "europe_pmc"} and hostname == "europepmc.org":
         return AcquisitionRoute.EUROPE_PMC_OA
