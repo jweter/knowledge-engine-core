@@ -483,3 +483,23 @@ def test_discovery_rejects_malformed_search_payload() -> None:
 
     with pytest.raises(NcbiDiscoveryError, match="search response was malformed"):
         service.discover("semaglutide", limit=1)
+
+
+@pytest.mark.parametrize(
+    "pmids",
+    (
+        (),
+        ("123", "123"),
+        ("not-a-pmid",),
+    ),
+)
+def test_explicit_pmid_resolution_validates_bounded_identifiers_before_network(
+    pmids: tuple[str, ...],
+) -> None:
+    transport = FakeTransport([])
+    service = PubmedPmcDiscoveryService(transport)
+
+    with pytest.raises(ValueError, match="PMID resolution"):
+        service.resolve_pmids(pmids)
+
+    assert transport.urls == []

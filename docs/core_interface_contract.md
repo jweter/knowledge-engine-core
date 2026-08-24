@@ -432,6 +432,16 @@ itself, but may need to trigger for a specific paper):**
   `schema_version` is unchanged (candidates is an optional field older
   records simply omit), so every existing invocation, consumer, and
   previously persisted run keeps working exactly as before.
+- `ke general-question-acquire-pmc <request.json> --ledger-root <dir>
+  --papers-dir <dir> --receipt <path.json>` (CORE-GQR-4): executes only
+  `eligible_full_text` items routed to `pmc_oa`. It rebuilds the plan with
+  database-backed reuse detection, resolves its exact PMIDs through current
+  PMC Cloud OA metadata, requires reusable license evidence, and delegates
+  downloads to the existing atomic approval-gated PMC service. The durable
+  receipt preserves search-run, research-question, provider-neutral candidate,
+  PMID/PMCID, license, filename, byte count, and SHA-256 provenance. It does
+  not yet create `Paper`/import-run rows or parse the PDFs.
+
 - `ke general-question-acquisition-plan <request.json> --ledger-root <dir>
   [--output <path.json>] [--no-database]` (CORE-GQR-1/GQR-2,
   `docs/general_question_research_loop_v1.md`): the first CLI surface for

@@ -19,7 +19,13 @@ from knowledge_engine.federated_discovery import (
     ProviderStatus,
 )
 from knowledge_engine.federated_search_ledger import FederatedSearchLedger
+from knowledge_engine.general_question_pmc_acquisition import (
+    GeneralQuestionPmcExecution,
+    GeneralQuestionPmcReceipt,
+    GeneralQuestionPmcReceiptItem,
+)
 from knowledge_engine.models import Paper
+from knowledge_engine.pmc_acquisition import AcquisitionReceipt, AcquisitionReceiptItem
 
 
 def _unwrapped(output: str) -> str:
@@ -299,3 +305,93 @@ def test_cli_rejects_malformed_request_json(tmp_path: Path) -> None:
     )
 
     assert result.exit_code != 0
+
+
+def test_cli_executes_planned_pmc_route_and_writes_durable_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ledger_root = tmp_path / "ledger"
+    run_id = _record_creatine_run(ledger_root)
+    request_path = _write_request(
+        tmp_path / "request.json",
+        search_run_id=run_id,
+        candidate_ids=["doi:10.1000/creatine"],
+    )
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    resolver = object()
+    service = object()
+    monkeypatch.setattr(entrypoint, "_pubmed_discovery_service", lambda: resolver)
+    monkeypatch.setattr(entrypoint, "_pmc_acquisition_service", lambda: service)
+    calls: list[tuple[object, object, Path]] = []
+
+    raw_receipt = AcquisitionReceipt(
+        schema_version=1,
+        acquired_count=1,
+        items=(
+            AcquisitionReceiptItem(
+                pmid="12345",
+                pmcid="PMC12345",
+                license="CC BY 4.0",
+                filename="PMC12345.pdf",
+                byte_count=13,
+                sha256="a" * 64,
+            ),
+        ),
+    )
+    public_receipt = GeneralQuestionPmcReceipt(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq-creatine",
+        acquisition_route="pmc_oa",
+        acquired_count=1,
+        items=(
+            GeneralQuestionPmcReceiptItem(
+                candidate_id="doi:10.1000/creatine",
+                pmid="12345",
+                pmcid="PMC12345",
+                license="CC BY 4.0",
+                filename="PMC12345.pdf",
+                byte_count=13,
+                sha256="a" * 64,
+            ),
+        ),
+    )
+
+    def fake_execute(
+        plan: object,
+        *,
+        resolver: object,
+        acquisition_service: object,
+        output_directory: Path,
+    ) -> GeneralQuestionPmcExecution:
+        del plan
+        calls.append((resolver, acquisition_service, output_directory))
+        return GeneralQuestionPmcExecution(
+            receipt=public_receipt,
+            acquisition_receipt=raw_receipt,
+        )
+
+    monkeypatch.setattr(entrypoint, "execute_pmc_acquisition_plan", fake_execute)
+    receipt_path = tmp_path / "receipt.json"
+    papers_dir = tmp_path / "papers"
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "general-question-acquire-pmc",
+            str(request_path),
+            "--ledger-root",
+            str(ledger_root),
+            "--papers-dir",
+            str(papers_dir),
+            "--receipt",
+            str(receipt_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls == [(resolver, service, papers_dir)]
+    payload = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert payload["search_run_id"] == run_id
+    assert payload["items"][0]["candidate_id"] == "doi:10.1000/creatine"

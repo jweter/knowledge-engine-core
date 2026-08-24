@@ -9,6 +9,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Executable PMC acquisition route (CORE-GQR-4)**:
+  `ke general-question-acquire-pmc` now converts eligible `pmc_oa` plan
+  items into one exact, atomic acquisition batch. It resolves selected PMIDs
+  against current PMC Cloud evidence without repeating discovery, requires a
+  reusable license, uses the existing approval-gated downloader, and writes a
+  durable receipt tied to the search run, research question, candidate,
+  PMID/PMCID, file hash, and byte count. Paper persistence and parsing remain
+  the next slice.
+
 - **Deterministic acquisition routes (CORE-GQR-3)**:
   `ke general-question-acquisition-plan` now adds an `acquisition_route`
   to every `eligible_full_text` item, selecting only the existing PMC OA,

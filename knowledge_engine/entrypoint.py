@@ -136,6 +136,10 @@ from knowledge_engine.general_question_acquisition import (
     GeneralQuestionAcquisitionRequest,
     build_acquisition_plan,
 )
+from knowledge_engine.general_question_pmc_acquisition import (
+    GeneralQuestionPmcAcquisitionError,
+    execute_pmc_acquisition_plan,
+)
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.llm import LocalLLMError, OllamaLLM
@@ -5698,6 +5702,64 @@ def general_question_acquisition_plan(
         _write_output(output, plan.to_json())
 
     _print_acquisition_plan(plan)
+
+
+@app.command("general-question-acquire-pmc")
+def general_question_acquire_pmc(
+    request_path: GeneralQuestionAcquisitionRequestArgument,
+    ledger_root: FederatedLedgerRootOption,
+    papers_dir: PapersDirectoryOption,
+    receipt: ReceiptOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Execute eligible PMC routes from one bounded acquisition request (CORE-GQR-4)."""
+
+    _validate_output(receipt, force=force)
+    try:
+        request = GeneralQuestionAcquisitionRequest.from_json(
+            request_path.read_text(encoding="utf-8")
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    try:
+        database = _local_database()
+        database.initialize()
+        with database.session() as session:
+            plan = build_acquisition_plan(request, ledger_root=ledger_root, session=session)
+        console.print(
+            "[yellow]Network access:[/yellow] resolving planned PMIDs and acquiring "
+            "license-verified PDFs from official PMC OA resources."
+        )
+        execution = execute_pmc_acquisition_plan(
+            plan,
+            resolver=_pubmed_discovery_service(),
+            acquisition_service=_pmc_acquisition_service(),
+            output_directory=papers_dir,
+        )
+    except FileNotFoundError:
+        console.print(f"[red]No federated search run found:[/red] {escape(request.search_run_id)}")
+        raise typer.Exit(1) from None
+    except (ValueError, GeneralQuestionPmcAcquisitionError) as exc:
+        console.print(f"[red]General-question PMC acquisition failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    try:
+        _write_output(receipt, execution.receipt.to_json())
+    except typer.BadParameter:
+        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
+        raise typer.BadParameter(
+            "Receipt output could not be written; acquired PDFs were rolled back."
+        ) from None
+
+    console.print(
+        f"[green]Acquired {execution.receipt.acquired_count} planned PMC OA PDFs.[/green] "
+        f"Receipt: {receipt}"
+    )
+    console.print(
+        "[bold]Receipt preserves search-run and candidate provenance; parsing and "
+        "Paper persistence remain the next CORE-GQR-4 slice.[/bold]"
+    )
 
 
 def _print_acquisition_plan(plan: GeneralQuestionAcquisitionPlan) -> None:
