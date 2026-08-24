@@ -33,6 +33,14 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Runtime-aware local embedding identity**: local
+  `sentence-transformers` model IDs now include the installed
+  `sentence-transformers`, `transformers`, and `torch` versions. Vector
+  ingestion and query compatibility checks therefore fail closed across
+  embedding-runtime upgrades instead of treating vectors produced by
+  materially different dependency stacks as interchangeable. Existing
+  local indexes must be regenerated after this upgrade.
+
 - **Evidence-aware authoritative retrieval**: `ke answer --evidence` and
   `ke evidence-report` now use FTS5 for a bounded candidate set and
   deterministically rerank it by rarity-weighted question coverage in the
