@@ -674,7 +674,7 @@ def test_already_indexed_lookup_requires_some_known_identity(tmp_path: Path) -> 
     (
         (
             "pubmed",
-            "PMC777",
+            None,
             "https://pmc.ncbi.nlm.nih.gov/articles/PMC777/pdf/test.pdf",
             AcquisitionRoute.PMC_OA,
         ),
