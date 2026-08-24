@@ -42,8 +42,6 @@ VersionResolver = Callable[[str], str]
 _RUNTIME_DEPENDENCIES = ("sentence-transformers", "transformers", "torch")
 
 
-
-
 def _load_sentence_transformer(model_name: str) -> SentenceEncoder:
     try:
         from sentence_transformers import SentenceTransformer
@@ -86,8 +84,7 @@ class SentenceTransformerEmbeddingGenerator:
 
         try:
             runtime = ",".join(
-                f"{package}={self._version_resolver(package)}"
-                for package in _RUNTIME_DEPENDENCIES
+                f"{package}={self._version_resolver(package)}" for package in _RUNTIME_DEPENDENCIES
             )
         except metadata.PackageNotFoundError as error:
             package = error.name or "embedding runtime dependency"
