@@ -2566,7 +2566,13 @@ def _print_import_run(
         )
     console.print()
     if completed_ingestion_summary is not None:
-        _print_completed_ingestion_footer(completed_ingestion_summary, run_status=run.run_status)
+        if run.validation_mode == "gqr_pmc_acquisition":
+            _print_pmc_acquisition_footer(completed_ingestion_summary)
+        else:
+            _print_completed_ingestion_footer(
+                completed_ingestion_summary,
+                run_status=run.run_status,
+            )
         return
     if include_persistence_outcome:
         console.print("Validation run metadata was written to the database.")
@@ -2586,6 +2592,21 @@ def _import_run_item_summary(run: ImportRun) -> dict[str, int]:
         "skipped": sum(1 for item in run.items if item.item_status == "skipped"),
         "needs_review": sum(1 for item in run.items if item.item_status == "needs_review"),
     }
+
+
+def _print_pmc_acquisition_footer(summary: dict[str, int]) -> None:
+    """Render an accurate footer for completed general-question PMC imports."""
+
+    persisted = summary["imported"]
+    failed = summary["failed"]
+    reused = summary["skipped"]
+    console.print(
+        f"PMC acquisition completed with {persisted} persisted, {failed} failed, "
+        f"{reused} reused."
+    )
+    console.print("Verified PMC documents were downloaded before parsing and persistence.")
+    console.print("ImportRun and ImportItem records link each candidate to its matched Paper.")
+    console.print("Acquisition and import do not constitute scientific review.")
 
 
 def _print_completed_ingestion_footer(summary: dict[str, int], *, run_status: str) -> None:
