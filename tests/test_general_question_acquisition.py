@@ -19,6 +19,7 @@ from knowledge_engine.federated_discovery import (
 from knowledge_engine.federated_search_ledger import FederatedSearchLedger
 from knowledge_engine.general_question_acquisition import (
     AcquisitionDisposition,
+    AcquisitionRoute,
     GeneralQuestionAcquisitionRequest,
     build_acquisition_plan,
 )
@@ -665,3 +666,141 @@ def test_already_indexed_lookup_requires_some_known_identity(tmp_path: Path) -> 
 
     assert plan.items[0].disposition != AcquisitionDisposition.ALREADY_INDEXED.value
     assert plan.already_indexed_count == 0
+
+
+@pytest.mark.parametrize(
+    ("provider", "pmcid", "full_text_url", "expected_route"),
+    (
+        (
+            "pubmed",
+            "PMC777",
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC777/pdf/test.pdf",
+            AcquisitionRoute.PMC_OA,
+        ),
+        (
+            "europepmc",
+            None,
+            "https://europepmc.org/articles/EPMC777?pdf=render",
+            AcquisitionRoute.EUROPE_PMC_OA,
+        ),
+        (
+            "core",
+            None,
+            "https://core.ac.uk/download/777.pdf",
+            AcquisitionRoute.CORE,
+        ),
+        (
+            "unpaywall",
+            None,
+            "https://repository.example/paper.pdf",
+            AcquisitionRoute.UNPAYWALL,
+        ),
+    ),
+)
+def test_supported_full_text_routes_are_explicit(
+    tmp_path: Path,
+    provider: str,
+    pmcid: str | None,
+    full_text_url: str,
+    expected_route: AcquisitionRoute,
+) -> None:
+    observation = ProviderObservation(
+        provider=provider,
+        provider_id="route-777",
+        title="Routed paper",
+        doi="10.1000/routed",
+        pmcid=pmcid,
+        full_text_url=full_text_url,
+        license="CC BY 4.0",
+        open_access=True,
+    )
+    plan = _plan_for_observations(tmp_path, (observation,))
+
+    assert plan.items[0].disposition == AcquisitionDisposition.ELIGIBLE_FULL_TEXT.value
+    assert plan.items[0].acquisition_route == expected_route.value
+
+
+def test_arbitrary_oa_url_without_supported_route_degrades_to_metadata_only(
+    tmp_path: Path,
+) -> None:
+    observation = ProviderObservation(
+        provider="crossref",
+        provider_id="10.1000/unsupported",
+        title="Unsupported direct URL",
+        doi="10.1000/unsupported",
+        full_text_url="https://publisher.example/paper.pdf",
+        license="CC BY 4.0",
+        open_access=True,
+    )
+
+    plan = _plan_for_observations(tmp_path, (observation,))
+
+    assert plan.items[0].disposition == AcquisitionDisposition.METADATA_ONLY.value
+    assert plan.items[0].acquisition_route is None
+    assert plan.items[0].full_text_url is None
+
+
+def test_pmc_route_wins_over_less_authoritative_supported_location(tmp_path: Path) -> None:
+    observations = (
+        ProviderObservation(
+            provider="unpaywall",
+            provider_id="10.1000/routed",
+            title="Routed paper",
+            doi="10.1000/routed",
+            full_text_url="https://repository.example/paper.pdf",
+            license="CC BY 4.0",
+            open_access=True,
+        ),
+        ProviderObservation(
+            provider="pubmed",
+            provider_id="777",
+            title="Routed paper",
+            doi="10.1000/routed",
+            pmcid="PMC777",
+            full_text_url="https://pmc.ncbi.nlm.nih.gov/articles/PMC777/pdf/test.pdf",
+            license="CC BY 4.0",
+            open_access=True,
+        ),
+    )
+
+    plan = _plan_for_observations(tmp_path, observations)
+
+    assert plan.items[0].acquisition_route == AcquisitionRoute.PMC_OA.value
+    assert plan.items[0].selected_observation_provider == "pubmed"
+
+
+def _plan_for_observations(
+    tmp_path: Path,
+    observations: tuple[ProviderObservation, ...],
+):
+    candidate = FederatedCandidate(
+        canonical_id="doi:10.1000/routed",
+        title="Routed paper",
+        doi="10.1000/routed",
+        observations=observations,
+    )
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="routing", limit_per_provider=10),
+        candidates=(candidate,),
+        provider_statuses=tuple(
+            ProviderStatus(
+                provider=provider,
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+                latency_ms=1,
+                reason=None,
+            )
+            for provider in sorted({item.provider for item in observations})
+        ),
+    )
+    run_id = FederatedSearchLedger(tmp_path).record(
+        result, research_question_id="rq-routing"
+    ).search_run_id
+    request = GeneralQuestionAcquisitionRequest(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq-routing",
+        candidate_ids=("doi:10.1000/routed",),
+    )
+    return build_acquisition_plan(request, ledger_root=tmp_path)
