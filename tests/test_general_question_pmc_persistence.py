@@ -174,6 +174,9 @@ def test_persists_verified_acquisition_with_plan_identity(tmp_path: Path) -> Non
         snapshot = json.loads(import_run.manifest_snapshot.corpus_json_text)
         assert snapshot["kind"] == "general_question_pmc_import"
         assert snapshot["plan"]["search_run_id"] == "run-123"
+        assert snapshot["persistence_items"][0]["import_item_id"] == (
+            result.items[0].import_item_id
+        )
         item = session.scalar(select(ImportItem))
         assert item is not None
         assert item.import_item_id == result.items[0].import_item_id
