@@ -190,6 +190,18 @@ persisting their durable receipts belongs to CORE-GQR-4.
 - attach import-run/acquisition receipt provenance;
 - keep failures independently inspectable.
 
+**Status:** the first executable provider route is implemented. `ke
+general-question-acquire-pmc <request.json> --ledger-root <dir> --papers-dir
+<dir> --receipt <path.json>` rebuilds the bounded plan with database-backed
+reuse detection, resolves the exact selected PMIDs against current PMC Cloud
+OA evidence without running a new search, requires a supported reusable
+license, invokes the existing approval-gated atomic PMC downloader, and writes
+a durable receipt retaining search-run, research-question, candidate, PMID,
+PMCID, license, filename, byte-count, and SHA-256 provenance. A receipt-write
+failure rolls back the acquired PDFs. Paper/import-run persistence and parsing
+remain the next CORE-GQR-4 slice; Europe PMC, CORE, and Unpaywall route
+execution remain subsequent provider adapters.
+
 ### CORE-GQR-5 - Grounded extraction and promotion
 - invoke domain-general grounded extraction;
 - verify proposed fields against source text;
