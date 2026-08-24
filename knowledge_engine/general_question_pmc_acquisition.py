@@ -8,14 +8,21 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Protocol
 
+from sqlalchemy.orm import Session
+
+from knowledge_engine.duplicate_queries import DuplicateQueryRepository
 from knowledge_engine.general_question_acquisition import (
     AcquisitionDisposition,
     AcquisitionRoute,
     GeneralQuestionAcquisitionPlan,
 )
 from knowledge_engine.license_rules import evaluate_license
+from knowledge_engine.paper_persistence import ClassifiedPaperRepository
+from knowledge_engine.parser import DocumentParseError, DocumentParser, PyMuPDFParser
+from knowledge_engine.persistence_errors import PaperPersistenceError
 from knowledge_engine.pmc_acquisition import AcquisitionReceipt
 from knowledge_engine.pubmed_discovery import PubmedCandidate
+from knowledge_engine.utils import file_sha256
 
 
 class GeneralQuestionPmcAcquisitionError(RuntimeError):
@@ -77,6 +84,36 @@ class GeneralQuestionPmcExecution:
 
     receipt: GeneralQuestionPmcReceipt
     acquisition_receipt: AcquisitionReceipt
+
+
+@dataclass(frozen=True)
+class GeneralQuestionPmcPersistenceReceiptItem:
+    """One verified acquisition reconciled to its durable Paper record."""
+
+    candidate_id: str
+    pmid: str
+    pmcid: str
+    filename: str
+    sha256: str
+    paper_id: int
+    persistence_status: str
+
+
+@dataclass(frozen=True)
+class GeneralQuestionPmcPersistenceReceipt:
+    """Durable result of parsing and persisting one acquired PMC batch."""
+
+    schema_version: int
+    search_run_id: str
+    research_question_id: str
+    acquisition_route: str
+    parsed_count: int
+    persisted_count: int
+    reused_count: int
+    items: tuple[GeneralQuestionPmcPersistenceReceiptItem, ...]
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self), indent=2, sort_keys=True) + "\n"
 
 
 def execute_pmc_acquisition_plan(
@@ -223,6 +260,137 @@ def execute_pmc_acquisition_plan(
     )
 
 
+def persist_pmc_acquisition_execution(
+    session: Session,
+    plan: GeneralQuestionAcquisitionPlan,
+    execution: GeneralQuestionPmcExecution,
+    *,
+    output_directory: Path,
+    parser: DocumentParser | None = None,
+) -> GeneralQuestionPmcPersistenceReceipt:
+    """Verify, parse, and persist an acquired PMC batch atomically with the caller.
+
+    The public acquisition receipt is an integrity boundary: every filename must
+    remain directly under the output directory and every byte count and SHA-256
+    digest must match before parsing starts. The caller owns the outer transaction,
+    so any raised error rolls back the complete batch.
+    """
+
+    receipt = execution.receipt
+    if (
+        receipt.search_run_id != plan.search_run_id
+        or receipt.research_question_id != plan.research_question_id
+        or receipt.acquisition_route != AcquisitionRoute.PMC_OA.value
+    ):
+        raise GeneralQuestionPmcAcquisitionError(
+            "PMC acquisition receipt provenance did not reconcile with the plan."
+        )
+
+    planned = {
+        item.candidate_id: item
+        for item in plan.items
+        if item.disposition == AcquisitionDisposition.ELIGIBLE_FULL_TEXT.value
+        and item.acquisition_route == AcquisitionRoute.PMC_OA.value
+    }
+    received_ids = [item.candidate_id for item in receipt.items]
+    if (
+        receipt.acquired_count != len(receipt.items)
+        or len(set(received_ids)) != len(received_ids)
+        or set(planned) != set(received_ids)
+    ):
+        raise GeneralQuestionPmcAcquisitionError(
+            "PMC acquisition receipt identities did not reconcile with the plan."
+        )
+
+    document_parser = parser or PyMuPDFParser()
+    repository = DuplicateQueryRepository(session)
+    persistence_items: list[GeneralQuestionPmcPersistenceReceiptItem] = []
+    persisted_count = 0
+    reused_count = 0
+    try:
+        output_root = output_directory.resolve(strict=True)
+        for receipt_item in receipt.items:
+            plan_item = planned[receipt_item.candidate_id]
+            identity = plan_item.identity
+            if identity is None or identity.pmid != receipt_item.pmid:
+                raise GeneralQuestionPmcAcquisitionError(
+                    "PMC acquisition receipt identity did not reconcile with the plan."
+                )
+            if (
+                Path(receipt_item.filename).name != receipt_item.filename
+                or Path(receipt_item.filename).suffix.lower() != ".pdf"
+            ):
+                raise GeneralQuestionPmcAcquisitionError(
+                    "PMC acquisition receipt contains an unsafe filename."
+                )
+
+            paper_path = (output_root / receipt_item.filename).resolve(strict=True)
+            if paper_path.parent != output_root:
+                raise GeneralQuestionPmcAcquisitionError(
+                    "PMC acquisition receipt contains an unsafe file path."
+                )
+            if paper_path.stat().st_size != receipt_item.byte_count:
+                raise GeneralQuestionPmcAcquisitionError(
+                    "Acquired PMC file size did not match its receipt."
+                )
+            digest = file_sha256(paper_path)
+            if digest != receipt_item.sha256:
+                raise GeneralQuestionPmcAcquisitionError(
+                    "Acquired PMC file digest did not match its receipt."
+                )
+
+            parsed = document_parser.parse(paper_path)
+            existing = (
+                repository.paper_by_content_hash(parsed.content_hash)
+                or repository.paper_by_normalized_doi(identity.doi)
+                or repository.paper_by_pmid(identity.pmid)
+                or repository.paper_by_arxiv_id(identity.arxiv_id)
+            )
+            if existing is not None:
+                paper = existing
+                status = "reused"
+                reused_count += 1
+            else:
+                paper = ClassifiedPaperRepository(session).add_parsed_paper(
+                    parsed,
+                    manifest_title=plan_item.title,
+                    manifest_doi=identity.doi,
+                    manifest_pmid=identity.pmid,
+                    manifest_arxiv_id=identity.arxiv_id,
+                )
+                status = "persisted"
+                persisted_count += 1
+
+            persistence_items.append(
+                GeneralQuestionPmcPersistenceReceiptItem(
+                    candidate_id=receipt_item.candidate_id,
+                    pmid=receipt_item.pmid,
+                    pmcid=receipt_item.pmcid,
+                    filename=receipt_item.filename,
+                    sha256=receipt_item.sha256,
+                    paper_id=paper.id,
+                    persistence_status=status,
+                )
+            )
+    except GeneralQuestionPmcAcquisitionError:
+        raise
+    except (DocumentParseError, FileNotFoundError, OSError, PaperPersistenceError) as exc:
+        raise GeneralQuestionPmcAcquisitionError(
+            "Acquired PMC files could not be parsed and persisted safely."
+        ) from exc
+
+    return GeneralQuestionPmcPersistenceReceipt(
+        schema_version=1,
+        search_run_id=receipt.search_run_id,
+        research_question_id=receipt.research_question_id,
+        acquisition_route=receipt.acquisition_route,
+        parsed_count=len(persistence_items),
+        persisted_count=persisted_count,
+        reused_count=reused_count,
+        items=tuple(persistence_items),
+    )
+
+
 def _rollback_acquired_files(output_directory: Path, receipt: AcquisitionReceipt) -> None:
     try:
         for item in receipt.items:
@@ -236,8 +404,11 @@ def _rollback_acquired_files(output_directory: Path, receipt: AcquisitionReceipt
 __all__ = [
     "GeneralQuestionPmcAcquisitionError",
     "GeneralQuestionPmcExecution",
+    "GeneralQuestionPmcPersistenceReceipt",
+    "GeneralQuestionPmcPersistenceReceiptItem",
     "GeneralQuestionPmcReceipt",
     "GeneralQuestionPmcReceiptItem",
     "PmcCandidateResolver",
     "execute_pmc_acquisition_plan",
+    "persist_pmc_acquisition_execution",
 ]

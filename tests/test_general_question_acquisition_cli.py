@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from typer.testing import CliRunner
@@ -373,6 +374,16 @@ def test_cli_executes_planned_pmc_route_and_writes_durable_receipt(
         )
 
     monkeypatch.setattr(entrypoint, "execute_pmc_acquisition_plan", fake_execute)
+    monkeypatch.setattr(
+        entrypoint,
+        "persist_pmc_acquisition_execution",
+        lambda *args, **kwargs: SimpleNamespace(
+            parsed_count=1,
+            persisted_count=1,
+            reused_count=0,
+            to_json=public_receipt.to_json,
+        ),
+    )
     receipt_path = tmp_path / "receipt.json"
     papers_dir = tmp_path / "papers"
 
