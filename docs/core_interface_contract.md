@@ -448,12 +448,13 @@ itself, but may need to trigger for a specific paper):**
   (`already_indexed`, `eligible_full_text`, `metadata_only`,
   `skipped_budget`, or `not_found_in_run`), preserved DOI/PMID/PMCID/arXiv/
   OpenAlex/Semantic Scholar identity, the selected observation's provider/
-  URL/license/OA facts, and an `existing_paper_id` when already indexed.
+  URL/license/OA facts, an explicit supported `acquisition_route` for every
+  `eligible_full_text` item, and an `existing_paper_id` when already indexed.
   Every disposition describes acquisition eligibility, never scientific
   support -- this command plans and reuses candidate resolution; it does
-  not download full text, ingest anything, or produce an Evidence Record
-  (CORE-GQR-3 acquisition routing and CORE-GQR-4 persist/parse remain
-  future work). By default the local database is opened to detect
+  not download full text, ingest anything, or produce an Evidence Record.
+  CORE-GQR-3's deterministic routing plan is complete; executing a route,
+  persisting its receipt, and parsing the result remain CORE-GQR-4 work. By default the local database is opened to detect
   candidates already matching an existing `Paper` by DOI, then PMID, then
   arXiv ID -- reported `already_indexed` instead of re-queuing them, and
   never competing with genuinely new candidates for the full-text budget
