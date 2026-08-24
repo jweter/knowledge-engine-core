@@ -448,9 +448,7 @@ def _record_pmc_import_run(
     snapshot_text = json.dumps(snapshot_payload, indent=2, sort_keys=True) + "\n"
     snapshot_bytes = snapshot_text.encode("utf-8")
     snapshot_digest = sha256(snapshot_bytes).hexdigest()
-    combined_digest = sha256(
-        b"general_question_pmc_import_v1\0" + snapshot_bytes
-    ).hexdigest()
+    combined_digest = sha256(b"general_question_pmc_import_v1\0" + snapshot_bytes).hexdigest()
 
     repository = ImportRunRepository(session)
     repository.add_snapshot(
