@@ -2601,8 +2601,7 @@ def _print_pmc_acquisition_footer(summary: dict[str, int]) -> None:
     failed = summary["failed"]
     reused = summary["skipped"]
     console.print(
-        f"PMC acquisition completed with {persisted} persisted, {failed} failed, "
-        f"{reused} reused."
+        f"PMC acquisition completed with {persisted} persisted, {failed} failed, {reused} reused."
     )
     console.print("Verified PMC documents were downloaded before parsing and persistence.")
     console.print("ImportRun and ImportItem records link each candidate to its matched Paper.")
