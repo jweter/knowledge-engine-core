@@ -437,10 +437,13 @@ itself, but may need to trigger for a specific paper):**
   `eligible_full_text` items routed to `pmc_oa`. It rebuilds the plan with
   database-backed reuse detection, resolves its exact PMIDs through current
   PMC Cloud OA metadata, requires reusable license evidence, and delegates
-  downloads to the existing atomic approval-gated PMC service. The durable
-  receipt preserves search-run, research-question, provider-neutral candidate,
-  PMID/PMCID, license, filename, byte count, and SHA-256 provenance. It does
-  not yet create `Paper`/import-run rows or parse the PDFs.
+  downloads to the existing atomic approval-gated PMC service. Before parsing,
+  it reconciles safe filenames, byte counts, SHA-256 digests, and plan/receipt
+  identity. It then persists or reuses each `Paper`, creates one immutable
+  `ImportRun` with a snapshot of the plan/acquisition/persistence facts, and
+  creates one `ImportItem` per candidate linked to the resulting Paper. The
+  additive receipt fields `import_run_id` and per-item `import_item_id`
+  expose that durable lineage while preserving every prior receipt field.
 
 - `ke general-question-acquisition-plan <request.json> --ledger-root <dir>
   [--output <path.json>] [--no-database]` (CORE-GQR-1/GQR-2,
