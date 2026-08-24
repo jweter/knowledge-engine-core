@@ -14,6 +14,7 @@ from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from sqlalchemy.orm import Session
 
@@ -38,6 +39,15 @@ class AcquisitionDisposition(StrEnum):
     METADATA_ONLY = "metadata_only"
     SKIPPED_BUDGET = "skipped_budget"
     NOT_FOUND_IN_RUN = "not_found_in_run"
+
+
+class AcquisitionRoute(StrEnum):
+    """Supported, independently validated full-text acquisition mechanisms."""
+
+    PMC_OA = "pmc_oa"
+    EUROPE_PMC_OA = "europe_pmc_oa"
+    CORE = "core"
+    UNPAYWALL = "unpaywall"
 
 
 @dataclass(frozen=True)
@@ -118,6 +128,7 @@ class AcquisitionPlanItem:
     disposition: str
     identity: AcquisitionIdentity | None
     selected_observation_provider: str | None
+    acquisition_route: str | None
     full_text_url: str | None
     xml_url: str | None
     license: str | None
@@ -200,6 +211,7 @@ def build_acquisition_plan(
                     disposition=AcquisitionDisposition.NOT_FOUND_IN_RUN.value,
                     identity=None,
                     selected_observation_provider=None,
+                    acquisition_route=None,
                     full_text_url=None,
                     xml_url=None,
                     license=None,
@@ -238,13 +250,13 @@ def build_acquisition_plan(
             items.append(_budget_item(candidate, identity))
             continue
 
-        observation = _best_acquisition_observation(candidate)
-        has_full_text = observation is not None and bool(
-            observation.full_text_url or observation.xml_url
+        routed_observation = _best_acquisition_observation(candidate)
+        route, observation = (
+            routed_observation if routed_observation is not None else (None, None)
         )
         full_text_allowed = (
-            has_full_text
-            and observation is not None
+            observation is not None
+            and route is not None
             and not _candidate_has_retraction_signal(candidate)
             and _observation_is_license_or_oa_eligible(observation)
         )
@@ -256,6 +268,7 @@ def build_acquisition_plan(
                     candidate,
                     observation,
                     identity,
+                    route=route,
                     disposition=AcquisitionDisposition.ELIGIBLE_FULL_TEXT,
                     reason=None,
                 )
@@ -269,6 +282,7 @@ def build_acquisition_plan(
                     candidate,
                     observation,
                     identity,
+                    route=route,
                     disposition=AcquisitionDisposition.SKIPPED_BUDGET,
                     reason="full_text_acquisition_budget_exhausted",
                 )
@@ -282,6 +296,7 @@ def build_acquisition_plan(
                     candidate,
                     observation,
                     identity,
+                    route=None,
                     disposition=AcquisitionDisposition.METADATA_ONLY,
                     reason="no_eligible_open_full_text_location",
                 )
@@ -293,6 +308,7 @@ def build_acquisition_plan(
                     candidate,
                     observation,
                     identity,
+                    route=None,
                     disposition=AcquisitionDisposition.SKIPPED_BUDGET,
                     reason="metadata_only_disabled",
                 )
@@ -334,21 +350,48 @@ def _validate_request_against_run(
 
 def _best_acquisition_observation(
     candidate: CandidateRecord,
-) -> CandidateObservationRecord | None:
-    if not candidate.observations:
+) -> tuple[AcquisitionRoute, CandidateObservationRecord] | None:
+    """Choose only observations backed by a supported acquisition mechanism."""
+
+    routed = tuple(
+        (route, observation)
+        for observation in candidate.observations
+        if (route := _acquisition_route(observation)) is not None
+    )
+    if not routed:
         return None
+    route_priority = {route: ordinal for ordinal, route in enumerate(AcquisitionRoute)}
     return min(
-        candidate.observations,
+        routed,
         key=lambda item: (
-            0
-            if _observation_is_license_or_oa_eligible(item) and (item.full_text_url or item.xml_url)
-            else 1,
-            0 if item.pmcid and (item.full_text_url or item.xml_url) else 1,
-            0 if item.full_text_url or item.xml_url else 1,
-            item.provider,
-            item.provider_id,
+            route_priority[item[0]],
+            0 if _observation_is_license_or_oa_eligible(item[1]) else 1,
+            item[1].provider,
+            item[1].provider_id,
         ),
     )
+
+
+def _acquisition_route(observation: CandidateObservationRecord) -> AcquisitionRoute | None:
+    """Map snapshot evidence to an existing, validation-gated acquisition path."""
+
+    url = observation.full_text_url or observation.xml_url
+    if not url:
+        return None
+    hostname = (urlsplit(url).hostname or "").lower()
+    provider = observation.provider.lower().replace("-", "_")
+
+    # A PMCID is routed back through the dedicated PMC OA service, which
+    # independently verifies approval evidence and its official download host.
+    if observation.pmcid:
+        return AcquisitionRoute.PMC_OA
+    if provider in {"europepmc", "europe_pmc"} and hostname == "europepmc.org":
+        return AcquisitionRoute.EUROPE_PMC_OA
+    if provider == "core" and hostname == "core.ac.uk":
+        return AcquisitionRoute.CORE
+    if provider == "unpaywall":
+        return AcquisitionRoute.UNPAYWALL
+    return None
 
 
 def _candidate_has_retraction_signal(candidate: CandidateRecord) -> bool:
@@ -400,6 +443,7 @@ def _budget_item(candidate: CandidateRecord, identity: AcquisitionIdentity) -> A
         disposition=AcquisitionDisposition.SKIPPED_BUDGET.value,
         identity=identity,
         selected_observation_provider=None,
+        acquisition_route=None,
         full_text_url=None,
         xml_url=None,
         license=None,
@@ -414,6 +458,7 @@ def _item_from_observation(
     observation: CandidateObservationRecord | None,
     identity: AcquisitionIdentity,
     *,
+    route: AcquisitionRoute | None,
     disposition: AcquisitionDisposition,
     reason: str | None,
 ) -> AcquisitionPlanItem:
@@ -423,6 +468,7 @@ def _item_from_observation(
         disposition=disposition.value,
         identity=identity,
         selected_observation_provider=observation.provider if observation else None,
+        acquisition_route=route.value if route is not None else None,
         full_text_url=observation.full_text_url if observation else None,
         xml_url=observation.xml_url if observation else None,
         license=observation.license if observation else None,
@@ -492,6 +538,7 @@ __all__ = [
     "ACQUISITION_SCHEMA_VERSION",
     "AcquisitionDisposition",
     "AcquisitionIdentity",
+    "AcquisitionRoute",
     "AcquisitionPlanItem",
     "GeneralQuestionAcquisitionPlan",
     "GeneralQuestionAcquisitionRequest",
