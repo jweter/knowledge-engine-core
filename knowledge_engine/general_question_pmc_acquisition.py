@@ -14,7 +14,7 @@ from knowledge_engine.general_question_acquisition import (
     GeneralQuestionAcquisitionPlan,
 )
 from knowledge_engine.license_rules import evaluate_license
-from knowledge_engine.pmc_acquisition import AcquisitionReceipt, PmcOaAcquisitionService
+from knowledge_engine.pmc_acquisition import AcquisitionReceipt
 from knowledge_engine.pubmed_discovery import PubmedCandidate
 
 
