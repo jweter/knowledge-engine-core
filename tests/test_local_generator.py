@@ -51,7 +51,7 @@ def test_model_id_rejects_an_unidentifiable_runtime() -> None:
         version_resolver=missing,
     )
 
-    with pytest.raises(LocalEmbeddingError, match="cannot identify.*not installed"):
+    with pytest.raises(LocalEmbeddingError, match="Cannot identify.*not installed"):
         _ = generator.model_id
 
 
