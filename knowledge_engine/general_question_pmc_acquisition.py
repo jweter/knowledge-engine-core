@@ -292,9 +292,12 @@ def persist_pmc_acquisition_execution(
         if item.disposition == AcquisitionDisposition.ELIGIBLE_FULL_TEXT.value
         and item.acquisition_route == AcquisitionRoute.PMC_OA.value
     }
-    if receipt.acquired_count != len(receipt.items) or set(planned) != {
-        item.candidate_id for item in receipt.items
-    }:
+    received_ids = [item.candidate_id for item in receipt.items]
+    if (
+        receipt.acquired_count != len(receipt.items)
+        or len(set(received_ids)) != len(received_ids)
+        or set(planned) != set(received_ids)
+    ):
         raise GeneralQuestionPmcAcquisitionError(
             "PMC acquisition receipt identities did not reconcile with the plan."
         )
