@@ -364,8 +364,8 @@ def _best_acquisition_observation(
     return min(
         routed,
         key=lambda item: (
-            route_priority[item[0]],
             0 if _observation_is_license_or_oa_eligible(item[1]) else 1,
+            route_priority[item[0]],
             item[1].provider,
             item[1].provider_id,
         ),
