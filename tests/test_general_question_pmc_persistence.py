@@ -170,15 +170,17 @@ def test_rejects_tampered_acquisition_before_parsing_or_persistence(tmp_path: Pa
     execution = _execution(papers_dir)
     (papers_dir / "PMC12345.pdf").write_bytes(b"tampered")
 
-    with pytest.raises(GeneralQuestionPmcAcquisitionError, match="size did not match"):
-        with database.session() as session:
-            persist_pmc_acquisition_execution(
-                session,
-                _plan(),
-                execution,
-                output_directory=papers_dir,
-                parser=FakeParser(),
-            )
+    with (
+        pytest.raises(GeneralQuestionPmcAcquisitionError, match="size did not match"),
+        database.session() as session,
+    ):
+        persist_pmc_acquisition_execution(
+            session,
+            _plan(),
+            execution,
+            output_directory=papers_dir,
+            parser=FakeParser(),
+        )
 
     with database.session() as session:
         assert session.scalar(select(Paper)) is None
