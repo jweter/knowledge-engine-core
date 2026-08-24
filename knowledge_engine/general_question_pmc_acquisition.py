@@ -190,11 +190,13 @@ def execute_pmc_acquisition_plan(
             ) from exc
 
     if acquired.acquired_count != len(pmids):
+        _rollback_acquired_files(output_directory, acquired)
         raise GeneralQuestionPmcAcquisitionError(
             "PMC acquisition receipt count did not reconcile with the plan."
         )
     acquired_by_pmid = {item.pmid: item for item in acquired.items}
     if len(acquired_by_pmid) != len(acquired.items) or set(acquired_by_pmid) != set(pmids):
+        _rollback_acquired_files(output_directory, acquired)
         raise GeneralQuestionPmcAcquisitionError(
             "PMC acquisition receipt identities did not reconcile with the plan."
         )
@@ -223,6 +225,18 @@ def execute_pmc_acquisition_plan(
         ),
         acquisition_receipt=acquired,
     )
+
+
+def _rollback_acquired_files(
+    output_directory: Path, receipt: AcquisitionReceipt
+) -> None:
+    try:
+        for item in receipt.items:
+            (output_directory / item.filename).unlink(missing_ok=True)
+    except OSError as exc:
+        raise GeneralQuestionPmcAcquisitionError(
+            "PMC acquisition receipt reconciliation failed and rollback was incomplete."
+        ) from exc
 
 
 __all__ = [
