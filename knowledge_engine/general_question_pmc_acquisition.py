@@ -433,13 +433,17 @@ def _record_pmc_import_run(
     now = utc_now()
     import_run_id = new_uuid()
     snapshot_id = new_uuid()
+    item_ids = tuple(new_uuid() for _ in persistence_items)
     corpus_path = f"gqr://search-runs/{plan.search_run_id}"
     snapshot_payload = {
         "schema_version": 1,
         "kind": "general_question_pmc_import",
         "plan": plan.to_dict(),
         "acquisition_receipt": asdict(receipt),
-        "persistence_items": [asdict(item) for item in persistence_items],
+        "persistence_items": [
+            {**asdict(item), "import_item_id": import_item_id}
+            for item, import_item_id in zip(persistence_items, item_ids, strict=True)
+        ],
     }
     snapshot_text = json.dumps(snapshot_payload, indent=2, sort_keys=True) + "\n"
     snapshot_bytes = snapshot_text.encode("utf-8")
@@ -492,17 +496,15 @@ def _record_pmc_import_run(
     )
 
     plan_by_candidate = {item.candidate_id: item for item in plan.items}
-    item_ids: list[str] = []
     import_items: list[ImportItem] = []
-    for ordinal, persisted in enumerate(persistence_items, start=2):
+    linked_items = zip(persistence_items, item_ids, strict=True)
+    for ordinal, (persisted, import_item_id) in enumerate(linked_items, start=2):
         plan_item = plan_by_candidate[persisted.candidate_id]
         identity = plan_item.identity
         if identity is None:
             raise GeneralQuestionPmcAcquisitionError(
                 "Persisted PMC item lost its acquisition-plan identity."
             )
-        import_item_id = new_uuid()
-        item_ids.append(import_item_id)
         duplicate_evidence = {
             "schema_version": 1,
             "search_run_id": plan.search_run_id,
@@ -560,7 +562,7 @@ def _record_pmc_import_run(
     persisted_run = repository.get_run(import_run_id)
     if persisted_run is None or len(persisted_run.items) != len(import_items):
         raise RuntimeError("PMC import-run provenance was not readable after persistence.")
-    return import_run_id, tuple(item_ids)
+    return import_run_id, item_ids
 
 
 def _rollback_acquired_files(output_directory: Path, receipt: AcquisitionReceipt) -> None:
