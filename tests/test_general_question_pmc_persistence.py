@@ -10,7 +10,6 @@ from typer.testing import CliRunner
 
 import knowledge_engine.cli as cli
 from knowledge_engine.cli import app
-
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database
 from knowledge_engine.general_question_acquisition import (
