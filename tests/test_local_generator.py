@@ -37,8 +37,7 @@ def test_model_id_reflects_model_and_embedding_runtime() -> None:
     )
 
     assert generator.model_id == (
-        "local:a-model|runtime:"
-        "sentence-transformers=6.0.0,transformers=5.0.0,torch=2.9.0+cpu"
+        "local:a-model|runtime:sentence-transformers=6.0.0,transformers=5.0.0,torch=2.9.0+cpu"
     )
 
 
