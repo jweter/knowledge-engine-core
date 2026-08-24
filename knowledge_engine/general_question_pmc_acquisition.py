@@ -108,9 +108,7 @@ def execute_pmc_acquisition_plan(
                 "Every planned PMC route must carry a valid PMID."
             )
         if pmid in candidate_ids_by_pmid:
-            raise GeneralQuestionPmcAcquisitionError(
-                "Planned PMC routes contain a duplicate PMID."
-            )
+            raise GeneralQuestionPmcAcquisitionError("Planned PMC routes contain a duplicate PMID.")
         candidate_ids_by_pmid[pmid] = item.candidate_id
         pmids.append(pmid)
 
@@ -185,9 +183,7 @@ def execute_pmc_acquisition_plan(
                 expected_count=len(approvals),
             )
         except (OSError, RuntimeError, ValueError) as exc:
-            raise GeneralQuestionPmcAcquisitionError(
-                "Planned PMC acquisition failed."
-            ) from exc
+            raise GeneralQuestionPmcAcquisitionError("Planned PMC acquisition failed.") from exc
 
     if acquired.acquired_count != len(pmids):
         _rollback_acquired_files(output_directory, acquired)
@@ -227,9 +223,7 @@ def execute_pmc_acquisition_plan(
     )
 
 
-def _rollback_acquired_files(
-    output_directory: Path, receipt: AcquisitionReceipt
-) -> None:
+def _rollback_acquired_files(output_directory: Path, receipt: AcquisitionReceipt) -> None:
     try:
         for item in receipt.items:
             (output_directory / item.filename).unlink(missing_ok=True)
