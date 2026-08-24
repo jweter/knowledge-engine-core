@@ -139,6 +139,7 @@ from knowledge_engine.general_question_acquisition import (
 from knowledge_engine.general_question_pmc_acquisition import (
     GeneralQuestionPmcAcquisitionError,
     execute_pmc_acquisition_plan,
+    persist_pmc_acquisition_execution,
 )
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
@@ -5745,20 +5746,38 @@ def general_question_acquire_pmc(
         raise typer.Exit(1) from exc
 
     try:
-        _write_output(receipt, execution.receipt.to_json())
+        with database.session() as session:
+            persistence_receipt = persist_pmc_acquisition_execution(
+                session,
+                plan,
+                execution,
+                output_directory=papers_dir,
+            )
+            _write_output(receipt, persistence_receipt.to_json())
     except typer.BadParameter:
         _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
         raise typer.BadParameter(
-            "Receipt output could not be written; acquired PDFs were rolled back."
+            "Receipt output could not be written; acquired PDFs and Paper writes "
+            "were rolled back."
         ) from None
+    except GeneralQuestionPmcAcquisitionError as exc:
+        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
+        console.print(
+            f"[red]General-question PMC persistence failed:[/red] {escape(str(exc))}"
+        )
+        raise typer.Exit(1) from exc
+    except Exception:
+        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
+        raise
 
     console.print(
-        f"[green]Acquired {execution.receipt.acquired_count} planned PMC OA PDFs.[/green] "
-        f"Receipt: {receipt}"
+        f"[green]Acquired and parsed {persistence_receipt.parsed_count} planned PMC OA "
+        f"PDFs.[/green] Receipt: {receipt}"
     )
     console.print(
-        "[bold]Receipt preserves search-run and candidate provenance; parsing and "
-        "Paper persistence remain the next CORE-GQR-4 slice.[/bold]"
+        f"[bold]Persisted {persistence_receipt.persisted_count} new Papers and reused "
+        f"{persistence_receipt.reused_count} existing Papers with search-run and "
+        "candidate provenance preserved in the receipt.[/bold]"
     )
 
 
