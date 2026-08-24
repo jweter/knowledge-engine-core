@@ -223,7 +223,10 @@ def test_build_embedding_generator_openai_requires_an_api_key(
 def test_build_embedding_generator_returns_a_real_embedding_generator() -> None:
     generator: EmbeddingGenerator = entrypoint._build_embedding_generator("local", None)
 
-    assert generator.model_id == "local:all-MiniLM-L6-v2"
+    assert generator.model_id.startswith("local:all-MiniLM-L6-v2|runtime:")
+    assert "sentence-transformers=" in generator.model_id
+    assert "transformers=" in generator.model_id
+    assert "torch=" in generator.model_id
 
 
 def test_embedding_generate_reports_an_unknown_openai_model_cleanly(

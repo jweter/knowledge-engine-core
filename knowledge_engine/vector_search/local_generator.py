@@ -13,6 +13,7 @@ or third-party data transfer, at the cost of a real new dependency
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from importlib import metadata
 from typing import Protocol, cast
 
 DEFAULT_MODEL_NAME = "all-MiniLM-L6-v2"
@@ -37,6 +38,8 @@ class SentenceEncoder(Protocol):
 
 
 ModelLoader = Callable[[str], SentenceEncoder]
+VersionResolver = Callable[[str], str]
+_RUNTIME_DEPENDENCIES = ("sentence-transformers", "transformers", "torch")
 
 
 def _load_sentence_transformer(model_name: str) -> SentenceEncoder:
@@ -60,16 +63,35 @@ class SentenceTransformerEmbeddingGenerator:
         *,
         model_name: str = DEFAULT_MODEL_NAME,
         model_loader: ModelLoader | None = None,
+        version_resolver: VersionResolver | None = None,
     ) -> None:
         if not model_name or not model_name.strip():
             raise LocalEmbeddingError("A model name is required.")
         self._model_name = model_name
         self._model_loader = model_loader or _load_sentence_transformer
+        self._version_resolver = version_resolver or metadata.version
         self._model: SentenceEncoder | None = None
 
     @property
     def model_id(self) -> str:
-        return f"local:{self._model_name}"
+        """Identify both model weights and the runtime that produced a vector.
+
+        sentence-transformers major releases can change numerical behavior
+        without changing the configured Hugging Face model name. Including
+        the direct embedding runtime versions makes vector ingestion/search
+        fail closed instead of silently mixing incompatible generations.
+        """
+
+        try:
+            runtime = ",".join(
+                f"{package}={self._version_resolver(package)}" for package in _RUNTIME_DEPENDENCIES
+            )
+        except metadata.PackageNotFoundError as error:
+            package = error.name or "embedding runtime dependency"
+            raise LocalEmbeddingError(
+                f"Cannot identify local embedding runtime: {package} is not installed."
+            ) from error
+        return f"local:{self._model_name}|runtime:{runtime}"
 
     @property
     def dimension(self) -> int:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from importlib import metadata
+
 import pytest
 
 from knowledge_engine.vector_search import (
@@ -22,12 +24,34 @@ class _FakeEncoder:
         return self._dimension
 
 
-def test_model_id_reflects_configured_model_name() -> None:
+def test_model_id_reflects_model_and_embedding_runtime() -> None:
+    versions = {
+        "sentence-transformers": "6.0.0",
+        "transformers": "5.0.0",
+        "torch": "2.9.0+cpu",
+    }
     generator = SentenceTransformerEmbeddingGenerator(
-        model_name="a-model", model_loader=lambda name: _FakeEncoder()
+        model_name="a-model",
+        model_loader=lambda name: _FakeEncoder(),
+        version_resolver=versions.__getitem__,
     )
 
-    assert generator.model_id == "local:a-model"
+    assert generator.model_id == (
+        "local:a-model|runtime:sentence-transformers=6.0.0,transformers=5.0.0,torch=2.9.0+cpu"
+    )
+
+
+def test_model_id_rejects_an_unidentifiable_runtime() -> None:
+    def missing(package: str) -> str:
+        raise metadata.PackageNotFoundError(package)
+
+    generator = SentenceTransformerEmbeddingGenerator(
+        model_loader=lambda name: _FakeEncoder(),
+        version_resolver=missing,
+    )
+
+    with pytest.raises(LocalEmbeddingError, match="Cannot identify.*not installed"):
+        _ = generator.model_id
 
 
 def test_defaults_to_default_model_name() -> None:
