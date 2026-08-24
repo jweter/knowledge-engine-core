@@ -141,6 +141,25 @@ class PubmedPmcDiscoveryService:
             raise ValueError("Discovery retstart must be non-negative.")
 
         pmids = self._search(normalized_query, limit=limit, retstart=retstart)
+        return DiscoveryResult(
+            query=normalized_query,
+            retstart=retstart,
+            limit=limit,
+            candidates=self._resolve_candidates(pmids),
+        )
+
+    def resolve_pmids(self, pmids: tuple[str, ...]) -> tuple[PubmedCandidate, ...]:
+        """Resolve an explicit bounded PMID selection without running a new search."""
+
+        if not 1 <= len(pmids) <= 100:
+            raise ValueError("PMID resolution requires between 1 and 100 identifiers.")
+        if len(set(pmids)) != len(pmids):
+            raise ValueError("PMID resolution identifiers must be unique.")
+        if any(not pmid.isdigit() for pmid in pmids):
+            raise ValueError("PMID resolution identifiers must contain only digits.")
+        return self._resolve_candidates(list(pmids))
+
+    def _resolve_candidates(self, pmids: list[str]) -> tuple[PubmedCandidate, ...]:
         metadata = self._fetch_metadata(pmids)
         pmc_links = self._link_pmc(pmids)
 
@@ -169,12 +188,7 @@ class PubmedPmcDiscoveryService:
                     oa_source="pmc_cloud_service" if oa else None,
                 )
             )
-        return DiscoveryResult(
-            query=normalized_query,
-            retstart=retstart,
-            limit=limit,
-            candidates=tuple(candidates),
-        )
+        return tuple(candidates)
 
     def _search(self, query: str, *, limit: int, retstart: int) -> list[str]:
         body = self._get_json(
