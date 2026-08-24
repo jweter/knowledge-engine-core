@@ -22,11 +22,11 @@ from knowledge_engine.general_question_pmc_acquisition import (
     persist_pmc_acquisition_execution,
 )
 from knowledge_engine.models import Paper
-from knowledge_engine.parser import ParsedPaper
+from knowledge_engine.parser import DocumentParser, ParsedPaper
 from knowledge_engine.pmc_acquisition import AcquisitionReceipt, AcquisitionReceiptItem
 
 
-class FakeParser:
+class FakeParser(DocumentParser):
     def parse(self, path: Path) -> ParsedPaper:
         content = path.read_bytes()
         digest = sha256(content).hexdigest()
