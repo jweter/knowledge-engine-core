@@ -201,10 +201,13 @@ candidate identities, rejects unsafe filenames, and rechecks byte counts and
 SHA-256 digests. It then persists parsed text with DOI/PMID/arXiv identity or
 reuses an existing Paper by content hash or stable identity. The persistence
 receipt retains search-run, research-question, candidate, PMID, PMCID, file
-digest, Paper ID, and persisted/reused disposition. Receipt-output or
-persistence failure rolls back both the batch's database transaction and its
-newly acquired PDFs. Durable ImportRun/ImportItem linkage is the next
-CORE-GQR-4 slice; Europe PMC, CORE, and Unpaywall route execution remain
+digest, Paper ID, and persisted/reused disposition. The same transaction now
+adds one immutable `ImportRun` snapshot of the bounded plan, acquisition
+receipt, and persistence outcomes plus one `ImportItem` per candidate linked
+to its Paper; the public receipt exposes those import-run/item IDs additively.
+Receipt-output or persistence failure rolls back both the batch's database
+transaction and its newly acquired PDFs. CORE-GQR-4's PMC persistence path is
+therefore complete; Europe PMC, CORE, and Unpaywall route execution remain
 subsequent provider adapters.
 
 ### CORE-GQR-5 - Grounded extraction and promotion
