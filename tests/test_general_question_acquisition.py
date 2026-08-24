@@ -795,9 +795,11 @@ def _plan_for_observations(
             for provider in sorted({item.provider for item in observations})
         ),
     )
-    run_id = FederatedSearchLedger(tmp_path).record(
-        result, research_question_id="rq-routing"
-    ).search_run_id
+    run_id = (
+        FederatedSearchLedger(tmp_path)
+        .record(result, research_question_id="rq-routing")
+        .search_run_id
+    )
     request = GeneralQuestionAcquisitionRequest(
         schema_version=1,
         search_run_id=run_id,
