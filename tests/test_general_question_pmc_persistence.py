@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
+import json
 from pathlib import Path
 
 import pytest
@@ -21,7 +22,7 @@ from knowledge_engine.general_question_pmc_acquisition import (
     GeneralQuestionPmcReceiptItem,
     persist_pmc_acquisition_execution,
 )
-from knowledge_engine.models import Paper
+from knowledge_engine.models import ImportItem, ImportRun, Paper
 from knowledge_engine.parser import DocumentParser, ParsedPaper
 from knowledge_engine.pmc_acquisition import AcquisitionReceipt, AcquisitionReceiptItem
 
@@ -155,6 +156,7 @@ def test_persists_verified_acquisition_with_plan_identity(tmp_path: Path) -> Non
     assert result.persisted_count == 1
     assert result.reused_count == 0
     assert result.items[0].persistence_status == "persisted"
+    assert result.items[0].import_item_id is not None
     with database.session() as session:
         paper = session.scalar(select(Paper))
         assert paper is not None
@@ -162,6 +164,25 @@ def test_persists_verified_acquisition_with_plan_identity(tmp_path: Path) -> Non
         assert paper.doi == "10.1000/creatine"
         assert paper.pmid == "12345"
         assert paper.source_path.endswith("PMC12345.pdf")
+        import_run = session.scalar(select(ImportRun))
+        assert import_run is not None
+        assert import_run.import_run_id == result.import_run_id
+        assert import_run.run_status == "succeeded"
+        assert import_run.validation_mode == "gqr_pmc_acquisition"
+        assert import_run.total_source_rows == 1
+        assert import_run.manifest_snapshot.corpus_json_sha256
+        snapshot = json.loads(import_run.manifest_snapshot.corpus_json_text)
+        assert snapshot["kind"] == "general_question_pmc_import"
+        assert snapshot["plan"]["search_run_id"] == "run-123"
+        item = session.scalar(select(ImportItem))
+        assert item is not None
+        assert item.import_item_id == result.items[0].import_item_id
+        assert item.item_status == "imported"
+        assert item.matched_paper_id == paper.id
+        assert item.computed_content_hash == execution.receipt.items[0].sha256
+        duplicate_evidence = json.loads(item.duplicate_evidence_json or "{}")
+        assert duplicate_evidence["search_run_id"] == "run-123"
+        assert duplicate_evidence["pmcid"] == "PMC12345"
 
 
 def test_rejects_tampered_acquisition_before_parsing_or_persistence(tmp_path: Path) -> None:
@@ -184,6 +205,7 @@ def test_rejects_tampered_acquisition_before_parsing_or_persistence(tmp_path: Pa
 
     with database.session() as session:
         assert session.scalar(select(Paper)) is None
+        assert session.scalar(select(ImportRun)) is None
 
 
 def test_reuses_existing_paper_by_stable_identity(tmp_path: Path) -> None:
@@ -215,5 +237,11 @@ def test_reuses_existing_paper_by_stable_identity(tmp_path: Path) -> None:
     assert result.persisted_count == 0
     assert result.reused_count == 1
     assert result.items[0].persistence_status == "reused"
+    assert result.items[0].import_item_id is not None
     with database.session() as session:
         assert len(list(session.scalars(select(Paper)))) == 1
+        item = session.scalar(select(ImportItem))
+        assert item is not None
+        assert item.item_status == "skipped"
+        assert item.duplicate_outcome == "reused_existing_paper"
+        assert item.matched_paper_id == result.items[0].paper_id
