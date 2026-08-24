@@ -252,9 +252,7 @@ def build_acquisition_plan(
             continue
 
         routed_observation = _best_acquisition_observation(candidate)
-        route, observation = (
-            routed_observation if routed_observation is not None else (None, None)
-        )
+        route, observation = routed_observation if routed_observation is not None else (None, None)
         full_text_allowed = (
             observation is not None
             and route is not None
