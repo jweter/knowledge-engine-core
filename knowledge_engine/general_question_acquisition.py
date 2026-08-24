@@ -235,6 +235,7 @@ def build_acquisition_plan(
                     disposition=AcquisitionDisposition.ALREADY_INDEXED.value,
                     identity=identity,
                     selected_observation_provider=None,
+                    acquisition_route=None,
                     full_text_url=None,
                     xml_url=None,
                     license=None,
