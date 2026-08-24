@@ -173,6 +173,17 @@ Route eligible candidates through existing mechanisms where possible:
 
 No provider gets an implicit trust exemption.
 
+**Status:** deterministic route selection is complete at the acquisition-plan
+boundary. Every `eligible_full_text` item now names one supported
+`acquisition_route` (`pmc_oa`, `europe_pmc_oa`, `core`, or
+`unpaywall`). PMC, Europe PMC, and CORE routes require their official
+allowlisted full-text hosts; an otherwise OA/licensed URL from an unsupported
+provider degrades to `metadata_only` instead of becoming an implicit direct
+download. Route priority is stable (PMC, Europe PMC, CORE, Unpaywall), and the
+existing provider-specific services remain responsible for independently
+validating access evidence before acquisition. Executing the routes and
+persisting their durable receipts belongs to CORE-GQR-4.
+
 ### CORE-GQR-4 - Persist and parse
 - create/import paper/source records;
 - parse newly acquired full text;

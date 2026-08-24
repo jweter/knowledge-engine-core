@@ -9,6 +9,16 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Deterministic acquisition routes (CORE-GQR-3)**:
+  `ke general-question-acquisition-plan` now adds an `acquisition_route`
+  to every `eligible_full_text` item, selecting only the existing PMC OA,
+  Europe PMC OA, CORE, or Unpaywall mechanisms in stable priority order.
+  Official-host checks protect the PMC, Europe PMC, and CORE routes; an
+  arbitrary OA/licensed URL from any other provider now degrades safely to
+  `metadata_only` rather than implying permission for a direct download.
+  This is an additive JSON field; route execution and receipt persistence
+  remain CORE-GQR-4.
+
 - **`ke general-question-acquisition-plan` CLI command (CORE-GQR-1/GQR-2)**:
   the first CLI surface for `general_question_acquisition.py`'s bounded
   acquisition planner. Reads a JSON `GeneralQuestionAcquisitionRequest`,
