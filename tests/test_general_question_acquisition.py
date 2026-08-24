@@ -20,6 +20,7 @@ from knowledge_engine.federated_search_ledger import FederatedSearchLedger
 from knowledge_engine.general_question_acquisition import (
     AcquisitionDisposition,
     AcquisitionRoute,
+    GeneralQuestionAcquisitionPlan,
     GeneralQuestionAcquisitionRequest,
     build_acquisition_plan,
 )
@@ -772,7 +773,7 @@ def test_pmc_route_wins_over_less_authoritative_supported_location(tmp_path: Pat
 def _plan_for_observations(
     tmp_path: Path,
     observations: tuple[ProviderObservation, ...],
-):
+) -> GeneralQuestionAcquisitionPlan:
     candidate = FederatedCandidate(
         canonical_id="doi:10.1000/routed",
         title="Routed paper",
