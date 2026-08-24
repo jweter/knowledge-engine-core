@@ -6,6 +6,10 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import select
+from typer.testing import CliRunner
+
+import knowledge_engine.cli as cli
+from knowledge_engine.cli import app
 
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database
@@ -138,7 +142,10 @@ def _execution(papers_dir: Path) -> GeneralQuestionPmcExecution:
     )
 
 
-def test_persists_verified_acquisition_with_plan_identity(tmp_path: Path) -> None:
+def test_persists_verified_acquisition_with_plan_identity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     database = _database(tmp_path)
     papers_dir = tmp_path / "papers"
     execution = _execution(papers_dir)
@@ -186,6 +193,12 @@ def test_persists_verified_acquisition_with_plan_identity(tmp_path: Path) -> Non
         duplicate_evidence = json.loads(item.duplicate_evidence_json or "{}")
         assert duplicate_evidence["search_run_id"] == "run-123"
         assert duplicate_evidence["pmcid"] == "PMC12345"
+
+    monkeypatch.setattr(cli, "_database", lambda: database)
+    rendered = CliRunner().invoke(app, ["corpus-run-show", result.import_run_id])
+    assert rendered.exit_code == 0
+    assert "Verified PMC documents were downloaded" in rendered.output
+    assert "No URLs were followed and no documents were downloaded." not in rendered.output
 
 
 def test_rejects_tampered_acquisition_before_parsing_or_persistence(tmp_path: Path) -> None:
