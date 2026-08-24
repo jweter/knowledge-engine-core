@@ -5757,14 +5757,11 @@ def general_question_acquire_pmc(
     except typer.BadParameter:
         _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
         raise typer.BadParameter(
-            "Receipt output could not be written; acquired PDFs and Paper writes "
-            "were rolled back."
+            "Receipt output could not be written; acquired PDFs and Paper writes were rolled back."
         ) from None
     except GeneralQuestionPmcAcquisitionError as exc:
         _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
-        console.print(
-            f"[red]General-question PMC persistence failed:[/red] {escape(str(exc))}"
-        )
+        console.print(f"[red]General-question PMC persistence failed:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
     except Exception:
         _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
