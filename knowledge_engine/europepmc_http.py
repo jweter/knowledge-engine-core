@@ -22,7 +22,19 @@ serves both discovery and acquisition -- mirroring `ncbi_http.py`'s
 `NCBI_HOSTS`, which combines the E-utilities hosts with `PMC_CLOUD_PDF_HOST`
 for the exact same reason."""
 
-EUROPEPMC_HOSTS = {EUROPEPMC_REST_HOST, EUROPEPMC_PDF_HOST}
+EUROPEPMC_PLUS_HOST = "plus.europepmc.org"
+"""Europe PMC's official submission repository download host.
+
+The public search response can retain an expired ``api/fulltextRepo`` URL for
+preprints.  Europe PMC's live metadata response supplies a current immutable
+download URL on this host instead.  General-question acquisition refreshes that
+metadata immediately before approval and never accepts a caller-supplied URL on
+this host without that independent reconciliation.
+"""
+
+EUROPEPMC_PDF_HOSTS = {EUROPEPMC_PDF_HOST, EUROPEPMC_PLUS_HOST}
+
+EUROPEPMC_HOSTS = {EUROPEPMC_REST_HOST, *EUROPEPMC_PDF_HOSTS}
 
 
 class ResponseTooLargeError(OSError):

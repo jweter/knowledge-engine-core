@@ -136,6 +136,11 @@ from knowledge_engine.general_question_acquisition import (
     GeneralQuestionAcquisitionRequest,
     build_acquisition_plan,
 )
+from knowledge_engine.general_question_europepmc_acquisition import (
+    GeneralQuestionEuropePmcAcquisitionError,
+    execute_europepmc_acquisition_plan,
+    persist_europepmc_acquisition_execution,
+)
 from knowledge_engine.general_question_pmc_acquisition import (
     GeneralQuestionPmcAcquisitionError,
     execute_pmc_acquisition_plan,
@@ -5770,6 +5775,83 @@ def general_question_acquire_pmc(
     console.print(
         f"[green]Acquired and parsed {persistence_receipt.parsed_count} planned PMC OA "
         f"PDFs.[/green] Receipt: {receipt}"
+    )
+    console.print(
+        f"[bold]Persisted {persistence_receipt.persisted_count} new Papers and reused "
+        f"{persistence_receipt.reused_count} existing Papers with search-run and "
+        "candidate provenance preserved in the receipt.[/bold]"
+    )
+
+
+@app.command("general-question-acquire-europe-pmc")
+def general_question_acquire_europe_pmc(
+    request_path: GeneralQuestionAcquisitionRequestArgument,
+    ledger_root: FederatedLedgerRootOption,
+    papers_dir: PapersDirectoryOption,
+    receipt: ReceiptOutputOption,
+    force: ForceOutputOption = False,
+) -> None:
+    """Execute eligible Europe PMC routes from one acquisition request (CORE-GQR-4)."""
+
+    _validate_output(receipt, force=force)
+    try:
+        request = GeneralQuestionAcquisitionRequest.from_json(
+            request_path.read_text(encoding="utf-8")
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    try:
+        database = _local_database()
+        database.initialize()
+        with database.session() as session:
+            plan = build_acquisition_plan(request, ledger_root=ledger_root, session=session)
+        console.print(
+            "[yellow]Network access:[/yellow] resolving planned DOIs and acquiring "
+            "license-verified PDFs from official Europe PMC resources."
+        )
+        execution = execute_europepmc_acquisition_plan(
+            plan,
+            resolver=_europepmc_discovery_service(),
+            acquisition_service=_europepmc_acquisition_service(),
+            output_directory=papers_dir,
+        )
+    except FileNotFoundError:
+        console.print(f"[red]No federated search run found:[/red] {escape(request.search_run_id)}")
+        raise typer.Exit(1) from None
+    except (ValueError, GeneralQuestionEuropePmcAcquisitionError) as exc:
+        console.print(
+            f"[red]General-question Europe PMC acquisition failed:[/red] {escape(str(exc))}"
+        )
+        raise typer.Exit(1) from exc
+
+    try:
+        with database.session() as session:
+            persistence_receipt = persist_europepmc_acquisition_execution(
+                session,
+                plan,
+                execution,
+                output_directory=papers_dir,
+            )
+            _write_output(receipt, persistence_receipt.to_json())
+    except typer.BadParameter:
+        _rollback_europepmc_acquired_files(papers_dir, execution.acquisition_receipt)
+        raise typer.BadParameter(
+            "Receipt output could not be written; acquired PDFs and Paper writes were rolled back."
+        ) from None
+    except GeneralQuestionEuropePmcAcquisitionError as exc:
+        _rollback_europepmc_acquired_files(papers_dir, execution.acquisition_receipt)
+        console.print(
+            f"[red]General-question Europe PMC persistence failed:[/red] {escape(str(exc))}"
+        )
+        raise typer.Exit(1) from exc
+    except Exception:
+        _rollback_europepmc_acquired_files(papers_dir, execution.acquisition_receipt)
+        raise
+
+    console.print(
+        f"[green]Acquired and parsed {persistence_receipt.parsed_count} planned Europe PMC "
+        f"OA PDFs.[/green] Receipt: {receipt}"
     )
     console.print(
         f"[bold]Persisted {persistence_receipt.persisted_count} new Papers and reused "

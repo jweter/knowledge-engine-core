@@ -1,6 +1,6 @@
 schema_version: 1
 project: knowledge-engine-core
-updated_at: "2026-08-24T00:00:00Z"
+updated_at: "2026-08-25T00:00:00Z"
 status_source: "Verified repository state plus docs/roadmap.md; this file is a continuity cache and never overrides higher-authority evidence (code, CI, live PR state, docs/roadmap.md)."
 
 product:
@@ -14,12 +14,12 @@ current_milestone:
   tracking_issue: "#402 (jweter/knowledge-engine-core), parent AI issue jweter/knowledge-engine-ai#69"
   state: "active"
   objective: "Turn persisted federated-discovery leads into bounded, auditable, reusable Evidence Records (query -> candidates -> acquisition -> ingestion -> extraction -> promotion) without weakening provenance, access, or grounding rules. This supersedes the now-foundational FRD sequence below as the current milestone: FRD-1..7 are complete/reachable infrastructure that GQR's Stage 3 (bounded federated discovery) consumes, not separate ongoing work."
-  updated_this_session: "2026-08-24: completed durable PMC persistence provenance for CORE-GQR-4. The acquisition command now verifies and parses downloaded PDFs, persists or reuses Papers, writes one immutable ImportRun snapshot plus per-candidate ImportItems linked to Papers, and exposes the import-run/item IDs in its additive receipt contract."
+  updated_this_session: "2026-08-25: completed the Europe PMC execution adapter for CORE-GQR-4. Exact planned DOIs are re-resolved, stale search-result PDF URLs are refreshed through Europe PMC's live full-text metadata endpoint, and current official PDFs are approval-gated, integrity-verified, parsed, persisted/reused, and linked to immutable ImportRun/ImportItem provenance."
   gqr_sub_milestone_status:
     CORE-GQR-1_schema: "implemented and merged (PR #404): GeneralQuestionAcquisitionRequest/GeneralQuestionAcquisitionPlan, stable JSON serialization, schema-version validation, persisted search-run candidate resolution via build_acquisition_plan()."
     CORE-GQR-2_identity_and_reuse: "DOI/PMID/arXiv-based already-indexed detection all implemented; schema version 13 added the two new persisted, uniquely indexed `papers` columns. This session closed the remaining ingestion-time gap: `CorpusIngestionService`/`LinkedCorpusIngestionService` (the real corpus-manifest ingestion path behind `ke corpus-import`) now populate `papers.pmid`/`papers.arxiv_id` for newly imported papers from `sources.csv`'s existing `pmid`/`arxiv_id` columns (schema version 14 added the `import_items.normalized_pmid`/`.normalized_arxiv_id` carrier columns this needed). `ke general-question-acquisition-plan` already passes a real database session into `build_acquisition_plan()` by default (`--no-database` to opt out) -- this was already true before this session; a prior version of this status line incorrectly said otherwise. Not yet done: no backfill for already-persisted (pre-existing) papers, and PMCID has no persisted column at all."
     CORE-GQR-3_acquisition_routing: "implemented and merged (PR #414): eligible_full_text items name a stable pmc_oa/europe_pmc_oa/core/unpaywall route; official-host checks gate PMC, Europe PMC, and CORE, and unsupported direct URLs degrade to metadata_only."
-    CORE-GQR-4_persist_and_parse: "PMC path complete -- exact PMIDs are re-resolved against current PMC Cloud OA evidence, downloaded atomically through the approval-gated service, integrity-verified, parsed, and persisted or reused as Papers. One immutable ImportRun and per-candidate ImportItems preserve plan/acquisition/persistence lineage and are exposed in the additive receipt. Europe PMC, CORE, and Unpaywall execution remain later adapters."
+    CORE-GQR-4_persist_and_parse: "PMC and Europe PMC paths complete. PMC re-resolves exact PMIDs against current PMC Cloud OA evidence. Europe PMC re-resolves exact DOIs and refreshes stale search-result URLs through current full-text metadata before accepting only official Europe PMC Plus downloads. Both routes download atomically, integrity-check, parse, persist/reuse Papers, and expose immutable ImportRun/per-candidate ImportItem lineage. CORE and Unpaywall execution remain later adapters."
     CORE-GQR-5_extraction_and_promotion: "not started."
     CORE-GQR-6_reuse_and_query_visibility: "not started."
   predecessor_milestone_frd_sequence:
@@ -93,11 +93,11 @@ verified_repository_state:
       cadence: "daily 06:30 UTC"
       note: "pushes to bot/discovery-cycle, opens no PR by design"
 
-active_work: "core-gqr-4-pmc-import-run-provenance -- link every verified PMC persistence outcome to immutable ImportRun/ImportItem records; leave for required CI before merge."
+active_work: "core-gqr-4-europe-pmc-adapter -- execute Europe PMC routes through exact DOI/live-metadata resolution and preserve the same atomic acquisition and durable import-lineage contract; leave for required CI before merge."
 
 next_continuation:
   priority: "P5-highest-value-authorized-roadmap"
-  action: "After this ImportRun/ImportItem provenance slice merges, continue CORE-GQR-4 with the next supported provider adapter (Europe PMC first by documented route priority), preserving the same approval, receipt, parsing, and import-lineage contract."
+  action: "After the Europe PMC adapter merges, continue CORE-GQR-4 with the next supported provider adapter (CORE by documented route priority), preserving the same approval, receipt, parsing, and import-lineage contract."
   selection_rule: "Before beginning roadmap work, query live PR state. Handle failed, green, blocked, conflicted, or pending existing work according to docs/agent-development-policy.md."
 
 human_decision_required: null

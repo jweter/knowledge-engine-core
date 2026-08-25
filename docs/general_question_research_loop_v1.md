@@ -190,7 +190,8 @@ persisting their durable receipts belongs to CORE-GQR-4.
 - attach import-run/acquisition receipt provenance;
 - keep failures independently inspectable.
 
-**Status:** the PMC route now acquires, verifies, parses, and persists Papers.
+**Status:** the PMC and Europe PMC routes now acquire, verify, parse, and
+persist Papers.
 `ke general-question-acquire-pmc <request.json> --ledger-root <dir>
 --papers-dir <dir> --receipt <path.json>` rebuilds the bounded plan with
 database-backed reuse detection, resolves the exact selected PMIDs against
@@ -206,9 +207,20 @@ adds one immutable `ImportRun` snapshot of the bounded plan, acquisition
 receipt, and persistence outcomes plus one `ImportItem` per candidate linked
 to its Paper; the public receipt exposes those import-run/item IDs additively.
 Receipt-output or persistence failure rolls back both the batch's database
-transaction and its newly acquired PDFs. CORE-GQR-4's PMC persistence path is
-therefore complete; Europe PMC, CORE, and Unpaywall route execution remain
-subsequent provider adapters.
+transaction and its newly acquired PDFs.
+
+`ke general-question-acquire-europe-pmc <request.json> --ledger-root <dir>
+--papers-dir <dir> --receipt <path.json>` provides the same contract for
+`europe_pmc_oa` items using DOI identity and Europe PMC IDs. Because Europe
+PMC search results can retain expired preprint PDF URLs, Core resolves each
+exact DOI and immediately refreshes it through Europe PMC's live full-text
+metadata endpoint. Only the resulting official `plus.europepmc.org/download/`
+PDF is admitted to the approval batch; redirects, third-party hosts, ambiguous
+DOI results, PMC-overlap records, missing reusable licenses, and stale metadata
+all fail closed. Persistence records the same byte/digest/Paper/search-run/
+candidate facts and immutable ImportRun/ImportItem lineage as the PMC path.
+CORE-GQR-4's PMC and Europe PMC persistence paths are therefore complete;
+CORE and Unpaywall route execution remain subsequent provider adapters.
 
 ### CORE-GQR-5 - Grounded extraction and promotion
 - invoke domain-general grounded extraction;
