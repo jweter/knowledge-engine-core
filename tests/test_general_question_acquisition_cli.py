@@ -11,6 +11,10 @@ import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database
 from knowledge_engine.entrypoint import app
+from knowledge_engine.europepmc_acquisition import (
+    EuropePmcAcquisitionReceipt,
+    EuropePmcAcquisitionReceiptItem,
+)
 from knowledge_engine.federated_discovery import (
     DiscoveryQuery,
     FederatedCandidate,
@@ -20,6 +24,11 @@ from knowledge_engine.federated_discovery import (
     ProviderStatus,
 )
 from knowledge_engine.federated_search_ledger import FederatedSearchLedger
+from knowledge_engine.general_question_europepmc_acquisition import (
+    GeneralQuestionEuropePmcExecution,
+    GeneralQuestionEuropePmcReceipt,
+    GeneralQuestionEuropePmcReceiptItem,
+)
 from knowledge_engine.general_question_pmc_acquisition import (
     GeneralQuestionPmcExecution,
     GeneralQuestionPmcReceipt,
@@ -406,3 +415,103 @@ def test_cli_executes_planned_pmc_route_and_writes_durable_receipt(
     payload = json.loads(receipt_path.read_text(encoding="utf-8"))
     assert payload["search_run_id"] == run_id
     assert payload["items"][0]["candidate_id"] == "doi:10.1000/creatine"
+
+
+def test_cli_executes_planned_europepmc_route_and_writes_durable_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ledger_root = tmp_path / "ledger"
+    run_id = _record_creatine_run(ledger_root)
+    request_path = _write_request(
+        tmp_path / "request.json",
+        search_run_id=run_id,
+        candidate_ids=["doi:10.1000/creatine"],
+    )
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    resolver = object()
+    service = object()
+    monkeypatch.setattr(entrypoint, "_europepmc_discovery_service", lambda: resolver)
+    monkeypatch.setattr(entrypoint, "_europepmc_acquisition_service", lambda: service)
+    calls: list[tuple[object, object, Path]] = []
+
+    raw_receipt = EuropePmcAcquisitionReceipt(
+        schema_version=1,
+        acquired_count=1,
+        items=(
+            EuropePmcAcquisitionReceiptItem(
+                europepmc_id="PPR123",
+                doi="10.1000/creatine",
+                license="cc by",
+                filename="europepmc-PPR123.pdf",
+                byte_count=13,
+                sha256="a" * 64,
+            ),
+        ),
+    )
+    public_receipt = GeneralQuestionEuropePmcReceipt(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq-creatine",
+        acquisition_route="europe_pmc_oa",
+        acquired_count=1,
+        items=(
+            GeneralQuestionEuropePmcReceiptItem(
+                candidate_id="doi:10.1000/creatine",
+                europepmc_id="PPR123",
+                doi="10.1000/creatine",
+                license="cc by",
+                filename="europepmc-PPR123.pdf",
+                byte_count=13,
+                sha256="a" * 64,
+            ),
+        ),
+    )
+
+    def fake_execute(
+        plan: object,
+        *,
+        resolver: object,
+        acquisition_service: object,
+        output_directory: Path,
+    ) -> GeneralQuestionEuropePmcExecution:
+        del plan
+        calls.append((resolver, acquisition_service, output_directory))
+        return GeneralQuestionEuropePmcExecution(
+            receipt=public_receipt,
+            acquisition_receipt=raw_receipt,
+        )
+
+    monkeypatch.setattr(entrypoint, "execute_europepmc_acquisition_plan", fake_execute)
+    monkeypatch.setattr(
+        entrypoint,
+        "persist_europepmc_acquisition_execution",
+        lambda *args, **kwargs: SimpleNamespace(
+            parsed_count=1,
+            persisted_count=1,
+            reused_count=0,
+            to_json=public_receipt.to_json,
+        ),
+    )
+    receipt_path = tmp_path / "receipt.json"
+    papers_dir = tmp_path / "papers"
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "general-question-acquire-europe-pmc",
+            str(request_path),
+            "--ledger-root",
+            str(ledger_root),
+            "--papers-dir",
+            str(papers_dir),
+            "--receipt",
+            str(receipt_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls == [(resolver, service, papers_dir)]
+    payload = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert payload["search_run_id"] == run_id
+    assert payload["items"][0]["europepmc_id"] == "PPR123"

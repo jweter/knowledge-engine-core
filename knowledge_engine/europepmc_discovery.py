@@ -26,14 +26,20 @@ from __future__ import annotations
 import json
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from http.client import IncompleteRead
 from typing import Protocol
 from urllib.parse import urlencode, urlsplit
 
-from knowledge_engine.europepmc_http import EUROPEPMC_PDF_HOST, TransportResponse
+from knowledge_engine.europepmc_http import (
+    EUROPEPMC_PDF_HOST,
+    EUROPEPMC_PLUS_HOST,
+    TransportResponse,
+)
+from knowledge_engine.utils import normalize_doi
 
 EUROPEPMC_SEARCH_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+EUROPEPMC_FULLTEXT_METADATA_URL = "https://europepmc.org/api/fulltextRepo"
 DEFAULT_HEADERS = {
     "Accept": "application/json",
     "User-Agent": "knowledge-engine-core/0.2",
@@ -176,6 +182,99 @@ class EuropePmcDiscoveryService:
             limit=limit,
             candidates=candidates,
         )
+
+    def resolve_dois(self, dois: tuple[str, ...]) -> tuple[EuropePmcCandidate, ...]:
+        """Resolve exact DOIs and refresh current Europe PMC-hosted PDF evidence.
+
+        Search-result PDF URLs for Europe PMC preprints can expire.  Each exact
+        DOI is therefore reconciled to one current search record and then to the
+        live full-text metadata endpoint, which supplies the current immutable
+        ``plus.europepmc.org`` download URL.  This is identity resolution, not a
+        new topical search: the result set must contain exactly the requested
+        DOI and is returned in caller order.
+        """
+
+        if not dois:
+            raise ValueError("Europe PMC DOI resolution requires at least one DOI.")
+        normalized_dois = tuple(normalize_doi(doi) for doi in dois)
+        if any(not doi for doi in normalized_dois):
+            raise ValueError("Europe PMC DOI resolution requires non-blank DOIs.")
+        if len(set(normalized_dois)) != len(normalized_dois):
+            raise ValueError("Europe PMC DOI resolution does not accept duplicate DOIs.")
+
+        resolved: list[EuropePmcCandidate] = []
+        for doi in normalized_dois:
+            escaped_doi = doi.replace("\\", "\\\\").replace('"', '\\"')
+            result = self.discover(f'DOI:"{escaped_doi}"', limit=2)
+            exact = tuple(
+                candidate
+                for candidate in result.candidates
+                if candidate.doi is not None and normalize_doi(candidate.doi) == doi
+            )
+            if len(exact) != 1:
+                raise EuropePmcDiscoveryError(
+                    "Europe PMC DOI resolution did not return one exact record."
+                )
+            candidate = exact[0]
+            if candidate.source != "PPR" or candidate.in_pmc:
+                raise EuropePmcDiscoveryError(
+                    "Europe PMC DOI resolution returned a record outside the preprint route."
+                )
+            pdf_url, pdf_host = self._current_preprint_pdf(candidate.europepmc_id)
+            resolved.append(replace(candidate, doi=doi, pdf_url=pdf_url, pdf_host=pdf_host))
+        return tuple(resolved)
+
+    def _current_preprint_pdf(self, europepmc_id: str) -> tuple[str, str]:
+        payload = self._get_json(
+            f"{EUROPEPMC_FULLTEXT_METADATA_URL}?"
+            + urlencode({"pprId": europepmc_id, "type": "METADATA"})
+        )
+        if payload.get("success") is not True or payload.get("id") != europepmc_id:
+            raise EuropePmcDiscoveryError(
+                "Europe PMC full-text metadata did not reconcile with the requested record."
+            )
+        metadata = payload.get("metadata")
+        if (
+            not isinstance(metadata, dict)
+            or metadata.get("hasPDF") is not True
+            or metadata.get("availabilityStatus") != "O"
+        ):
+            raise EuropePmcDiscoveryError(
+                "Europe PMC full-text metadata lacks an available open PDF."
+            )
+        files = payload.get("files")
+        if not isinstance(files, list):
+            raise EuropePmcDiscoveryError("Europe PMC full-text metadata was malformed.")
+        pdf_urls: list[str] = []
+        for row in files:
+            if not isinstance(row, dict):
+                continue
+            url = row.get("url")
+            if (
+                row.get("type") == "pdf"
+                and row.get("mimeType") == "application/pdf"
+                and isinstance(url, str)
+            ):
+                pdf_urls.append(url)
+        if len(pdf_urls) != 1:
+            raise EuropePmcDiscoveryError("Europe PMC full-text metadata did not identify one PDF.")
+        pdf_url = pdf_urls[0]
+        parsed = urlsplit(pdf_url)
+        if (
+            parsed.scheme != "https"
+            or parsed.hostname != EUROPEPMC_PLUS_HOST
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.port not in (None, 443)
+            or not parsed.path.startswith("/download/")
+            or not parsed.path.lower().endswith(".pdf")
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise EuropePmcDiscoveryError(
+                "Europe PMC full-text metadata returned an unsupported PDF URL."
+            )
+        return pdf_url, EUROPEPMC_PLUS_HOST
 
     def _get_json(self, url: str) -> dict[str, object]:
         response = self._get(url)

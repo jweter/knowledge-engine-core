@@ -63,6 +63,40 @@ def test_acquire_requires_exact_approval_and_writes_sanitized_receipt(tmp_path: 
     assert str(tmp_path) not in receipt.to_json()
 
 
+def test_acquire_accepts_current_europepmc_plus_download(tmp_path: Path) -> None:
+    pdf_url = "https://plus.europepmc.org/download/current-pdf.pdf"
+    candidates = _write_candidates(tmp_path, pdf_url=pdf_url)
+    approvals = _write_approvals(tmp_path, pdf_url=pdf_url, selected_count=1)
+    output = tmp_path / "papers"
+    transport = FakeTransport([FakeResponse(200, b"%PDF-1.7\nbody", {})])
+
+    receipt = EuropePmcOaAcquisitionService(transport).acquire(
+        candidates_path=candidates,
+        approvals_path=approvals,
+        output_directory=output,
+        expected_count=1,
+    )
+
+    assert transport.urls == [pdf_url]
+    assert receipt.acquired_count == 1
+
+
+def test_acquire_rejects_non_download_path_on_europepmc_plus(tmp_path: Path) -> None:
+    pdf_url = "https://plus.europepmc.org/account/current-pdf.pdf"
+    candidates = _write_candidates(tmp_path, pdf_url=pdf_url)
+    approvals = _write_approvals(tmp_path, pdf_url=pdf_url)
+    transport = FakeTransport([])
+
+    with pytest.raises(EuropePmcAcquisitionError, match="Plus download"):
+        EuropePmcOaAcquisitionService(transport).acquire(
+            candidates_path=candidates,
+            approvals_path=approvals,
+            output_directory=tmp_path / "papers",
+        )
+
+    assert transport.urls == []
+
+
 def test_expected_count_mismatch_fails_before_network(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path, selected_count=1)
@@ -327,13 +361,14 @@ def _write_candidates(
     *,
     count: int = 1,
     duplicate_id: bool = False,
+    pdf_url: str = "https://europepmc.org/articles/EPMC999?pdf=render",
 ) -> Path:
     rows = [
         {
             "europepmc_id": "EPMC999",
             "doi": "10.1000/example-999",
             "license": "CC BY",
-            "pdf_url": "https://europepmc.org/articles/EPMC999?pdf=render",
+            "pdf_url": pdf_url,
             "open_access": True,
             "in_pmc": False,
         }
@@ -362,13 +397,14 @@ def _write_approvals(
     duplicate_filename: bool = False,
     duplicate_id: bool = False,
     selected_count: int | bool | None = None,
+    pdf_url: str = "https://europepmc.org/articles/EPMC999?pdf=render",
 ) -> Path:
     rows = [
         {
             "europepmc_id": "EPMC999",
             "doi": "10.1000/example-999",
             "license": license_name,
-            "pdf_url": "https://europepmc.org/articles/EPMC999?pdf=render",
+            "pdf_url": pdf_url,
             "filename": "europepmc-EPMC999.pdf",
         }
     ]

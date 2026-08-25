@@ -20,7 +20,11 @@ from pathlib import Path
 from typing import Protocol
 from urllib.parse import urlsplit
 
-from knowledge_engine.europepmc_http import EUROPEPMC_PDF_HOST, TransportResponse
+from knowledge_engine.europepmc_http import (
+    EUROPEPMC_PDF_HOSTS,
+    EUROPEPMC_PLUS_HOST,
+    TransportResponse,
+)
 
 PDF_SIGNATURE = b"%PDF-"
 SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.pdf$")
@@ -305,13 +309,22 @@ def _build_plans(
         parsed = urlsplit(pdf_url)
         if (
             parsed.scheme != "https"
-            or parsed.hostname != EUROPEPMC_PDF_HOST
+            or parsed.hostname not in EUROPEPMC_PDF_HOSTS
             or parsed.username is not None
             or parsed.password is not None
             or parsed.port not in (None, 443)
         ):
             raise EuropePmcAcquisitionError(
                 "Approval PDF URL is not an allowlisted Europe PMC OA HTTPS resource."
+            )
+        if parsed.hostname == EUROPEPMC_PLUS_HOST and (
+            not parsed.path.startswith("/download/")
+            or not parsed.path.lower().endswith(".pdf")
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise EuropePmcAcquisitionError(
+                "Approval PDF URL is not an allowlisted Europe PMC Plus download."
             )
         plans.append(
             _AcquisitionPlan(

@@ -9,6 +9,18 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Executable Europe PMC acquisition and import provenance (CORE-GQR-4)**:
+  `ke general-question-acquire-europe-pmc` now applies the completed PMC
+  route's safety and lineage contract to eligible `europe_pmc_oa` plan
+  items. Each planned DOI is re-resolved exactly, reconciled against Europe
+  PMC's live full-text metadata, and refreshed to the current official
+  `plus.europepmc.org` PDF URL before approval and atomic download. Core then
+  integrity-checks, parses, persists or reuses the Paper, and records one
+  immutable `ImportRun` plus per-candidate `ImportItem` lineage. This also
+  fixes a production-only provider defect found during live verification:
+  Europe PMC search results can retain an expired `api/fulltextRepo` PDF URL
+  even though the live metadata endpoint exposes a working current download.
+
 - **Executable PMC acquisition and import provenance (CORE-GQR-4)**:
   `ke general-question-acquire-pmc` converts eligible `pmc_oa` plan items
   into one exact, atomic acquisition batch, verifies the downloaded bytes,

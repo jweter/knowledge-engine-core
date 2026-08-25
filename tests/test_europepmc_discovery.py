@@ -106,6 +106,24 @@ def _full_candidate(**overrides: object) -> dict[str, object]:
     return base
 
 
+def _metadata_response(**overrides: object) -> FakeResponse:
+    payload: dict[str, object] = {
+        "id": "PPR123",
+        "success": True,
+        "metadata": {"hasPDF": True, "availabilityStatus": "O"},
+        "files": [
+            {
+                "filename": "EMS123-pdf.pdf",
+                "type": "pdf",
+                "mimeType": "application/pdf",
+                "url": "https://plus.europepmc.org/download/current-pdf.pdf",
+            }
+        ],
+    }
+    payload.update(overrides)
+    return FakeResponse(200, json.dumps(payload).encode(), {})
+
+
 def test_discover_parses_a_full_candidate_preferring_europepmc_host() -> None:
     transport = FakeTransport([_search_response(_full_candidate())])
     result = _service(transport).discover("semaglutide", limit=10)
@@ -127,6 +145,46 @@ def test_discover_parses_a_full_candidate_preferring_europepmc_host() -> None:
     assert candidate.license == "cc by"
     assert candidate.pdf_url == "https://europepmc.org/api/fulltextRepo?pprId=PPR123"
     assert candidate.pdf_host == "europepmc.org"
+
+
+def test_resolve_dois_refreshes_the_current_official_pdf_url() -> None:
+    transport = FakeTransport([_search_response(_full_candidate()), _metadata_response()])
+
+    result = _service(transport).resolve_dois(("https://doi.org/10.1000/EXAMPLE",))
+
+    assert len(result) == 1
+    assert result[0].doi == "10.1000/example"
+    assert result[0].pdf_url == "https://plus.europepmc.org/download/current-pdf.pdf"
+    assert result[0].pdf_host == "plus.europepmc.org"
+    assert "query=DOI%3A%2210.1000%2Fexample%22" in transport.urls[0]
+    assert transport.urls[1] == (
+        "https://europepmc.org/api/fulltextRepo?pprId=PPR123&type=METADATA"
+    )
+
+
+def test_resolve_dois_rejects_non_official_metadata_pdf() -> None:
+    metadata = _metadata_response(
+        files=[
+            {
+                "filename": "paper.pdf",
+                "type": "pdf",
+                "mimeType": "application/pdf",
+                "url": "https://example.org/paper.pdf",
+            }
+        ]
+    )
+    transport = FakeTransport([_search_response(_full_candidate()), metadata])
+
+    with pytest.raises(EuropePmcDiscoveryError, match="unsupported PDF URL"):
+        _service(transport).resolve_dois(("10.1000/example",))
+
+
+def test_resolve_dois_rejects_ambiguous_exact_records() -> None:
+    duplicate = _full_candidate(id="PPR124")
+    transport = FakeTransport([_search_response(_full_candidate(), duplicate)])
+
+    with pytest.raises(EuropePmcDiscoveryError, match="one exact record"):
+        _service(transport).resolve_dois(("10.1000/example",))
 
 
 def test_discover_falls_back_to_third_party_pdf_when_no_europepmc_host() -> None:

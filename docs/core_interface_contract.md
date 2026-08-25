@@ -444,6 +444,16 @@ itself, but may need to trigger for a specific paper):**
   creates one `ImportItem` per candidate linked to the resulting Paper. The
   additive receipt fields `import_run_id` and per-item `import_item_id`
   expose that durable lineage while preserving every prior receipt field.
+- `ke general-question-acquire-europe-pmc <request.json> --ledger-root <dir>
+  --papers-dir <dir> --receipt <path.json>` (CORE-GQR-4): executes only
+  `eligible_full_text` items routed to `europe_pmc_oa`. It resolves each exact
+  DOI against current Europe PMC evidence and refreshes the search result's
+  potentially expired PDF URL through the live full-text metadata endpoint.
+  The approval gate accepts only one reconciled, reusable-license, non-PMC
+  record with a current official `plus.europepmc.org/download/` PDF. The
+  resulting receipt and persistence contract mirrors the PMC command, using
+  Europe PMC ID and DOI identity and exposing the resulting Paper,
+  `ImportRun`, and per-candidate `ImportItem` IDs.
 
 - `ke general-question-acquisition-plan <request.json> --ledger-root <dir>
   [--output <path.json>] [--no-database]` (CORE-GQR-1/GQR-2,
@@ -466,8 +476,9 @@ itself, but may need to trigger for a specific paper):**
   Every disposition describes acquisition eligibility, never scientific
   support -- this command plans and reuses candidate resolution; it does
   not download full text, ingest anything, or produce an Evidence Record.
-  CORE-GQR-3's deterministic routing plan is complete; executing a route,
-  persisting its receipt, and parsing the result remain CORE-GQR-4 work. By default the local database is opened to detect
+  CORE-GQR-3's deterministic routing plan is complete; PMC and Europe PMC
+  execution are now implemented, while CORE and Unpaywall execution remain
+  CORE-GQR-4 work. By default the local database is opened to detect
   candidates already matching an existing `Paper` by DOI, then PMID, then
   arXiv ID -- reported `already_indexed` instead of re-queuing them, and
   never competing with genuinely new candidates for the full-text budget
