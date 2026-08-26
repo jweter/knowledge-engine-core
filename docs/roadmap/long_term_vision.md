@@ -47,6 +47,31 @@ underneath that experience; it is not the experience itself. The AI Interface
 Layer described below is what turns that foundation into the product a person
 actually uses.
 
+### Progressive live answers are part of the finished product
+
+The live product above should not make users choose between a fast answer and a
+separate deep-research mode before they see any value. The adopted interaction
+model is one continuous research run that matures:
+
+```text
+Draft -> Sourced -> Verified -> Deep
+```
+
+When a responsible preliminary answer can be produced, Web should show it
+immediately. The same Research Session should then continue adding source-linked
+evidence, contradiction review, verification, and deeper analysis without a page
+restart or a second search. Rapid multi-topic searching must still favor fast
+Draft delivery for each new query; deeper work can continue, pause, or be
+reprioritized in the background. User attention may affect scheduling priority,
+never evidence weight or scientific confidence.
+
+`docs/roadmap/progressive_answer_pipeline.md` is the canonical product roadmap
+for this behavior and defines the cross-repository responsibilities of Web, AI,
+and Core, stable answer revision semantics, required run identifiers, release
+gates, and latency/quality metrics. Future architecture that touches Ask,
+Research Sessions, streaming, answer versioning, caching, scheduling, or
+user-visible latency must preserve that contract.
+
 ## Guiding Idea
 
 The system should help humans understand what is known, what is uncertain, what

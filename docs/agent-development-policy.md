@@ -11,6 +11,16 @@ maintainability, provenance, transparency, honest degradation). This document
 is the operational contract that turns those values into a repeatable
 scheduled-run procedure.
 
+The repository-root `AGENTS.md` is the short agent entry point. For any work
+that touches Ask, Research Sessions, Web/AI/Core orchestration, answer
+streaming/versioning, release gates, scheduling, caching, or user-visible
+latency, agents must also read
+`docs/roadmap/progressive_answer_pipeline.md`. The adopted product behavior is
+one continuous research run that matures `Draft -> Sourced -> Verified -> Deep`:
+an immediately useful answer first, then progressively stronger evidence,
+verification, and deep research. This requirement must not be reconstructed
+from conversation memory or silently replaced by a separate fast-vs-deep mode.
+
 ## 1. Knowledge Engine is a three-repository family
 
 `knowledge-engine-core` is one of three repositories that together form one
@@ -76,7 +86,10 @@ those two documents' own stated dependencies before changing this surface.
 Authority order when sources disagree:
 
 1. Verified current repository state: code, tests, CI, open PRs/issues.
-2. `docs/roadmap.md` and `docs/roadmap/` — canonical direction.
+2. `docs/roadmap.md` and `docs/roadmap/` — canonical direction, including
+   `docs/roadmap/long_term_vision.md`,
+   `docs/roadmap/evolving_vision_principles.md`, and the adopted
+   `docs/roadmap/progressive_answer_pipeline.md` product contract where relevant.
 3. `docs/project-status.yaml` — continuity snapshot; verify and refresh it
    every scheduled run (see section 9).
 4. This document — workflow, merge policy, safety rules, escalation.
@@ -100,6 +113,9 @@ work, inspect:
 - unresolved blocking review threads or requested changes;
 - `docs/project-status.yaml` against verified repository reality;
 - `docs/roadmap.md` / `docs/roadmap/` for the current milestone;
+- `docs/roadmap/progressive_answer_pipeline.md` whenever the proposed work
+  affects Ask, research-session lifecycle, answer delivery, streaming,
+  scheduling, caching, or user-visible latency;
 - relevant architecture/design documents for the work under consideration.
 
 Never invent repository state. If a tool cannot confirm something (CI status,
@@ -193,7 +209,8 @@ For a new slice:
 
 1. Read the current milestone/status in `docs/roadmap.md` and
    `docs/project-status.yaml`.
-2. Read the relevant design document(s) for the surface being touched.
+2. Read the relevant design document(s) for the surface being touched, including
+   `docs/roadmap/progressive_answer_pipeline.md` for progressive-answer surfaces.
 3. Define a small, falsifiable completion target.
 4. Create a focused branch (this repo has used names like
    `<feature-slug>` or `<milestone>-<short-description>`; avoid `main`).
