@@ -1,6 +1,6 @@
 # Evolving Vision Principles
 
-Status: standing future-facing guidance, 2026-08-15.
+Status: standing future-facing guidance, 2026-08-25.
 
 `docs/founding_vision.md` remains the preserved historical statement of why the
 Knowledge Engine exists. `docs/roadmap/long_term_vision.md` translates that
@@ -118,6 +118,10 @@ At regular architecture and roadmap reviews, ask across every layer:
 - Can experts inspect details while non-experts still receive clear explanations?
 - Is the public interface teaching users how to reason with evidence rather than
   merely delivering answers?
+- Does every search produce useful value as early as responsibly possible while
+  allowing the same answer to mature into a deeper, better-supported result?
+- Can rapid multi-topic searching remain responsive without throwing away the
+  option of deeper work on the result the user keeps exploring?
 
 ### Performance and cost
 
@@ -129,6 +133,10 @@ At regular architecture and roadmap reviews, ask across every layer:
 - Are caches, batching, deduplication, incremental refresh, and source-aware
   scheduling reducing unnecessary work?
 - Can the project scale up without forcing a paid service into the critical path?
+- Is time-to-first-useful-answer measured independently from time-to-verified and
+  time-to-deep-research completion?
+- Can active user attention increase research priority without ever changing the
+  scientific weight, truth status, or confidence of evidence?
 
 ### Open-source ecosystem learning
 
@@ -139,6 +147,53 @@ At regular architecture and roadmap reviews, ask across every layer:
 - Can we learn the idea and implement a smaller, cleaner Knowledge Engine-native
   version?
 - If code is reused, are attribution and license obligations clear?
+
+## Progressive answers are the default interaction model
+
+A Knowledge Engine query should be one continuous research run, not a forced
+choice between a fast chatbot answer and a separate deep-research product.
+Whenever a responsible preliminary answer can be produced, the system should
+show it immediately and then progressively strengthen that same result as
+retrieval, sourcing, verification, contradiction review, and deeper analysis
+complete.
+
+The canonical maturity path is:
+
+```text
+Draft -> Sourced -> Verified -> Deep
+```
+
+These labels describe what has actually completed. They are not cosmetic quality
+badges. A Draft is useful but preliminary. Sourced means evidence has been
+attached. Verified means the relevant release/Research ISA gates have passed.
+Deep means the system invested additional discovery and analytical effort beyond
+the verified minimum.
+
+This interaction model establishes several permanent principles:
+
+- **Time-to-useful-answer is a first-class metric.** Scientific rigor should not
+  require an empty page while the entire research pipeline finishes.
+- **Depth is progressive, not preselected.** The user should not need to decide
+  how much research is necessary before seeing the first result.
+- **User attention may schedule compute, never truth.** Remaining on a result,
+  opening its evidence, or explicitly asking the engine to keep researching may
+  increase that run's priority. Those signals must never increase evidence
+  weight or confidence.
+- **Rapid search remains fast.** A user may ask several unrelated questions in
+  succession and receive the fast stage for each. Background/deep work should be
+  deprioritized or resumed intelligently rather than blocking the next query.
+- **Live updates should be stable.** New citations, evidence, limitations, and
+  verified revisions should appear without constantly rewriting text underneath
+  someone who is reading it.
+- **Revisions remain auditable.** Later evidence may change an earlier answer;
+  the system should preserve what changed and why rather than silently replacing
+  history.
+- **Insufficient evidence is a valid early result.** When a fast answer cannot be
+  produced responsibly, the engine should say that research is still required
+  instead of fabricating certainty to satisfy latency.
+
+The implementation roadmap for this product behavior is maintained in
+`docs/roadmap/progressive_answer_pipeline.md`.
 
 ## Provider-neutral research infrastructure
 
@@ -223,4 +278,5 @@ four questions:
 4. **What is the highest-value thing to learn next?**
 
 Everything we adopt, build, remove, or redesign should make those answers more
-accurate, traceable, current, useful, and reproducible.
+accurate, traceable, current, useful, reproducible, and available as early as
+responsibly possible.
