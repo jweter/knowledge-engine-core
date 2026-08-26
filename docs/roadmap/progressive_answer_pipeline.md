@@ -2,6 +2,17 @@
 
 Status: adopted product direction, 2026-08-25.
 
+## Canonical references
+
+This product requirement is intentionally cross-linked so it survives isolated
+agent sessions and future roadmap work:
+
+- `docs/roadmap.md` — canonical active roadmap.
+- `docs/roadmap/long_term_vision.md` — finished-product vision.
+- `docs/roadmap/evolving_vision_principles.md` — standing future-facing vision.
+- `docs/agent-development-policy.md` — operational contract for agents.
+- `AGENTS.md` — repository-root agent entry point.
+
 ## Decision
 
 A Knowledge Engine search should not force the user to choose between a fast
