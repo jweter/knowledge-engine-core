@@ -230,7 +230,9 @@ class CoreOaAcquisitionService:
                 or candidate.pdf_url != approval.pdf_url
                 or candidate.pdf_host != CORE_PDF_HOST
             ):
-                raise CoreAcquisitionError("CORE approval evidence does not match the refreshed work.")
+                raise CoreAcquisitionError(
+                    "CORE approval evidence does not match the refreshed work."
+                )
             if evaluate_license(approval.license) != "passed":
                 raise CoreAcquisitionError("CORE approval lacks a supported reusable license.")
             parsed = urlsplit(approval.pdf_url)
@@ -241,8 +243,13 @@ class CoreOaAcquisitionService:
                 or parsed.password is not None
                 or parsed.port not in (None, 443)
             ):
-                raise CoreAcquisitionError("CORE approval URL is not an allowlisted HTTPS resource.")
-            if not SAFE_FILENAME.fullmatch(approval.filename) or approval.filename in seen_filenames:
+                raise CoreAcquisitionError(
+                    "CORE approval URL is not an allowlisted HTTPS resource."
+                )
+            if (
+                not SAFE_FILENAME.fullmatch(approval.filename)
+                or approval.filename in seen_filenames
+            ):
                 raise CoreAcquisitionError("CORE approval filename is unsafe or duplicated.")
             seen_filenames.add(approval.filename)
 
@@ -253,7 +260,12 @@ class CoreOaAcquisitionService:
         for approval in approvals:
             destination = output_directory / approval.filename
             temporary = output_directory / f".{approval.filename}.tmp"
-            if destination.exists() or destination.is_symlink() or temporary.exists() or temporary.is_symlink():
+            if (
+                destination.exists()
+                or destination.is_symlink()
+                or temporary.exists()
+                or temporary.is_symlink()
+            ):
                 raise CoreAcquisitionError("CORE PDF output already exists.")
 
         output_directory.mkdir(parents=True, exist_ok=True)
