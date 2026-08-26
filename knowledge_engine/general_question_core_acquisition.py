@@ -152,9 +152,7 @@ def execute_core_acquisition_plan(
                 "Planned CORE route lacks explicit reusable license evidence."
             )
         if not item.full_text_url:
-            raise GeneralQuestionCoreAcquisitionError(
-                "Planned CORE route lacks a full-text URL."
-            )
+            raise GeneralQuestionCoreAcquisitionError("Planned CORE route lacks a full-text URL.")
         candidate_ids_by_doi[doi] = item.candidate_id
         planned_by_doi[doi] = item
         dois.append(doi)
@@ -505,9 +503,13 @@ def _record_core_import_run(
                 inclusion_status="included",
                 usage_status="approved_open_access",
                 local_path=persisted.filename,
-                item_status="imported" if persisted.persistence_status == "persisted" else "skipped",
+                item_status="imported"
+                if persisted.persistence_status == "persisted"
+                else "skipped",
                 duplicate_outcome=(
-                    "new_paper" if persisted.persistence_status == "persisted" else "reused_existing_paper"
+                    "new_paper"
+                    if persisted.persistence_status == "persisted"
+                    else "reused_existing_paper"
                 ),
                 matched_paper_id=persisted.paper_id,
                 matched_import_item_id=None,
