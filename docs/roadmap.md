@@ -2,6 +2,16 @@
 
 This file is the roadmap index. Phase-specific notes live in `docs/roadmap/`.
 
+One cross-repository product requirement is important enough to be called out
+from the canonical roadmap itself: `docs/roadmap/progressive_answer_pipeline.md`
+defines the adopted live-answer model for the finished Knowledge Engine. One
+research run should mature `Draft -> Sourced -> Verified -> Deep`, delivering a
+useful answer as early as responsibly possible while continuing sourcing,
+verification, and deeper research behind the same answer surface. Any roadmap
+work touching Ask, Research Sessions, Web/AI/Core orchestration, streaming,
+answer revisions, release gates, caching, scheduling, or latency must preserve
+that direction.
+
 These phases describe the near-term, buildable work inside
 `knowledge-engine-core` itself. `docs/roadmap/long_term_vision.md` describes
 the larger, multi-package ecosystem this roadmap builds toward -- including
@@ -1358,7 +1368,8 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   ChEBI, not NCBI); fixed to state that provenance is mixed and reuse
   terms should be verified source-by-source. Explicitly background
   context, not evidence, with the same non-`EvidenceRecord` boundary
-  M41/M42/M43 drew. See `docs/history/milestones/m44_pubchem_lookup.md`.
+  M41/M42/M43 drew. See
+  `docs/history/milestones/m44_pubchem_lookup.md`.
 - **M45** wired three of `docs/reference_knowledge_layer_design.md`'s
   Addendum items (2-4) into the Phase 2 review workflow: a new `ke
   extraction-review-annotate` command reads the draft evidence items `ke
@@ -1405,7 +1416,8 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   of a minute or more of network calls. Never touches
   `research_question`/`evidence_direction`, and never changes `ke
   extraction-review-promote`'s existing refusal to promote a record
-  missing either. See `docs/history/milestones/m45_extraction_review_annotate.md`.
+  missing either. See
+  `docs/history/milestones/m45_extraction_review_annotate.md`.
 - **M71 (2026-08-10)** added a fifth live-lookup reference source, NLM/NIH's
   ClinicalTrials.gov API v2, alongside M41-M44's Wikipedia/RxNorm/MeSH/PubChem
   lookups. Owner-confirmed direction: extend the live-lookup path only,
@@ -1643,6 +1655,10 @@ is routed through `EvidenceRecord` promotion or the confidence rating.
   research-question crafting, evidence synthesis, and confidence rating
   (see `docs/roadmap/long_term_vision.md`) actually reach a person, on top
   of the Evidence and Knowledge Graph layers Phases 2 and 4 build.
+- The user-facing Ask experience must follow
+  `docs/roadmap/progressive_answer_pipeline.md`: one Research Session matures
+  `Draft -> Sourced -> Verified -> Deep`, with a fast first useful answer and
+  stable progressive evidence/verification updates rather than separate modes.
 - `docs/roadmap/long_term_vision.md`'s Discovery Engine (hypothesis
   generation, experiment suggestion) and Education Engine (adaptive
   explanations, learning paths) are not yet claimed by any phase or
@@ -1939,6 +1955,11 @@ forward -- the ladder above supersedes it.
 - `docs/roadmap/long_term_vision.md` -- the multi-package ecosystem and final
   goal these phases build toward, including the active `knowledge-engine-ai`
   layer's present and future role over Phase 2's Evidence Records
+- `docs/roadmap/evolving_vision_principles.md` -- standing future-facing
+  principles for continued evolution after any individual roadmap is complete
+- `docs/roadmap/progressive_answer_pipeline.md` -- adopted cross-repository
+  live-answer roadmap: one search matures `Draft -> Sourced -> Verified -> Deep`
+  while preserving a fast first useful answer and evidence-backed verification
 - `docs/ai_layer_architecture.md` -- the AI repository's Retrieval/
   Evidence/Analytical/Discovery Intelligence stages, and, layered on
   top, a forward-looking multi-agent orchestration design whose
