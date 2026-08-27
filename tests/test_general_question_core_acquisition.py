@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from hashlib import sha256
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from sqlalchemy import select
 
 from knowledge_engine.config import Settings
 from knowledge_engine.core_acquisition import (
+    CoreAcquisitionApproval,
     CoreAcquisitionReceipt,
     CoreAcquisitionReceiptItem,
     CoreOaAcquisitionService,
@@ -45,7 +47,13 @@ class FakeAcquisitionService:
         self.calls = 0
         self.receipt_core_id = receipt_core_id
 
-    def acquire(self, *, candidates, approvals, output_directory: Path) -> CoreAcquisitionReceipt:
+    def acquire(
+        self,
+        *,
+        candidates: tuple[CoreCandidate, ...],
+        approvals: tuple[CoreAcquisitionApproval, ...],
+        output_directory: Path,
+    ) -> CoreAcquisitionReceipt:
         self.calls += 1
         assert len(candidates) == 1
         assert len(approvals) == 1
@@ -91,7 +99,7 @@ class FakePdfResponse:
     def __init__(self, body: bytes, status_code: int = 200) -> None:
         self.body = body
         self.status_code = status_code
-        self.headers: dict[str, str] = {}
+        self.headers: Mapping[str, str] = {}
 
 
 class FakePdfTransport:
@@ -99,7 +107,15 @@ class FakePdfTransport:
         self.body = body
         self.urls: list[str] = []
 
-    def get(self, *, url, headers, timeout_seconds, max_response_bytes):
+    def get(
+        self,
+        *,
+        url: str,
+        headers: Mapping[str, str],
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> FakePdfResponse:
+        del headers, timeout_seconds, max_response_bytes
         self.urls.append(url)
         return FakePdfResponse(self.body)
 
@@ -244,7 +260,7 @@ def test_rejects_and_rolls_back_mismatched_provider_receipt(tmp_path: Path) -> N
 def test_core_service_rejects_non_pdf_and_rolls_back(tmp_path: Path) -> None:
     service = CoreOaAcquisitionService(FakePdfTransport(body=b"not-a-pdf"))
     candidate = _candidate()
-    from knowledge_engine.core_acquisition import CoreAcquisitionApproval, CoreAcquisitionError
+    from knowledge_engine.core_acquisition import CoreAcquisitionError
 
     approval = CoreAcquisitionApproval(
         core_id="123",
