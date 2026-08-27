@@ -9,6 +9,9 @@ can be added without rewriting the monolithic registry.
 
 from __future__ import annotations
 
+import typer
+from rich.markup import escape
+
 from knowledge_engine.core_acquisition import (
     CoreDoiResolver,
     CoreOaAcquisitionService,
@@ -37,8 +40,6 @@ from knowledge_engine.general_question_core_acquisition import (
     execute_core_acquisition_plan,
     persist_core_acquisition_execution,
 )
-from rich.markup import escape
-import typer
 
 
 def _core_doi_resolver() -> CoreDoiResolver:
