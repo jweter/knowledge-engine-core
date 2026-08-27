@@ -68,7 +68,28 @@ transaction. The durable receipt preserves:
 - persisted/reused Paper ID; and
 - import-run/item identifiers.
 
+Paper reuse is also fail-closed. Core compares the acquired content hash with
+all available DOI, PMID, and arXiv Paper matches before recording reuse. If
+stable identities resolve to different Papers, if content identity and stable
+identity resolve to different Papers, or if an identity-matched Paper carries a
+different content hash, persistence aborts rather than linking the acquisition
+to an unrelated Paper.
+
 Receipt-output or persistence failure must roll back newly acquired PDFs and
 restore a pre-existing forced receipt when applicable. Discovery/Unpaywall
 metadata and acquired Papers remain **non-Evidence-Record material** until
 CORE-GQR-5 grounded extraction and validation/promotion complete.
+
+## Verification status
+
+After the first PR review, three P1 findings were repaired: fail-closed Paper
+identity reconciliation, preservation of planned/current license plus byte-count
+evidence in the exported persistence receipt, and backward-compatible optional
+`best_oa_location_pdf_url` lookup evidence. A branch-local one-shot preflight
+then passed Ruff formatting/checks, mypy for the repaired acquisition module,
+and the affected Unpaywall/manual-preview regression tests, including a new
+cross-Paper content/identity conflict case.
+
+That branch-local preflight is diagnostic evidence only. Merge authority remains
+fresh exact-head PR CI: Quality, Security - Bandit, and Security - pip-audit
+must all pass after the final human-authored head.
