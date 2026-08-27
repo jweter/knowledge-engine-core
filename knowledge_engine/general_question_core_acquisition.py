@@ -223,10 +223,10 @@ def execute_core_acquisition_plan(
             "CORE acquisition receipt identities did not reconcile with the plan."
         )
     for doi in dois:
-        item = acquired_by_doi[doi]
+        acquired_item = acquired_by_doi[doi]
         candidate = resolved_by_doi[doi]
         plan_item = planned_by_doi[doi]
-        if item.core_id != candidate.core_id or item.license != plan_item.license:
+        if acquired_item.core_id != candidate.core_id or acquired_item.license != plan_item.license:
             _rollback_acquired_files(output_directory, acquired)
             raise GeneralQuestionCoreAcquisitionError(
                 "CORE acquisition receipt evidence did not reconcile with resolution."
