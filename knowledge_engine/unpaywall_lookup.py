@@ -295,9 +295,7 @@ def _best_location_evidence(raw: object) -> tuple[str | None, str | None, str | 
     return (
         url.strip() if isinstance(url, str) and url.strip() else None,
         pdf_url.strip() if isinstance(pdf_url, str) and pdf_url.strip() else None,
-        license_value.strip()
-        if isinstance(license_value, str) and license_value.strip()
-        else None,
+        license_value.strip() if isinstance(license_value, str) and license_value.strip() else None,
     )
 
 
@@ -318,9 +316,7 @@ def _parse_locations(raw: object) -> tuple[UnpaywallLocation, ...]:
         locations.append(
             UnpaywallLocation(
                 url=url.strip(),
-                pdf_url=pdf_url.strip()
-                if isinstance(pdf_url, str) and pdf_url.strip()
-                else None,
+                pdf_url=pdf_url.strip() if isinstance(pdf_url, str) and pdf_url.strip() else None,
                 host_type=host_type if isinstance(host_type, str) and host_type.strip() else None,
                 license=license_value
                 if isinstance(license_value, str) and license_value.strip()
