@@ -18,6 +18,7 @@ from knowledge_engine.core_discovery import CORE_PDF_HOST, CoreCandidate
 from knowledge_engine.duplicate_queries import DuplicateQueryRepository
 from knowledge_engine.general_question_acquisition import (
     AcquisitionDisposition,
+    AcquisitionPlanItem,
     AcquisitionRoute,
     GeneralQuestionAcquisitionPlan,
 )
@@ -134,7 +135,7 @@ def execute_core_acquisition_plan(
         )
 
     candidate_ids_by_doi: dict[str, str] = {}
-    planned_by_doi: dict[str, object] = {}
+    planned_by_doi: dict[str, AcquisitionPlanItem] = {}
     dois: list[str] = []
     for item in selected:
         raw_doi = item.identity.doi if item.identity is not None else None
@@ -178,8 +179,8 @@ def execute_core_acquisition_plan(
     for doi in dois:
         candidate = resolved_by_doi[doi]
         plan_item = planned_by_doi[doi]
-        planned_url = getattr(plan_item, "full_text_url")
-        planned_license = getattr(plan_item, "license")
+        planned_url = plan_item.full_text_url
+        planned_license = plan_item.license
         if (
             candidate.pdf_url is None
             or candidate.pdf_host != CORE_PDF_HOST
@@ -225,7 +226,7 @@ def execute_core_acquisition_plan(
         item = acquired_by_doi[doi]
         candidate = resolved_by_doi[doi]
         plan_item = planned_by_doi[doi]
-        if item.core_id != candidate.core_id or item.license != getattr(plan_item, "license"):
+        if item.core_id != candidate.core_id or item.license != plan_item.license:
             _rollback_acquired_files(output_directory, acquired)
             raise GeneralQuestionCoreAcquisitionError(
                 "CORE acquisition receipt evidence did not reconcile with resolution."
