@@ -110,9 +110,7 @@ def general_question_acquire_core(
         ) from None
     except GeneralQuestionCoreAcquisitionError as exc:
         _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
-        console.print(
-            f"[red]General-question CORE persistence failed:[/red] {escape(str(exc))}"
-        )
+        console.print(f"[red]General-question CORE persistence failed:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
     except Exception:
         _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
