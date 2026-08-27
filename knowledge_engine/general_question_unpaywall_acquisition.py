@@ -212,7 +212,9 @@ def execute_unpaywall_acquisition_plan(
         raise GeneralQuestionUnpaywallAcquisitionError(
             "Unpaywall acquisition receipt count did not reconcile with the plan."
         )
-    acquired_by_doi = {normalize_doi(receipt_item.doi): receipt_item for receipt_item in acquired.items}
+    acquired_by_doi = {
+        normalize_doi(receipt_item.doi): receipt_item for receipt_item in acquired.items
+    }
     if len(acquired_by_doi) != len(acquired.items) or set(acquired_by_doi) != set(dois):
         _rollback_acquired_files(output_directory, acquired)
         raise GeneralQuestionUnpaywallAcquisitionError(
@@ -479,9 +481,7 @@ def _record_unpaywall_import_run(
     for ordinal, (persisted, item_id) in enumerate(
         zip(persistence_items, item_ids, strict=True), start=1
     ):
-        plan_item = next(
-            item for item in plan.items if item.candidate_id == persisted.candidate_id
-        )
+        plan_item = next(item for item in plan.items if item.candidate_id == persisted.candidate_id)
         identity = plan_item.identity
         if identity is None:
             raise GeneralQuestionUnpaywallAcquisitionError(
@@ -537,9 +537,7 @@ def _record_unpaywall_import_run(
     return import_run_id, item_ids
 
 
-def _rollback_acquired_files(
-    output_directory: Path, receipt: UnpaywallAcquisitionReceipt
-) -> None:
+def _rollback_acquired_files(output_directory: Path, receipt: UnpaywallAcquisitionReceipt) -> None:
     rollback_failed = False
     for item in receipt.items:
         try:
@@ -547,6 +545,4 @@ def _rollback_acquired_files(
         except OSError:
             rollback_failed = True
     if rollback_failed:
-        raise GeneralQuestionUnpaywallAcquisitionError(
-            "Unpaywall acquisition rollback failed."
-        )
+        raise GeneralQuestionUnpaywallAcquisitionError("Unpaywall acquisition rollback failed.")
