@@ -12,6 +12,8 @@ from __future__ import annotations
 import typer
 from rich.markup import escape
 
+import knowledge_engine.entrypoint as entrypoint
+from knowledge_engine.cli import console
 from knowledge_engine.core_acquisition import (
     CoreDoiResolver,
     CoreOaAcquisitionService,
@@ -27,8 +29,6 @@ from knowledge_engine.entrypoint import (
     _local_database,
     _validate_output,
     _write_output,
-    app,
-    console,
 )
 from knowledge_engine.general_question_acquisition import (
     GeneralQuestionAcquisitionRequest,
@@ -41,6 +41,8 @@ from knowledge_engine.general_question_core_acquisition import (
     execute_core_acquisition_plan,
     persist_core_acquisition_execution,
 )
+
+app = entrypoint.app
 
 
 def _core_doi_resolver() -> CoreDoiResolver:
