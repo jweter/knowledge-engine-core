@@ -73,10 +73,14 @@ def _record_core_run(ledger_root: Path) -> str:
             ),
         ),
     )
-    return FederatedSearchLedger(ledger_root).record(
-        result,
-        research_question_id="rq-core",
-    ).search_run_id
+    return (
+        FederatedSearchLedger(ledger_root)
+        .record(
+            result,
+            research_question_id="rq-core",
+        )
+        .search_run_id
+    )
 
 
 def _write_request(path: Path, *, search_run_id: str) -> Path:
