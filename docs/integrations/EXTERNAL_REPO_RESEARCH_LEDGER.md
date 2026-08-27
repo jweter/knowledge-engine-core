@@ -76,6 +76,33 @@ Source of detailed truth: `docs/integrations/README.md` in `jweter/Project-Everw
 | UE-MCP / Monolith / Hayba | AI-assisted Unreal development tooling | `PLANNED` | Compare and choose only if source-control/CI/review boundaries remain intact. |
 | SimWorld | World-observation/action separation reference | `REFERENCE_ONLY` | Architecture study only. |
 
+## Portfolio security / secret-leak research
+
+These candidates were evaluated from the 2026-08-27 GitHub-secret-scanning research batch. The goal is defensive protection of the managed public repositories and their history, not broad third-party reconnaissance. Repository-wide automation must use least-privilege credentials and may scan only repositories/accounts Jeremy owns or is authorized to audit.
+
+| Candidate | Upstream / evidence | Status | Current disposition |
+|---|---|---|---|
+| TruffleHog | `trufflesecurity/trufflehog`; actively maintained; AGPL-3.0 | `PLANNED` | Preferred portfolio-wide secret scanner. Integrate as an external pinned GitHub Action/CLI rather than vendoring/linking source. Start with PR/push scanning plus a scheduled history audit. Review detector verification/network behavior before enabling credential validation. |
+| GitHound | `tillson/git-hound`; MIT; maintained into 2026 | `REFERENCE_ONLY` | Useful periodic owner-scoped/public-exposure audit and GitHub-dork reference, but not needed in normal CI if TruffleHog is adopted. Do not use for unrelated third-party reconnaissance. |
+| GitHub-Dorks | `techgaun/github-dorks`; Apache-2.0; maintained into 2025 | `REFERENCE_ONLY` | Retain its search patterns as a manual/periodic defensive audit reference for Jeremy-owned repositories; not a CI dependency. |
+| git-secrets | `awslabs/git-secrets`; Apache-2.0; maintained into 2025 | `DEFERRED` | Solid lightweight pre-commit prevention, but materially overlaps the planned TruffleHog control. Reconsider only if a simpler local hook is needed on machines where TruffleHog is impractical. |
+| GitGot | `BishopFox/GitGot`; LGPL-3.0; last pushed 2024 | `REJECTED` | Capable GitHub secret/recon search, but redundant with the newer TruffleHog + GitHound/GitHub-Dorks defensive stack and less current. |
+| GitMonitor | `Talkaboutcybersecurity/GitMonitor`; LGPL-3.0; last pushed 2020 | `REJECTED` | Continuous-monitoring idea is useful, but implementation is stale and superseded by maintained scanners and native GitHub controls. |
+| GitRob | `michenriksen/gitrob`; MIT; archived | `REJECTED` | Historically useful organization recon tool, but upstream is archived and its role is covered by maintained alternatives. |
+| GittyLeaks | `kootenpv/gittyleaks` appears to be the surviving upstream; last pushed 2020; no detected repository license | `REJECTED` | Stale, licensing is unclear, and functionality is redundant with maintained scanners. |
+| Watchtower / Nightfall | Current product is Nightfall AI DLP, not an open-source repo | `DEFERRED` | Potential future SaaS DLP for organization-wide GitHub/AI/SaaS monitoring, but it introduces cost, external data processing, and vendor dependence. Not justified for the current portfolio while self-hosted/open-source scanning is sufficient. |
+
+### Planned TruffleHog boundary
+
+- Use TruffleHog as an external security tool; do not copy its AGPL source into managed repositories.
+- Pin the GitHub Action or binary to an immutable reviewed version/commit rather than `latest`.
+- Give the workflow read-only repository contents/history access unless a later remediation feature is explicitly approved.
+- Do not upload findings as public artifacts; logs must avoid printing discovered secret values.
+- PR/push scanning should be fast and focused on introduced history; a scheduled job may perform deeper historical scans.
+- Credential verification can cause outbound requests to credential providers. Keep it disabled or tightly reviewed until the exact detector behavior and acceptable side effects are documented.
+- A finding is a security incident/gate, not an auto-remediation authority. Rotate/revoke any real exposed credential and remove it from reachable history through an explicit incident process.
+- Native GitHub secret-scanning/push-protection settings, where available, should complement this control rather than be disabled.
+
 ## Recovered secondary research batch
 
 These names were researched during the broader media/AI repository survey but were not promoted into any durable project integration index. They are preserved here now so they cannot be lost again. They are **not approved dependencies**. Exact upstream repository identity, current license, maintenance status, project fit, and intended boundary must be re-verified before any implementation decision.
