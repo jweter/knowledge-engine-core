@@ -341,6 +341,9 @@ def test_persists_verified_unpaywall_acquisition_with_import_lineage(tmp_path: P
     assert result.parsed_count == 1
     assert result.persisted_count == 1
     assert result.items[0].import_item_id is not None
+    assert result.items[0].plan_license == "CC BY"
+    assert result.items[0].resolved_license == "CC BY"
+    assert result.items[0].byte_count == execution.receipt.items[0].byte_count
     with database.session() as session:
         paper = session.scalar(select(Paper))
         assert paper is not None
@@ -382,4 +385,56 @@ def test_persistence_rejects_tampered_pdf(tmp_path: Path) -> None:
 
     with database.session() as session:
         assert session.scalar(select(Paper)) is None
+        assert session.scalar(select(ImportRun)) is None
+
+
+def test_persistence_rejects_conflicting_content_and_stable_identity(tmp_path: Path) -> None:
+    database = _database(tmp_path)
+    papers_dir = tmp_path / "papers-conflict"
+    execution = execute_unpaywall_acquisition_plan(
+        _plan(),
+        resolver=FakeResolver(_resolved()),
+        acquisition_service=FakeAcquisitionService(),
+        output_directory=papers_dir,
+    )
+    acquired_hash = execution.receipt.items[0].sha256
+
+    with database.session() as session:
+        session.add(
+            Paper(
+                title="Same bytes under another identity",
+                doi="10.1000/other",
+                source_path="other.pdf",
+                content_hash=acquired_hash,
+                publication_year=2025,
+                page_count=1,
+                word_count=1,
+            )
+        )
+        session.add(
+            Paper(
+                title="Planned DOI with conflicting bytes",
+                doi="10.1000/creatine",
+                source_path="conflicting.pdf",
+                content_hash="f" * 64,
+                publication_year=2025,
+                page_count=1,
+                word_count=1,
+            )
+        )
+
+    with (
+        pytest.raises(GeneralQuestionUnpaywallAcquisitionError, match="different Papers"),
+        database.session() as session,
+    ):
+        persist_unpaywall_acquisition_execution(
+            session,
+            _plan(),
+            execution,
+            output_directory=papers_dir,
+            parser=FakeParser(),
+        )
+
+    with database.session() as session:
+        assert len(session.scalars(select(Paper)).all()) == 2
         assert session.scalar(select(ImportRun)) is None

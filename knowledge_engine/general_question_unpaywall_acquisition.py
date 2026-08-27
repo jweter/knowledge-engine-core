@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from knowledge_engine.duplicate_queries import DuplicateQueryRepository
 from knowledge_engine.general_question_acquisition import (
     AcquisitionDisposition,
+    AcquisitionIdentity,
     AcquisitionPlanItem,
     AcquisitionRoute,
     GeneralQuestionAcquisitionPlan,
@@ -20,7 +21,7 @@ from knowledge_engine.general_question_acquisition import (
 from knowledge_engine.import_runs._helpers import new_uuid, utc_now
 from knowledge_engine.import_runs.repository import ImportRunRepository
 from knowledge_engine.license_rules import evaluate_license
-from knowledge_engine.models import ImportItem, ImportRun, ManifestSnapshot
+from knowledge_engine.models import ImportItem, ImportRun, ManifestSnapshot, Paper
 from knowledge_engine.paper_persistence import ClassifiedPaperRepository
 from knowledge_engine.parser import DocumentParseError, DocumentParser, PyMuPDFParser
 from knowledge_engine.persistence_errors import PaperPersistenceError
@@ -89,7 +90,10 @@ class GeneralQuestionUnpaywallPersistenceReceiptItem:
     doi: str
     pdf_url: str
     source_host: str
+    plan_license: str
+    resolved_license: str
     filename: str
+    byte_count: int
     sha256: str
     paper_id: int
     persistence_status: str
@@ -339,11 +343,10 @@ def persist_unpaywall_acquisition_execution(
                 )
 
             parsed = document_parser.parse(paper_path)
-            existing = (
-                repository.paper_by_content_hash(parsed.content_hash)
-                or repository.paper_by_normalized_doi(identity.doi)
-                or repository.paper_by_pmid(identity.pmid)
-                or repository.paper_by_arxiv_id(identity.arxiv_id)
+            existing = _reconciled_existing_paper(
+                repository,
+                content_hash=parsed.content_hash,
+                identity=identity,
             )
             if existing is not None:
                 paper = existing
@@ -365,7 +368,10 @@ def persist_unpaywall_acquisition_execution(
                     doi=normalize_doi(receipt_item.doi),
                     pdf_url=receipt_item.pdf_url,
                     source_host=receipt_item.source_host,
+                    plan_license=receipt_item.plan_license,
+                    resolved_license=receipt_item.resolved_license,
                     filename=receipt_item.filename,
+                    byte_count=receipt_item.byte_count,
                     sha256=receipt_item.sha256,
                     paper_id=paper.id,
                     persistence_status=persistence_status,
@@ -387,7 +393,10 @@ def persist_unpaywall_acquisition_execution(
             doi=item.doi,
             pdf_url=item.pdf_url,
             source_host=item.source_host,
+            plan_license=item.plan_license,
+            resolved_license=item.resolved_license,
             filename=item.filename,
+            byte_count=item.byte_count,
             sha256=item.sha256,
             paper_id=item.paper_id,
             persistence_status=item.persistence_status,
@@ -406,6 +415,48 @@ def persist_unpaywall_acquisition_execution(
         reused_count=reused_count,
         items=linked_items,
     )
+
+
+def _reconciled_existing_paper(
+    repository: DuplicateQueryRepository,
+    *,
+    content_hash: str,
+    identity: AcquisitionIdentity,
+) -> Paper | None:
+    """Reuse a Paper only when content and every stable identity signal agree."""
+
+    content_match = repository.paper_by_content_hash(content_hash)
+    identity_matches = tuple(
+        paper
+        for paper in (
+            repository.paper_by_normalized_doi(identity.doi) if identity.doi else None,
+            repository.paper_by_pmid(identity.pmid) if identity.pmid else None,
+            repository.paper_by_arxiv_id(identity.arxiv_id) if identity.arxiv_id else None,
+        )
+        if paper is not None
+    )
+    identity_by_id = {paper.id: paper for paper in identity_matches}
+    if len(identity_by_id) > 1:
+        raise GeneralQuestionUnpaywallAcquisitionError(
+            "Stable identity signals resolve to different Papers; refusing automatic reuse."
+        )
+
+    identity_match = next(iter(identity_by_id.values()), None)
+    if (
+        content_match is not None
+        and identity_match is not None
+        and content_match.id != identity_match.id
+    ):
+        raise GeneralQuestionUnpaywallAcquisitionError(
+            "Acquired content and stable identity resolve to different Papers; "
+            "refusing automatic reuse."
+        )
+    if identity_match is not None and identity_match.content_hash != content_hash:
+        raise GeneralQuestionUnpaywallAcquisitionError(
+            "Stable identity matches a Paper whose content hash differs from acquired content; "
+            "refusing automatic reuse."
+        )
+    return content_match or identity_match
 
 
 def _record_unpaywall_import_run(
@@ -491,6 +542,9 @@ def _record_unpaywall_import_run(
             "acquisition_route": receipt.acquisition_route,
             "pdf_url": persisted.pdf_url,
             "source_host": persisted.source_host,
+            "plan_license": persisted.plan_license,
+            "resolved_license": persisted.resolved_license,
+            "byte_count": persisted.byte_count,
             "persistence_status": persisted.persistence_status,
             "matched_paper_id": persisted.paper_id,
         }
