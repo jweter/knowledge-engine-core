@@ -82,7 +82,7 @@ These candidates were evaluated from the 2026-08-27 GitHub-secret-scanning resea
 
 | Candidate | Upstream / evidence | Status | Current disposition |
 |---|---|---|---|
-| TruffleHog | `trufflesecurity/trufflehog`; actively maintained; AGPL-3.0 | `PLANNED` | Preferred portfolio-wide secret scanner. Integrate as an external pinned GitHub Action/CLI rather than vendoring/linking source. Start with PR/push scanning plus a scheduled history audit. Review detector verification/network behavior before enabling credential validation. |
+| TruffleHog | `trufflesecurity/trufflehog`; actively maintained; AGPL-3.0 | `PARTIAL` | PR/push secret gates are deployed across all five managed repos using pinned TruffleHog v3.97.1 and release SHA-256 `f863ea3a8d786f7d097870496c977944cce7372a2fe1e56707d965016e543ece`, read-only access, `--no-verification`, suppressed finding payloads, and an ephemeral synthetic detection self-test. Core #426, Web #91, AI #77, Rocksmith #441, and Everward #119 are merged; post-merge TruffleHog push scans are green. The separate scheduled/manual deep-history audit and baseline triage remain under Core issue #424. |
 | GitHound | `tillson/git-hound`; MIT; maintained into 2026 | `REFERENCE_ONLY` | Useful periodic owner-scoped/public-exposure audit and GitHub-dork reference, but not needed in normal CI if TruffleHog is adopted. Do not use for unrelated third-party reconnaissance. |
 | GitHub-Dorks | `techgaun/github-dorks`; Apache-2.0; maintained into 2025 | `REFERENCE_ONLY` | Retain its search patterns as a manual/periodic defensive audit reference for Jeremy-owned repositories; not a CI dependency. |
 | git-secrets | `awslabs/git-secrets`; Apache-2.0; maintained into 2025 | `DEFERRED` | Solid lightweight pre-commit prevention, but materially overlaps the planned TruffleHog control. Reconsider only if a simpler local hook is needed on machines where TruffleHog is impractical. |
@@ -92,16 +92,18 @@ These candidates were evaluated from the 2026-08-27 GitHub-secret-scanning resea
 | GittyLeaks | `kootenpv/gittyleaks` appears to be the surviving upstream; last pushed 2020; no detected repository license | `REJECTED` | Stale, licensing is unclear, and functionality is redundant with maintained scanners. |
 | Watchtower / Nightfall | Current product is Nightfall AI DLP, not an open-source repo | `DEFERRED` | Potential future SaaS DLP for organization-wide GitHub/AI/SaaS monitoring, but it introduces cost, external data processing, and vendor dependence. Not justified for the current portfolio while self-hosted/open-source scanning is sufficient. |
 
-### Planned TruffleHog boundary
+### TruffleHog rollout boundary
 
 - Use TruffleHog as an external security tool; do not copy its AGPL source into managed repositories.
-- Pin the GitHub Action or binary to an immutable reviewed version/commit rather than `latest`.
+- The current rollout pins the official v3.97.1 Linux amd64 release archive by SHA-256 rather than using a mutable `latest` action/image.
 - Give the workflow read-only repository contents/history access unless a later remediation feature is explicitly approved.
 - Do not upload findings as public artifacts; logs must avoid printing discovered secret values.
-- PR/push scanning should be fast and focused on introduced history; a scheduled job may perform deeper historical scans.
-- Credential verification can cause outbound requests to credential providers. Keep it disabled or tightly reviewed until the exact detector behavior and acceptable side effects are documented.
+- PR/push scanning is focused on introduced history and is now deployed across all five managed repos.
+- Credential verification can cause outbound requests to credential providers. The current portfolio gate uses `--no-verification`.
+- Each workflow generates an ephemeral synthetic private-key fixture outside Git history and requires TruffleHog exit 183, proving detection is live without committing a credential fixture.
 - A finding is a security incident/gate, not an auto-remediation authority. Rotate/revoke any real exposed credential and remove it from reachable history through an explicit incident process.
 - Native GitHub secret-scanning/push-protection settings, where available, should complement this control rather than be disabled.
+- Core issue #424 remains open for the distinct scheduled/manual deep-history audit and baseline-finding triage; completion of that phase is required before promoting this ledger entry to `IMPLEMENTED`.
 
 ## Recovered secondary research batch
 
