@@ -1,8 +1,10 @@
 # Third-Party Integration Guide Index
 
-Last reviewed: 2026-08-20
+Last reviewed: 2026-08-27
 
 This directory is the canonical planning surface for third-party systems being evaluated for Knowledge Engine or cross-project development infrastructure.
+
+The durable cross-project inventory and disposition ledger is `EXTERNAL_REPO_RESEARCH_LEDGER.md`. Add every newly researched external repository there before substantive implementation so discoveries cannot disappear into chat history or be mistaken for completed integrations.
 
 ## Governing rules
 
