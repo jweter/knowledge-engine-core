@@ -154,9 +154,7 @@ def general_question_acquire_core(
 
     if _receipt_collides_with_acquired_pdf(receipt, papers_dir, execution):
         _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
-        raise typer.BadParameter(
-            "Receipt output path must not overwrite an acquired CORE PDF."
-        )
+        raise typer.BadParameter("Receipt output path must not overwrite an acquired CORE PDF.")
 
     try:
         previous_receipt = receipt.read_bytes() if receipt.exists() else None
