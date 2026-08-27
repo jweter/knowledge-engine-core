@@ -36,6 +36,7 @@ from knowledge_engine.general_question_acquisition import (
 )
 from knowledge_engine.general_question_core_acquisition import (
     GeneralQuestionCoreAcquisitionError,
+    GeneralQuestionCoreExecution,
     _rollback_acquired_files,
     execute_core_acquisition_plan,
     persist_core_acquisition_execution,
@@ -52,6 +53,63 @@ def _core_acquisition_service() -> CoreOaAcquisitionService:
     """Build the strict CORE-hosted PDF acquisition service."""
 
     return CoreOaAcquisitionService(UrllibCorePdfTransport())
+
+
+def _receipt_collides_with_acquired_pdf(
+    receipt: ReceiptOutputOption,
+    papers_dir: PapersDirectoryOption,
+    execution: GeneralQuestionCoreExecution,
+) -> bool:
+    """Return whether the requested receipt path names an acquired PDF."""
+
+    receipt_path = receipt.resolve(strict=False)
+    return any(
+        receipt_path == (papers_dir / item.filename).resolve(strict=False)
+        for item in execution.acquisition_receipt.items
+    )
+
+
+def _restore_receipt_after_failure(receipt: ReceiptOutputOption, previous: bytes | None) -> None:
+    """Remove a new receipt or restore the file that ``--force`` replaced."""
+
+    try:
+        if previous is None:
+            receipt.unlink(missing_ok=True)
+        else:
+            receipt.write_bytes(previous)
+    except OSError as exc:
+        raise GeneralQuestionCoreAcquisitionError(
+            "CORE receipt rollback failed after persistence did not commit."
+        ) from exc
+
+
+def _cleanup_failed_persistence(
+    *,
+    receipt: ReceiptOutputOption,
+    previous_receipt: bytes | None,
+    receipt_write_attempted: bool,
+    papers_dir: PapersDirectoryOption,
+    execution: GeneralQuestionCoreExecution,
+) -> None:
+    """Best-effort cleanup for the filesystem sides of a failed DB transaction."""
+
+    receipt_error: GeneralQuestionCoreAcquisitionError | None = None
+    if receipt_write_attempted:
+        try:
+            _restore_receipt_after_failure(receipt, previous_receipt)
+        except GeneralQuestionCoreAcquisitionError as exc:
+            receipt_error = exc
+
+    rollback_error: GeneralQuestionCoreAcquisitionError | None = None
+    try:
+        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
+    except GeneralQuestionCoreAcquisitionError as exc:
+        rollback_error = exc
+
+    if receipt_error is not None:
+        raise receipt_error
+    if rollback_error is not None:
+        raise rollback_error
 
 
 @app.command("general-question-acquire-core")
@@ -94,6 +152,21 @@ def general_question_acquire_core(
         console.print(f"[red]General-question CORE acquisition failed:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
 
+    if _receipt_collides_with_acquired_pdf(receipt, papers_dir, execution):
+        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
+        raise typer.BadParameter(
+            "Receipt output path must not overwrite an acquired CORE PDF."
+        )
+
+    try:
+        previous_receipt = receipt.read_bytes() if receipt.exists() else None
+    except OSError as exc:
+        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
+        raise typer.BadParameter(
+            "Existing receipt could not be preserved before CORE persistence."
+        ) from exc
+
+    receipt_write_attempted = False
     try:
         with database.session() as session:
             persistence_receipt = persist_core_acquisition_execution(
@@ -102,18 +175,37 @@ def general_question_acquire_core(
                 execution,
                 output_directory=papers_dir,
             )
+            receipt_write_attempted = True
             _write_output(receipt, persistence_receipt.to_json())
     except typer.BadParameter:
-        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
+        _cleanup_failed_persistence(
+            receipt=receipt,
+            previous_receipt=previous_receipt,
+            receipt_write_attempted=receipt_write_attempted,
+            papers_dir=papers_dir,
+            execution=execution,
+        )
         raise typer.BadParameter(
             "Receipt output could not be written; acquired PDFs and Paper writes were rolled back."
         ) from None
     except GeneralQuestionCoreAcquisitionError as exc:
-        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
+        _cleanup_failed_persistence(
+            receipt=receipt,
+            previous_receipt=previous_receipt,
+            receipt_write_attempted=receipt_write_attempted,
+            papers_dir=papers_dir,
+            execution=execution,
+        )
         console.print(f"[red]General-question CORE persistence failed:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
     except Exception:
-        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
+        _cleanup_failed_persistence(
+            receipt=receipt,
+            previous_receipt=previous_receipt,
+            receipt_write_attempted=receipt_write_attempted,
+            papers_dir=papers_dir,
+            execution=execution,
+        )
         raise
 
     console.print(
