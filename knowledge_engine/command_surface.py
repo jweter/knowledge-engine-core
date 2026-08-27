@@ -45,9 +45,11 @@ from knowledge_engine.general_question_core_acquisition import (
 from knowledge_engine.general_question_unpaywall_acquisition import (
     GeneralQuestionUnpaywallAcquisitionError,
     GeneralQuestionUnpaywallExecution,
-    _rollback_acquired_files as _rollback_unpaywall_files,
     execute_unpaywall_acquisition_plan,
     persist_unpaywall_acquisition_execution,
+)
+from knowledge_engine.general_question_unpaywall_acquisition import (
+    _rollback_acquired_files as _rollback_unpaywall_files,
 )
 from knowledge_engine.unpaywall_acquisition import (
     UnpaywallDoiResolver,
