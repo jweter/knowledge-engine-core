@@ -111,10 +111,10 @@ class UnpaywallRecord:
     is_oa: bool
     oa_status: str | None
     best_oa_location_url: str | None
-    best_oa_location_pdf_url: str | None
     best_oa_location_license: str | None
     license_rule_result: str
     oa_locations: tuple[UnpaywallLocation, ...]
+    best_oa_location_pdf_url: str | None = None
 
 
 @dataclass(frozen=True)
@@ -279,10 +279,10 @@ def _parse_record(raw: dict[str, object]) -> UnpaywallRecord:
         is_oa=is_oa,
         oa_status=_optional_string(raw, "oa_status"),
         best_oa_location_url=best_url,
-        best_oa_location_pdf_url=best_pdf_url,
         best_oa_location_license=best_license,
         license_rule_result=evaluate_license(normalize_unpaywall_license(best_license)),
         oa_locations=_parse_locations(raw.get("oa_locations")),
+        best_oa_location_pdf_url=best_pdf_url,
     )
 
 
