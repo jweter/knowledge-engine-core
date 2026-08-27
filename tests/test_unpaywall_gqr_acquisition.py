@@ -144,7 +144,9 @@ def _lookup_result(
             best_oa_location_url="https://core.ac.uk/works/123",
             best_oa_location_pdf_url=pdf_url,
             best_oa_location_license=license_name,
-            license_rule_result="passed" if license_name == "cc-by" else "unsupported_license_basis",
+            license_rule_result="passed"
+            if license_name == "cc-by"
+            else "unsupported_license_basis",
             oa_locations=(),
         ),
     )
@@ -234,9 +236,9 @@ def test_resolver_requires_reusable_license_and_direct_pdf() -> None:
             ("10.1000/creatine",)
         )
     with pytest.raises(UnpaywallAcquisitionError, match="reusable-license direct-PDF"):
-        UnpaywallDoiResolver(
-            FakeLookup(_lookup_result(license_name="cc-by-nc-nd"))
-        ).resolve_dois(("10.1000/creatine",))
+        UnpaywallDoiResolver(FakeLookup(_lookup_result(license_name="cc-by-nc-nd"))).resolve_dois(
+            ("10.1000/creatine",)
+        )
 
 
 def test_acquisition_service_commits_pdf_and_receipt_atomically(tmp_path: Path) -> None:
