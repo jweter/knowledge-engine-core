@@ -8,7 +8,7 @@ from knowledge_engine.unpaywall_http import TransportResponse
 from knowledge_engine.unpaywall_lookup import UnpaywallLookupService
 
 
-@dataclass(frozen=True)
+@dataclass
 class FakeResponse:
     status_code: int
     body: bytes
