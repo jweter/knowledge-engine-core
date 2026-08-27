@@ -4,6 +4,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from knowledge_engine.unpaywall_http import TransportResponse
 from knowledge_engine.unpaywall_lookup import UnpaywallLookupService
 
 
@@ -25,7 +26,7 @@ class FakeTransport:
         headers: Mapping[str, str],
         timeout_seconds: float,
         max_response_bytes: int,
-    ) -> FakeResponse:
+    ) -> TransportResponse:
         del url, headers, timeout_seconds, max_response_bytes
         return self.response
 
