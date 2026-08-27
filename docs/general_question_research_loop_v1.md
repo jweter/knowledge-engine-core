@@ -190,8 +190,12 @@ persisting their durable receipts belongs to CORE-GQR-4.
 - attach import-run/acquisition receipt provenance;
 - keep failures independently inspectable.
 
-**Status:** the PMC and Europe PMC routes now acquire, verify, parse, and
-persist Papers.
+**Status:** PMC and Europe PMC are complete and reachable. The CORE provider
+execution/persistence library merged in PR #420; this slice makes that same
+fail-closed path reachable through the supported `ke` command surface. Unpaywall
+remains the final provider execution adapter before CORE-GQR-4 can be treated as
+provider-complete.
+
 `ke general-question-acquire-pmc <request.json> --ledger-root <dir>
 --papers-dir <dir> --receipt <path.json>` rebuilds the bounded plan with
 database-backed reuse detection, resolves the exact selected PMIDs against
@@ -219,8 +223,20 @@ PDF is admitted to the approval batch; redirects, third-party hosts, ambiguous
 DOI results, PMC-overlap records, missing reusable licenses, and stale metadata
 all fail closed. Persistence records the same byte/digest/Paper/search-run/
 candidate facts and immutable ImportRun/ImportItem lineage as the PMC path.
-CORE-GQR-4's PMC and Europe PMC persistence paths are therefore complete;
-CORE and Unpaywall route execution remain subsequent provider adapters.
+
+`ke general-question-acquire-core <request.json> --ledger-root <dir>
+--papers-dir <dir> --receipt <path.json>` executes only `eligible_full_text`
+items routed to `core`. The command rebuilds the bounded plan with local reuse
+detection, re-resolves every planned DOI through current CORE discovery, and
+requires the current CORE work to resolve uniquely to the exact planned
+`https://core.ac.uk/...` PDF URL. Because CORE's API does not provide per-work
+license metadata, the persisted plan itself must carry an explicit supported
+reusable license; provider-wide open-access aggregation is never treated as a
+license exemption. The existing #420 executor then performs bounded no-redirect
+PDF acquisition, byte/signature/digest verification, atomic rollback,
+Paper persistence/reuse, and immutable ImportRun/ImportItem lineage. This CLI
+registration is additive and pending its own exact-head Quality/security gate;
+it does not weaken the existing PMC or Europe PMC commands.
 
 ### CORE-GQR-5 - Grounded extraction and promotion
 - invoke domain-general grounded extraction;
