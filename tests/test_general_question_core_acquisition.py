@@ -99,7 +99,7 @@ class FakePdfResponse:
     def __init__(self, body: bytes, status_code: int = 200) -> None:
         self.body = body
         self.status_code = status_code
-        self.headers: dict[str, str] = {}
+        self.headers: Mapping[str, str] = {}
 
 
 class FakePdfTransport:
