@@ -90,7 +90,7 @@ class UrllibCorePdfTransport:
         headers: Mapping[str, str],
         timeout_seconds: float,
         max_response_bytes: int,
-    ) -> CorePdfHttpResponse:
+    ) -> TransportResponse:
         parsed = urlsplit(url)
         if (
             parsed.scheme != "https"
