@@ -25,14 +25,13 @@ adjudication pipeline**: given one or more DOIs (typically DOIs already
 surfaced -- and possibly `held` -- by `pubmed_discovery.py`,
 `europepmc_discovery.py`, or `core_discovery.py`), it queries Unpaywall's
 official per-DOI endpoint and reports what Unpaywall knows: OA status, best
-OA location, license, and every OA location it has on file, plus this
-project's own `license_rule_result` (via the shared `license_rules.py`) so
-whoever reviews it next (an AI agent or a human) can see at a glance
-whether Unpaywall's reported license would clear this project's
-reusable-license bar. It makes **no**
-accept/reject/hold decision of its own -- that remains the responsibility
-of whichever pipeline's `held` candidate this evidence is being used to
-re-examine.
+OA location, direct PDF URL when Unpaywall reports one, license, and every
+OA location it has on file, plus this project's own `license_rule_result`
+(via the shared `license_rules.py`) so whoever reviews it next (an AI agent
+or a human) can see at a glance whether Unpaywall's reported license would
+clear this project's reusable-license bar. It makes **no** accept/reject/hold
+decision of its own -- that remains the responsibility of whichever
+pipeline's candidate this evidence is being used to re-examine.
 """
 
 from __future__ import annotations
@@ -98,6 +97,7 @@ class UnpaywallLocation:
     """One OA location Unpaywall has on file for a DOI."""
 
     url: str
+    pdf_url: str | None
     host_type: str | None
     license: str | None
     is_best: bool
@@ -111,6 +111,7 @@ class UnpaywallRecord:
     is_oa: bool
     oa_status: str | None
     best_oa_location_url: str | None
+    best_oa_location_pdf_url: str | None
     best_oa_location_license: str | None
     license_rule_result: str
     oa_locations: tuple[UnpaywallLocation, ...]
@@ -272,26 +273,31 @@ def _parse_record(raw: dict[str, object]) -> UnpaywallRecord:
     if not isinstance(is_oa, bool):
         raise UnpaywallLookupError("Unpaywall response was missing required evidence.")
 
-    best_url, best_license = _best_location_evidence(raw.get("best_oa_location"))
+    best_url, best_pdf_url, best_license = _best_location_evidence(raw.get("best_oa_location"))
     return UnpaywallRecord(
         title=_optional_string(raw, "title"),
         is_oa=is_oa,
         oa_status=_optional_string(raw, "oa_status"),
         best_oa_location_url=best_url,
+        best_oa_location_pdf_url=best_pdf_url,
         best_oa_location_license=best_license,
         license_rule_result=evaluate_license(normalize_unpaywall_license(best_license)),
         oa_locations=_parse_locations(raw.get("oa_locations")),
     )
 
 
-def _best_location_evidence(raw: object) -> tuple[str | None, str | None]:
+def _best_location_evidence(raw: object) -> tuple[str | None, str | None, str | None]:
     if not isinstance(raw, dict):
-        return None, None
+        return None, None, None
     url = raw.get("url")
+    pdf_url = raw.get("url_for_pdf")
     license_value = raw.get("license")
     return (
-        url if isinstance(url, str) and url.strip() else None,
-        license_value if isinstance(license_value, str) and license_value.strip() else None,
+        url.strip() if isinstance(url, str) and url.strip() else None,
+        pdf_url.strip() if isinstance(pdf_url, str) and pdf_url.strip() else None,
+        license_value.strip()
+        if isinstance(license_value, str) and license_value.strip()
+        else None,
     )
 
 
@@ -305,12 +311,16 @@ def _parse_locations(raw: object) -> tuple[UnpaywallLocation, ...]:
         url = entry.get("url")
         if not isinstance(url, str) or not url.strip():
             continue
+        pdf_url = entry.get("url_for_pdf")
         host_type = entry.get("host_type")
         license_value = entry.get("license")
         is_best = entry.get("is_best")
         locations.append(
             UnpaywallLocation(
                 url=url.strip(),
+                pdf_url=pdf_url.strip()
+                if isinstance(pdf_url, str) and pdf_url.strip()
+                else None,
                 host_type=host_type if isinstance(host_type, str) and host_type.strip() else None,
                 license=license_value
                 if isinstance(license_value, str) and license_value.strip()
