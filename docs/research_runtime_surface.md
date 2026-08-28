@@ -23,17 +23,28 @@ returns a versioned JSON capability document with:
 
 Hosted Web must not switch to `ke-research` until `complete` is true. A partially extracted runtime is therefore development progress, not a false production-ready boundary.
 
-## Stage 1
+## Stage 1: deterministic base
 
 Stage 1 builds `ke-research` on `knowledge_engine.cli`, which avoids importing the Phase 3 vector package at command-surface import time. It preserves the deterministic base commands already registered there, including `evidence-report`, and reports every still-missing federated/GQR command explicitly.
 
-The existing `ke` entry point is unchanged.
+## Stage 2: federated discovery and acquisition planning
+
+Stage 2 registers `federated-discover` and `general-question-acquisition-plan` directly on the slim surface. The implementation composes the existing provider adapters, recorded federated-search ledger, public result serializer, and GQR planner directly from their focused modules; it does not import `knowledge_engine.entrypoint` to borrow the existing command functions.
+
+The structured JSON boundaries remain the same ones `knowledge-engine-ai` already consumes:
+
+- `federated-discover --output <path>` writes `build_public_federated_result_payload(...)`;
+- `general-question-acquisition-plan --output <path>` writes `GeneralQuestionAcquisitionPlan.to_json()`.
+
+Provider failures remain coverage facts, not evidence quality. Acquisition dispositions remain acquisition eligibility, not scientific support. No source is downloaded by the planning command.
+
+The existing `ke` entry point remains unchanged throughout both stages.
 
 ## Ordered continuation
 
-The next slices should move the missing command groups onto this surface in dependency-bounded steps:
+The next slices should move the remaining command groups onto this surface in dependency-bounded steps:
 
-1. federated discovery, citation snowball, and acquisition planning;
+1. citation snowball;
 2. PMC and Europe PMC acquisition executors;
 3. CORE and Unpaywall acquisition executors;
 4. any remaining grounding/review commands not already registered by the base CLI;
