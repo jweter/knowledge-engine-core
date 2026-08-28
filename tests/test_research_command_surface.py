@@ -29,9 +29,15 @@ def test_capability_payload_is_explicit_and_fail_closed_until_complete() -> None
     assert available.isdisjoint(missing)
     assert available | missing == required
     assert payload["complete"] is (not missing)
-    # The slim base must already preserve Core's machine-readable retrieval
-    # boundary. Missing later-stage commands remain visible, never guessed.
-    assert "evidence-report" in available
+    # Stage 1 preserves Core retrieval; Stage 2 adds the first external
+    # discovery/planning group without importing the heavyweight entrypoint.
+    assert {
+        "evidence-report",
+        "federated-discover",
+        "general-question-acquisition-plan",
+    } <= available
+    assert "citation-snowball" in missing
+    assert payload["complete"] is False
 
 
 def test_capability_command_emits_machine_readable_json() -> None:
@@ -40,6 +46,12 @@ def test_capability_command_emits_machine_readable_json() -> None:
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload == research_runtime_capability_payload()
+
+
+def test_new_research_commands_are_cli_reachable_without_execution() -> None:
+    for command in ("federated-discover", "general-question-acquisition-plan"):
+        result = runner.invoke(app, [command, "--help"])
+        assert result.exit_code == 0
 
 
 def test_poetry_exposes_additive_ke_research_entrypoint() -> None:
