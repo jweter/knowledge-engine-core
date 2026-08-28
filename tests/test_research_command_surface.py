@@ -29,14 +29,15 @@ def test_capability_payload_is_explicit_and_fail_closed_until_complete() -> None
     assert available.isdisjoint(missing)
     assert available | missing == required
     assert payload["complete"] is (not missing)
-    # Stage 1 preserves Core retrieval; Stage 2 adds the first external
-    # discovery/planning group without importing the heavyweight entrypoint.
+    # The slim runtime now owns retrieval plus the whole bounded discovery
+    # and planning group without importing the heavyweight entrypoint.
     assert {
         "evidence-report",
         "federated-discover",
+        "citation-snowball",
         "general-question-acquisition-plan",
     } <= available
-    assert "citation-snowball" in missing
+    assert "general-question-acquire-pmc" in missing
     assert payload["complete"] is False
 
 
@@ -49,7 +50,11 @@ def test_capability_command_emits_machine_readable_json() -> None:
 
 
 def test_new_research_commands_are_cli_reachable_without_execution() -> None:
-    for command in ("federated-discover", "general-question-acquisition-plan"):
+    for command in (
+        "federated-discover",
+        "citation-snowball",
+        "general-question-acquisition-plan",
+    ):
         result = runner.invoke(app, [command, "--help"])
         assert result.exit_code == 0
 
