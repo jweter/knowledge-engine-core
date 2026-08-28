@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 from typer.testing import CliRunner
 
@@ -18,9 +19,9 @@ runner = CliRunner()
 def test_capability_payload_is_explicit_and_fail_closed_until_complete() -> None:
     payload = research_runtime_capability_payload()
 
-    required = set(payload["required_commands"])
-    available = set(payload["available_commands"])
-    missing = set(payload["missing_commands"])
+    required = set(cast(list[str], payload["required_commands"]))
+    available = set(cast(list[str], payload["available_commands"]))
+    missing = set(cast(list[str], payload["missing_commands"]))
 
     assert payload["schema_version"] == RESEARCH_RUNTIME_CONTRACT_VERSION == 1
     assert payload["surface"] == "ke-research"
