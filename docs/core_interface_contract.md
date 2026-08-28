@@ -200,7 +200,9 @@ most likely to actually call:
   question coverage over the records' research question, claim, PICO, and
   result fields reranks those candidates. JSON output exposes the resulting
   `evidence_alignment_score`; it never uses Evidence Quality, confidence,
-  consensus, or an LLM.
+  consensus, or an LLM. For `--format json`, zero indexed matches is a successful
+  empty retrieval (`papers: []`, exit 0), allowing a machine consumer to broaden
+  the same question into discovery. Markdown keeps the historical no-match error.
 - `ke evidence-map-report <map.json> --evidence <records.jsonl> --relationships
   <relationships.jsonl> --sources <sources.csv> [--output <path.md>]` -- render
   the reviewed map's stored PICO, results, limitations, citations, and

@@ -601,7 +601,11 @@ def evidence_report(
             evidence_records=evidence_records,
         )
 
-    if not results:
+    # A zero-result lexical retrieval is a normal outcome for a novel research
+    # question. Machine consumers need the valid empty JSON report so they can
+    # decide whether to broaden into federated discovery. Preserve the historical
+    # human-facing Markdown behavior, where an empty corpus query is still an error.
+    if not results and report_format != "json":
         raise typer.BadParameter("No relevant papers found in the indexed corpus.")
 
     if report_format == "json":
