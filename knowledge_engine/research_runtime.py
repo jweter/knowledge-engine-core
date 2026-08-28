@@ -9,12 +9,14 @@ from knowledge_engine.research_command_surface import (
     app,
     research_runtime_capability_payload,
 )
+from knowledge_engine.research_review_surface import register_research_review_commands
 from knowledge_engine.research_secondary_acquisition_surface import (
     register_research_secondary_acquisition_commands,
 )
 
 register_research_oa_acquisition_commands(app)
 register_research_secondary_acquisition_commands(app)
+register_research_review_commands(app)
 
 __all__ = [
     "RESEARCH_RUNTIME_CONTRACT_VERSION",
