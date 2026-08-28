@@ -30,7 +30,7 @@ def test_capability_payload_is_explicit_and_fail_closed_until_complete() -> None
     assert available | missing == required
     assert payload["complete"] is (not missing)
     # The composed slim runtime now owns retrieval, bounded discovery/planning,
-    # and the first two reusable full-text acquisition routes.
+    # and all four reusable full-text acquisition routes.
     assert {
         "evidence-report",
         "federated-discover",
@@ -38,8 +38,10 @@ def test_capability_payload_is_explicit_and_fail_closed_until_complete() -> None
         "general-question-acquisition-plan",
         "general-question-acquire-pmc",
         "general-question-acquire-europe-pmc",
+        "general-question-acquire-core",
+        "general-question-acquire-unpaywall",
     } <= available
-    assert "general-question-acquire-core" in missing
+    assert missing
     assert payload["complete"] is False
 
 
@@ -58,6 +60,8 @@ def test_new_research_commands_are_cli_reachable_without_execution() -> None:
         "general-question-acquisition-plan",
         "general-question-acquire-pmc",
         "general-question-acquire-europe-pmc",
+        "general-question-acquire-core",
+        "general-question-acquire-unpaywall",
     ):
         result = runner.invoke(app, [command, "--help"])
         assert result.exit_code == 0
