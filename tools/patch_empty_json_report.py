@@ -1,0 +1,90 @@
+from pathlib import Path
+
+cli_path = Path("knowledge_engine/cli.py")
+cli_text = cli_path.read_text(encoding="utf-8")
+old = '''    if not results:\n        raise typer.BadParameter("No relevant papers found in the indexed corpus.")\n\n    if report_format == "json":\n'''
+new = '''    # A zero-result lexical retrieval is a normal outcome for a novel research\n    # question. Machine consumers need the valid empty JSON report so they can\n    # decide whether to broaden into federated discovery. Preserve the historical\n    # human-facing Markdown behavior, where an empty corpus query is still an error.\n    if not results and report_format != "json":\n        raise typer.BadParameter("No relevant papers found in the indexed corpus.")\n\n    if report_format == "json":\n'''
+if old not in cli_text:
+    raise SystemExit("evidence-report no-results block not found")
+cli_path.write_text(cli_text.replace(old, new, 1), encoding="utf-8")
+
+test_path = Path("tests/test_cli.py")
+test_text = test_path.read_text(encoding="utf-8")
+marker = "def test_evidence_report_json_returns_empty_report_when_indexed_retrieval_has_no_matches"
+if marker not in test_text:
+    test_text += r'''
+
+
+def test_evidence_report_json_returns_empty_report_when_indexed_retrieval_has_no_matches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"source_doi": "10.1038/s41591-022-02026-4"}],
+    )
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    question = "Does listening to music during exercise improve endurance performance?"
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            question,
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["schema_version"] == 1
+    assert payload["question"] == question
+    assert payload["papers"] == []
+    assert payload["evidence_summary"]["total"] == 1
+    assert "No scientific synthesis has been performed." in payload["disclaimer"]
+
+
+def test_evidence_report_markdown_preserves_no_match_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"source_doi": "10.1038/s41591-022-02026-4"}],
+    )
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Does listening to music during exercise improve endurance performance?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    for box_char in "│╭╮╰╯─":
+        plain = plain.replace(box_char, " ")
+    assert "No relevant papers found in the indexed corpus." in " ".join(plain.split())
+'''
+    test_path.write_text(test_text, encoding="utf-8")
+
+contract_path = Path("docs/core_interface_contract.md")
+contract_text = contract_path.read_text(encoding="utf-8")
+old_contract = '''  `evidence_alignment_score`; it never uses Evidence Quality, confidence,\n  consensus, or an LLM.\n'''
+new_contract = '''  `evidence_alignment_score`; it never uses Evidence Quality, confidence,\n  consensus, or an LLM. For `--format json`, zero indexed matches is a successful\n  empty retrieval (`papers: []`, exit 0), allowing a machine consumer to broaden\n  the same question into discovery. Markdown keeps the historical no-match error.\n'''
+if old_contract not in contract_text:
+    raise SystemExit("core interface evidence-report paragraph not found")
+contract_path.write_text(contract_text.replace(old_contract, new_contract, 1), encoding="utf-8")
