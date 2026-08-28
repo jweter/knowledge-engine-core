@@ -6,7 +6,7 @@ from typing import cast
 
 from typer.testing import CliRunner
 
-from knowledge_engine.research_command_surface import (
+from knowledge_engine.research_runtime import (
     RESEARCH_RUNTIME_CONTRACT_VERSION,
     RESEARCH_RUNTIME_REQUIRED_COMMANDS,
     app,
@@ -29,15 +29,17 @@ def test_capability_payload_is_explicit_and_fail_closed_until_complete() -> None
     assert available.isdisjoint(missing)
     assert available | missing == required
     assert payload["complete"] is (not missing)
-    # The slim runtime now owns retrieval plus the whole bounded discovery
-    # and planning group without importing the heavyweight entrypoint.
+    # The composed slim runtime now owns retrieval, bounded discovery/planning,
+    # and the first two reusable full-text acquisition routes.
     assert {
         "evidence-report",
         "federated-discover",
         "citation-snowball",
         "general-question-acquisition-plan",
+        "general-question-acquire-pmc",
+        "general-question-acquire-europe-pmc",
     } <= available
-    assert "general-question-acquire-pmc" in missing
+    assert "general-question-acquire-core" in missing
     assert payload["complete"] is False
 
 
@@ -54,6 +56,8 @@ def test_new_research_commands_are_cli_reachable_without_execution() -> None:
         "federated-discover",
         "citation-snowball",
         "general-question-acquisition-plan",
+        "general-question-acquire-pmc",
+        "general-question-acquire-europe-pmc",
     ):
         result = runner.invoke(app, [command, "--help"])
         assert result.exit_code == 0
@@ -63,4 +67,4 @@ def test_poetry_exposes_additive_ke_research_entrypoint() -> None:
     pyproject = (Path(__file__).parents[1] / "pyproject.toml").read_text(encoding="utf-8")
 
     assert 'ke = "knowledge_engine.command_surface:app"' in pyproject
-    assert 'ke-research = "knowledge_engine.research_command_surface:app"' in pyproject
+    assert 'ke-research = "knowledge_engine.research_runtime:app"' in pyproject
