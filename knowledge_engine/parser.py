@@ -6,7 +6,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
-import fitz
+import pymupdf as fitz
 from pydantic import BaseModel, Field
 
 from knowledge_engine.utils import count_words, file_sha256, normalize_whitespace
