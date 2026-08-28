@@ -1,0 +1,61 @@
+name: Patch PyMuPDF typing boundary
+
+on:
+  push:
+    branches:
+      - agent/pymupdf-json-stdout-clean
+    paths:
+      - .github/workflows/patch-pymupdf-typing.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/pymupdf-json-stdout-clean
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            knowledge_engine/parser.py
+      - name: Preserve typed shim for mypy and silent runtime import
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('knowledge_engine/parser.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''from pathlib import Path
+
+import pymupdf as fitz
+from pydantic import BaseModel, Field
+
+from knowledge_engine.utils import count_words, file_sha256, normalize_whitespace
+'''
+          new = '''from pathlib import Path
+from typing import TYPE_CHECKING
+
+from pydantic import BaseModel, Field
+
+from knowledge_engine.utils import count_words, file_sha256, normalize_whitespace
+
+if TYPE_CHECKING:
+    import fitz
+else:
+    import pymupdf as fitz
+'''
+          if old not in text:
+              raise SystemExit('expected import block not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add knowledge_engine/parser.py
+          git commit -m "Preserve PyMuPDF typing without stdout warnings"
+          git push origin HEAD:agent/pymupdf-json-stdout-clean
