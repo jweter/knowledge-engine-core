@@ -16,8 +16,9 @@ fail closed.
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from pathlib import Path
-from typing import Annotated, cast
+from typing import Annotated, Any, cast
 
 import click
 import typer
@@ -25,6 +26,13 @@ import typer
 import knowledge_engine.cli as cli
 from knowledge_engine.arxiv_http import UrllibArxivTransport
 from knowledge_engine.arxiv_provider import ArxivProvider
+from knowledge_engine.citation_snowball import (
+    CitationSnowballDiscovery,
+    CitationSnowballPlan,
+    CitationTraversalProvider,
+)
+from knowledge_engine.citation_snowball_ledger import CitationSnowballLedger
+from knowledge_engine.citation_traversal import CitationDirection
 from knowledge_engine.config import build_settings
 from knowledge_engine.crossref_federated_adapter import CrossrefFederatedAdapter
 from knowledge_engine.crossref_http import UrllibCrossrefTransport
@@ -40,6 +48,8 @@ from knowledge_engine.general_question_acquisition import (
     build_acquisition_plan,
 )
 from knowledge_engine.ncbi_http import UrllibNcbiTransport
+from knowledge_engine.openalex_citation_adapter import OpenAlexCitationAdapter
+from knowledge_engine.openalex_citations import OpenAlexCitationProvider
 from knowledge_engine.openalex_http import UrllibOpenAlexTransport
 from knowledge_engine.openalex_provider import OpenAlexProvider
 from knowledge_engine.pubmed_discovery import GetTransport, PubmedPmcDiscoveryService
@@ -103,8 +113,40 @@ AcquisitionNoDatabaseOption = Annotated[
     bool,
     typer.Option("--no-database", help="Skip already-indexed lookup against the local database."),
 ]
+SnowballSeedsOption = Annotated[
+    str,
+    typer.Option("--seeds", help="Comma-separated seed identifiers."),
+]
+SnowballLedgerRootOption = Annotated[
+    Path,
+    typer.Option("--ledger-root", help="Directory for persisted citation-snowball runs."),
+]
+SnowballProviderOption = Annotated[
+    str,
+    typer.Option("--provider", help="Citation provider: semantic_scholar or openalex."),
+]
+SnowballDirectionsOption = Annotated[
+    str,
+    typer.Option("--directions", help="Comma-separated references,citations directions."),
+]
+SnowballMaxDepthOption = Annotated[
+    int,
+    typer.Option("--max-depth", min=1, max=3),
+]
+SnowballLimitPerTraversalOption = Annotated[
+    int,
+    typer.Option("--limit-per-traversal", min=1, max=100),
+]
+SnowballMaxCandidatesOption = Annotated[
+    int,
+    typer.Option("--max-candidates", min=1, max=1000),
+]
+SnowballOutputOption = Annotated[Path | None, typer.Option("--output")]
 
 app = cli.app
+
+_DIRECTION_BY_NAME = {direction.value: direction for direction in CitationDirection}
+_SNOWBALL_PROVIDERS = ("semantic_scholar", "openalex")
 
 
 def research_runtime_capability_payload() -> dict[str, object]:
@@ -146,7 +188,7 @@ def _pubmed_discovery_service() -> PubmedPmcDiscoveryService:
 def _federated_discovery_registry(
     *, openalex_api_key: str | None, semantic_scholar_api_key: str | None
 ) -> DiscoveryProviderRegistry:
-    """Compose the same provider set as the production federated CLI without entrypoint imports."""
+    """Compose the production provider set without importing the heavyweight entrypoint."""
 
     providers: list[DiscoveryProvider] = [
         PubmedFederatedAdapter(_pubmed_discovery_service()),
@@ -167,6 +209,53 @@ def _parse_provider_subset(providers: str | None) -> tuple[str, ...] | None:
     if not names:
         raise typer.BadParameter("--providers must name at least one provider when given.")
     return names
+
+
+def _parse_snowball_provider(provider: str) -> str:
+    normalized = provider.strip().lower().replace("-", "_")
+    if normalized not in _SNOWBALL_PROVIDERS:
+        allowed = ", ".join(_SNOWBALL_PROVIDERS)
+        raise typer.BadParameter(f"Unknown provider '{provider}'. Choose from: {allowed}.")
+    return normalized
+
+
+def _build_snowball_provider(
+    provider: str,
+    *,
+    semantic_scholar_api_key: str | None,
+    openalex_api_key: str | None,
+) -> CitationTraversalProvider:
+    if provider == "semantic_scholar":
+        return SemanticScholarProvider(
+            transport=UrllibSemanticScholarTransport(), api_key=semantic_scholar_api_key
+        )
+    return OpenAlexCitationAdapter(
+        citation_source=OpenAlexCitationProvider(
+            transport=UrllibOpenAlexTransport(), api_key=openalex_api_key
+        ),
+        work_lookup=OpenAlexProvider(transport=UrllibOpenAlexTransport(), api_key=openalex_api_key),
+    )
+
+
+def _parse_snowball_seeds(seeds: str) -> tuple[str, ...]:
+    parsed = tuple(seed.strip() for seed in seeds.split(",") if seed.strip())
+    if not parsed:
+        raise typer.BadParameter("--seeds must name at least one seed identifier.")
+    return parsed
+
+
+def _parse_snowball_directions(directions: str) -> tuple[CitationDirection, ...]:
+    names = tuple(name.strip() for name in directions.split(",") if name.strip())
+    if not names:
+        raise typer.BadParameter("--directions must name at least one direction.")
+    parsed: list[CitationDirection] = []
+    for name in names:
+        direction = _DIRECTION_BY_NAME.get(name)
+        if direction is None:
+            allowed = ", ".join(sorted(_DIRECTION_BY_NAME))
+            raise typer.BadParameter(f"Unknown direction '{name}'. Choose from: {allowed}.")
+        parsed.append(direction)
+    return tuple(parsed)
 
 
 def _local_database() -> Database:
@@ -202,7 +291,7 @@ def federated_discover(
     research_question_id: FederatedResearchQuestionIdOption = None,
     output: FederatedOutputOption = None,
 ) -> None:
-    """Run the recorded federated discovery path without importing the heavyweight entrypoint."""
+    """Run recorded federated discovery without importing the heavyweight entrypoint."""
 
     try:
         discovery_query = DiscoveryQuery(
@@ -233,6 +322,69 @@ def federated_discover(
         f"search_run_id={execution.record.search_run_id} "
         f"completeness={execution.coverage.completeness} "
         f"candidates={len(execution.result.candidates)}"
+    )
+
+
+@app.command("citation-snowball")
+def citation_snowball(
+    seeds: SnowballSeedsOption,
+    ledger_root: SnowballLedgerRootOption,
+    provider: SnowballProviderOption = "semantic_scholar",
+    directions: SnowballDirectionsOption = "references,citations",
+    max_depth: SnowballMaxDepthOption = 1,
+    limit_per_traversal: SnowballLimitPerTraversalOption = 25,
+    max_candidates: SnowballMaxCandidatesOption = 100,
+    semantic_scholar_api_key: FederatedSemanticScholarApiKeyOption = None,
+    openalex_api_key: FederatedOpenAlexApiKeyOption = None,
+    output: SnowballOutputOption = None,
+) -> None:
+    """Run one bounded citation expansion and persist its replay record."""
+
+    try:
+        plan = CitationSnowballPlan(
+            seed_identifiers=_parse_snowball_seeds(seeds),
+            directions=_parse_snowball_directions(directions),
+            max_depth=max_depth,
+            limit_per_traversal=limit_per_traversal,
+            max_candidates=max_candidates,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    parsed_provider = _parse_snowball_provider(provider)
+    discovery = CitationSnowballDiscovery(
+        _build_snowball_provider(
+            parsed_provider,
+            semantic_scholar_api_key=semantic_scholar_api_key,
+            openalex_api_key=openalex_api_key,
+        )
+    )
+    result = discovery.run(plan)
+    record = CitationSnowballLedger(ledger_root).record(result)
+
+    if output is not None:
+        payload: dict[str, Any] = {
+            "snowball_run_id": record.snowball_run_id,
+            "provider": result.provider,
+            "plan": {
+                "seed_identifiers": list(plan.normalized_seed_identifiers),
+                "directions": [direction.value for direction in plan.directions],
+                "max_depth": plan.max_depth,
+                "limit_per_traversal": plan.limit_per_traversal,
+                "max_candidates": plan.max_candidates,
+            },
+            "completeness": result.completeness.value,
+            "truncated": result.truncated,
+            "candidates": [asdict(candidate) for candidate in result.candidates],
+            "edges": [
+                {**asdict(edge), "direction": edge.direction.value} for edge in result.edges
+            ],
+        }
+        _write_text_output(output, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+    typer.echo(
+        f"snowball_run_id={record.snowball_run_id} provider={result.provider} "
+        f"completeness={result.completeness.value} candidates={len(result.candidates)}"
     )
 
 
