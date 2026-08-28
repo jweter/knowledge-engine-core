@@ -5,11 +5,16 @@ from __future__ import annotations
 import re
 from collections import Counter
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import pymupdf as fitz
 from pydantic import BaseModel, Field
 
 from knowledge_engine.utils import count_words, file_sha256, normalize_whitespace
+
+if TYPE_CHECKING:
+    import fitz
+else:
+    import pymupdf as fitz
 
 DOI_PATTERN = re.compile(r"\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b", re.IGNORECASE)
 REFERENCE_HEADING_PATTERN = re.compile(r"(?im)^\s*(?:references|bibliography|literature cited)\s*$")
