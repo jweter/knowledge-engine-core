@@ -2039,3 +2039,68 @@ def evidence_consumer_args(
         "--output",
         str(tmp_path / "report.md"),
     ]
+
+
+def test_evidence_report_json_returns_empty_report_when_indexed_retrieval_has_no_matches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"source_doi": "10.1038/s41591-022-02026-4"}],
+    )
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    question = "Does listening to music during exercise improve endurance performance?"
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            question,
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["schema_version"] == 1
+    assert payload["question"] == question
+    assert payload["papers"] == []
+    assert payload["evidence_summary"]["total"] == 1
+    assert "No scientific synthesis has been performed." in payload["disclaimer"]
+
+
+def test_evidence_report_markdown_preserves_no_match_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
+    records_path = write_evidence_records(
+        tmp_path,
+        [{"source_doi": "10.1038/s41591-022-02026-4"}],
+    )
+    monkeypatch.setattr(cli, "_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "evidence-report",
+            "Does listening to music during exercise improve endurance performance?",
+            "--sources",
+            str(sources_csv),
+            "--evidence",
+            str(records_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    for box_char in "│╭╮╰╯─":
+        plain = plain.replace(box_char, " ")
+    assert "No relevant papers found in the indexed corpus." in " ".join(plain.split())
