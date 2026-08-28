@@ -16,7 +16,7 @@ from knowledge_engine.research_runtime import (
 runner = CliRunner()
 
 
-def test_capability_payload_is_explicit_and_fail_closed_until_complete() -> None:
+def test_capability_payload_covers_the_complete_research_manifest() -> None:
     payload = research_runtime_capability_payload()
 
     required = set(cast(list[str], payload["required_commands"]))
@@ -26,23 +26,9 @@ def test_capability_payload_is_explicit_and_fail_closed_until_complete() -> None
     assert payload["schema_version"] == RESEARCH_RUNTIME_CONTRACT_VERSION == 1
     assert payload["surface"] == "ke-research"
     assert required == set(RESEARCH_RUNTIME_REQUIRED_COMMANDS)
-    assert available.isdisjoint(missing)
-    assert available | missing == required
-    assert payload["complete"] is (not missing)
-    # The composed slim runtime now owns retrieval, bounded discovery/planning,
-    # and all four reusable full-text acquisition routes.
-    assert {
-        "evidence-report",
-        "federated-discover",
-        "citation-snowball",
-        "general-question-acquisition-plan",
-        "general-question-acquire-pmc",
-        "general-question-acquire-europe-pmc",
-        "general-question-acquire-core",
-        "general-question-acquire-unpaywall",
-    } <= available
-    assert missing
-    assert payload["complete"] is False
+    assert available == required
+    assert missing == set()
+    assert payload["complete"] is True
 
 
 def test_capability_command_emits_machine_readable_json() -> None:
@@ -53,18 +39,10 @@ def test_capability_command_emits_machine_readable_json() -> None:
     assert payload == research_runtime_capability_payload()
 
 
-def test_new_research_commands_are_cli_reachable_without_execution() -> None:
-    for command in (
-        "federated-discover",
-        "citation-snowball",
-        "general-question-acquisition-plan",
-        "general-question-acquire-pmc",
-        "general-question-acquire-europe-pmc",
-        "general-question-acquire-core",
-        "general-question-acquire-unpaywall",
-    ):
+def test_every_required_research_command_is_cli_reachable_without_execution() -> None:
+    for command in RESEARCH_RUNTIME_REQUIRED_COMMANDS:
         result = runner.invoke(app, [command, "--help"])
-        assert result.exit_code == 0
+        assert result.exit_code == 0, f"{command}: {result.stdout}"
 
 
 def test_poetry_exposes_additive_ke_research_entrypoint() -> None:
