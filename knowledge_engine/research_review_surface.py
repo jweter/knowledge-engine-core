@@ -202,7 +202,9 @@ def evidence_review_automate(
         and (evidence_record_id is None or record.get("evidence_record_id") == evidence_record_id)
     ]
     if evidence_record_id is not None and not eligible_indices:
-        typer.echo(f"No eligible record found for evidence_record_id {evidence_record_id!r}.", err=True)
+        typer.echo(
+            f"No eligible record found for evidence_record_id {evidence_record_id!r}.", err=True
+        )
         raise typer.Exit(1)
 
     batch_indices = eligible_indices[:limit]
@@ -269,7 +271,9 @@ def evidence_record_review_promote(
     ]
 
     if dry_run:
-        typer.echo(f"Dry run: {len(eligible_indices)} record(s) would be promoted; nothing written.")
+        typer.echo(
+            f"Dry run: {len(eligible_indices)} record(s) would be promoted; nothing written."
+        )
         return
 
     for index in eligible_indices:

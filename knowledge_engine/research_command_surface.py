@@ -376,9 +376,7 @@ def citation_snowball(
             "completeness": result.completeness.value,
             "truncated": result.truncated,
             "candidates": [asdict(candidate) for candidate in result.candidates],
-            "edges": [
-                {**asdict(edge), "direction": edge.direction.value} for edge in result.edges
-            ],
+            "edges": [{**asdict(edge), "direction": edge.direction.value} for edge in result.edges],
         }
         _write_text_output(output, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 

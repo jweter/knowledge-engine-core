@@ -252,9 +252,7 @@ def _rollback_pmc_files(output_directory: Path, receipt: AcquisitionReceipt) -> 
         raise typer.BadParameter("Acquired PMC files could not be fully rolled back.")
 
 
-def _rollback_europepmc_files(
-    output_directory: Path, receipt: EuropePmcAcquisitionReceipt
-) -> None:
+def _rollback_europepmc_files(output_directory: Path, receipt: EuropePmcAcquisitionReceipt) -> None:
     rollback_failed = False
     for item in receipt.items:
         try:
