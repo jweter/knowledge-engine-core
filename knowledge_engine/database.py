@@ -35,6 +35,7 @@ from knowledge_engine.models import (
 from knowledge_engine.parser import ParsedPaper
 
 CURRENT_SCHEMA_VERSION = 14
+_SQLITE_BUSY_TIMEOUT_MS = 30_000
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
@@ -167,6 +168,11 @@ def _enable_sqlite_foreign_keys(dbapi_connection: Any, connection_record: object
     del connection_record
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
+    # Parallel read-oriented CLI calls can start against the same fresh local
+    # database and both run schema initialization. SQLite allows only one writer
+    # at a time, so wait for that bounded startup lock instead of failing one
+    # research branch with ``database is locked``.
+    cursor.execute(f"PRAGMA busy_timeout={_SQLITE_BUSY_TIMEOUT_MS}")
     cursor.close()
 
 
