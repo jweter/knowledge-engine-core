@@ -1,0 +1,84 @@
+name: Amend SQLite initialization transaction mode
+
+on:
+  push:
+    branches:
+      - agent/sqlite-concurrent-initialize
+    paths:
+      - .github/workflows/amend-sqlite-immediate-init.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/sqlite-concurrent-initialize
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            knowledge_engine
+            tests
+            README.md
+            pyproject.toml
+            poetry.lock
+            .github/workflows/amend-sqlite-immediate-init.yml
+
+      - name: Serialize schema initialization with BEGIN IMMEDIATE
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('knowledge_engine/database.py')
+          text = path.read_text(encoding='utf-8')
+
+          old_begin = '''def _begin_sqlite_transaction(conn: Connection) -> None:\n    \"\"\"Issue an explicit `BEGIN`, replacing pysqlite's own (now-disabled) heuristics.\"\"\"\n\n    conn.exec_driver_sql(\"BEGIN\")\n'''
+          new_begin = '''def _begin_sqlite_transaction(conn: Connection) -> None:\n    \"\"\"Issue the explicit SQLite transaction mode requested by this connection.\n\n    Ordinary application sessions remain deferred ``BEGIN`` transactions. Schema/FTS\n    initialization opts into ``BEGIN IMMEDIATE`` so concurrent CLI startup reserves the\n    single SQLite writer before reading schema state; the second initializer then waits\n    on ``busy_timeout`` instead of deadlocking during a read-to-write upgrade.\n    \"\"\"\n\n    begin_statement = (\n        \"BEGIN IMMEDIATE\"\n        if conn.get_execution_options().get(\"sqlite_begin_immediate\") is True\n        else \"BEGIN\"\n    )\n    conn.exec_driver_sql(begin_statement)\n'''
+          if old_begin not in text:
+              raise SystemExit('begin hook block not found')
+          text = text.replace(old_begin, new_begin, 1)
+
+          old_migrate = '''def migrate_schema(engine: Engine) -> None:\n    \"\"\"Apply additive local SQLite schema migrations.\"\"\"\n\n    with engine.begin() as connection:\n'''
+          new_migrate = '''def migrate_schema(engine: Engine) -> None:\n    \"\"\"Apply additive local SQLite schema migrations under a reserved writer slot.\"\"\"\n\n    migration_engine = engine.execution_options(sqlite_begin_immediate=True)\n    with migration_engine.begin() as connection:\n'''
+          if old_migrate not in text:
+              raise SystemExit('migrate_schema header not found')
+          text = text.replace(old_migrate, new_migrate, 1)
+
+          old_fts = '''def create_fts_tables(engine: Engine) -> None:\n    \"\"\"Create SQLite FTS5 tables used for local search.\"\"\"\n\n    with engine.begin() as connection:\n'''
+          new_fts = '''def create_fts_tables(engine: Engine) -> None:\n    \"\"\"Create SQLite FTS5 tables used for local search under a reserved writer slot.\"\"\"\n\n    initialization_engine = engine.execution_options(sqlite_begin_immediate=True)\n    with initialization_engine.begin() as connection:\n'''
+          if old_fts not in text:
+              raise SystemExit('create_fts_tables header not found')
+          text = text.replace(old_fts, new_fts, 1)
+          path.write_text(text, encoding='utf-8')
+
+          test = Path('tests/test_database_concurrency.py')
+          current = test.read_text(encoding='utf-8')
+          current = current.replace(
+              'from concurrent.futures import ThreadPoolExecutor\n',
+              'from concurrent.futures import ThreadPoolExecutor\nfrom threading import Barrier\n',
+              1,
+          )
+          current += '''\n\ndef test_two_fresh_initializers_can_start_together(tmp_path: Path) -> None:\n    first, _ = _database(tmp_path)\n    second, _ = _database(tmp_path)\n    barrier = Barrier(2)\n\n    def initialize(database: Database) -> None:\n        barrier.wait(timeout=5)\n        database.initialize()\n\n    with ThreadPoolExecutor(max_workers=2) as executor:\n        futures = [executor.submit(initialize, database) for database in (first, second)]\n        for future in futures:\n            future.result(timeout=10)\n\n\ndef test_ordinary_transactions_remain_deferred(tmp_path: Path) -> None:\n    database, _ = _database(tmp_path)\n    statements: list[str] = []\n\n    def capture_begin(connection: object) -> None:\n        del connection\n\n    del capture_begin\n    with database.engine.connect() as connection:\n        connection.connection.set_trace_callback(statements.append)\n        with connection.begin():\n            connection.exec_driver_sql(\"SELECT 1\")\n\n    assert \"BEGIN\" in statements\n    assert \"BEGIN IMMEDIATE\" not in statements\n'''
+          test.write_text(current, encoding='utf-8')
+          PY
+
+      - name: Run focused checks
+        run: |
+          python -m pip install poetry
+          poetry install
+          poetry run ruff format knowledge_engine/database.py tests/test_database_concurrency.py
+          poetry run ruff check knowledge_engine/database.py tests/test_database_concurrency.py
+          poetry run mypy knowledge_engine/database.py
+          poetry run pytest -q tests/test_database_concurrency.py
+
+      - name: Commit amendment
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/amend-sqlite-immediate-init.yml
+          git add knowledge_engine/database.py tests/test_database_concurrency.py
+          git commit -m 'Reserve SQLite writer during schema initialization'
+          git push origin HEAD:agent/sqlite-concurrent-initialize
