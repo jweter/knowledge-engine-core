@@ -1,3 +1,5 @@
+"""Regression coverage for concurrent Core SQLite schema initialization."""
+
 from __future__ import annotations
 
 import sqlite3
