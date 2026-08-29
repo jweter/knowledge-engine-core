@@ -74,7 +74,9 @@ Only after all four are real should the hosted Research Copilot checkbox become 
 
 ## Next slice
 
-The next implementation slice is an import/dependency regression gate. It should prove that importing the composed `ke-research` runtime does not import `knowledge_engine.vector_search`, `faiss`, `torch`, `sentence_transformers`, or `qdrant_client`. Once that invariant is protected by CI, packaging can safely separate the vector stack from the hosted research runtime without making the normal `ke` installation weaker.
+The import/dependency regression gate is implemented: `tests/test_research_command_surface.py::test_slim_runtime_import_does_not_require_phase3_vector_modules` poisons `faiss`, `torch`, `sentence_transformers`, `qdrant_client`, and `knowledge_engine.vector_search` in a fresh subprocess interpreter and proves that importing `knowledge_engine.research_runtime` still succeeds without touching them. CI protects that invariant on every PR.
+
+The next implementation slice is the packaging half of the same gate: today's `pyproject.toml` still lists `faiss-cpu`, `torch`, `sentence-transformers`, and `qdrant-client` as unconditional dependencies, so no install actually omits them yet. Splitting them into an optional extra (while leaving the normal `ke` install's default behavior unchanged) is what would let a hosted `ke-research` deployment skip the vector stack the import-boundary test now proves it does not need.
 
 ## Database boundary
 
