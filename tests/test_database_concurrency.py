@@ -4,6 +4,7 @@ import sqlite3
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
 
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database
@@ -45,3 +46,18 @@ def test_initialize_waits_for_transient_parallel_writer(tmp_path: Path) -> None:
         if blocker.in_transaction:
             blocker.execute("ROLLBACK")
         blocker.close()
+
+
+def test_two_fresh_initializers_can_start_together(tmp_path: Path) -> None:
+    first, _ = _database(tmp_path)
+    second, _ = _database(tmp_path)
+    barrier = Barrier(2)
+
+    def initialize(database: Database) -> None:
+        barrier.wait(timeout=5)
+        database.initialize()
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(initialize, database) for database in (first, second)]
+        for future in futures:
+            future.result(timeout=10)
