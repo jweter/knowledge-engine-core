@@ -69,7 +69,9 @@ def test_slim_runtime_import_does_not_require_phase3_vector_modules() -> None:
             f"blocked = {blocked!r}",
             "for name in blocked: sys.modules[name] = None",
             "import knowledge_engine.research_runtime",
-            "for forbidden in ('knowledge_engine.entrypoint', 'knowledge_engine.command_surface'): ",
+            "for forbidden in ("
+            "'knowledge_engine.entrypoint', 'knowledge_engine.command_surface'"
+            "): ",
             "    assert forbidden not in sys.modules, forbidden",
             "print(json.dumps({'ok': True}))",
         ]

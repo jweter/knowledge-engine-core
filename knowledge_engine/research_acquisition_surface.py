@@ -25,6 +25,8 @@ from knowledge_engine.europepmc_acquisition import (
 )
 from knowledge_engine.europepmc_discovery import (
     EuropePmcDiscoveryService,
+)
+from knowledge_engine.europepmc_discovery import (
     GetTransport as EuropePmcGetTransport,
 )
 from knowledge_engine.europepmc_http import UrllibEuropePmcTransport

@@ -250,7 +250,8 @@ def evidence_review_automate(
     if updated_indices:
         _rewrite_selected_lines(evidence, raw_lines, records, updated_indices)
     typer.echo(
-        f"updated={len(updated_ids)} eligible={len(eligible_indices)} processed={len(batch_indices)}"
+        f"updated={len(updated_ids)} eligible={len(eligible_indices)} "
+        f"processed={len(batch_indices)}"
     )
 
 

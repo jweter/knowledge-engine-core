@@ -20,7 +20,6 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated, Any, cast
 
-import click
 import typer
 
 import knowledge_engine.cli as cli
@@ -143,7 +142,17 @@ SnowballMaxCandidatesOption = Annotated[
 ]
 SnowballOutputOption = Annotated[Path | None, typer.Option("--output")]
 
-app = cli.app
+app = typer.Typer()
+
+# These two commands are genuinely inherited unmodified from the production
+# `ke` CLI (see PR description). Every other command below is a slim
+# reimplementation and must NOT be registered onto `cli.app`: several of
+# these command names (federated-discover, citation-snowball,
+# general-question-acquisition-plan, evidence-intelligence, ...) already
+# exist there, and sharing the Typer instance would silently overwrite the
+# production implementations the moment this module is imported.
+app.command("evidence-report")(cli.evidence_report)
+app.command("extraction-review-promote")(cli.extraction_review_promote)
 
 _DIRECTION_BY_NAME = {direction.value: direction for direction in CitationDirection}
 _SNOWBALL_PROVIDERS = ("semantic_scholar", "openalex")
@@ -171,9 +180,10 @@ def research_runtime_capability_payload() -> dict[str, object]:
 
 def _registered_command_names() -> frozenset[str]:
     command = typer.main.get_command(app)
-    if not isinstance(command, click.Group):
+    commands = getattr(command, "commands", None)
+    if not isinstance(commands, dict):
         return frozenset()
-    return frozenset(command.commands)
+    return frozenset(commands)
 
 
 def _crossref_provider() -> CrossrefProvider:
