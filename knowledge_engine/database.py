@@ -35,6 +35,7 @@ from knowledge_engine.models import (
 from knowledge_engine.parser import ParsedPaper
 
 CURRENT_SCHEMA_VERSION = 14
+_SQLITE_BUSY_TIMEOUT_MS = 30_000
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
     "import_runs": {
@@ -167,6 +168,11 @@ def _enable_sqlite_foreign_keys(dbapi_connection: Any, connection_record: object
     del connection_record
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
+    # Parallel read-oriented CLI calls can start against the same fresh local
+    # database and both run schema initialization. SQLite allows only one writer
+    # at a time, so wait for that bounded startup lock instead of failing one
+    # research branch with ``database is locked``.
+    cursor.execute(f"PRAGMA busy_timeout={_SQLITE_BUSY_TIMEOUT_MS}")
     cursor.close()
 
 
@@ -193,15 +199,27 @@ def _disable_pysqlite_transaction_management(
 
 
 def _begin_sqlite_transaction(conn: Connection) -> None:
-    """Issue an explicit `BEGIN`, replacing pysqlite's own (now-disabled) heuristics."""
+    """Issue the explicit SQLite transaction mode requested by this connection.
 
-    conn.exec_driver_sql("BEGIN")
+    Ordinary application sessions remain deferred ``BEGIN`` transactions. Schema/FTS
+    initialization opts into ``BEGIN IMMEDIATE`` so concurrent CLI startup reserves the
+    single SQLite writer before reading schema state; the second initializer then waits
+    on ``busy_timeout`` instead of deadlocking during a read-to-write upgrade.
+    """
+
+    begin_statement = (
+        "BEGIN IMMEDIATE"
+        if conn.get_execution_options().get("sqlite_begin_immediate") is True
+        else "BEGIN"
+    )
+    conn.exec_driver_sql(begin_statement)
 
 
 def migrate_schema(engine: Engine) -> None:
-    """Apply additive local SQLite schema migrations."""
+    """Apply additive local SQLite schema migrations under a reserved writer slot."""
 
-    with engine.begin() as connection:
+    migration_engine = engine.execution_options(sqlite_begin_immediate=True)
+    with migration_engine.begin() as connection:
         existing_version = _current_schema_version(connection)
         if existing_version > CURRENT_SCHEMA_VERSION:
             msg = (
@@ -591,9 +609,10 @@ def _utc_now_iso() -> str:
 
 
 def create_fts_tables(engine: Engine) -> None:
-    """Create SQLite FTS5 tables used for local search."""
+    """Create SQLite FTS5 tables used for local search under a reserved writer slot."""
 
-    with engine.begin() as connection:
+    initialization_engine = engine.execution_options(sqlite_begin_immediate=True)
+    with initialization_engine.begin() as connection:
         connection.execute(
             text("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS paper_search
