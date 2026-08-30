@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,18 @@ from knowledge_engine.corpus_library import (
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.models import Author, Keyword, Paper
 from knowledge_engine.parser import ParsedPage, ParsedPaper
+
+
+def _evidence_line(record_id: str, *, source_doi: str = "10.1/x") -> str:
+    return json.dumps(
+        {
+            "evidence_record_id": record_id,
+            "schema_version": 1,
+            "source_doi": source_doi,
+            "claim_text": "Weight loss was significantly greater with treatment.",
+            "review_status": "draft",
+        }
+    )
 
 
 def _database(tmp_path: Path, name: str) -> Database:
@@ -300,3 +313,166 @@ def test_import_corpus_library_compressed_raises_if_input_missing(tmp_path: Path
     target = _database(tmp_path, "target")
     with target.session() as session, pytest.raises(FileNotFoundError):
         import_corpus_library_compressed(session, tmp_path / "missing.sqlite3.gz")
+
+
+def test_export_corpus_library_omits_evidence_when_not_given(tmp_path: Path) -> None:
+    source = _database(tmp_path, "source")
+    output = tmp_path / "snapshot.sqlite3"
+    summary = export_corpus_library(source.engine, output)
+
+    assert summary.evidence_record_count == 0
+
+
+def test_export_corpus_library_counts_evidence_records_when_given(tmp_path: Path) -> None:
+    source = _database(tmp_path, "source")
+    evidence_path = tmp_path / "evidence_records.jsonl"
+    evidence_path.write_text(
+        _evidence_line("auto-1") + "\n" + _evidence_line("auto-2") + "\n", encoding="utf-8"
+    )
+
+    output = tmp_path / "snapshot.sqlite3"
+    summary = export_corpus_library(source.engine, output, evidence_path)
+
+    assert summary.evidence_record_count == 2
+
+
+def test_export_corpus_library_skips_malformed_evidence_lines(tmp_path: Path) -> None:
+    source = _database(tmp_path, "source")
+    evidence_path = tmp_path / "evidence_records.jsonl"
+    evidence_path.write_text(
+        "\n".join(
+            [
+                _evidence_line("auto-1"),
+                "not json",
+                json.dumps(["not", "an", "object"]),
+                json.dumps({"claim_text": "no id here"}),
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    output = tmp_path / "snapshot.sqlite3"
+    summary = export_corpus_library(source.engine, output, evidence_path)
+
+    assert summary.evidence_record_count == 1
+
+
+def test_import_corpus_library_merges_evidence_records(tmp_path: Path) -> None:
+    source = _database(tmp_path, "source")
+    evidence_path = tmp_path / "source_evidence.jsonl"
+    evidence_path.write_text(
+        _evidence_line("auto-1") + "\n" + _evidence_line("auto-2") + "\n", encoding="utf-8"
+    )
+
+    snapshot = tmp_path / "snapshot.sqlite3"
+    export_corpus_library(source.engine, snapshot, evidence_path)
+
+    target = _database(tmp_path, "target")
+    target_evidence_path = tmp_path / "target_evidence.jsonl"
+    with target.session() as session:
+        summary = import_corpus_library(session, snapshot, target_evidence_path)
+
+    assert summary.imported_evidence_record_count == 2
+    assert summary.skipped_existing_evidence_record_count == 0
+    lines = target_evidence_path.read_text(encoding="utf-8").strip().splitlines()
+    ids = {json.loads(line)["evidence_record_id"] for line in lines}
+    assert ids == {"auto-1", "auto-2"}
+
+
+def test_import_corpus_library_deduplicates_evidence_already_present(tmp_path: Path) -> None:
+    source = _database(tmp_path, "source")
+    evidence_path = tmp_path / "source_evidence.jsonl"
+    evidence_path.write_text(
+        _evidence_line("auto-1") + "\n" + _evidence_line("auto-2") + "\n", encoding="utf-8"
+    )
+
+    snapshot = tmp_path / "snapshot.sqlite3"
+    export_corpus_library(source.engine, snapshot, evidence_path)
+
+    target = _database(tmp_path, "target")
+    target_evidence_path = tmp_path / "target_evidence.jsonl"
+    target_evidence_path.write_text(_evidence_line("auto-1") + "\n", encoding="utf-8")
+
+    with target.session() as session:
+        summary = import_corpus_library(session, snapshot, target_evidence_path)
+
+    assert summary.imported_evidence_record_count == 1
+    assert summary.skipped_existing_evidence_record_count == 1
+    lines = target_evidence_path.read_text(encoding="utf-8").strip().splitlines()
+    ids = [json.loads(line)["evidence_record_id"] for line in lines]
+    assert ids == ["auto-1", "auto-2"]
+
+    # Re-importing the same snapshot again is idempotent: nothing new to add.
+    with target.session() as session:
+        second = import_corpus_library(session, snapshot, target_evidence_path)
+    assert second.imported_evidence_record_count == 0
+    assert second.skipped_existing_evidence_record_count == 2
+    assert target_evidence_path.read_text(encoding="utf-8").strip().splitlines() == lines
+
+
+def test_import_corpus_library_evidence_merge_does_not_corrupt_a_missing_trailing_newline(
+    tmp_path: Path,
+) -> None:
+    """Regression test: a target evidence file whose last line lacks a trailing
+    newline (e.g. hand-edited, or written by some other tool) must not have the
+    first merged record concatenated directly onto it -- that would corrupt both
+    as JSON and silently drop them from every evidence reader."""
+
+    source = _database(tmp_path, "source")
+    evidence_path = tmp_path / "source_evidence.jsonl"
+    evidence_path.write_text(_evidence_line("auto-2") + "\n", encoding="utf-8")
+
+    snapshot = tmp_path / "snapshot.sqlite3"
+    export_corpus_library(source.engine, snapshot, evidence_path)
+
+    target = _database(tmp_path, "target")
+    target_evidence_path = tmp_path / "target_evidence.jsonl"
+    target_evidence_path.write_text(_evidence_line("auto-1"), encoding="utf-8")  # no trailing "\n"
+
+    with target.session() as session:
+        summary = import_corpus_library(session, snapshot, target_evidence_path)
+
+    assert summary.imported_evidence_record_count == 1
+    lines = target_evidence_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 2
+    ids = [json.loads(line)["evidence_record_id"] for line in lines]
+    assert ids == ["auto-1", "auto-2"]
+
+
+def test_import_corpus_library_snapshot_without_evidence_table_is_a_noop(
+    tmp_path: Path,
+) -> None:
+    source = _database(tmp_path, "source")
+    snapshot = tmp_path / "snapshot.sqlite3"
+    export_corpus_library(source.engine, snapshot)
+
+    target = _database(tmp_path, "target")
+    target_evidence_path = tmp_path / "target_evidence.jsonl"
+    with target.session() as session:
+        summary = import_corpus_library(session, snapshot, target_evidence_path)
+
+    assert summary.imported_evidence_record_count == 0
+    assert summary.skipped_existing_evidence_record_count == 0
+    assert not target_evidence_path.exists()
+
+
+def test_export_import_compressed_round_trip_carries_evidence(tmp_path: Path) -> None:
+    source = _database(tmp_path, "source")
+    evidence_path = tmp_path / "source_evidence.jsonl"
+    evidence_path.write_text(_evidence_line("auto-1") + "\n", encoding="utf-8")
+
+    output = tmp_path / "snapshot.sqlite3.gz"
+    summary = export_corpus_library_compressed(source.engine, output, evidence_path)
+    assert summary.evidence_record_count == 1
+
+    target = _database(tmp_path, "target")
+    target_evidence_path = tmp_path / "target_evidence.jsonl"
+    with target.session() as session:
+        import_summary = import_corpus_library_compressed(session, output, target_evidence_path)
+
+    assert import_summary.imported_evidence_record_count == 1
+    assert (
+        json.loads(target_evidence_path.read_text(encoding="utf-8").strip())["evidence_record_id"]
+        == "auto-1"
+    )

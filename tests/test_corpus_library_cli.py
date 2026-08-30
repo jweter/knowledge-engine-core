@@ -185,3 +185,51 @@ def test_corpus_library_import_cli_reports_a_clear_error_for_a_stale_snapshot_sc
     unwrapped = _unwrapped(result.output)
     assert "predates the current database schema" in unwrapped
     assert "ke corpus-library-export" in unwrapped
+
+
+def test_corpus_library_export_import_cli_round_trips_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = _database(tmp_path, "source")
+    with source.session() as session:
+        PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "e" * 64))
+    source_evidence = tmp_path / "source_evidence.jsonl"
+    source_evidence.write_text(
+        '{"evidence_record_id": "auto-1", "source_doi": "10.1/e", "claim_text": "x"}\n',
+        encoding="utf-8",
+    )
+    snapshot_output = tmp_path / "snapshot.sqlite3"
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: source)
+    export_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "corpus-library-export",
+            "--output",
+            str(snapshot_output),
+            "--evidence",
+            str(source_evidence),
+        ],
+    )
+    assert export_result.exit_code == 0, export_result.output
+    assert "1 evidence record(s)" in _unwrapped(export_result.output)
+
+    target = _database(tmp_path, "target")
+    target_evidence = tmp_path / "target_evidence.jsonl"
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: target)
+    import_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "corpus-library-import",
+            "--input",
+            str(snapshot_output),
+            "--evidence",
+            str(target_evidence),
+        ],
+    )
+
+    assert import_result.exit_code == 0, import_result.output
+    unwrapped = _unwrapped(import_result.output)
+    assert "1 evidence record(s) imported" in unwrapped
+    assert "0 already present and skipped." in unwrapped
+    assert target_evidence.exists()
+    assert "auto-1" in target_evidence.read_text(encoding="utf-8")

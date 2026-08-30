@@ -309,9 +309,49 @@ step, not part of this milestone. CORE-GQR-6 (reuse and query visibility) is the
 correct next slice.
 
 ### CORE-GQR-6 - Reuse and query visibility
-- newly promoted evidence becomes visible to normal retrieval immediately or through one explicit documented refresh step;
-- repeat-question tests prove no duplicate acquisition;
-- corpus-library export/import preserves the newly acquired evidence.
+
+Complete, all three bullets satisfied by a combination of existing behavior and
+one new piece of code:
+
+- **Visible immediately, via one explicit documented step**: a record
+  `ke general-question-extract-and-promote` promotes has `source_doi` set to
+  its source paper's own DOI (`extraction/evidence_items.py`'s
+  `source_doi=paper.doi`), and `ke evidence-report`/`ke evidence-map-report`
+  join retrieval results to `--evidence` records by that same `source_doi`
+  (`cli.py`'s `_index_evidence_records_by_doi`). The explicit refresh step is
+  therefore: pass the *same* `--evidence <path>` used for promotion (by
+  convention, a corpus's `data/corpora/<corpus>/evidence_records.jsonl`) to
+  `ke evidence-report`/`ke evidence-map-report`. No new code was needed --
+  this was already true the moment CORE-GQR-5 landed, just not written down.
+- **Repeat-question tests already prove no duplicate acquisition**, at every
+  stage of the pipeline: `tests/test_general_question_acquisition.py`'s
+  `test_already_indexed_candidate_is_reported_instead_of_reacquired` (and its
+  PMID/arXiv-identity siblings) proves a repeat query does not re-plan
+  acquisition for a paper already indexed (CORE-GQR-2), and
+  `tests/test_general_question_extraction_promotion.py`'s
+  `test_rerunning_the_same_receipt_is_idempotent` proves re-running the same
+  receipt through extraction/promotion does not duplicate its evidence
+  records (CORE-GQR-5). No new test was needed for this bullet either.
+- **Corpus-library export/import preserves newly acquired evidence** -- this
+  was the one real gap: `evidence_records.jsonl` lives outside the SQLite
+  database entirely, so a corpus-library snapshot (which only ever copied
+  `papers`/`paper_pages`/`paper_texts`/`journals`/`authors`/`keywords`) would
+  carry a newly acquired paper into another environment while silently
+  leaving its promoted evidence behind. `ke corpus-library-export --output
+  <path> --evidence <path>` now also copies `--evidence`'s well-formed
+  records into the snapshot (a small transport-only
+  `evidence_records_snapshot` table, `corpus_library.py`), and `ke
+  corpus-library-import --input <path> --evidence <path>` merges them into
+  the target evidence file, deduplicated by `evidence_record_id` -- so a
+  repeated or overlapping import is idempotent for evidence exactly as it
+  already was for papers. `--evidence` is optional on both commands and
+  omitting it exports/imports zero evidence records, matching every
+  pre-CORE-GQR-6 snapshot and caller unchanged.
+
+This completes Core's portion of General Question Research Loop v1 (see
+Definition of done below); `knowledge-engine-web`/`knowledge-engine-ai` may
+still have their own follow-up work surfacing GQR results, tracked in their
+own repositories.
 
 ## Acceptance test
 

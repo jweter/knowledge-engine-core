@@ -9,6 +9,27 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Corpus-library snapshots carry promoted evidence (CORE-GQR-6, completes
+  General Question Research Loop v1's Core portion)**: `ke
+  corpus-library-export`/`ke corpus-library-import` now take an optional
+  `--evidence <path>`. On export it copies that corpus's
+  `evidence_records.jsonl` (e.g. as populated by `ke
+  general-question-extract-and-promote`) into the snapshot's new
+  `evidence_records_snapshot` table; on import it merges the snapshot's
+  evidence records into the target file, deduplicated by
+  `evidence_record_id`, so a repeated or overlapping import is idempotent
+  for evidence exactly as it already was for papers. Previously a
+  corpus-library snapshot carried a newly acquired paper into another
+  environment while silently leaving its promoted evidence behind, since
+  evidence records live outside the SQLite database entirely. `--evidence`
+  is optional on both commands; omitting it exports/imports zero evidence
+  records, unchanged from before this change. The other two CORE-GQR-6
+  requirements -- promoted evidence visible to `ke evidence-report`/`ke
+  evidence-map-report` via the same `--evidence <path>`, and repeat-question
+  tests proving no duplicate acquisition -- were already satisfied by
+  existing `source_doi`-based joining and existing CORE-GQR-2/CORE-GQR-5
+  tests; see `docs/general_question_research_loop_v1.md`.
+
 - **GQR acquisition-to-evidence extraction bridge (CORE-GQR-5)**: a new
   `ke general-question-extract-and-promote` command (production `ke` and the
   `ke-research`-slim runtime both carry it) takes any of the four GQR
