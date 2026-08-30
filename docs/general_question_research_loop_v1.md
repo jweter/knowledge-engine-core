@@ -190,10 +190,13 @@ persisting their durable receipts belongs to CORE-GQR-4.
 - attach import-run/acquisition receipt provenance;
 - keep failures independently inspectable.
 
-**Status:** provider-complete. PMC and Europe PMC are complete and reachable.
-The CORE provider execution/persistence library merged in PR #420 and is
-reachable through the supported `ke` command surface. Unpaywall merged in
-PR #422 and is described below.
+**Status:** all four provider routes are implemented and reachable for the
+success path. PMC and Europe PMC are complete and reachable. The CORE
+provider execution/persistence library merged in PR #420 and is reachable
+through the supported `ke` command surface. Unpaywall merged in PR #422 and
+is described below. This section's own "keep failures independently
+inspectable" bullet is not yet met by any of the four routes -- see the note
+after the Unpaywall command below.
 
 `ke general-question-acquire-pmc <request.json> --ledger-root <dir>
 --papers-dir <dir> --receipt <path.json>` rebuilds the bounded plan with
@@ -242,7 +245,7 @@ commands.
 items routed to `unpaywall`. Because Unpaywall is a per-DOI OA-location/license
 locator rather than a full-text host, the command re-resolves every planned
 DOI through Unpaywall's live per-DOI API immediately before acquisition,
-requires current `oa_status=true` plus a reusable license accepted by Core's
+requires current `is_oa=true` plus a reusable license accepted by Core's
 shared license policy, and requires the current direct-PDF URL to reconcile
 exactly with the persisted GQR plan. An arbitrary Unpaywall-returned URL is
 never treated as network authority: direct PDF bytes are admitted only from
@@ -256,10 +259,16 @@ source-host provenance and immutable ImportRun/ImportItem lineage as the
 other three routes. See `docs/security/unpaywall_gqr_acquisition_boundary.md`
 for the full fail-closed security boundary.
 
-With all four routes (PMC, Europe PMC, CORE, Unpaywall) reachable and tested,
-CORE-GQR-4 is provider-complete. Discovery metadata and acquired Papers
-remain non-Evidence-Record material until CORE-GQR-5 grounded extraction and
-validation/promotion.
+All four routes (PMC, Europe PMC, CORE, Unpaywall) are reachable and tested
+for the success path, but CORE-GQR-4 is not yet complete: on a resolver,
+download, or parsing failure, all four commands (`general_question_acquire_pmc`
+/ `_europe_pmc` in `research_acquisition_surface.py`, `_core` / `_unpaywall`
+in `command_surface.py`) only print a console error and roll back the batch --
+no durable per-candidate failure record survives for later audit or retry.
+Making that failure path independently inspectable (this section's own
+bullet) is CORE-GQR-4's one remaining gap. Discovery metadata and acquired
+Papers remain non-Evidence-Record material until CORE-GQR-5 grounded
+extraction and validation/promotion.
 
 ### CORE-GQR-5 - Grounded extraction and promotion
 - invoke domain-general grounded extraction;
