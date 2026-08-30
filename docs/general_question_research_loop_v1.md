@@ -190,11 +190,10 @@ persisting their durable receipts belongs to CORE-GQR-4.
 - attach import-run/acquisition receipt provenance;
 - keep failures independently inspectable.
 
-**Status:** PMC and Europe PMC are complete and reachable. The CORE provider
-execution/persistence library merged in PR #420; this slice makes that same
-fail-closed path reachable through the supported `ke` command surface. Unpaywall
-remains the final provider execution adapter before CORE-GQR-4 can be treated as
-provider-complete.
+**Status:** provider-complete. PMC and Europe PMC are complete and reachable.
+The CORE provider execution/persistence library merged in PR #420 and is
+reachable through the supported `ke` command surface. Unpaywall merged in
+PR #422 and is described below.
 
 `ke general-question-acquire-pmc <request.json> --ledger-root <dir>
 --papers-dir <dir> --receipt <path.json>` rebuilds the bounded plan with
@@ -235,8 +234,32 @@ reusable license; provider-wide open-access aggregation is never treated as a
 license exemption. The existing #420 executor then performs bounded no-redirect
 PDF acquisition, byte/signature/digest verification, atomic rollback,
 Paper persistence/reuse, and immutable ImportRun/ImportItem lineage. This CLI
-registration is additive and pending its own exact-head Quality/security gate;
-it does not weaken the existing PMC or Europe PMC commands.
+registration is additive and does not weaken the existing PMC or Europe PMC
+commands.
+
+`ke general-question-acquire-unpaywall <request.json> --ledger-root <dir>
+--papers-dir <dir> --receipt <path.json>` executes only `eligible_full_text`
+items routed to `unpaywall`. Because Unpaywall is a per-DOI OA-location/license
+locator rather than a full-text host, the command re-resolves every planned
+DOI through Unpaywall's live per-DOI API immediately before acquisition,
+requires current `oa_status=true` plus a reusable license accepted by Core's
+shared license policy, and requires the current direct-PDF URL to reconcile
+exactly with the persisted GQR plan. An arbitrary Unpaywall-returned URL is
+never treated as network authority: direct PDF bytes are admitted only from
+Core's existing reviewed full-text host set (PMC, PMC OA S3, Europe PMC/Plus,
+CORE), over HTTPS/default port, with no credentials or redirects and a 100 MB
+bound. The batch is staged, PDF signatures verified, and rolled back
+atomically on failure; byte count/SHA-256 are rechecked before parsing;
+content-hash and DOI/PMID/arXiv Paper identities are reconciled fail-closed
+before reuse. Persistence records the same search-run/candidate/license/
+source-host provenance and immutable ImportRun/ImportItem lineage as the
+other three routes. See `docs/security/unpaywall_gqr_acquisition_boundary.md`
+for the full fail-closed security boundary.
+
+With all four routes (PMC, Europe PMC, CORE, Unpaywall) reachable and tested,
+CORE-GQR-4 is provider-complete. Discovery metadata and acquired Papers
+remain non-Evidence-Record material until CORE-GQR-5 grounded extraction and
+validation/promotion.
 
 ### CORE-GQR-5 - Grounded extraction and promotion
 - invoke domain-general grounded extraction;
