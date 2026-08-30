@@ -146,6 +146,9 @@ from knowledge_engine.general_question_europepmc_acquisition import (
     execute_europepmc_acquisition_plan,
     persist_europepmc_acquisition_execution,
 )
+from knowledge_engine.general_question_extraction_promotion import (
+    run_general_question_extraction_and_promotion,
+)
 from knowledge_engine.general_question_pmc_acquisition import (
     GeneralQuestionPmcAcquisitionError,
     execute_pmc_acquisition_plan,
@@ -936,6 +939,20 @@ RelationshipClassifyAutomateLimitOption = Annotated[
         min=1,
         help="Maximum candidate pairs to classify this run.",
     ),
+]
+GeneralQuestionExtractionReceiptOption = Annotated[
+    Path,
+    typer.Option(
+        "--receipt",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+        help="A GQR acquisition route's persistence receipt JSON file.",
+    ),
+]
+GeneralQuestionExtractionEvidenceOption = Annotated[
+    Path,
+    typer.Option("--evidence", help="EvidenceRecord JSONL file to append promoted records to."),
 ]
 EvidenceRecordReviewPromoteEvidenceOption = Annotated[
     Path,
@@ -4647,6 +4664,41 @@ def evidence_record_review_promote(
     console.print(f"[green]Promoted {len(promoted_ids)} record(s) to 'reviewed'.[/green]")
     if promoted_ids:
         console.print(", ".join(promoted_ids))
+
+
+@app.command("general-question-extract-and-promote")
+def general_question_extract_and_promote(
+    receipt: GeneralQuestionExtractionReceiptOption,
+    evidence: GeneralQuestionExtractionEvidenceOption,
+) -> None:
+    """CORE-GQR-5: extract, autoclassify, and promote a GQR receipt's acquired papers.
+
+    Takes any of the four GQR acquisition routes' persistence receipts (PMC,
+    Europe PMC, CORE, Unpaywall), re-derives the paper IDs it names, runs the
+    existing deterministic extraction/autoclassification pipeline against
+    each paper's persisted pages, and appends only schema-valid records to
+    `--evidence` using the exact validator `ke evidence-validate` and
+    `ke extraction-review-promote` already use. A paper or candidate that
+    does not reach promotion gets a durable rejection reason written next to
+    the receipt (`<receipt>.extraction_rejections.json`), never only this
+    command's own stdout. Re-running against the same receipt is idempotent:
+    an already-promoted record is skipped as a duplicate, not re-appended.
+    """
+
+    database = _local_database()
+    database.initialize()
+    with database.session() as session:
+        summary = run_general_question_extraction_and_promotion(
+            session, receipt_path=receipt, evidence_output_path=evidence
+        )
+
+    console.print(
+        f"papers={summary.paper_count} promoted={summary.promoted_count} "
+        f"duplicates={summary.duplicate_count} rejected={len(summary.rejected)} "
+        f"evidence={evidence}"
+    )
+    if summary.rejection_record_path is not None:
+        console.print(f"[yellow]Rejection record:[/yellow] {summary.rejection_record_path}")
 
 
 @app.command("evidence-review-automate")

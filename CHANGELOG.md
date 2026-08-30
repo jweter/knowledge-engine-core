@@ -9,6 +9,34 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **GQR acquisition-to-evidence extraction bridge (CORE-GQR-5)**: a new
+  `ke general-question-extract-and-promote` command (production `ke` and the
+  `ke-research`-slim runtime both carry it) takes any of the four GQR
+  acquisition routes' persistence receipts (PMC, Europe PMC, CORE,
+  Unpaywall -- they share one `paper_id`/`persistence_status` receipt
+  shape), re-derives the acquired paper IDs, and runs the existing
+  deterministic extraction pipeline (M17-M28's claim-candidate detection,
+  study-design/PICO extraction) plus the existing deterministic
+  autoclassifier (M52's `build_automated_evidence_record`) against each
+  paper's persisted pages. Only records that pass `ke evidence-validate`'s
+  own schema check (reused unmodified via `knowledge_engine.cli`'s
+  `_promote_evidence_records`) are appended to `--evidence`; a paper or
+  candidate that does not reach promotion gets a durable, sanitized
+  rejection reason written to `<receipt-path>.extraction_rejections.json`
+  (new `knowledge_engine/general_question_extraction_promotion.py`),
+  mirroring CORE-GQR-4's failure-record pattern rather than only a console
+  line. Grounding is structural, not an added check: M17 sets
+  `claim_text`/`result_summary` to a verbatim source sentence, so an
+  autoclassified record cannot describe text its source paper does not
+  contain. Re-running the same receipt is idempotent -- an already-promoted
+  record is skipped as a duplicate. Discovery metadata and acquired Papers
+  are no longer non-Evidence-Record material once this command runs; this
+  closes CORE-GQR-5. The separate LLM-grounded PICO refinement
+  (`ke evidence-review-automate`, requires a local Ollama model) and its
+  `review_status="reviewed"` promotion remain a distinct follow-up step, as
+  they already were for any other `ke extraction-review-autoclassify`
+  output.
+
 - **Durable acquisition failure records (CORE-GQR-4 complete)**: all four
   General Question acquisition routes (`general-question-acquire-pmc`,
   `-europe-pmc`, `-core`, `-unpaywall`, including the `ke-research`-slim
