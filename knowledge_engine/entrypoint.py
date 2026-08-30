@@ -973,6 +973,17 @@ CorpusLibraryInputOption = Annotated[
     Path,
     typer.Option("--input", help="Corpus-library snapshot file to import."),
 ]
+CorpusLibraryEvidenceOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--evidence",
+        help=(
+            "Corpus evidence JSONL file (e.g. evidence_records.jsonl): included in "
+            "the snapshot on export; merged into this file, deduplicated by "
+            "evidence_record_id, on import. Omitted means no evidence is carried."
+        ),
+    ),
+]
 EmbeddingVectorsOption = Annotated[
     Path,
     typer.Option(
@@ -4985,7 +4996,9 @@ def paper_pages_table_text_backfill(dry_run: DryRunOption = False) -> None:
 
 
 @app.command("corpus-library-export")
-def corpus_library_export(output: CorpusLibraryOutputOption) -> None:
+def corpus_library_export(
+    output: CorpusLibraryOutputOption, evidence: CorpusLibraryEvidenceOption = None
+) -> None:
     """Export the local database's corpus content to a standalone snapshot.
 
     Only paper-intrinsic content is copied (papers, their extracted pages
@@ -4995,32 +5008,46 @@ def corpus_library_export(output: CorpusLibraryOutputOption) -> None:
     snapshot instead of a plain one -- GitHub caps individual pushed files
     at 100MB, and this corpus's page-level text compresses well enough to
     stay committable for much longer than the raw SQLite file would.
+
+    `--evidence <path>` additionally carries that corpus's promoted
+    `EvidenceRecord`s (e.g. `data/corpora/<corpus>/evidence_records.jsonl`,
+    as populated by `ke general-question-extract-and-promote`) into the
+    snapshot, so `ke corpus-library-import --evidence <path>` elsewhere can
+    hydrate both the papers and the evidence that references them together.
     """
 
     database = _local_database()
     database.initialize()
     try:
         if output.suffix == ".gz":
-            summary = export_corpus_library_compressed(database.engine, output)
+            summary = export_corpus_library_compressed(database.engine, output, evidence)
         else:
-            summary = export_corpus_library(database.engine, output)
+            summary = export_corpus_library(database.engine, output, evidence)
     except FileExistsError as exc:
         console.print(f"[red]{escape(str(exc))}[/red]")
         raise typer.Exit(1) from None
+    evidence_note = f", {summary.evidence_record_count} evidence record(s)" if evidence else ""
     console.print(
         f"[green]Exported corpus library:[/green] {output} "
         f"({summary.paper_count} paper(s), {summary.journal_count} journal(s), "
-        f"{summary.author_count} author(s), {summary.keyword_count} keyword(s))."
+        f"{summary.author_count} author(s), {summary.keyword_count} keyword(s)"
+        f"{evidence_note})."
     )
 
 
 @app.command("corpus-library-import")
-def corpus_library_import(input_path: CorpusLibraryInputOption) -> None:
+def corpus_library_import(
+    input_path: CorpusLibraryInputOption, evidence: CorpusLibraryEvidenceOption = None
+) -> None:
     """Hydrate the local database's corpus content from a snapshot.
 
     A paper whose content hash already exists locally is skipped, so
     importing the same or an overlapping snapshot twice is idempotent. A
     `.gz` suffix is read as a gzip-compressed snapshot.
+
+    `--evidence <path>` merges any evidence records carried in the snapshot
+    into that file, deduplicated by `evidence_record_id` -- so re-importing
+    the same or an overlapping snapshot is also idempotent for evidence.
     """
 
     database = _local_database()
@@ -5028,9 +5055,9 @@ def corpus_library_import(input_path: CorpusLibraryInputOption) -> None:
     try:
         with database.session() as session:
             if input_path.suffix == ".gz":
-                summary = import_corpus_library_compressed(session, input_path)
+                summary = import_corpus_library_compressed(session, input_path, evidence)
             else:
-                summary = import_corpus_library(session, input_path)
+                summary = import_corpus_library(session, input_path, evidence)
     except FileNotFoundError as exc:
         console.print(f"[red]{escape(str(exc))}[/red]")
         raise typer.Exit(1) from None
@@ -5046,9 +5073,16 @@ def corpus_library_import(input_path: CorpusLibraryInputOption) -> None:
             )
             raise typer.Exit(1) from None
         raise
+    evidence_note = (
+        f" {summary.imported_evidence_record_count} evidence record(s) imported, "
+        f"{summary.skipped_existing_evidence_record_count} already present and skipped."
+        if evidence
+        else ""
+    )
     console.print(
         f"[green]Imported corpus library:[/green] {summary.imported_paper_count} paper(s) "
         f"imported, {summary.skipped_existing_paper_count} already present and skipped."
+        f"{evidence_note}"
     )
 
 

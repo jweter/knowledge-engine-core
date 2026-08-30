@@ -16,17 +16,37 @@ operational history (when a command ran, against which ruleset), not the
 corpus itself -- re-running the relevant `ke` command regenerates them
 locally, and a snapshot from one machine's history has no meaning on
 another's.
+
+CORE-GQR-6 added one more optional, explicitly-opt-in piece: a corpus's
+promoted `EvidenceRecord`s (`evidence_records.jsonl`, e.g. as populated by
+`ke general-question-extract-and-promote`) live outside the SQLite database
+entirely, so they were previously left behind by an export/import cycle.
+Passing `evidence_path`/`evidence_output_path` to the functions below carries
+them along inside the same snapshot file, deduplicated by
+`evidence_record_id` on import -- see `_EVIDENCE_SNAPSHOT_TABLE`.
 """
 
 from __future__ import annotations
 
 import gzip
+import json
 import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from sqlalchemy import ColumnElement, Engine, create_engine, select
+from sqlalchemy import (
+    Column,
+    ColumnElement,
+    Engine,
+    MetaData,
+    String,
+    Table,
+    Text,
+    create_engine,
+    inspect,
+    select,
+)
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
 from knowledge_engine.database import PaperRepository
@@ -61,6 +81,26 @@ _PAPER_LOAD_OPTIONS = (
     selectinload(Paper.keyword_links).selectinload(PaperKeyword.keyword),
 )
 
+# CORE-GQR-6: a snapshot-only transport table for promoted GeneralQuestion
+# `EvidenceRecord`s, deliberately declared on its own `MetaData` rather than
+# added to `models.Base`. `GraphClaim`'s docstring is still accurate about the
+# *working* database: an `EvidenceRecord` is a JSONL object appended to a
+# corpus's `evidence_records.jsonl` file, never a row in any table the live
+# application queries. This table exists solely so a portable corpus-library
+# snapshot file -- already the mechanism for carrying a corpus's papers
+# between environments -- can carry that corpus's promoted evidence records
+# alongside them, so `ke corpus-library-import` doesn't silently leave a
+# freshly hydrated database's evidence behind. `record_json` stores the
+# original JSONL line verbatim; only `evidence_record_id` is unpacked, for
+# dedup on import.
+_EVIDENCE_SNAPSHOT_METADATA = MetaData()
+_EVIDENCE_SNAPSHOT_TABLE = Table(
+    "evidence_records_snapshot",
+    _EVIDENCE_SNAPSHOT_METADATA,
+    Column("evidence_record_id", String, primary_key=True),
+    Column("record_json", Text, nullable=False),
+)
+
 
 @dataclass(frozen=True)
 class ExportSummary:
@@ -70,6 +110,7 @@ class ExportSummary:
     journal_count: int
     author_count: int
     keyword_count: int
+    evidence_record_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -78,25 +119,51 @@ class ImportSummary:
 
     imported_paper_count: int
     skipped_existing_paper_count: int
+    imported_evidence_record_count: int = 0
+    skipped_existing_evidence_record_count: int = 0
 
 
-def export_corpus_library(source_engine: Engine, output_path: Path) -> ExportSummary:
+def export_corpus_library(
+    source_engine: Engine, output_path: Path, evidence_path: Path | None = None
+) -> ExportSummary:
     """Copy corpus-content tables into a fresh, standalone snapshot file.
 
     `output_path` must not already exist -- callers needing to overwrite an
     existing snapshot delete it first, mirroring the `--force` pattern used
     for other `ke` output files rather than silently clobbering one here.
+
+    `evidence_path`, when given and it exists, is a corpus's
+    `evidence_records.jsonl` file (e.g. one populated by
+    `ke general-question-extract-and-promote`): every well-formed record in
+    it is copied into the snapshot's `evidence_records_snapshot` table so
+    `ke corpus-library-import` can carry it into another environment
+    alongside the papers it describes. A missing or omitted `evidence_path`
+    exports zero evidence records -- not an error, since not every corpus has
+    promoted evidence yet.
     """
 
     if output_path.exists():
         msg = f"Corpus library output already exists: {output_path}"
         raise FileExistsError(msg)
 
+    evidence_rows = _read_evidence_jsonl(evidence_path) if evidence_path else []
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     target_engine = create_engine(f"sqlite:///{output_path}", future=True)
     try:
         tables = [Base.metadata.tables[name] for name in CORPUS_LIBRARY_TABLES]
         Base.metadata.create_all(target_engine, tables=tables)
+
+        if evidence_rows:
+            _EVIDENCE_SNAPSHOT_METADATA.create_all(target_engine)
+            with target_engine.begin() as connection:
+                connection.execute(
+                    _EVIDENCE_SNAPSHOT_TABLE.insert(),
+                    [
+                        {"evidence_record_id": record_id, "record_json": raw_line}
+                        for record_id, raw_line in evidence_rows
+                    ],
+                )
 
         source_session_factory = sessionmaker(source_engine, future=True)
         target_session_factory = sessionmaker(target_engine, future=True)
@@ -158,6 +225,7 @@ def export_corpus_library(source_engine: Engine, output_path: Path) -> ExportSum
                 journal_count=len(journal_cache),
                 author_count=len(author_cache),
                 keyword_count=len(keyword_cache),
+                evidence_record_count=len(evidence_rows),
             )
     finally:
         # On Windows, a SQLAlchemy engine's connection pool keeps the underlying
@@ -169,7 +237,9 @@ def export_corpus_library(source_engine: Engine, output_path: Path) -> ExportSum
         target_engine.dispose()
 
 
-def import_corpus_library(target_session: Session, input_path: Path) -> ImportSummary:
+def import_corpus_library(
+    target_session: Session, input_path: Path, evidence_output_path: Path | None = None
+) -> ImportSummary:
     """Hydrate a local working database from a corpus-library snapshot.
 
     A paper whose `content_hash` already exists locally is skipped entirely,
@@ -182,6 +252,15 @@ def import_corpus_library(target_session: Session, input_path: Path) -> ImportSu
     (`PaperRepository.upsert_search_index`), so `ke search`/`ke answer`
     can find it immediately -- without this, an imported paper would sit in
     the relational tables but never surface through either command.
+
+    `evidence_output_path`, when given, is the corpus's own
+    `evidence_records.jsonl` file: any evidence record carried in this
+    snapshot (see `export_corpus_library`) whose `evidence_record_id` is not
+    already present there is appended, exactly matching
+    `_promote_evidence_records`'s own append-only, ID-deduplicated contract.
+    An older snapshot with no `evidence_records_snapshot` table (predating
+    CORE-GQR-6) is simply treated as carrying zero evidence records, not an
+    error.
     """
 
     if not input_path.exists():
@@ -246,7 +325,16 @@ def import_corpus_library(target_session: Session, input_path: Path) -> ImportSu
                 PaperRepository(target_session).upsert_search_index(new_paper)
                 imported += 1
 
-        return ImportSummary(imported_paper_count=imported, skipped_existing_paper_count=skipped)
+            imported_evidence, skipped_evidence = _merge_evidence_snapshot(
+                source_engine, evidence_output_path
+            )
+
+        return ImportSummary(
+            imported_paper_count=imported,
+            skipped_existing_paper_count=skipped,
+            imported_evidence_record_count=imported_evidence,
+            skipped_existing_evidence_record_count=skipped_evidence,
+        )
     finally:
         # Same leaked-handle hazard as export_corpus_library's target_engine:
         # import_corpus_library_compressed deletes this file's temp directory
@@ -255,7 +343,9 @@ def import_corpus_library(target_session: Session, input_path: Path) -> ImportSu
         source_engine.dispose()
 
 
-def export_corpus_library_compressed(source_engine: Engine, output_path: Path) -> ExportSummary:
+def export_corpus_library_compressed(
+    source_engine: Engine, output_path: Path, evidence_path: Path | None = None
+) -> ExportSummary:
     """Like `export_corpus_library`, but writes a gzip-compressed snapshot.
 
     GitHub hard-caps individual pushed files at 100MB. This corpus's
@@ -281,7 +371,7 @@ def export_corpus_library_compressed(source_engine: Engine, output_path: Path) -
 
     with tempfile.TemporaryDirectory() as raw_dir:
         raw_path = Path(raw_dir) / "snapshot.sqlite3"
-        summary = export_corpus_library(source_engine, raw_path)
+        summary = export_corpus_library(source_engine, raw_path, evidence_path)
         with (
             raw_path.open("rb") as raw_file,
             gzip.GzipFile(output_path, "wb", mtime=0) as compressed_file,
@@ -290,7 +380,9 @@ def export_corpus_library_compressed(source_engine: Engine, output_path: Path) -
     return summary
 
 
-def import_corpus_library_compressed(target_session: Session, input_path: Path) -> ImportSummary:
+def import_corpus_library_compressed(
+    target_session: Session, input_path: Path, evidence_output_path: Path | None = None
+) -> ImportSummary:
     """Like `import_corpus_library`, but reads a gzip-compressed snapshot."""
 
     if not input_path.exists():
@@ -301,7 +393,72 @@ def import_corpus_library_compressed(target_session: Session, input_path: Path) 
         raw_path = Path(raw_dir) / "snapshot.sqlite3"
         with gzip.open(input_path, "rb") as compressed_file, raw_path.open("wb") as raw_file:
             shutil.copyfileobj(compressed_file, raw_file)
-        return import_corpus_library(target_session, raw_path)
+        return import_corpus_library(target_session, raw_path, evidence_output_path)
+
+
+def _read_evidence_jsonl(path: Path) -> list[tuple[str, str]]:
+    """Parse a JSONL evidence file into `(evidence_record_id, raw_line)` pairs.
+
+    Skips a missing file, a blank line, invalid JSON, a non-object record, or
+    a record with no non-empty string `evidence_record_id` -- a
+    corpus-library snapshot is a transport format, not a second validator, so
+    this mirrors `_promote_evidence_records`'s own defensive (not rejecting)
+    parsing rather than raising on a malformed line.
+    """
+
+    if not path.exists():
+        return []
+
+    pairs: list[tuple[str, str]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            record = json.loads(stripped)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(record, dict):
+            continue
+        record_id = record.get("evidence_record_id")
+        if not isinstance(record_id, str) or not record_id.strip():
+            continue
+        pairs.append((record_id, stripped))
+    return pairs
+
+
+def _merge_evidence_snapshot(
+    source_engine: Engine, evidence_output_path: Path | None
+) -> tuple[int, int]:
+    """Append a snapshot's evidence records into `evidence_output_path`.
+
+    Returns `(imported_count, skipped_existing_count)`. A `None`
+    `evidence_output_path`, or a snapshot with no `evidence_records_snapshot`
+    table (predating CORE-GQR-6, or exported with no `evidence_path`), is
+    zero records on both counts rather than an error.
+    """
+
+    if evidence_output_path is None:
+        return 0, 0
+    if not inspect(source_engine).has_table(_EVIDENCE_SNAPSHOT_TABLE.name):
+        return 0, 0
+
+    existing_ids = {record_id for record_id, _ in _read_evidence_jsonl(evidence_output_path)}
+    with source_engine.connect() as connection:
+        rows = connection.execute(
+            select(_EVIDENCE_SNAPSHOT_TABLE).order_by(_EVIDENCE_SNAPSHOT_TABLE.c.evidence_record_id)
+        ).all()
+
+    new_lines = [row.record_json for row in rows if row.evidence_record_id not in existing_ids]
+    skipped = len(rows) - len(new_lines)
+
+    if new_lines:
+        evidence_output_path.parent.mkdir(parents=True, exist_ok=True)
+        with evidence_output_path.open("a", encoding="utf-8") as handle:
+            for line in new_lines:
+                handle.write(line + "\n")
+
+    return len(new_lines), skipped
 
 
 def _copy_paper_fields(paper: Paper, *, journal: Journal | None) -> Paper:

@@ -167,7 +167,12 @@ abstract, full text, pages, keywords) but deliberately *not* raw PDFs
 `Paper.id` is only unique within one database -- see `docs/phase3_design.md`'s
 Open Questions). This is the actual portable artifact: import it into a
 fresh database with `ke corpus-library-import --input <file>` rather than
-copying the live working database.
+copying the live working database. Both commands take an optional
+`--evidence <path>` (CORE-GQR-6): on export it copies that corpus's
+`evidence_records.jsonl` into the snapshot; on import it merges the
+snapshot's evidence records into that file, deduplicated by
+`evidence_record_id`. Omitting `--evidence` exports/imports zero evidence
+records and behaves exactly as before CORE-GQR-6.
 
 ## The CLI is the primary API
 
