@@ -5738,16 +5738,6 @@ def general_question_acquire_pmc(
         database.initialize()
         with database.session() as session:
             plan = build_acquisition_plan(request, ledger_root=ledger_root, session=session)
-        console.print(
-            "[yellow]Network access:[/yellow] resolving planned PMIDs and acquiring "
-            "license-verified PDFs from official PMC OA resources."
-        )
-        execution = execute_pmc_acquisition_plan(
-            plan,
-            resolver=_pubmed_discovery_service(),
-            acquisition_service=_pmc_acquisition_service(),
-            output_directory=papers_dir,
-        )
     except FileNotFoundError:
         write_acquisition_failure_record(
             receipt,
@@ -5760,13 +5750,37 @@ def general_question_acquire_pmc(
         )
         console.print(f"[red]No federated search run found:[/red] {escape(request.search_run_id)}")
         raise typer.Exit(1) from None
+    except ValueError as exc:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.PMC_OA.value,
+            stage="build_plan",
+            reason=str(exc),
+            candidate_ids=request.candidate_ids,
+        )
+        console.print(f"[red]General-question PMC acquisition failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    try:
+        console.print(
+            "[yellow]Network access:[/yellow] resolving planned PMIDs and acquiring "
+            "license-verified PDFs from official PMC OA resources."
+        )
+        execution = execute_pmc_acquisition_plan(
+            plan,
+            resolver=_pubmed_discovery_service(),
+            acquisition_service=_pmc_acquisition_service(),
+            output_directory=papers_dir,
+        )
     except (ValueError, GeneralQuestionPmcAcquisitionError) as exc:
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
             research_question_id=request.research_question_id,
             acquisition_route=AcquisitionRoute.PMC_OA.value,
-            stage="build_plan" if isinstance(exc, ValueError) else "acquire",
+            stage="acquire",
             reason=str(exc),
             candidate_ids=request.candidate_ids,
         )
@@ -5783,7 +5797,6 @@ def general_question_acquire_pmc(
             )
             _write_output(receipt, persistence_receipt.to_json())
     except typer.BadParameter:
-        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
@@ -5793,11 +5806,11 @@ def general_question_acquire_pmc(
             reason="Receipt output could not be written.",
             candidate_ids=request.candidate_ids,
         )
+        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
         raise typer.BadParameter(
             "Receipt output could not be written; acquired PDFs and Paper writes were rolled back."
         ) from None
     except GeneralQuestionPmcAcquisitionError as exc:
-        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
@@ -5807,10 +5820,10 @@ def general_question_acquire_pmc(
             reason=str(exc),
             candidate_ids=request.candidate_ids,
         )
+        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
         console.print(f"[red]General-question PMC persistence failed:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
     except Exception as exc:
-        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
@@ -5820,6 +5833,7 @@ def general_question_acquire_pmc(
             reason=f"Unexpected error: {type(exc).__name__}.",
             candidate_ids=request.candidate_ids,
         )
+        _rollback_acquired_files(papers_dir, execution.acquisition_receipt)
         raise
 
     clear_acquisition_failure_record(receipt)
@@ -5857,16 +5871,6 @@ def general_question_acquire_europe_pmc(
         database.initialize()
         with database.session() as session:
             plan = build_acquisition_plan(request, ledger_root=ledger_root, session=session)
-        console.print(
-            "[yellow]Network access:[/yellow] resolving planned DOIs and acquiring "
-            "license-verified PDFs from official Europe PMC resources."
-        )
-        execution = execute_europepmc_acquisition_plan(
-            plan,
-            resolver=_europepmc_discovery_service(),
-            acquisition_service=_europepmc_acquisition_service(),
-            output_directory=papers_dir,
-        )
     except FileNotFoundError:
         write_acquisition_failure_record(
             receipt,
@@ -5879,13 +5883,39 @@ def general_question_acquire_europe_pmc(
         )
         console.print(f"[red]No federated search run found:[/red] {escape(request.search_run_id)}")
         raise typer.Exit(1) from None
+    except ValueError as exc:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.EUROPE_PMC_OA.value,
+            stage="build_plan",
+            reason=str(exc),
+            candidate_ids=request.candidate_ids,
+        )
+        console.print(
+            f"[red]General-question Europe PMC acquisition failed:[/red] {escape(str(exc))}"
+        )
+        raise typer.Exit(1) from exc
+
+    try:
+        console.print(
+            "[yellow]Network access:[/yellow] resolving planned DOIs and acquiring "
+            "license-verified PDFs from official Europe PMC resources."
+        )
+        execution = execute_europepmc_acquisition_plan(
+            plan,
+            resolver=_europepmc_discovery_service(),
+            acquisition_service=_europepmc_acquisition_service(),
+            output_directory=papers_dir,
+        )
     except (ValueError, GeneralQuestionEuropePmcAcquisitionError) as exc:
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
             research_question_id=request.research_question_id,
             acquisition_route=AcquisitionRoute.EUROPE_PMC_OA.value,
-            stage="build_plan" if isinstance(exc, ValueError) else "acquire",
+            stage="acquire",
             reason=str(exc),
             candidate_ids=request.candidate_ids,
         )
@@ -5904,7 +5934,6 @@ def general_question_acquire_europe_pmc(
             )
             _write_output(receipt, persistence_receipt.to_json())
     except typer.BadParameter:
-        _rollback_europepmc_acquired_files(papers_dir, execution.acquisition_receipt)
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
@@ -5914,11 +5943,11 @@ def general_question_acquire_europe_pmc(
             reason="Receipt output could not be written.",
             candidate_ids=request.candidate_ids,
         )
+        _rollback_europepmc_acquired_files(papers_dir, execution.acquisition_receipt)
         raise typer.BadParameter(
             "Receipt output could not be written; acquired PDFs and Paper writes were rolled back."
         ) from None
     except GeneralQuestionEuropePmcAcquisitionError as exc:
-        _rollback_europepmc_acquired_files(papers_dir, execution.acquisition_receipt)
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
@@ -5928,12 +5957,12 @@ def general_question_acquire_europe_pmc(
             reason=str(exc),
             candidate_ids=request.candidate_ids,
         )
+        _rollback_europepmc_acquired_files(papers_dir, execution.acquisition_receipt)
         console.print(
             f"[red]General-question Europe PMC persistence failed:[/red] {escape(str(exc))}"
         )
         raise typer.Exit(1) from exc
     except Exception as exc:
-        _rollback_europepmc_acquired_files(papers_dir, execution.acquisition_receipt)
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
@@ -5943,6 +5972,7 @@ def general_question_acquire_europe_pmc(
             reason=f"Unexpected error: {type(exc).__name__}.",
             candidate_ids=request.candidate_ids,
         )
+        _rollback_europepmc_acquired_files(papers_dir, execution.acquisition_receipt)
         raise
 
     clear_acquisition_failure_record(receipt)

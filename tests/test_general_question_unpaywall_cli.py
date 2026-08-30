@@ -288,3 +288,45 @@ def test_cli_writes_durable_failure_record_when_persistence_fails(
     assert failure["acquisition_route"] == "unpaywall"
     assert failure["stage"] == "persist"
     assert failure["reason"] == "simulated persistence failure"
+
+
+def test_cli_classifies_a_resolver_configuration_error_as_acquire_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # _unpaywall_doi_resolver() raises ValueError when KE_UNPAYWALL_EMAIL is
+    # unset. That happens while acquiring (after the plan already exists), so
+    # it must be recorded as an "acquire"-stage failure, not "build_plan".
+    ledger_root = tmp_path / "ledger"
+    run_id = _record_unpaywall_run(ledger_root)
+    request_path = _write_request(tmp_path / "request.json", search_run_id=run_id)
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(command_surface, "_local_database", lambda: database)
+
+    def missing_email_resolver() -> object:
+        raise ValueError(
+            "KE_UNPAYWALL_EMAIL is not set. Unpaywall requires a contact email in every request."
+        )
+
+    monkeypatch.setattr(command_surface, "_unpaywall_doi_resolver", missing_email_resolver)
+    monkeypatch.setattr(command_surface, "_unpaywall_acquisition_service", lambda: object())
+
+    receipt_path = tmp_path / "receipt.json"
+    result = CliRunner().invoke(
+        app,
+        [
+            "general-question-acquire-unpaywall",
+            str(request_path),
+            "--ledger-root",
+            str(ledger_root),
+            "--papers-dir",
+            str(tmp_path / "papers"),
+            "--receipt",
+            str(receipt_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    failure = json.loads((tmp_path / "receipt.json.failure.json").read_text(encoding="utf-8"))
+    assert failure["acquisition_route"] == "unpaywall"
+    assert failure["stage"] == "acquire"
+    assert "KE_UNPAYWALL_EMAIL" in failure["reason"]

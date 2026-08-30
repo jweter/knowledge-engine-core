@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
+import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -64,6 +66,12 @@ def write_acquisition_failure_record(
 ) -> Path:
     """Persist a sanitized failure record next to ``receipt_path``.
 
+    Written via a temporary file plus an atomic ``os.replace`` so a reader
+    never observes a truncated record, and so a pre-existing symbolic link at
+    the failure-record path is replaced outright rather than followed and
+    written through (``os.replace``/``rename`` retargets the directory entry
+    itself; it does not dereference a destination symlink).
+
     Best-effort: an ``OSError`` while writing the failure record itself is
     swallowed so it never masks or replaces the original error the caller is
     already raising.
@@ -82,7 +90,19 @@ def write_acquisition_failure_record(
     path = failure_record_path(receipt_path)
     with contextlib.suppress(OSError):
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(record.to_json(), encoding="utf-8")
+        descriptor, temp_name = tempfile.mkstemp(
+            dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
+        )
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                handle.write(record.to_json())
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temp_name, path)
+        except OSError:
+            with contextlib.suppress(OSError):
+                os.unlink(temp_name)
+            raise
     return path
 
 

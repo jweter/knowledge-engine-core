@@ -91,3 +91,60 @@ def test_clear_acquisition_failure_record_is_a_noop_when_nothing_to_clear(
     clear_acquisition_failure_record(receipt)
 
     assert not failure_record_path(receipt).exists()
+
+
+def test_write_acquisition_failure_record_replaces_a_preexisting_symlink(
+    tmp_path: Path,
+) -> None:
+    # A pre-created symlink at the failure-record path must be replaced
+    # outright, never followed and written through.
+    outside_target = tmp_path / "outside-secret.txt"
+    outside_target.write_text("do not overwrite me", encoding="utf-8")
+    receipt = tmp_path / "receipt.json"
+    failure_record_path(receipt).symlink_to(outside_target)
+
+    write_acquisition_failure_record(
+        receipt,
+        search_run_id="run-1",
+        research_question_id="rq-1",
+        acquisition_route="pmc_oa",
+        stage="acquire",
+        reason="simulated failure",
+        candidate_ids=("doi:10.1000/a",),
+    )
+
+    assert outside_target.read_text(encoding="utf-8") == "do not overwrite me"
+    path = failure_record_path(receipt)
+    assert not path.is_symlink()
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["reason"] == "simulated failure"
+
+
+def test_write_acquisition_failure_record_overwrites_a_prior_record_atomically(
+    tmp_path: Path,
+) -> None:
+    receipt = tmp_path / "receipt.json"
+    write_acquisition_failure_record(
+        receipt,
+        search_run_id="run-1",
+        research_question_id="rq-1",
+        acquisition_route="pmc_oa",
+        stage="build_plan",
+        reason="first failure",
+        candidate_ids=("doi:10.1000/a",),
+    )
+
+    write_acquisition_failure_record(
+        receipt,
+        search_run_id="run-1",
+        research_question_id="rq-1",
+        acquisition_route="pmc_oa",
+        stage="persist",
+        reason="second failure",
+        candidate_ids=("doi:10.1000/a",),
+    )
+
+    path = failure_record_path(receipt)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["reason"] == "second failure"
+    assert list(path.parent.glob(".*.tmp")) == []

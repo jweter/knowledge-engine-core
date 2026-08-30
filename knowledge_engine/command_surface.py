@@ -228,16 +228,6 @@ def general_question_acquire_core(
         database.initialize()
         with database.session() as session:
             plan = build_acquisition_plan(request, ledger_root=ledger_root, session=session)
-        console.print(
-            "[yellow]Network access:[/yellow] resolving planned DOIs and acquiring "
-            "explicitly licensed PDFs from official CORE resources."
-        )
-        execution = execute_core_acquisition_plan(
-            plan,
-            resolver=_core_doi_resolver(),
-            acquisition_service=_core_acquisition_service(),
-            output_directory=papers_dir,
-        )
     except FileNotFoundError:
         write_acquisition_failure_record(
             receipt,
@@ -250,13 +240,37 @@ def general_question_acquire_core(
         )
         console.print(f"[red]No federated search run found:[/red] {escape(request.search_run_id)}")
         raise typer.Exit(1) from None
+    except ValueError as exc:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.CORE.value,
+            stage="build_plan",
+            reason=str(exc),
+            candidate_ids=request.candidate_ids,
+        )
+        console.print(f"[red]General-question CORE acquisition failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    try:
+        console.print(
+            "[yellow]Network access:[/yellow] resolving planned DOIs and acquiring "
+            "explicitly licensed PDFs from official CORE resources."
+        )
+        execution = execute_core_acquisition_plan(
+            plan,
+            resolver=_core_doi_resolver(),
+            acquisition_service=_core_acquisition_service(),
+            output_directory=papers_dir,
+        )
     except (ValueError, GeneralQuestionCoreAcquisitionError) as exc:
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
             research_question_id=request.research_question_id,
             acquisition_route=AcquisitionRoute.CORE.value,
-            stage="build_plan" if isinstance(exc, ValueError) else "acquire",
+            stage="acquire",
             reason=str(exc),
             candidate_ids=request.candidate_ids,
         )
@@ -287,13 +301,6 @@ def general_question_acquire_core(
             receipt_write_attempted = True
             _write_output(receipt, persistence_receipt.to_json())
     except typer.BadParameter:
-        _cleanup_failed_persistence(
-            receipt=receipt,
-            previous_receipt=previous_receipt,
-            receipt_write_attempted=receipt_write_attempted,
-            papers_dir=papers_dir,
-            execution=execution,
-        )
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
@@ -303,10 +310,6 @@ def general_question_acquire_core(
             reason="Receipt output could not be written.",
             candidate_ids=request.candidate_ids,
         )
-        raise typer.BadParameter(
-            "Receipt output could not be written; acquired PDFs and Paper writes were rolled back."
-        ) from None
-    except GeneralQuestionCoreAcquisitionError as exc:
         _cleanup_failed_persistence(
             receipt=receipt,
             previous_receipt=previous_receipt,
@@ -314,6 +317,10 @@ def general_question_acquire_core(
             papers_dir=papers_dir,
             execution=execution,
         )
+        raise typer.BadParameter(
+            "Receipt output could not be written; acquired PDFs and Paper writes were rolled back."
+        ) from None
+    except GeneralQuestionCoreAcquisitionError as exc:
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
@@ -323,9 +330,6 @@ def general_question_acquire_core(
             reason=str(exc),
             candidate_ids=request.candidate_ids,
         )
-        console.print(f"[red]General-question CORE persistence failed:[/red] {escape(str(exc))}")
-        raise typer.Exit(1) from exc
-    except Exception as exc:
         _cleanup_failed_persistence(
             receipt=receipt,
             previous_receipt=previous_receipt,
@@ -333,6 +337,9 @@ def general_question_acquire_core(
             papers_dir=papers_dir,
             execution=execution,
         )
+        console.print(f"[red]General-question CORE persistence failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+    except Exception as exc:
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
@@ -341,6 +348,13 @@ def general_question_acquire_core(
             stage="persist",
             reason=f"Unexpected error: {type(exc).__name__}.",
             candidate_ids=request.candidate_ids,
+        )
+        _cleanup_failed_persistence(
+            receipt=receipt,
+            previous_receipt=previous_receipt,
+            receipt_write_attempted=receipt_write_attempted,
+            papers_dir=papers_dir,
+            execution=execution,
         )
         raise
 
@@ -379,16 +393,6 @@ def general_question_acquire_unpaywall(
         database.initialize()
         with database.session() as session:
             plan = build_acquisition_plan(request, ledger_root=ledger_root, session=session)
-        console.print(
-            "[yellow]Network access:[/yellow] re-resolving planned DOIs through "
-            "Unpaywall and acquiring only reusable-license direct PDFs on reviewed hosts."
-        )
-        execution = execute_unpaywall_acquisition_plan(
-            plan,
-            resolver=_unpaywall_doi_resolver(),
-            acquisition_service=_unpaywall_acquisition_service(),
-            output_directory=papers_dir,
-        )
     except FileNotFoundError:
         write_acquisition_failure_record(
             receipt,
@@ -401,13 +405,39 @@ def general_question_acquire_unpaywall(
         )
         console.print(f"[red]No federated search run found:[/red] {escape(request.search_run_id)}")
         raise typer.Exit(1) from None
+    except ValueError as exc:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.UNPAYWALL.value,
+            stage="build_plan",
+            reason=str(exc),
+            candidate_ids=request.candidate_ids,
+        )
+        console.print(
+            f"[red]General-question Unpaywall acquisition failed:[/red] {escape(str(exc))}"
+        )
+        raise typer.Exit(1) from exc
+
+    try:
+        console.print(
+            "[yellow]Network access:[/yellow] re-resolving planned DOIs through "
+            "Unpaywall and acquiring only reusable-license direct PDFs on reviewed hosts."
+        )
+        execution = execute_unpaywall_acquisition_plan(
+            plan,
+            resolver=_unpaywall_doi_resolver(),
+            acquisition_service=_unpaywall_acquisition_service(),
+            output_directory=papers_dir,
+        )
     except (ValueError, GeneralQuestionUnpaywallAcquisitionError) as exc:
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
             research_question_id=request.research_question_id,
             acquisition_route=AcquisitionRoute.UNPAYWALL.value,
-            stage="build_plan" if isinstance(exc, ValueError) else "acquire",
+            stage="acquire",
             reason=str(exc),
             candidate_ids=request.candidate_ids,
         )
@@ -442,13 +472,6 @@ def general_question_acquire_unpaywall(
             receipt_write_attempted = True
             _write_output(receipt, persistence_receipt.to_json())
     except typer.BadParameter:
-        _cleanup_failed_unpaywall_persistence(
-            receipt=receipt,
-            previous_receipt=previous_receipt,
-            receipt_write_attempted=receipt_write_attempted,
-            papers_dir=papers_dir,
-            execution=execution,
-        )
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
@@ -458,10 +481,6 @@ def general_question_acquire_unpaywall(
             reason="Receipt output could not be written.",
             candidate_ids=request.candidate_ids,
         )
-        raise typer.BadParameter(
-            "Receipt output could not be written; acquired PDFs and Paper writes were rolled back."
-        ) from None
-    except GeneralQuestionUnpaywallAcquisitionError as exc:
         _cleanup_failed_unpaywall_persistence(
             receipt=receipt,
             previous_receipt=previous_receipt,
@@ -469,6 +488,10 @@ def general_question_acquire_unpaywall(
             papers_dir=papers_dir,
             execution=execution,
         )
+        raise typer.BadParameter(
+            "Receipt output could not be written; acquired PDFs and Paper writes were rolled back."
+        ) from None
+    except GeneralQuestionUnpaywallAcquisitionError as exc:
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
@@ -478,11 +501,6 @@ def general_question_acquire_unpaywall(
             reason=str(exc),
             candidate_ids=request.candidate_ids,
         )
-        console.print(
-            f"[red]General-question Unpaywall persistence failed:[/red] {escape(str(exc))}"
-        )
-        raise typer.Exit(1) from exc
-    except Exception as exc:
         _cleanup_failed_unpaywall_persistence(
             receipt=receipt,
             previous_receipt=previous_receipt,
@@ -490,6 +508,11 @@ def general_question_acquire_unpaywall(
             papers_dir=papers_dir,
             execution=execution,
         )
+        console.print(
+            f"[red]General-question Unpaywall persistence failed:[/red] {escape(str(exc))}"
+        )
+        raise typer.Exit(1) from exc
+    except Exception as exc:
         write_acquisition_failure_record(
             receipt,
             search_run_id=request.search_run_id,
@@ -498,6 +521,13 @@ def general_question_acquire_unpaywall(
             stage="persist",
             reason=f"Unexpected error: {type(exc).__name__}.",
             candidate_ids=request.candidate_ids,
+        )
+        _cleanup_failed_unpaywall_persistence(
+            receipt=receipt,
+            previous_receipt=previous_receipt,
+            receipt_write_attempted=receipt_write_attempted,
+            papers_dir=papers_dir,
+            execution=execution,
         )
         raise
 
