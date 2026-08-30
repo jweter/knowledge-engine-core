@@ -32,8 +32,13 @@ from knowledge_engine.entrypoint import (
     _write_output,
 )
 from knowledge_engine.general_question_acquisition import (
+    AcquisitionRoute,
     GeneralQuestionAcquisitionRequest,
     build_acquisition_plan,
+)
+from knowledge_engine.general_question_acquisition_failures import (
+    clear_acquisition_failure_record,
+    write_acquisition_failure_record,
 )
 from knowledge_engine.general_question_core_acquisition import (
     GeneralQuestionCoreAcquisitionError,
@@ -223,6 +228,32 @@ def general_question_acquire_core(
         database.initialize()
         with database.session() as session:
             plan = build_acquisition_plan(request, ledger_root=ledger_root, session=session)
+    except FileNotFoundError:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.CORE.value,
+            stage="build_plan",
+            reason="No federated search run found.",
+            candidate_ids=request.candidate_ids,
+        )
+        console.print(f"[red]No federated search run found:[/red] {escape(request.search_run_id)}")
+        raise typer.Exit(1) from None
+    except ValueError as exc:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.CORE.value,
+            stage="build_plan",
+            reason=str(exc),
+            candidate_ids=request.candidate_ids,
+        )
+        console.print(f"[red]General-question CORE acquisition failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    try:
         console.print(
             "[yellow]Network access:[/yellow] resolving planned DOIs and acquiring "
             "explicitly licensed PDFs from official CORE resources."
@@ -233,10 +264,16 @@ def general_question_acquire_core(
             acquisition_service=_core_acquisition_service(),
             output_directory=papers_dir,
         )
-    except FileNotFoundError:
-        console.print(f"[red]No federated search run found:[/red] {escape(request.search_run_id)}")
-        raise typer.Exit(1) from None
     except (ValueError, GeneralQuestionCoreAcquisitionError) as exc:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.CORE.value,
+            stage="acquire",
+            reason=str(exc),
+            candidate_ids=request.candidate_ids,
+        )
         console.print(f"[red]General-question CORE acquisition failed:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
 
@@ -264,6 +301,15 @@ def general_question_acquire_core(
             receipt_write_attempted = True
             _write_output(receipt, persistence_receipt.to_json())
     except typer.BadParameter:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.CORE.value,
+            stage="persist",
+            reason="Receipt output could not be written.",
+            candidate_ids=request.candidate_ids,
+        )
         _cleanup_failed_persistence(
             receipt=receipt,
             previous_receipt=previous_receipt,
@@ -275,6 +321,15 @@ def general_question_acquire_core(
             "Receipt output could not be written; acquired PDFs and Paper writes were rolled back."
         ) from None
     except GeneralQuestionCoreAcquisitionError as exc:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.CORE.value,
+            stage="persist",
+            reason=str(exc),
+            candidate_ids=request.candidate_ids,
+        )
         _cleanup_failed_persistence(
             receipt=receipt,
             previous_receipt=previous_receipt,
@@ -284,7 +339,16 @@ def general_question_acquire_core(
         )
         console.print(f"[red]General-question CORE persistence failed:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
-    except Exception:
+    except Exception as exc:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.CORE.value,
+            stage="persist",
+            reason=f"Unexpected error: {type(exc).__name__}.",
+            candidate_ids=request.candidate_ids,
+        )
         _cleanup_failed_persistence(
             receipt=receipt,
             previous_receipt=previous_receipt,
@@ -294,6 +358,7 @@ def general_question_acquire_core(
         )
         raise
 
+    clear_acquisition_failure_record(receipt)
     console.print(
         f"[green]Acquired and parsed {persistence_receipt.parsed_count} planned CORE "
         f"PDFs.[/green] Receipt: {receipt}"
@@ -328,6 +393,34 @@ def general_question_acquire_unpaywall(
         database.initialize()
         with database.session() as session:
             plan = build_acquisition_plan(request, ledger_root=ledger_root, session=session)
+    except FileNotFoundError:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.UNPAYWALL.value,
+            stage="build_plan",
+            reason="No federated search run found.",
+            candidate_ids=request.candidate_ids,
+        )
+        console.print(f"[red]No federated search run found:[/red] {escape(request.search_run_id)}")
+        raise typer.Exit(1) from None
+    except ValueError as exc:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.UNPAYWALL.value,
+            stage="build_plan",
+            reason=str(exc),
+            candidate_ids=request.candidate_ids,
+        )
+        console.print(
+            f"[red]General-question Unpaywall acquisition failed:[/red] {escape(str(exc))}"
+        )
+        raise typer.Exit(1) from exc
+
+    try:
         console.print(
             "[yellow]Network access:[/yellow] re-resolving planned DOIs through "
             "Unpaywall and acquiring only reusable-license direct PDFs on reviewed hosts."
@@ -338,10 +431,16 @@ def general_question_acquire_unpaywall(
             acquisition_service=_unpaywall_acquisition_service(),
             output_directory=papers_dir,
         )
-    except FileNotFoundError:
-        console.print(f"[red]No federated search run found:[/red] {escape(request.search_run_id)}")
-        raise typer.Exit(1) from None
     except (ValueError, GeneralQuestionUnpaywallAcquisitionError) as exc:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.UNPAYWALL.value,
+            stage="acquire",
+            reason=str(exc),
+            candidate_ids=request.candidate_ids,
+        )
         console.print(
             f"[red]General-question Unpaywall acquisition failed:[/red] {escape(str(exc))}"
         )
@@ -373,6 +472,15 @@ def general_question_acquire_unpaywall(
             receipt_write_attempted = True
             _write_output(receipt, persistence_receipt.to_json())
     except typer.BadParameter:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.UNPAYWALL.value,
+            stage="persist",
+            reason="Receipt output could not be written.",
+            candidate_ids=request.candidate_ids,
+        )
         _cleanup_failed_unpaywall_persistence(
             receipt=receipt,
             previous_receipt=previous_receipt,
@@ -384,6 +492,15 @@ def general_question_acquire_unpaywall(
             "Receipt output could not be written; acquired PDFs and Paper writes were rolled back."
         ) from None
     except GeneralQuestionUnpaywallAcquisitionError as exc:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.UNPAYWALL.value,
+            stage="persist",
+            reason=str(exc),
+            candidate_ids=request.candidate_ids,
+        )
         _cleanup_failed_unpaywall_persistence(
             receipt=receipt,
             previous_receipt=previous_receipt,
@@ -395,7 +512,16 @@ def general_question_acquire_unpaywall(
             f"[red]General-question Unpaywall persistence failed:[/red] {escape(str(exc))}"
         )
         raise typer.Exit(1) from exc
-    except Exception:
+    except Exception as exc:
+        write_acquisition_failure_record(
+            receipt,
+            search_run_id=request.search_run_id,
+            research_question_id=request.research_question_id,
+            acquisition_route=AcquisitionRoute.UNPAYWALL.value,
+            stage="persist",
+            reason=f"Unexpected error: {type(exc).__name__}.",
+            candidate_ids=request.candidate_ids,
+        )
         _cleanup_failed_unpaywall_persistence(
             receipt=receipt,
             previous_receipt=previous_receipt,
@@ -405,6 +531,7 @@ def general_question_acquire_unpaywall(
         )
         raise
 
+    clear_acquisition_failure_record(receipt)
     console.print(
         f"[green]Acquired and parsed {persistence_receipt.parsed_count} planned Unpaywall "
         f"PDFs.[/green] Receipt: {receipt}"

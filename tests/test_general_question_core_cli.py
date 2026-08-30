@@ -29,6 +29,7 @@ from knowledge_engine.federated_discovery import (
 )
 from knowledge_engine.federated_search_ledger import FederatedSearchLedger
 from knowledge_engine.general_question_core_acquisition import (
+    GeneralQuestionCoreAcquisitionError,
     GeneralQuestionCoreExecution,
     GeneralQuestionCoreReceipt,
     GeneralQuestionCoreReceiptItem,
@@ -343,3 +344,153 @@ def test_cli_restores_forced_receipt_when_second_transaction_fails(
     assert isinstance(result.exception, RuntimeError)
     assert receipt_path.read_bytes() == original_receipt
     assert not (papers_dir / "core-core123.pdf").exists()
+
+    failure_path = tmp_path / "receipt.json.failure.json"
+    failure = json.loads(failure_path.read_text(encoding="utf-8"))
+    assert failure["acquisition_route"] == "core"
+    assert failure["stage"] == "persist"
+    assert failure["reason"] == "Unexpected error: RuntimeError."
+    assert failure["candidate_ids"] == ["doi:10.1000/core-example"]
+
+
+def test_cli_writes_durable_failure_record_when_search_run_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ledger_root = tmp_path / "ledger"
+    ledger_root.mkdir()
+    request_path = _write_request(
+        tmp_path / "request.json",
+        search_run_id="00000000-0000-0000-0000-000000000999",
+    )
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(command_surface, "_local_database", lambda: database)
+
+    receipt_path = tmp_path / "receipt.json"
+    result = CliRunner().invoke(
+        app,
+        [
+            "general-question-acquire-core",
+            str(request_path),
+            "--ledger-root",
+            str(ledger_root),
+            "--papers-dir",
+            str(tmp_path / "papers"),
+            "--receipt",
+            str(receipt_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert not receipt_path.exists()
+    failure_path = tmp_path / "receipt.json.failure.json"
+    failure = json.loads(failure_path.read_text(encoding="utf-8"))
+    assert failure["acquisition_route"] == "core"
+    assert failure["stage"] == "build_plan"
+    assert failure["search_run_id"] == "00000000-0000-0000-0000-000000000999"
+    assert failure["research_question_id"] == "rq-core"
+    assert failure["candidate_ids"] == ["doi:10.1000/core-example"]
+
+
+def test_cli_clears_a_stale_failure_record_on_success(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ledger_root = tmp_path / "ledger"
+    run_id = _record_core_run(ledger_root)
+    request_path = _write_request(tmp_path / "request.json", search_run_id=run_id)
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(command_surface, "_local_database", lambda: database)
+    monkeypatch.setattr(command_surface, "_core_doi_resolver", lambda: object())
+    monkeypatch.setattr(command_surface, "_core_acquisition_service", lambda: object())
+    execution = _execution(run_id)
+    monkeypatch.setattr(
+        command_surface,
+        "execute_core_acquisition_plan",
+        lambda *args, **kwargs: execution,
+    )
+    monkeypatch.setattr(
+        command_surface,
+        "persist_core_acquisition_execution",
+        lambda *args, **kwargs: SimpleNamespace(
+            parsed_count=1,
+            persisted_count=1,
+            reused_count=0,
+            to_json=execution.receipt.to_json,
+        ),
+    )
+
+    receipt_path = tmp_path / "receipt.json"
+    failure_path = tmp_path / "receipt.json.failure.json"
+    failure_path.write_text('{"stale": true}\n', encoding="utf-8")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "general-question-acquire-core",
+            str(request_path),
+            "--ledger-root",
+            str(ledger_root),
+            "--papers-dir",
+            str(tmp_path / "papers"),
+            "--receipt",
+            str(receipt_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert not failure_path.exists()
+
+
+def test_cli_writes_failure_record_even_when_rollback_itself_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ledger_root = tmp_path / "ledger"
+    run_id = _record_core_run(ledger_root)
+    request_path = _write_request(tmp_path / "request.json", search_run_id=run_id)
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(command_surface, "_local_database", lambda: database)
+    monkeypatch.setattr(command_surface, "_core_doi_resolver", lambda: object())
+    monkeypatch.setattr(command_surface, "_core_acquisition_service", lambda: object())
+    execution = _execution(run_id)
+    monkeypatch.setattr(
+        command_surface,
+        "execute_core_acquisition_plan",
+        lambda *args, **kwargs: execution,
+    )
+
+    def fail_persistence(*args: object, **kwargs: object) -> object:
+        del args, kwargs
+        raise GeneralQuestionCoreAcquisitionError("simulated persistence failure")
+
+    monkeypatch.setattr(command_surface, "persist_core_acquisition_execution", fail_persistence)
+
+    def fail_cleanup(**kwargs: object) -> None:
+        del kwargs
+        raise RuntimeError("simulated rollback failure")
+
+    monkeypatch.setattr(command_surface, "_cleanup_failed_persistence", fail_cleanup)
+
+    receipt_path = tmp_path / "receipt.json"
+    result = CliRunner().invoke(
+        app,
+        [
+            "general-question-acquire-core",
+            str(request_path),
+            "--ledger-root",
+            str(ledger_root),
+            "--papers-dir",
+            str(tmp_path / "papers"),
+            "--receipt",
+            str(receipt_path),
+        ],
+    )
+
+    # The rollback/cleanup failure propagates (it is not swallowed), but the
+    # durable failure record for the *original* persistence error must still
+    # have been written before cleanup ran.
+    assert result.exit_code == 1
+    assert isinstance(result.exception, RuntimeError)
+    failure_path = tmp_path / "receipt.json.failure.json"
+    failure = json.loads(failure_path.read_text(encoding="utf-8"))
+    assert failure["acquisition_route"] == "core"
+    assert failure["stage"] == "persist"
+    assert failure["reason"] == "simulated persistence failure"

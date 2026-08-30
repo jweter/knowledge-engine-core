@@ -190,13 +190,13 @@ persisting their durable receipts belongs to CORE-GQR-4.
 - attach import-run/acquisition receipt provenance;
 - keep failures independently inspectable.
 
-**Status:** all four provider routes are implemented and reachable for the
-success path. PMC and Europe PMC are complete and reachable. The CORE
+**Status:** complete. All four provider routes are implemented and reachable
+for the success path. PMC and Europe PMC are complete and reachable. The CORE
 provider execution/persistence library merged in PR #420 and is reachable
 through the supported `ke` command surface. Unpaywall merged in PR #422 and
 is described below. This section's own "keep failures independently
-inspectable" bullet is not yet met by any of the four routes -- see the note
-after the Unpaywall command below.
+inspectable" bullet is now met by all four routes -- see the note after the
+Unpaywall command below.
 
 `ke general-question-acquire-pmc <request.json> --ledger-root <dir>
 --papers-dir <dir> --receipt <path.json>` rebuilds the bounded plan with
@@ -260,15 +260,23 @@ other three routes. See `docs/security/unpaywall_gqr_acquisition_boundary.md`
 for the full fail-closed security boundary.
 
 All four routes (PMC, Europe PMC, CORE, Unpaywall) are reachable and tested
-for the success path, but CORE-GQR-4 is not yet complete: on a resolver,
-download, or parsing failure, all four commands (`general_question_acquire_pmc`
-/ `_europe_pmc` in `research_acquisition_surface.py`, `_core` / `_unpaywall`
-in `command_surface.py`) only print a console error and roll back the batch --
-no durable per-candidate failure record survives for later audit or retry.
-Making that failure path independently inspectable (this section's own
-bullet) is CORE-GQR-4's one remaining gap. Discovery metadata and acquired
-Papers remain non-Evidence-Record material until CORE-GQR-5 grounded
-extraction and validation/promotion.
+for the success path. On a resolver, download, or parsing failure, each
+command (`general_question_acquire_pmc` / `_europe_pmc` in `entrypoint.py`,
+`_core` / `_unpaywall` in `command_surface.py`, and the `ke-research`-slim
+duplicates of the PMC/Europe PMC executors in `research_acquisition_surface.py`)
+still prints a console error and rolls back the batch, but now also writes a
+durable, sanitized `GeneralQuestionAcquisitionFailureRecord`
+(`knowledge_engine/general_question_acquisition_failures.py`) to
+`<receipt-path>.failure.json` before exiting non-zero. The record captures the
+search-run and research-question IDs, the acquisition route, the failure
+stage (`build_plan`, `acquire`, or `persist`), a sanitized reason, the
+requested candidate IDs, and a timestamp -- giving a caller an auditable,
+retryable trace instead of only ephemeral stderr/CI-log output. A stale
+failure record from an earlier failed attempt at the same receipt path is
+removed once a retried batch succeeds. This closes this section's "keep
+failures independently inspectable" bullet, completing CORE-GQR-4. Discovery
+metadata and acquired Papers remain non-Evidence-Record material until
+CORE-GQR-5 grounded extraction and validation/promotion.
 
 ### CORE-GQR-5 - Grounded extraction and promotion
 - invoke domain-general grounded extraction;
