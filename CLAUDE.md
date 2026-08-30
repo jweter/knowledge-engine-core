@@ -10,6 +10,17 @@ Coordinate with:
 
 Do not assume cross-repository compatibility. Verify shared contracts before changing them.
 
+## Required Agent Context
+
+Before selecting or implementing substantial work, read:
+
+1. `AGENTS.md` — repository agent entry point and current mandatory product-direction documents.
+2. `docs/agent-development-policy.md` — autonomous workflow, source-of-truth order, merge policy, and cross-repository coordination rules.
+3. `docs/project-status.yaml` plus the active roadmap/design documents it identifies.
+4. `docs/INDUSTRY_REALITY_CHECK.md` — the current repo-specific gap analysis versus production scientific/research infrastructure expectations.
+
+Treat `docs/INDUSTRY_REALITY_CHECK.md` as a durable quality-gap baseline, not as a replacement for verified repository state or the active roadmap. Prefer roadmap-compatible work that closes a documented quality gap when priorities are otherwise comparable. Do not declare a gap closed merely because code exists or CI passes when the report calls for integration, observability, performance, coverage, production, or Product Reality evidence. Update the assessment when major verified capability materially changes its conclusions.
+
 ## Engineering Priorities
 
 Prefer, in order:
