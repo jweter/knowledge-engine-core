@@ -1,6 +1,6 @@
 schema_version: 1
 project: knowledge-engine-core
-updated_at: "2026-08-27T09:46:00Z"
+updated_at: "2026-08-30T06:25:00Z"
 status_source: "Verified repository state plus docs/roadmap.md; this file is a continuity cache and never overrides higher-authority evidence (code, CI, live PR state, docs/roadmap.md)."
 
 product:
@@ -14,12 +14,12 @@ current_milestone:
   tracking_issue: "#402 (jweter/knowledge-engine-core), parent AI issue jweter/knowledge-engine-ai#69"
   state: "active"
   objective: "Turn persisted federated-discovery leads into bounded, auditable, reusable Evidence Records (query -> candidates -> acquisition -> ingestion -> extraction -> promotion) without weakening provenance, access, or grounding rules. This supersedes the now-foundational FRD sequence below as the current milestone: FRD-1..7 are complete/reachable infrastructure that GQR's Stage 3 (bounded federated discovery) consumes, not separate ongoing work."
-  updated_this_session: "2026-08-27: verified PR #420 merged the validation-gated CORE execution/persistence library on exact head 5018421a. The current slice exposes that merged executor through the supported `ke general-question-acquire-core` command surface while preserving the existing PMC/Europe PMC commands; exact-head Quality, Bandit, and pip-audit remain required before this CLI slice may merge."
+  updated_this_session: "2026-08-30 (hourly triage, docs-only): the two lines below and CORE-GQR-4's roadmap-doc section were stale. Live repository state (knowledge_engine/command_surface.py, knowledge_engine/research_secondary_acquisition_surface.py, tests/test_general_question_unpaywall_cli.py, docs/security/unpaywall_gqr_acquisition_boundary.md) confirms PR #422 ('Execute validation-gated Unpaywall GQR routes', merged 2026-08-27T13:48:09Z) already landed the `ke general-question-acquire-unpaywall` executor -- this merged three hours after this file's previous 2026-08-27T09:46:00Z snapshot and was never reflected here; no Unpaywall provider adapter work remains to redo. PR #441 review follow-up (chatgpt-codex-connector, same session): this file's own first draft overcorrected by calling CORE-GQR-4 'provider-complete'. All four commands (general-question-acquire-pmc/europe-pmc/core/unpaywall, knowledge_engine/research_acquisition_surface.py and command_surface.py) verified to only console.print an error and roll back on resolver/download/parsing failure -- no ImportRun/receipt or other durable candidate-level record survives a failed run. CORE-GQR-4's own roadmap-doc bullet requires failures to 'keep failures independently inspectable', which this does not meet. CORE-GQR-4 therefore remains active with exactly one concrete remaining gap (durable failure/rejection persistence); CORE-GQR-5 should not start first."
   gqr_sub_milestone_status:
     CORE-GQR-1_schema: "implemented and merged (PR #404): GeneralQuestionAcquisitionRequest/GeneralQuestionAcquisitionPlan, stable JSON serialization, schema-version validation, persisted search-run candidate resolution via build_acquisition_plan()."
     CORE-GQR-2_identity_and_reuse: "DOI/PMID/arXiv-based already-indexed detection all implemented; schema version 13 added the two new persisted, uniquely indexed `papers` columns. This session closed the remaining ingestion-time gap: `CorpusIngestionService`/`LinkedCorpusIngestionService` (the real corpus-manifest ingestion path behind `ke corpus-import`) now populate `papers.pmid`/`papers.arxiv_id` for newly imported papers from `sources.csv`'s existing `pmid`/`arxiv_id` columns (schema version 14 added the `import_items.normalized_pmid`/`.normalized_arxiv_id` carrier columns this needed). `ke general-question-acquisition-plan` already passes a real database session into `build_acquisition_plan()` by default (`--no-database` to opt out) -- this was already true before this session; a prior version of this status line incorrectly said otherwise. Not yet done: no backfill for already-persisted (pre-existing) papers, and PMCID has no persisted column at all."
     CORE-GQR-3_acquisition_routing: "implemented and merged (PR #414): eligible_full_text items name a stable pmc_oa/europe_pmc_oa/core/unpaywall route; official-host checks gate PMC, Europe PMC, and CORE, and unsupported direct URLs degrade to metadata_only."
-    CORE-GQR-4_persist_and_parse: "PMC and Europe PMC execution paths are complete and reachable. The CORE provider library merged in PR #420: exact DOIs are re-resolved, `core.ac.uk` URLs are reconciled, explicit reusable-license evidence is mandatory, downloads are bounded/atomic, bytes are integrity-checked, Papers are persisted/reused, and ImportRun/ImportItem lineage is retained. The current branch makes that executor reachable through `ke general-question-acquire-core`; this reachability change is pending fresh exact-head CI. Unpaywall is the remaining provider execution adapter after this slice."
+    CORE-GQR-4_persist_and_parse: "all four provider routes (PMC, Europe PMC, CORE, Unpaywall) are implemented, reachable through the `ke` command surface, and covered by dedicated tests for the success path. PMC/Europe PMC/CORE merged via PR #414/#420 (exact DOIs re-resolved, official hosts reconciled, explicit reusable-license evidence mandatory, downloads bounded/atomic, bytes integrity-checked, Papers persisted/reused, ImportRun/ImportItem lineage retained). Unpaywall merged via PR #422 (2026-08-27): `ke general-question-acquire-unpaywall` re-resolves every planned DOI through Unpaywall's live per-DOI API, requires current `is_oa=true` plus a reusable license, admits direct PDF bytes only from Core's existing reviewed full-text host set (never treating Unpaywall itself as a full-text host), and carries the same atomic/receipted/ImportRun-ImportItem persistence contract as the other three routes. See docs/security/unpaywall_gqr_acquisition_boundary.md for the fail-closed security boundary. Remaining gap (not yet done): a resolver/download/parsing failure on any of the four commands only prints a console error and rolls back (command_surface.py's general_question_acquire_core/_unpaywall, research_acquisition_surface.py's general_question_acquire_pmc/_europe_pmc) -- no durable per-candidate failure record is written, so CORE-GQR-4's own 'keep failures independently inspectable' requirement is not yet met for any route."
     CORE-GQR-5_extraction_and_promotion: "not started."
     CORE-GQR-6_reuse_and_query_visibility: "not started."
   predecessor_milestone_frd_sequence:
@@ -60,10 +60,10 @@ automation_contract:
   advisory_review_unavailable_example: "chatgpt-codex-connector[bot] posting a Codex-usage-limit notice is not a review finding"
 
 verified_repository_state:
-  checked_at: "2026-08-27T09:46:00Z"
+  checked_at: "2026-08-30T06:25:00Z"
   note: "Live PR/check/issue state is intentionally not cached as authoritative counts here. Scheduled runs must query GitHub directly before acting."
   open_prs: 0
-  open_prs_detail: "No open pull requests at run triage. PR #420 was independently verified merged before the current CORE CLI reachability branch was created."
+  open_prs_detail: "No open pull requests at run triage. PR #422 (Unpaywall execution adapter) was independently verified merged 2026-08-27T13:48:09Z."
   open_issues_relevant_to_gqr:
     - number: 402
       title: "General Question Research Loop v1: bounded acquisition and reusable evidence"
@@ -93,11 +93,11 @@ verified_repository_state:
       cadence: "daily 06:30 UTC"
       note: "pushes to bot/discovery-cycle, opens no PR by design"
 
-active_work: "core-gqr-4-core-cli -- expose the merged CORE executor through the supported `ke` command surface without changing existing CLI contracts; leave for fresh required CI before merge."
+active_work: null
 
 next_continuation:
   priority: "P5-highest-value-authorized-roadmap"
-  action: "After the CORE CLI reachability slice merges, continue CORE-GQR-4 with the remaining Unpaywall execution adapter, preserving exact identity re-resolution, explicit access/license validation, atomic acquisition, durable receipts, parsing, Paper reuse, and ImportRun/ImportItem lineage. Do not begin CORE-GQR-5 until provider execution is complete or the roadmap explicitly changes."
+  action: "CORE-GQR-4's four provider execution adapters are all implemented for the success path, but one explicit roadmap requirement remains open: 'keep failures independently inspectable'. Add a durable, per-candidate failure/rejection record (e.g. persisted alongside or instead of today's console-print-and-rollback-only behavior) to general-question-acquire-pmc/europe-pmc/core/unpaywall so a resolver/download/parsing failure leaves an auditable, retryable trace rather than only stderr output. Only once that lands is CORE-GQR-4 complete and CORE-GQR-5 (grounded extraction and promotion: invoke the existing domain-general grounded-extraction/source-verification component against a persistence receipt's parsed text, verify proposed fields against source spans, validate against the Evidence Record schema, append/promote only valid records, persist rejection reasons for failed proposals) the correct next slice. Do not begin CORE-GQR-6 until CORE-GQR-5 is complete or the roadmap explicitly changes."
   selection_rule: "Before beginning roadmap work, query live PR state. Handle failed, green, blocked, conflicted, or pending existing work according to docs/agent-development-policy.md."
 
 human_decision_required: null
