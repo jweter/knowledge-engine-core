@@ -411,6 +411,35 @@ def test_import_corpus_library_deduplicates_evidence_already_present(tmp_path: P
     assert target_evidence_path.read_text(encoding="utf-8").strip().splitlines() == lines
 
 
+def test_import_corpus_library_evidence_merge_does_not_corrupt_a_missing_trailing_newline(
+    tmp_path: Path,
+) -> None:
+    """Regression test: a target evidence file whose last line lacks a trailing
+    newline (e.g. hand-edited, or written by some other tool) must not have the
+    first merged record concatenated directly onto it -- that would corrupt both
+    as JSON and silently drop them from every evidence reader."""
+
+    source = _database(tmp_path, "source")
+    evidence_path = tmp_path / "source_evidence.jsonl"
+    evidence_path.write_text(_evidence_line("auto-2") + "\n", encoding="utf-8")
+
+    snapshot = tmp_path / "snapshot.sqlite3"
+    export_corpus_library(source.engine, snapshot, evidence_path)
+
+    target = _database(tmp_path, "target")
+    target_evidence_path = tmp_path / "target_evidence.jsonl"
+    target_evidence_path.write_text(_evidence_line("auto-1"), encoding="utf-8")  # no trailing "\n"
+
+    with target.session() as session:
+        summary = import_corpus_library(session, snapshot, target_evidence_path)
+
+    assert summary.imported_evidence_record_count == 1
+    lines = target_evidence_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 2
+    ids = [json.loads(line)["evidence_record_id"] for line in lines]
+    assert ids == ["auto-1", "auto-2"]
+
+
 def test_import_corpus_library_snapshot_without_evidence_table_is_a_noop(
     tmp_path: Path,
 ) -> None:

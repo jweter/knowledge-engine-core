@@ -454,11 +454,28 @@ def _merge_evidence_snapshot(
 
     if new_lines:
         evidence_output_path.parent.mkdir(parents=True, exist_ok=True)
+        # A pre-existing file whose last line has no trailing newline (e.g.
+        # hand-edited, or written by some other tool) would otherwise have the
+        # first appended record concatenated directly onto it, corrupting both
+        # as JSON -- start on a fresh line first in that case.
+        needs_leading_newline = (
+            evidence_output_path.exists()
+            and evidence_output_path.stat().st_size > 0
+            and not _file_ends_with_newline(evidence_output_path)
+        )
         with evidence_output_path.open("a", encoding="utf-8") as handle:
+            if needs_leading_newline:
+                handle.write("\n")
             for line in new_lines:
                 handle.write(line + "\n")
 
     return len(new_lines), skipped
+
+
+def _file_ends_with_newline(path: Path) -> bool:
+    with path.open("rb") as handle:
+        handle.seek(-1, 2)
+        return handle.read(1) == b"\n"
 
 
 def _copy_paper_fields(paper: Paper, *, journal: Journal | None) -> Paper:
