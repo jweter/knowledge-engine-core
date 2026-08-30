@@ -285,6 +285,29 @@ CORE-GQR-5 grounded extraction and validation/promotion.
 - append/promote only valid records;
 - persist rejection reasons for failed proposals.
 
+Complete: `ke general-question-extract-and-promote --receipt <persistence-receipt.json>
+--evidence <evidence.jsonl>` (production `ke` and the `ke-research`-slim runtime both
+carry it) bridges a GQR persistence receipt (any of PMC/Europe PMC/CORE/Unpaywall --
+they share one `paper_id`/`persistence_status` shape) to validated Evidence Records:
+it re-derives the receipt's paper IDs, runs the existing deterministic M17-M28
+extraction pipeline plus M52's deterministic autoclassifier against each paper's
+persisted pages, and appends only records that pass `ke evidence-validate`'s own
+schema check (`knowledge_engine.cli._promote_evidence_records`, reused unmodified) to
+`--evidence`. Grounding is structural rather than a separate check: M17's
+claim-candidate detection sets `claim_text`/`result_summary` to a verbatim sentence
+from the paper's own persisted pages, so an autoclassified record cannot describe
+text its source does not contain. A paper or candidate that does not reach promotion
+(no persisted pages, no claim candidates, autoclassification declined, or a schema
+validation failure) gets a durable, sanitized rejection reason at
+`<receipt-path>.extraction_rejections.json`, never only console output -- the same
+"keep failures independently inspectable" contract CORE-GQR-4 established for the
+acquisition stage. Re-running against the same receipt is idempotent. Promoted
+records keep `review_status="draft"`; the separate LLM-grounded PICO refinement
+(`ke evidence-review-automate`, needs a local Ollama model) and its
+`review_status="reviewed"` promotion remain a distinct, already-existing follow-up
+step, not part of this milestone. CORE-GQR-6 (reuse and query visibility) is the
+correct next slice.
+
 ### CORE-GQR-6 - Reuse and query visibility
 - newly promoted evidence becomes visible to normal retrieval immediately or through one explicit documented refresh step;
 - repeat-question tests prove no duplicate acquisition;

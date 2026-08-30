@@ -29,6 +29,9 @@ from knowledge_engine.extraction import (
 )
 from knowledge_engine.extraction.evidence_items import PaperMetadata
 from knowledge_engine.extraction_review_batch import run_batch_extraction_review
+from knowledge_engine.general_question_extraction_promotion import (
+    run_general_question_extraction_and_promotion,
+)
 from knowledge_engine.llm import LocalLLMError, OllamaLLM
 from knowledge_engine.parser import ParsedPage
 
@@ -50,6 +53,11 @@ EvidenceReviewModelOption = Annotated[
 ]
 EvidenceRecordIdOption = Annotated[str | None, typer.Option("--evidence-record-id")]
 DryRunOption = Annotated[bool, typer.Option("--dry-run")]
+GeneralQuestionReceiptOption = Annotated[
+    Path,
+    typer.Option("--receipt", exists=True, dir_okay=False, readable=True),
+]
+GeneralQuestionEvidenceOutputOption = Annotated[Path, typer.Option("--evidence")]
 
 _MANUAL_EXTRACTION_METHODS = frozenset({"manual_human_review", "manual"})
 
@@ -61,6 +69,7 @@ def register_research_review_commands(app: typer.Typer) -> None:
     app.command("extraction-review-autoclassify")(extraction_review_autoclassify)
     app.command("evidence-review-automate")(evidence_review_automate)
     app.command("evidence-record-review-promote")(evidence_record_review_promote)
+    app.command("general-question-extract-and-promote")(general_question_extract_and_promote)
 
 
 def extraction_review_batch_generate(
@@ -293,6 +302,40 @@ def evidence_record_review_promote(
     if eligible_indices:
         _rewrite_selected_lines(evidence, raw_lines, records, set(eligible_indices))
     typer.echo(f"promoted={len(eligible_indices)}")
+
+
+def general_question_extract_and_promote(
+    receipt: GeneralQuestionReceiptOption,
+    evidence: GeneralQuestionEvidenceOutputOption,
+) -> None:
+    """CORE-GQR-5: extract, autoclassify, and promote a GQR receipt's acquired papers.
+
+    Takes any of the four GQR acquisition routes' persistence receipts (PMC,
+    Europe PMC, CORE, Unpaywall), re-derives the paper IDs it names, runs the
+    existing deterministic extraction/autoclassification pipeline against
+    each paper's persisted pages, and appends only schema-valid records to
+    `--evidence` using the exact validator `ke evidence-validate` and
+    `ke extraction-review-promote` already use. A paper or candidate that
+    does not reach promotion gets a durable rejection reason written next to
+    the receipt (`<receipt>.extraction_rejections.json`), never only this
+    command's own stdout. Re-running against the same receipt is idempotent:
+    an already-promoted record is skipped as a duplicate, not re-appended.
+    """
+
+    database = _local_database()
+    database.initialize()
+    with database.session() as session:
+        summary = run_general_question_extraction_and_promotion(
+            session, receipt_path=receipt, evidence_output_path=evidence
+        )
+
+    typer.echo(
+        f"papers={summary.paper_count} promoted={summary.promoted_count} "
+        f"duplicates={summary.duplicate_count} rejected={len(summary.rejected)} "
+        f"evidence={evidence}"
+    )
+    if summary.rejection_record_path is not None:
+        typer.echo(f"rejection_record={summary.rejection_record_path}", err=True)
 
 
 def _is_already_reviewed(record: dict[str, Any]) -> bool:
