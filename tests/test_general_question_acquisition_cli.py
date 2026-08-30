@@ -415,6 +415,46 @@ def test_cli_executes_planned_pmc_route_and_writes_durable_receipt(
     payload = json.loads(receipt_path.read_text(encoding="utf-8"))
     assert payload["search_run_id"] == run_id
     assert payload["items"][0]["candidate_id"] == "doi:10.1000/creatine"
+    assert not (tmp_path / "receipt.json.failure.json").exists()
+
+
+def test_cli_writes_durable_failure_record_when_pmc_search_run_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ledger_root = tmp_path / "ledger"
+    ledger_root.mkdir()
+    request_path = _write_request(
+        tmp_path / "request.json",
+        search_run_id="00000000-0000-0000-0000-000000000999",
+    )
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    receipt_path = tmp_path / "receipt.json"
+    result = CliRunner().invoke(
+        app,
+        [
+            "general-question-acquire-pmc",
+            str(request_path),
+            "--ledger-root",
+            str(ledger_root),
+            "--papers-dir",
+            str(tmp_path / "papers"),
+            "--receipt",
+            str(receipt_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert not receipt_path.exists()
+    failure = json.loads((tmp_path / "receipt.json.failure.json").read_text(encoding="utf-8"))
+    assert failure["acquisition_route"] == "pmc_oa"
+    assert failure["stage"] == "build_plan"
+    assert failure["search_run_id"] == "00000000-0000-0000-0000-000000000999"
+    assert failure["candidate_ids"] == [
+        "doi:10.1000/creatine",
+        "doi:10.1000/metadata",
+    ]
 
 
 def test_cli_executes_planned_europepmc_route_and_writes_durable_receipt(
@@ -515,3 +555,39 @@ def test_cli_executes_planned_europepmc_route_and_writes_durable_receipt(
     payload = json.loads(receipt_path.read_text(encoding="utf-8"))
     assert payload["search_run_id"] == run_id
     assert payload["items"][0]["europepmc_id"] == "PPR123"
+    assert not (tmp_path / "receipt.json.failure.json").exists()
+
+
+def test_cli_writes_durable_failure_record_when_europepmc_search_run_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ledger_root = tmp_path / "ledger"
+    ledger_root.mkdir()
+    request_path = _write_request(
+        tmp_path / "request.json",
+        search_run_id="00000000-0000-0000-0000-000000000999",
+    )
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    receipt_path = tmp_path / "receipt.json"
+    result = CliRunner().invoke(
+        app,
+        [
+            "general-question-acquire-europe-pmc",
+            str(request_path),
+            "--ledger-root",
+            str(ledger_root),
+            "--papers-dir",
+            str(tmp_path / "papers"),
+            "--receipt",
+            str(receipt_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert not receipt_path.exists()
+    failure = json.loads((tmp_path / "receipt.json.failure.json").read_text(encoding="utf-8"))
+    assert failure["acquisition_route"] == "europe_pmc_oa"
+    assert failure["stage"] == "build_plan"
+    assert failure["search_run_id"] == "00000000-0000-0000-0000-000000000999"

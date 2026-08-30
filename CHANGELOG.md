@@ -9,6 +9,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Durable acquisition failure records (CORE-GQR-4 complete)**: all four
+  General Question acquisition routes (`general-question-acquire-pmc`,
+  `-europe-pmc`, `-core`, `-unpaywall`, including the `ke-research`-slim
+  duplicates of the PMC/Europe PMC executors) now write a sanitized,
+  durable `GeneralQuestionAcquisitionFailureRecord` to
+  `<receipt-path>.failure.json` when a resolver, download, or persistence
+  failure rolls back the batch, in addition to the existing console error
+  and non-zero exit. The record names the search-run/research-question
+  IDs, acquisition route, failure stage, sanitized reason, requested
+  candidate IDs, and timestamp, so a failed run leaves an auditable,
+  retryable trace instead of only stderr/CI-log output. A stale failure
+  record is removed once a retried batch at the same receipt path
+  succeeds. This closes CORE-GQR-4's one remaining requirement ("keep
+  failures independently inspectable").
+
 - **Executable Europe PMC acquisition and import provenance (CORE-GQR-4)**:
   `ke general-question-acquire-europe-pmc` now applies the completed PMC
   route's safety and lineage contract to eligible `europe_pmc_oa` plan
