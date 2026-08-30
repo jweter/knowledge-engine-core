@@ -13,10 +13,28 @@ to the work:
   requirement: one research run matures `Draft -> Sourced -> Verified -> Deep`,
   prioritizing an immediate useful answer while continuing evidence gathering,
   verification, and deep research as time/attention justify it.
+- `docs/INDUSTRY_REALITY_CHECK.md` — current Core-specific gap analysis versus
+  production scientific/research infrastructure expectations.
 
 The progressive-answer requirement is not optional UX polish. Any work touching
 Ask, Research Sessions, Web/AI/Core orchestration, answer streaming/versioning,
 release gates, scheduling, caching, or latency must preserve that direction.
+
+## Industry-quality baseline
+
+`docs/INDUSTRY_REALITY_CHECK.md` is a durable quality-gap baseline. It does not
+override verified current repository state, `docs/roadmap.md`, or authorized
+architecture decisions. Use it when selecting, designing, reviewing, and
+validating work:
+
+- prefer roadmap-compatible work that closes a documented quality gap when
+  priorities are otherwise comparable;
+- do not treat passing CI alone as proof that integration, observability,
+  performance, general-question research, service boundaries, or production
+  readiness gaps are closed;
+- when a major verified capability materially changes the assessment, update
+  the reality check or explicitly record why the prior finding still applies;
+- never let an old score override newer verified evidence.
 
 Repository state, CI, and the source-of-truth ordering in
 `docs/agent-development-policy.md` still govern implementation decisions. Do not
