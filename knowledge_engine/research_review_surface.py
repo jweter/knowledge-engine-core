@@ -332,7 +332,9 @@ def general_question_extract_and_promote(
     typer.echo(
         f"papers={summary.paper_count} promoted={summary.promoted_count} "
         f"duplicates={summary.duplicate_count} rejected={len(summary.rejected)} "
-        f"evidence={evidence}"
+        f"evidence={evidence} duration_ms={summary.duration_ms} "
+        f"extraction_duration_ms={summary.extraction_duration_ms} "
+        f"promotion_duration_ms={summary.promotion_duration_ms}"
     )
     if summary.rejection_record_path is not None:
         typer.echo(f"rejection_record={summary.rejection_record_path}", err=True)

@@ -118,6 +118,9 @@ def test_promotes_a_grounded_candidate_and_writes_no_rejection_file(tmp_path: Pa
     assert summary.rejected == ()
     assert summary.rejection_record_path is None
     assert not extraction_rejection_record_path(receipt_path).exists()
+    assert summary.duration_ms >= 0
+    assert summary.extraction_duration_ms >= 0
+    assert summary.promotion_duration_ms >= 0
 
     lines = evidence_path.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == summary.promoted_count
@@ -179,6 +182,8 @@ def test_paper_with_no_claim_candidates_is_rejected_with_a_durable_reason(
     assert summary.rejected[0].paper_id == paper_id
     assert summary.rejected[0].stage == "no_claim_candidates"
     assert not evidence_path.exists()
+    # No candidate ever reached the promotion call, so that substage never ran.
+    assert summary.promotion_duration_ms == 0
 
     rejection_path = summary.rejection_record_path
     assert rejection_path == extraction_rejection_record_path(receipt_path)

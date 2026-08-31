@@ -104,6 +104,9 @@ def test_production_cli_extracts_and_promotes(
     assert result.exit_code == 0, result.output
     assert "papers=1" in result.output
     assert "rejected=0" in result.output
+    assert "duration_ms=" in result.output
+    assert "extraction_duration_ms=" in result.output
+    assert "promotion_duration_ms=" in result.output
     assert evidence_path.exists()
     records = [json.loads(line) for line in evidence_path.read_text(encoding="utf-8").splitlines()]
     assert records
@@ -133,4 +136,5 @@ def test_slim_research_cli_extracts_and_promotes(
     assert result.exit_code == 0, result.output
     assert "papers=1" in result.output
     assert "rejected=0" in result.output
+    assert "duration_ms=" in result.output
     assert evidence_path.exists()
