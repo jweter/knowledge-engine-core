@@ -13,12 +13,23 @@ to the work:
   requirement: one research run matures `Draft -> Sourced -> Verified -> Deep`,
   prioritizing an immediate useful answer while continuing evidence gathering,
   verification, and deep research as time/attention justify it.
+- `docs/roadmap/research_report_v1.md` — adopted cross-repository product
+  acceptance contract: the final research answer must match or exceed strong
+  scholarly-assistant readability while materially exceeding it in provenance,
+  contradiction handling, evidence boundaries, missing-evidence disclosure,
+  and auditability.
 - `docs/INDUSTRY_REALITY_CHECK.md` — current Core-specific gap analysis versus
   production scientific/research infrastructure expectations.
 
-The progressive-answer requirement is not optional UX polish. Any work touching
-Ask, Research Sessions, Web/AI/Core orchestration, answer streaming/versioning,
-release gates, scheduling, caching, or latency must preserve that direction.
+The progressive-answer and Research Report v1 requirements are not optional UX
+polish. Any work touching Ask, Research Sessions, Web/AI/Core orchestration,
+evidence extraction, answer streaming/versioning, release gates, scheduling,
+caching, or latency must preserve those directions.
+
+Until Research Report v1 passes its Monster Energy / one-year blood-pressure
+golden acceptance case end to end, prefer work that directly enables the
+structured, source-grounded report contract over additional non-blocking backend
+abstractions. Core must continue to prefer missing data over invented metadata.
 
 ## Industry-quality baseline
 
