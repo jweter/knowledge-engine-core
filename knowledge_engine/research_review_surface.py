@@ -58,6 +58,16 @@ GeneralQuestionReceiptOption = Annotated[
     typer.Option("--receipt", exists=True, dir_okay=False, readable=True),
 ]
 GeneralQuestionEvidenceOutputOption = Annotated[Path, typer.Option("--evidence")]
+GeneralQuestionExtractionSummaryOutputOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--output",
+        help=(
+            "Optional path to save the run summary (paper/promoted/duplicate/rejected "
+            "counts plus duration_ms/extraction_duration_ms/promotion_duration_ms) as JSON."
+        ),
+    ),
+]
 
 _MANUAL_EXTRACTION_METHODS = frozenset({"manual_human_review", "manual"})
 
@@ -307,6 +317,7 @@ def evidence_record_review_promote(
 def general_question_extract_and_promote(
     receipt: GeneralQuestionReceiptOption,
     evidence: GeneralQuestionEvidenceOutputOption,
+    output: GeneralQuestionExtractionSummaryOutputOption = None,
 ) -> None:
     """CORE-GQR-5: extract, autoclassify, and promote a GQR receipt's acquired papers.
 
@@ -320,6 +331,12 @@ def general_question_extract_and_promote(
     the receipt (`<receipt>.extraction_rejections.json`), never only this
     command's own stdout. Re-running against the same receipt is idempotent:
     an already-promoted record is skipped as a duplicate, not re-appended.
+
+    Optional `--output <path.json>` writes the full run summary --
+    including `duration_ms`/`extraction_duration_ms`/`promotion_duration_ms`
+    -- as JSON. Use this, not the printed line, when a caller (such as
+    `knowledge-engine-ai`'s `ke_client.py`) needs to consume these fields
+    programmatically.
     """
 
     database = _local_database()
@@ -327,6 +344,11 @@ def general_question_extract_and_promote(
     with database.session() as session:
         summary = run_general_question_extraction_and_promotion(
             session, receipt_path=receipt, evidence_output_path=evidence
+        )
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(
+            json.dumps(summary.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
 
     typer.echo(
@@ -336,6 +358,8 @@ def general_question_extract_and_promote(
         f"extraction_duration_ms={summary.extraction_duration_ms} "
         f"promotion_duration_ms={summary.promotion_duration_ms}"
     )
+    if output is not None:
+        typer.echo(f"summary={output}")
     if summary.rejection_record_path is not None:
         typer.echo(f"rejection_record={summary.rejection_record_path}", err=True)
 

@@ -85,12 +85,15 @@ class GeneralQuestionExtractionPromotionSummary:
 
     The three ``*_duration_ms`` fields answer issue #433's "Grounded
     extraction/promotion" bottleneck-instrumentation ask: ``duration_ms`` is
-    this call's total wall-clock time; ``extraction_duration_ms`` covers only
-    ``run_batch_extraction_review`` (M17-M28 deterministic extraction plus
-    M52 autoclassification); ``promotion_duration_ms`` covers only the
-    ``_promote_evidence_records`` validation/append call, and is ``0`` when
-    no candidate records reached promotion. They are additive JSON fields;
-    existing callers that ignore them are unaffected.
+    this call's total wall-clock time; ``extraction_duration_ms`` covers both
+    ``run_batch_extraction_review`` (M17-M28 deterministic extraction) and
+    the immediately following ``build_automated_evidence_record`` loop (M52
+    autoclassification) -- the two run back to back with no other work
+    between them, so timing only the first would silently misattribute
+    autoclassification's cost to neither stage; ``promotion_duration_ms``
+    covers only the ``_promote_evidence_records`` validation/append call,
+    and is ``0`` when no candidate records reached promotion. They are
+    additive JSON fields; existing callers that ignore them are unaffected.
     """
 
     schema_version: str
@@ -105,6 +108,33 @@ class GeneralQuestionExtractionPromotionSummary:
     duration_ms: int
     extraction_duration_ms: int
     promotion_duration_ms: int
+
+    def to_dict(self) -> dict[str, Any]:
+        """Machine-readable form, including the ``*_duration_ms`` timings.
+
+        `docs/core_interface_contract.md` warns consumers not to parse
+        Rich-formatted console output because it may reflow -- this is the
+        supported structured alternative (see the CLI's optional
+        ``--output <path.json>``), not the two commands' human-readable
+        summary line.
+        """
+
+        return {
+            "schema_version": self.schema_version,
+            "search_run_id": self.search_run_id,
+            "research_question_id": self.research_question_id,
+            "acquisition_route": self.acquisition_route,
+            "paper_count": self.paper_count,
+            "promoted_count": self.promoted_count,
+            "duplicate_count": self.duplicate_count,
+            "rejected": [asdict(rejection) for rejection in self.rejected],
+            "rejection_record_path": (
+                str(self.rejection_record_path) if self.rejection_record_path is not None else None
+            ),
+            "duration_ms": self.duration_ms,
+            "extraction_duration_ms": self.extraction_duration_ms,
+            "promotion_duration_ms": self.promotion_duration_ms,
+        }
 
 
 def extraction_rejection_record_path(receipt_path: Path) -> Path:
@@ -242,7 +272,6 @@ def run_general_question_extraction_and_promotion(
 
     extraction_started = time.monotonic()
     batch_summary = run_batch_extraction_review(paper_pages)
-    extraction_duration_ms = round((time.monotonic() - extraction_started) * 1000)
 
     candidate_records: list[dict[str, Any]] = []
     candidate_paper_ids: list[int] = []
@@ -277,6 +306,7 @@ def run_general_question_extraction_and_promotion(
                     ),
                 )
             )
+    extraction_duration_ms = round((time.monotonic() - extraction_started) * 1000)
 
     promoted_count = 0
     duplicate_count = 0

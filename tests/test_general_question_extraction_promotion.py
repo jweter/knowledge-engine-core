@@ -122,6 +122,16 @@ def test_promotes_a_grounded_candidate_and_writes_no_rejection_file(tmp_path: Pa
     assert summary.extraction_duration_ms >= 0
     assert summary.promotion_duration_ms >= 0
 
+    payload = summary.to_dict()
+    assert payload["paper_count"] == summary.paper_count
+    assert payload["promoted_count"] == summary.promoted_count
+    assert payload["rejected"] == []
+    assert payload["rejection_record_path"] is None
+    assert payload["duration_ms"] == summary.duration_ms
+    assert payload["extraction_duration_ms"] == summary.extraction_duration_ms
+    assert payload["promotion_duration_ms"] == summary.promotion_duration_ms
+    json.dumps(payload)  # to_dict() must be directly JSON-serializable.
+
     lines = evidence_path.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == summary.promoted_count
     records = [json.loads(line) for line in lines]
@@ -184,6 +194,11 @@ def test_paper_with_no_claim_candidates_is_rejected_with_a_durable_reason(
     assert not evidence_path.exists()
     # No candidate ever reached the promotion call, so that substage never ran.
     assert summary.promotion_duration_ms == 0
+    # to_dict() must serialize rejection_record_path as a string, not a Path.
+    assert summary.to_dict()["rejection_record_path"] == str(summary.rejection_record_path)
+    assert summary.to_dict()["rejected"] == [
+        {"paper_id": paper_id, "stage": "no_claim_candidates", "reason": summary.rejected[0].reason}
+    ]
 
     rejection_path = summary.rejection_record_path
     assert rejection_path == extraction_rejection_record_path(receipt_path)
