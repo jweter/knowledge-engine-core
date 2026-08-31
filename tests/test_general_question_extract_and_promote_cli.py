@@ -89,6 +89,7 @@ def test_production_cli_extracts_and_promotes(
     monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
     receipt_path = _receipt(tmp_path, paper_id)
     evidence_path = tmp_path / "evidence.jsonl"
+    summary_path = tmp_path / "summary.json"
 
     result = CliRunner().invoke(
         entrypoint.app,
@@ -98,16 +99,28 @@ def test_production_cli_extracts_and_promotes(
             str(receipt_path),
             "--evidence",
             str(evidence_path),
+            "--output",
+            str(summary_path),
         ],
     )
 
     assert result.exit_code == 0, result.output
     assert "papers=1" in result.output
     assert "rejected=0" in result.output
+    assert "duration_ms=" in result.output
+    assert "extraction_duration_ms=" in result.output
+    assert "promotion_duration_ms=" in result.output
     assert evidence_path.exists()
     records = [json.loads(line) for line in evidence_path.read_text(encoding="utf-8").splitlines()]
     assert records
     assert all(record["source_span"]["paper_id"] == paper_id for record in records)
+
+    summary_payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary_payload["paper_count"] == 1
+    assert summary_payload["promoted_count"] == len(records)
+    assert summary_payload["duration_ms"] >= 0
+    assert summary_payload["extraction_duration_ms"] >= 0
+    assert summary_payload["promotion_duration_ms"] >= 0
 
 
 def test_slim_research_cli_extracts_and_promotes(
@@ -118,6 +131,7 @@ def test_slim_research_cli_extracts_and_promotes(
     monkeypatch.setattr(research_review_surface, "_local_database", lambda: database)
     receipt_path = _receipt(tmp_path, paper_id)
     evidence_path = tmp_path / "evidence.jsonl"
+    summary_path = tmp_path / "summary.json"
 
     result = CliRunner().invoke(
         research_app,
@@ -127,10 +141,18 @@ def test_slim_research_cli_extracts_and_promotes(
             str(receipt_path),
             "--evidence",
             str(evidence_path),
+            "--output",
+            str(summary_path),
         ],
     )
 
     assert result.exit_code == 0, result.output
     assert "papers=1" in result.output
     assert "rejected=0" in result.output
+    assert "duration_ms=" in result.output
+    assert f"summary={summary_path}" in result.output
     assert evidence_path.exists()
+
+    summary_payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary_payload["paper_count"] == 1
+    assert summary_payload["duration_ms"] >= 0

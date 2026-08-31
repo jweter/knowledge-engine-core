@@ -1,6 +1,6 @@
 schema_version: 1
 project: knowledge-engine-core
-updated_at: "2026-08-30T20:00:00Z"
+updated_at: "2026-08-31T18:00:00Z"
 status_source: "Verified repository state plus docs/roadmap.md; this file is a continuity cache and never overrides higher-authority evidence (code, CI, live PR state, docs/roadmap.md)."
 
 product:
@@ -60,10 +60,10 @@ automation_contract:
   advisory_review_unavailable_example: "chatgpt-codex-connector[bot] posting a Codex-usage-limit notice is not a review finding"
 
 verified_repository_state:
-  checked_at: "2026-08-30T20:00:00Z"
+  checked_at: "2026-08-31T18:00:00Z"
   note: "Live PR/check/issue state is intentionally not cached as authoritative counts here. Scheduled runs must query GitHub directly before acting."
   open_prs: 0
-  open_prs_detail: "No open pull requests at the start of this run's triage (all five Knowledge Engine/Rocksmith/Everward repositories checked; Knowledge Engine was selected -- it had gone longest without substantive development of the three portfolio projects, and had no P0-P4 blockers). This session is opening one new PR (CORE-GQR-6 corpus-library evidence preservation, see updated_this_session above) and leaving it for fresh CI per docs/agent-development-policy.md -- do not merge it in a future run without independently verifying CI is green."
+  open_prs_detail: "No open pull requests at the start of this run's triage (all five Knowledge Engine/Rocksmith/Everward repositories checked; core had gone longest without substantive development among the three portfolio projects (last merge ~20h prior, all others same-day), and had no P0-P4 blockers -- the one stray branch, agent/gqr5-grounded-draft-queue, is a fully-merged stale ancestor of main, not active work). This session is opening one new PR (issue #433 extraction/promotion timing instrumentation, see active_work above) and leaving it for fresh CI per docs/agent-development-policy.md -- do not merge it in a future run without independently verifying CI is green."
   open_issues_relevant_to_gqr:
     - number: 402
       title: "General Question Research Loop v1: bounded acquisition and reusable evidence"
@@ -93,11 +93,16 @@ verified_repository_state:
       cadence: "daily 06:30 UTC"
       note: "pushes to bot/discovery-cycle, opens no PR by design"
 
-active_work: null
+active_work:
+  name: "Research-loop bottleneck instrumentation (issue #433) -- extraction/promotion timing slice"
+  tracking_issue: "#433 (jweter/knowledge-engine-core), companion to jweter/knowledge-engine-ai#84, refs #402"
+  state: "one slice implemented this session, PR opened, awaiting fresh CI"
+  summary: "2026-08-31 (hourly run): #433 asks for per-operation duration_ms with substage timing across six named Core bottlenecks, none of which existed anywhere in the repo before this session (grepped for duration_ms first). Item 5, 'grounded extraction/promotion', is the issue's own named largest bottleneck, so this session instrumented it: GeneralQuestionExtractionPromotionSummary (knowledge_engine/general_question_extraction_promotion.py) gained duration_ms (total call time), extraction_duration_ms (run_batch_extraction_review substage), and promotion_duration_ms (_promote_evidence_records substage, 0 when nothing reached promotion). Both CLI surfaces (entrypoint.py's ke general-question-extract-and-promote, research_review_surface.py's ke-research-slim twin) print all three. Purely additive dataclass fields; the one existing construction site is updated, no other caller constructs this dataclass. New/updated tests: unit-level duration_ms/extraction_duration_ms/promotion_duration_ms >= 0 assertions plus a promotion_duration_ms == 0 assertion on the no-claim-candidates rejection path (tests/test_general_question_extraction_promotion.py); both CLI round-trip tests assert the new fields appear in printed output (tests/test_general_question_extract_and_promote_cli.py). Full local gate (ruff format --check, ruff check, mypy) clean on touched files and repo-wide; full pytest run in progress at time of writing, targeted tests (9 cases across both files) green.
+    Not done in this slice -- explicitly follow-up work per #433: (1) CLI/process startup-vs-work timing, (2) federated-provider per-attempt latency/degradation in the ledger, (3) full discovered->deduplicated->already_indexed->eligible->acquired candidate-funnel persistence (GeneralQuestionAcquisitionPlan already exposes most of these as counts today, just not durably persisted alongside duration), (4) bounded-concurrency acquisition throughput, (6) a re-retrieval-readiness signal. Pick the next of these for the following #433 slice rather than re-touching extraction/promotion timing."
 
 next_continuation:
   priority: "P5-highest-value-authorized-roadmap"
-  action: "CORE-GQR-6 is now complete, and it was the last sub-milestone of General Question Research Loop v1 (docs/general_question_research_loop_v1.md) -- Core's portion of that milestone is done per its own Definition of done. This milestone's roadmap_file was the source of truth while it was active; the next run must re-read docs/roadmap.md's 'Current Project Path' section fresh (do not assume or invent a next milestone here) to select the next P5 slice, and update current_milestone below to name it once selected."
+  action: "Continue issue #433 (research-loop bottleneck instrumentation) with the next unaddressed substage listed in active_work.summary above -- the federated-provider per-attempt latency/degradation metadata (item 2) or the candidate-funnel persistence (item 3) are the next-smallest coherent slices. Verify this session's PR's CI is green and merge it first if not already merged. If #433 is later fully addressed on Core's side, re-read docs/roadmap.md's 'Current Project Path' section fresh for the next P5 slice."
   selection_rule: "Before beginning roadmap work, query live PR state. Handle failed, green, blocked, conflicted, or pending existing work according to docs/agent-development-policy.md."
 
 human_decision_required: null

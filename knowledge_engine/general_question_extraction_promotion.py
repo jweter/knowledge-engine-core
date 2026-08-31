@@ -41,6 +41,7 @@ import contextlib
 import json
 import os
 import tempfile
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -80,7 +81,20 @@ class GeneralQuestionExtractionRejection:
 
 @dataclass(frozen=True)
 class GeneralQuestionExtractionPromotionSummary:
-    """Outcome of running CORE-GQR-5 against one acquisition receipt."""
+    """Outcome of running CORE-GQR-5 against one acquisition receipt.
+
+    The three ``*_duration_ms`` fields answer issue #433's "Grounded
+    extraction/promotion" bottleneck-instrumentation ask: ``duration_ms`` is
+    this call's total wall-clock time; ``extraction_duration_ms`` covers both
+    ``run_batch_extraction_review`` (M17-M28 deterministic extraction) and
+    the immediately following ``build_automated_evidence_record`` loop (M52
+    autoclassification) -- the two run back to back with no other work
+    between them, so timing only the first would silently misattribute
+    autoclassification's cost to neither stage; ``promotion_duration_ms``
+    covers only the ``_promote_evidence_records`` validation/append call,
+    and is ``0`` when no candidate records reached promotion. They are
+    additive JSON fields; existing callers that ignore them are unaffected.
+    """
 
     schema_version: str
     search_run_id: str
@@ -91,6 +105,36 @@ class GeneralQuestionExtractionPromotionSummary:
     duplicate_count: int
     rejected: tuple[GeneralQuestionExtractionRejection, ...]
     rejection_record_path: Path | None
+    duration_ms: int
+    extraction_duration_ms: int
+    promotion_duration_ms: int
+
+    def to_dict(self) -> dict[str, Any]:
+        """Machine-readable form, including the ``*_duration_ms`` timings.
+
+        `docs/core_interface_contract.md` warns consumers not to parse
+        Rich-formatted console output because it may reflow -- this is the
+        supported structured alternative (see the CLI's optional
+        ``--output <path.json>``), not the two commands' human-readable
+        summary line.
+        """
+
+        return {
+            "schema_version": self.schema_version,
+            "search_run_id": self.search_run_id,
+            "research_question_id": self.research_question_id,
+            "acquisition_route": self.acquisition_route,
+            "paper_count": self.paper_count,
+            "promoted_count": self.promoted_count,
+            "duplicate_count": self.duplicate_count,
+            "rejected": [asdict(rejection) for rejection in self.rejected],
+            "rejection_record_path": (
+                str(self.rejection_record_path) if self.rejection_record_path is not None else None
+            ),
+            "duration_ms": self.duration_ms,
+            "extraction_duration_ms": self.extraction_duration_ms,
+            "promotion_duration_ms": self.promotion_duration_ms,
+        }
 
 
 def extraction_rejection_record_path(receipt_path: Path) -> Path:
@@ -187,6 +231,7 @@ def run_general_question_extraction_and_promotion(
     command against the same receipt is idempotent.
     """
 
+    run_started = time.monotonic()
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     search_run_id = str(receipt.get("search_run_id", ""))
     research_question_id = str(receipt.get("research_question_id", ""))
@@ -225,6 +270,7 @@ def run_general_question_extraction_and_promotion(
             (PaperMetadata(paper_id=paper.id, doi=paper.doi, title=paper.title), pages)
         )
 
+    extraction_started = time.monotonic()
     batch_summary = run_batch_extraction_review(paper_pages)
 
     candidate_records: list[dict[str, Any]] = []
@@ -260,9 +306,11 @@ def run_general_question_extraction_and_promotion(
                     ),
                 )
             )
+    extraction_duration_ms = round((time.monotonic() - extraction_started) * 1000)
 
     promoted_count = 0
     duplicate_count = 0
+    promotion_duration_ms = 0
     if candidate_records:
         descriptor, temp_name = tempfile.mkstemp(prefix="ke-gqr5-drafts-", suffix=".jsonl")
         temp_path = Path(temp_name)
@@ -271,7 +319,9 @@ def run_general_question_extraction_and_promotion(
                 for record in candidate_records:
                     handle.write(json.dumps(record) + "\n")
             evidence_output_path.parent.mkdir(parents=True, exist_ok=True)
+            promotion_started = time.monotonic()
             promotion_result = cli._promote_evidence_records(temp_path, evidence_output_path)
+            promotion_duration_ms = round((time.monotonic() - promotion_started) * 1000)
         finally:
             with contextlib.suppress(OSError):
                 temp_path.unlink()
@@ -305,6 +355,9 @@ def run_general_question_extraction_and_promotion(
         duplicate_count=duplicate_count,
         rejected=tuple(rejections),
         rejection_record_path=rejection_record_path,
+        duration_ms=round((time.monotonic() - run_started) * 1000),
+        extraction_duration_ms=extraction_duration_ms,
+        promotion_duration_ms=promotion_duration_ms,
     )
 
 

@@ -9,6 +9,30 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Extraction/promotion timing instrumentation (issue #433)**: `ke
+  general-question-extract-and-promote`'s `GeneralQuestionExtractionPromotionSummary`
+  now reports `duration_ms` (total call time), `extraction_duration_ms` (the
+  `run_batch_extraction_review` deterministic-extraction call plus the
+  immediately following `build_automated_evidence_record` autoclassification
+  loop -- issue #433 names this combined stage "currently the largest
+  functional bottleneck for arbitrary questions"), and `promotion_duration_ms`
+  (the `_promote_evidence_records` substage, `0` when nothing reached
+  promotion). Both CLI surfaces (production `ke` and `ke-research`-slim)
+  print all three alongside the existing
+  `papers=`/`promoted=`/`duplicates=`/`rejected=` summary line, and a new
+  optional `--output <path.json>` on both saves the full summary
+  (`GeneralQuestionExtractionPromotionSummary.to_dict()`) as JSON -- the
+  supported machine-readable path for a programmatic caller such as
+  `knowledge-engine-ai`'s `ke_client.py`, matching
+  `general-question-acquisition-plan`'s existing `--output` convention
+  rather than requiring a consumer to parse Rich-formatted console output.
+  Additive fields/option only -- existing callers that ignore them are
+  unaffected. This is Core's first slice of #433's cross-repository
+  research-loop bottleneck-instrumentation ask (companion to
+  `knowledge-engine-ai`#84); the remaining substages it names
+  (federated-provider latency, candidate funnel, CLI/process-startup cost,
+  re-retrieval readiness) remain unaddressed follow-up work.
+
 - **Corpus-library snapshots carry promoted evidence (CORE-GQR-6, completes
   General Question Research Loop v1's Core portion)**: `ke
   corpus-library-export`/`ke corpus-library-import` now take an optional
