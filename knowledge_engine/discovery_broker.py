@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import replace
 from typing import Protocol
 
@@ -64,31 +65,50 @@ def _search_provider(
     name: str,
     query: DiscoveryQuery,
 ) -> tuple[ProviderStatus, tuple[FederatedCandidate, ...]]:
-    """Execute and validate one provider without allowing it to collapse the run."""
+    """Execute and validate one provider without allowing it to collapse the run.
+
+    The broker is the one place every provider attempt already passes through
+    regardless of adapter, so it measures each attempt's own wall-clock latency
+    here rather than requiring every adapter to do so individually. A status
+    that already carries its own ``latency_ms`` (a future adapter reporting
+    sub-attempt timing, e.g. one retry within its own search()) keeps that
+    value; the broker only fills the field in when the adapter left it unset.
+    Skipped/disabled providers (``attempted=False``) are never timed: they did
+    no work for ``_search_provider`` to measure.
+    """
+    start = time.monotonic()
     try:
         result = provider.search(query)
+        elapsed_ms = _elapsed_ms(start)
         if not isinstance(result, FederatedSearchResult):
-            return _failed_status(name, "provider_result_contract_mismatch"), ()
+            return _failed_status(name, "provider_result_contract_mismatch", elapsed_ms), ()
         if result.query != query:
-            return _failed_status(name, "query_contract_mismatch"), ()
+            return _failed_status(name, "query_contract_mismatch", elapsed_ms), ()
         if len(result.provider_statuses) != 1:
-            return _failed_status(name, "provider_status_contract_mismatch"), ()
+            return _failed_status(name, "provider_status_contract_mismatch", elapsed_ms), ()
 
         status = result.provider_statuses[0]
         if _normalize_provider_name(status.provider) != name:
-            return _failed_status(name, "provider_identity_mismatch"), ()
+            return _failed_status(name, "provider_identity_mismatch", elapsed_ms), ()
 
         normalized_status = replace(status, provider=name)
+        if normalized_status.attempted and normalized_status.latency_ms is None:
+            normalized_status = replace(normalized_status, latency_ms=elapsed_ms)
         return normalized_status, result.candidates
     except Exception:  # noqa: BLE001 - runtime provider boundary must contain malformed adapters
-        return _failed_status(name, "provider_exception"), ()
+        return _failed_status(name, "provider_exception", _elapsed_ms(start)), ()
 
 
-def _failed_status(provider: str, reason: str) -> ProviderStatus:
+def _elapsed_ms(start: float) -> int:
+    return round((time.monotonic() - start) * 1000)
+
+
+def _failed_status(provider: str, reason: str, latency_ms: int | None = None) -> ProviderStatus:
     return ProviderStatus(
         provider=provider,
         outcome=ProviderOutcome.FAILED,
         attempted=True,
+        latency_ms=latency_ms,
         reason=reason,
     )
 
