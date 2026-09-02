@@ -118,3 +118,68 @@ jobs:
           test ! -e review-status-delivery.txt
           test ! -e pytest-review-status.txt
           test ! -e review-status-error.txt
+
+  slim-research-runtime:
+    name: Slim Research runtime install
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Render lean dependency set
+        run: |
+          python scripts/render-research-runtime-requirements.py \
+            > "${RUNNER_TEMP}/research-runtime-requirements.txt"
+          cat "${RUNNER_TEMP}/research-runtime-requirements.txt"
+
+      - name: Install isolated slim runtime
+        run: |
+          python -m venv "${RUNNER_TEMP}/ke-research-venv"
+          "${RUNNER_TEMP}/ke-research-venv/bin/python" -m pip install --upgrade pip
+          "${RUNNER_TEMP}/ke-research-venv/bin/python" -m pip install \
+            -r "${RUNNER_TEMP}/research-runtime-requirements.txt"
+          "${RUNNER_TEMP}/ke-research-venv/bin/python" -m pip install --no-deps .
+
+      - name: Prove vector stack is absent
+        run: |
+          "${RUNNER_TEMP}/ke-research-venv/bin/python" - <<'PY'
+          import importlib.util
+
+          forbidden = ("faiss", "qdrant_client", "sentence_transformers", "torch")
+          present = [name for name in forbidden if importlib.util.find_spec(name) is not None]
+          assert not present, f"vector-only packages leaked into slim runtime: {present}"
+          print("SLIM_VECTOR_STACK_ABSENT=1")
+          PY
+
+      - name: Verify complete Research command surface
+        run: |
+          RESEARCH_VENV="${RUNNER_TEMP}/ke-research-venv"
+          "$RESEARCH_VENV/bin/ke-research" research-runtime-capabilities \
+            > "${RUNNER_TEMP}/research-runtime-capabilities.json"
+          "$RESEARCH_VENV/bin/python" - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          root = Path(os.environ["RUNNER_TEMP"])
+          payload = json.loads((root / "research-runtime-capabilities.json").read_text())
+          assert payload["complete"] is True, payload
+          assert payload["missing_commands"] == [], payload
+          executable = root / "ke-research-venv" / "bin" / "ke-research"
+          for command in payload["required_commands"]:
+              subprocess.run(
+                  [str(executable), command, "--help"],
+                  check=True,
+                  stdout=subprocess.DEVNULL,
+                  stderr=subprocess.PIPE,
+                  text=True,
+              )
+          print(f"SLIM_RESEARCH_COMMAND_COUNT={len(payload['required_commands'])}")
+          PY
