@@ -10,6 +10,7 @@ import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database
 from knowledge_engine.entrypoint import app
+from knowledge_engine.vector_search import LocalEmbeddingError
 
 
 def _unwrapped(output: str) -> str:
@@ -41,6 +42,23 @@ class _FakeEmbeddingGenerator:
 
     def generate(self, text: str) -> tuple[float, ...]:
         return (1.0, 0.0)
+
+
+class _FailingReadyEmbeddingGenerator:
+    """Constructs fine, but raises when readiness (`.dimension`) is checked.
+
+    Mirrors a real lazy-loading generator whose model load fails on first
+    use rather than at construction time (e.g. `SentenceTransformerEmbeddingGenerator`).
+    """
+
+    model_id = "fake:test-v1"
+
+    @property
+    def dimension(self) -> int:
+        raise LocalEmbeddingError("Failed to load local embedding model 'fake-model'.")
+
+    def generate(self, text: str) -> tuple[float, ...]:
+        raise LocalEmbeddingError("Failed to load local embedding model 'fake-model'.")
 
 
 def test_cli_prints_both_timings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -142,6 +160,24 @@ def test_cli_measures_embedding_generator_when_requested(
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     assert payload["embedding_generator_ready_ms"] >= 0
     assert payload["embedding_generator_model_id"] == "fake:test-v1"
+
+
+def test_cli_reports_clean_error_when_generator_fails_to_become_ready(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    monkeypatch.setattr(
+        entrypoint,
+        "_build_embedding_generator",
+        lambda generator, model: _FailingReadyEmbeddingGenerator(),
+    )
+
+    result = CliRunner().invoke(app, ["process-startup-timing", "--generator", "local"])
+
+    assert result.exit_code == 1
+    assert "Failed to prepare embedding generator" in _unwrapped(result.output)
+    assert "Failed to load local embedding model" in _unwrapped(result.output)
 
 
 def test_cli_rejects_model_without_generator(

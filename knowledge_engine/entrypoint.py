@@ -5901,9 +5901,13 @@ def process_startup_timing(
         (lambda: _build_embedding_generator(generator, model)) if generator is not None else None
     )
 
-    timing = measure_process_startup_timing(
-        _local_database, build_embedding_generator=build_embedding_generator
-    )
+    try:
+        timing = measure_process_startup_timing(
+            _local_database, build_embedding_generator=build_embedding_generator
+        )
+    except (LocalEmbeddingError, OpenAiEmbeddingError) as exc:
+        console.print(f"[red]Failed to prepare embedding generator:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from None
 
     if output is not None:
         _write_output(output, timing.to_json())
