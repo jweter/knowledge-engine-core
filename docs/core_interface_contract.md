@@ -522,6 +522,24 @@ itself, but may need to trigger for a specific paper):**
   `research_question_id` mismatch against the persisted run each exit `1`
   with a plain console error, never a stack trace or a silently-adjusted
   plan.
+- `ke process-startup-timing [--output <path.json>]` (issue #433 item 1,
+  `process_startup_timing.py`): measures one `ke` invocation's own fixed
+  overhead as two independently timed costs, neither folded into any
+  command's own `duration_ms`: `import_to_command_ms` (elapsed time from
+  `knowledge_engine`'s own package import -- the earliest point this
+  process's code can observe, captured once at import time as
+  `knowledge_engine._PACKAGE_IMPORT_MONOTONIC` -- to this command running,
+  covering every submodule import the `ke` command surface needs plus
+  Typer's argument parsing and dispatch) and `database_open_ms`
+  (constructing and initializing the local `Database` -- schema/index
+  readiness -- timed separately from startup and from a command's own
+  retrieval/search/acquisition work). `--output <path.json>` saves
+  `ProcessStartupTiming.to_dict()` for a programmatic caller such as
+  `knowledge-engine-ai`, which invokes Core only through `ke` subprocesses
+  -- the data issue #433 asks for so a persistent-host redesign decision
+  can be made from real elapsed time. Addresses the process-startup half
+  of item 1 only; the model-load half (e.g. `ke vector-search`'s
+  sentence-transformers embedding model) is unaddressed follow-up work.
 - **`ProviderObservation` publication-status fields (FRD-5 follow-up):**
   `knowledge_engine.federated_discovery.ProviderObservation` -- and its
   ledger mirror, `federated_search_ledger.CandidateObservationRecord` --

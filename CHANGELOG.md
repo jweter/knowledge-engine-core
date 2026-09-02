@@ -9,6 +9,24 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **New `ke process-startup-timing` command (issue #433, item 1)**: measures
+  one `ke` invocation's own fixed overhead, split into two independently
+  timed costs neither folded into any command's own `duration_ms`:
+  `import_to_command_ms` (elapsed time from `knowledge_engine`'s own package
+  import -- the earliest point this process's code can observe, captured
+  once at import time -- to the command running, i.e. every submodule
+  import the `ke` command surface needs plus Typer's argument parsing and
+  dispatch) and `database_open_ms` (constructing and initializing the local
+  `Database` -- schema/index readiness -- kept separate from startup and
+  from a command's own retrieval/search/acquisition work). `--output
+  <path.json>` saves `ProcessStartupTiming.to_dict()` for a programmatic
+  caller such as `knowledge-engine-ai`, giving issue #433's "AI currently
+  invokes Core through `ke` subprocesses" persistent-host decision real
+  elapsed-time data instead of a guess. This addresses the process-startup
+  half of item 1; the model-load half (e.g. `ke vector-search`'s
+  sentence-transformers embedding model) remains unaddressed follow-up
+  work, as does item 4 (bounded-concurrency acquisition throughput).
+
 - **Federated-provider latency instrumentation (issue #433)**:
   `ProviderStatus.latency_ms` (`federated_discovery.py`) already existed and
   was already persisted by `FederatedSearchLedger`, but every provider
