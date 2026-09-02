@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
+import shutil
+import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -11,7 +14,7 @@ from typing import Any
 from sqlalchemy import func, select
 
 from knowledge_engine.config import Settings
-from knowledge_engine.corpus_library import import_corpus_library_compressed
+from knowledge_engine.corpus_library import import_corpus_library
 from knowledge_engine.database import Database
 from knowledge_engine.models import Paper
 
@@ -37,6 +40,43 @@ class ResearchWorkspaceBootstrapSummary:
         payload["database_path"] = str(self.database_path)
         payload["evidence_path"] = str(self.evidence_path)
         return payload
+
+
+def _import_snapshot_with_schema_compatibility(
+    *,
+    target_session: Any,
+    snapshot_path: Path,
+    evidence_output_path: Path,
+) -> Any:
+    """Import a compressed corpus snapshot after migrating a temporary copy.
+
+    Corpus-library snapshots intentionally omit the working database's schema
+    version history. A committed snapshot can therefore predate a later
+    additive model column even though the application importing it is current.
+    Migrating only the decompressed temporary copy keeps the committed seed
+    immutable while allowing the normal import path to select the current ORM
+    model safely. The temporary database is discarded after the import.
+    """
+
+    with tempfile.TemporaryDirectory() as raw_dir:
+        raw_root = Path(raw_dir)
+        raw_path = raw_root / "snapshot.sqlite3"
+        with gzip.open(snapshot_path, "rb") as compressed_file, raw_path.open("wb") as raw_file:
+            shutil.copyfileobj(compressed_file, raw_file)
+
+        snapshot_database = Database(
+            Settings(
+                project_root=raw_root,
+                data_dir=raw_root,
+                database_url=f"sqlite:///{raw_path}",
+            )
+        )
+        try:
+            snapshot_database.initialize()
+        finally:
+            snapshot_database.engine.dispose()
+
+        return import_corpus_library(target_session, raw_path, evidence_output_path)
 
 
 def bootstrap_research_workspace(
@@ -72,10 +112,10 @@ def bootstrap_research_workspace(
     try:
         database.initialize()
         with database.session() as session:
-            imported = import_corpus_library_compressed(
-                session,
-                snapshot_path,
-                resolved_evidence_path,
+            imported = _import_snapshot_with_schema_compatibility(
+                target_session=session,
+                snapshot_path=snapshot_path,
+                evidence_output_path=resolved_evidence_path,
             )
             total_paper_count = int(session.scalar(select(func.count()).select_from(Paper)) or 0)
 
