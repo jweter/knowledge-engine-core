@@ -94,6 +94,17 @@ class GeneralQuestionExtractionPromotionSummary:
     covers only the ``_promote_evidence_records`` validation/append call,
     and is ``0`` when no candidate records reached promotion. They are
     additive JSON fields; existing callers that ignore them are unaffected.
+
+    ``evidence_store_record_count`` answers issue #433's "re-retrieval
+    readiness" ask: the total number of valid records in
+    ``evidence_output_path`` after this call, whether or not this call itself
+    promoted anything. Promotion only ever appends, so this count is
+    monotonically non-decreasing across repeated calls against the same
+    evidence file -- a caller (e.g. the AI orchestration loop, currently
+    polling per acquisition receipt) can treat it as a cheap revision
+    identifier: if the value has not changed since a prior call, no new
+    Evidence Record became available and there is no reason to re-retrieve
+    yet, instead of always waiting for an entire maximal acquisition batch.
     """
 
     schema_version: str
@@ -108,6 +119,7 @@ class GeneralQuestionExtractionPromotionSummary:
     duration_ms: int
     extraction_duration_ms: int
     promotion_duration_ms: int
+    evidence_store_record_count: int
 
     def to_dict(self) -> dict[str, Any]:
         """Machine-readable form, including the ``*_duration_ms`` timings.
@@ -134,6 +146,7 @@ class GeneralQuestionExtractionPromotionSummary:
             "duration_ms": self.duration_ms,
             "extraction_duration_ms": self.extraction_duration_ms,
             "promotion_duration_ms": self.promotion_duration_ms,
+            "evidence_store_record_count": self.evidence_store_record_count,
         }
 
 
@@ -195,6 +208,46 @@ def _write_rejection_records(
                 os.unlink(temp_name)
             raise
     return path
+
+
+def _count_evidence_records(evidence_output_path: Path) -> int:
+    """Count only schema-valid Evidence Records in `evidence_output_path`.
+
+    A "ready to re-retrieve" count must not include a record downstream
+    validation would reject -- Core prefers missing data over invented
+    metadata, so an unusable record must never inflate this signal. Reuses
+    `cli._validate_evidence_record` -- the exact per-record gate
+    `_promote_evidence_records` itself already applies with
+    `require_review_fields=True` -- against each line, tracking
+    `seen_ids` across the whole file so a duplicate/malformed
+    `evidence_record_id` is not double-counted either. A blank line,
+    invalid JSON, or non-object line is skipped, not raised, since this is
+    a read-only count, not the correctness gate itself -- `ke
+    evidence-validate` remains that. Returns 0 when the file does not
+    exist yet (no record has ever been promoted to it).
+    """
+
+    if not evidence_output_path.exists():
+        return 0
+    seen_ids: set[str] = set()
+    count = 0
+    for line in evidence_output_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            record = json.loads(stripped)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(record, dict):
+            continue
+        record_errors: list[str] = []
+        cli._validate_evidence_record(
+            record, 0, seen_ids, record_errors, require_review_fields=True
+        )
+        if not record_errors:
+            count += 1
+    return count
 
 
 def _receipt_paper_ids(receipt: dict[str, Any]) -> list[int]:
@@ -345,6 +398,8 @@ def run_general_question_extraction_and_promotion(
         rejections=rejections,
     )
 
+    evidence_store_record_count = _count_evidence_records(evidence_output_path)
+
     return GeneralQuestionExtractionPromotionSummary(
         schema_version=GENERAL_QUESTION_EXTRACTION_PROMOTION_RULES_VERSION,
         search_run_id=search_run_id,
@@ -358,6 +413,7 @@ def run_general_question_extraction_and_promotion(
         duration_ms=round((time.monotonic() - run_started) * 1000),
         extraction_duration_ms=extraction_duration_ms,
         promotion_duration_ms=promotion_duration_ms,
+        evidence_store_record_count=evidence_store_record_count,
     )
 
 
