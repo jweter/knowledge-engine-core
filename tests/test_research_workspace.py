@@ -93,7 +93,10 @@ def _make_snapshot_missing_current_paper_columns(snapshot: Path) -> None:
             connection.close()
 
         snapshot.unlink()
-        with raw_path.open("rb") as raw_file, gzip.GzipFile(snapshot, "wb", mtime=0) as compressed_file:
+        with (
+            raw_path.open("rb") as raw_file,
+            gzip.GzipFile(snapshot, "wb", mtime=0) as compressed_file,
+        ):
             shutil.copyfileobj(raw_file, compressed_file)
 
 
