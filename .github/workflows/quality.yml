@@ -133,6 +133,8 @@ jobs:
           python-version: "3.12"
 
       - name: Render lean dependency set
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           python scripts/render-research-runtime-requirements.py \
             > "${RUNNER_TEMP}/research-runtime-requirements.txt"

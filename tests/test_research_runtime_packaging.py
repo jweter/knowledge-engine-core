@@ -66,7 +66,5 @@ def test_rendered_requirements_are_deterministic_and_explain_exclusions() -> Non
         ("0.0.7", "0.0.8"),
     ],
 )
-def test_caret_upper_bound_matches_poetry_compatibility_rules(
-    version: str, expected: str
-) -> None:
+def test_caret_upper_bound_matches_poetry_compatibility_rules(version: str, expected: str) -> None:
     assert _caret_upper_bound(version) == expected
