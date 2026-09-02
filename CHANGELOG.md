@@ -26,8 +26,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   is now real, non-null data end to end (broker -> ledger ->
   `ke federated-coverage-report`). An explicit retry-attempt count and a
   cache/reuse-hit flag remain unaddressed follow-up work for item 2, as do
-  items 1 (CLI/process-startup cost), 4 (bounded-concurrency acquisition
-  throughput), and 6 (re-retrieval readiness).
+  items 1 (CLI/process-startup cost) and 4 (bounded-concurrency acquisition
+  throughput).
+
+- **Re-retrieval readiness signal for GQR extraction/promotion (issue
+  #433, item 6)**: `ke general-question-extract-and-promote`'s
+  `GeneralQuestionExtractionPromotionSummary` (`general_question_extraction_promotion.py`)
+  gains `evidence_store_record_count` -- the total number of records in
+  `--evidence` after the call, whether or not this call promoted anything
+  new. Promotion only ever appends, so the count is monotonically
+  non-decreasing across repeated calls against the same evidence file: a
+  caller such as `knowledge-engine-ai`'s orchestration loop can compare it
+  across calls as a cheap revision/cache-invalidation signal and re-query
+  as soon as it changes, instead of always waiting for an entire maximal
+  acquisition batch to finish. Purely additive JSON field; no existing
+  caller in this repository family reads this command's `--output` payload
+  yet, so there is no cross-repo compatibility impact to coordinate.
 
 - **Candidate-funnel timing instrumentation (issue #433)**: `ke
   general-question-acquisition-plan`'s `GeneralQuestionAcquisitionPlan` now

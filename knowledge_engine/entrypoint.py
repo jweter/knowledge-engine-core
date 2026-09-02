@@ -4708,10 +4708,18 @@ def general_question_extract_and_promote(
 
     Optional `--output <path.json>` writes the full run summary --
     including `duration_ms`/`extraction_duration_ms`/`promotion_duration_ms`
-    -- as JSON (`GeneralQuestionExtractionPromotionSummary.to_dict()`). Use
-    this, not the printed console line, when a caller needs to consume
-    these fields programmatically; per `docs/core_interface_contract.md`,
-    Rich-formatted console output is for humans and may reflow.
+    and `evidence_store_record_count` -- as JSON
+    (`GeneralQuestionExtractionPromotionSummary.to_dict()`). Use this, not
+    the printed console line, when a caller needs to consume these fields
+    programmatically; per `docs/core_interface_contract.md`, Rich-formatted
+    console output is for humans and may reflow.
+
+    `evidence_store_record_count` is the total number of records in
+    `--evidence` after this call, whether or not this call promoted
+    anything new -- a cheap, monotonically non-decreasing revision signal a
+    caller can compare across repeated calls to know when it is worth
+    re-retrieving instead of always waiting for an entire acquisition batch
+    to finish (issue #433).
     """
 
     database = _local_database()
@@ -4728,7 +4736,8 @@ def general_question_extract_and_promote(
         f"duplicates={summary.duplicate_count} rejected={len(summary.rejected)} "
         f"evidence={evidence} duration_ms={summary.duration_ms} "
         f"extraction_duration_ms={summary.extraction_duration_ms} "
-        f"promotion_duration_ms={summary.promotion_duration_ms}"
+        f"promotion_duration_ms={summary.promotion_duration_ms} "
+        f"evidence_store_record_count={summary.evidence_store_record_count}"
     )
     if output is not None:
         console.print(f"[green]Wrote summary:[/green] {output}")

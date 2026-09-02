@@ -468,12 +468,17 @@ itself, but may need to trigger for a specific paper):**
   Evidence Records via the existing deterministic extraction/autoclassification
   pipeline. Optional `--output <path.json>` saves the full run summary
   (`GeneralQuestionExtractionPromotionSummary.to_dict()`) -- paper/promoted/
-  duplicate/rejected counts, `rejection_record_path`, and the `duration_ms`/
+  duplicate/rejected counts, `rejection_record_path`, the `duration_ms`/
   `extraction_duration_ms`/`promotion_duration_ms` timings issue #433 asks
-  for -- for a programmatic caller such as `knowledge-engine-ai`'s
-  `ke_client.py`, the same boundary-respecting reason
-  `general-question-acquisition-plan`'s own `--output` exists: never parse
-  this command's printed console line instead.
+  for, and `evidence_store_record_count` (the total record count in
+  `--evidence` after this call, whether or not this call promoted anything;
+  monotonically non-decreasing, so a caller can treat it as a cheap
+  revision signal for when it is worth re-retrieving instead of always
+  waiting for an entire acquisition batch -- issue #433's "re-retrieval
+  readiness" ask) -- for a programmatic caller such as
+  `knowledge-engine-ai`'s `ke_client.py`, the same boundary-respecting
+  reason `general-question-acquisition-plan`'s own `--output` exists: never
+  parse this command's printed console line instead.
 
 - `ke general-question-acquisition-plan <request.json> --ledger-root <dir>
   [--output <path.json>] [--no-database]` (CORE-GQR-1/GQR-2,

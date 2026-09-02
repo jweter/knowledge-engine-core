@@ -121,6 +121,7 @@ def test_promotes_a_grounded_candidate_and_writes_no_rejection_file(tmp_path: Pa
     assert summary.duration_ms >= 0
     assert summary.extraction_duration_ms >= 0
     assert summary.promotion_duration_ms >= 0
+    assert summary.evidence_store_record_count == summary.promoted_count
 
     payload = summary.to_dict()
     assert payload["paper_count"] == summary.paper_count
@@ -130,6 +131,7 @@ def test_promotes_a_grounded_candidate_and_writes_no_rejection_file(tmp_path: Pa
     assert payload["duration_ms"] == summary.duration_ms
     assert payload["extraction_duration_ms"] == summary.extraction_duration_ms
     assert payload["promotion_duration_ms"] == summary.promotion_duration_ms
+    assert payload["evidence_store_record_count"] == summary.evidence_store_record_count
     json.dumps(payload)  # to_dict() must be directly JSON-serializable.
 
     lines = evidence_path.read_text(encoding="utf-8").strip().splitlines()
@@ -167,6 +169,11 @@ def test_rerunning_the_same_receipt_is_idempotent(tmp_path: Path) -> None:
     assert second.duplicate_count == first.promoted_count
     lines = evidence_path.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == first.promoted_count
+    # A duplicate re-run must not inflate the revision count: it stays the
+    # same total, so a caller polling this field correctly sees no new
+    # Evidence Records became available on the second call.
+    assert first.evidence_store_record_count == first.promoted_count
+    assert second.evidence_store_record_count == first.evidence_store_record_count
 
 
 def test_paper_with_no_claim_candidates_is_rejected_with_a_durable_reason(
@@ -192,6 +199,9 @@ def test_paper_with_no_claim_candidates_is_rejected_with_a_durable_reason(
     assert summary.rejected[0].paper_id == paper_id
     assert summary.rejected[0].stage == "no_claim_candidates"
     assert not evidence_path.exists()
+    # Nothing was ever promoted to this evidence file, so the revision
+    # count is 0 rather than raising on a missing file.
+    assert summary.evidence_store_record_count == 0
     # No candidate ever reached the promotion call, so that substage never ran.
     assert summary.promotion_duration_ms == 0
     # to_dict() must serialize rejection_record_path as a string, not a Path.
@@ -290,6 +300,53 @@ def test_a_later_success_clears_a_stale_rejection_record(tmp_path: Path) -> None
     assert summary.promoted_count >= 1
     assert summary.rejected == ()
     assert not extraction_rejection_record_path(receipt_path).exists()
+
+
+def test_evidence_store_record_count_accumulates_across_receipts(tmp_path: Path) -> None:
+    """issue #433 re-retrieval readiness: the count rises only when a later
+    receipt against the same evidence file actually promotes something new,
+    giving a caller a cheap signal for when it is worth re-retrieving.
+    """
+
+    database = _database(tmp_path)
+    with database.session() as session:
+        first_paper = PaperRepository(session).add_parsed_paper(
+            _parsed_paper(tmp_path, "a" * 64, title="Rich Paper One", text=_RICH_TEXT)
+        )
+        first_paper_id = first_paper.id
+
+    evidence_path = tmp_path / "evidence.jsonl"
+    first_receipt = _receipt(
+        tmp_path, name="receipt-1.json", paper_ids=[(first_paper_id, "persisted")]
+    )
+    with database.session() as session:
+        first = run_general_question_extraction_and_promotion(
+            session, receipt_path=first_receipt, evidence_output_path=evidence_path
+        )
+    assert first.promoted_count >= 1
+    assert first.evidence_store_record_count == first.promoted_count
+
+    with database.session() as session:
+        second_paper = PaperRepository(session).add_parsed_paper(
+            _parsed_paper(tmp_path, "b" * 64, title="Rich Paper Two", text=_RICH_TEXT)
+        )
+        second_paper_id = second_paper.id
+
+    second_receipt = _receipt(
+        tmp_path,
+        name="receipt-2.json",
+        paper_ids=[(second_paper_id, "persisted")],
+        search_run_id="run-2",
+    )
+    with database.session() as session:
+        second = run_general_question_extraction_and_promotion(
+            session, receipt_path=second_receipt, evidence_output_path=evidence_path
+        )
+
+    assert second.promoted_count >= 1
+    assert second.evidence_store_record_count == first.evidence_store_record_count + (
+        second.promoted_count
+    )
 
 
 def test_ignores_receipt_items_that_are_not_persisted_or_reused(tmp_path: Path) -> None:
