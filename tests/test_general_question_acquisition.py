@@ -152,6 +152,7 @@ def test_plan_resolves_only_persisted_candidates_and_preserves_provider_failure(
     assert plan.metadata_only_count == 1
     assert plan.missing_candidate_count == 1
     assert plan.provider_failures == ("openalex",)
+    assert plan.duration_ms >= 0
     assert [item.disposition for item in plan.items] == [
         AcquisitionDisposition.ELIGIBLE_FULL_TEXT.value,
         AcquisitionDisposition.METADATA_ONLY.value,
@@ -160,6 +161,34 @@ def test_plan_resolves_only_persisted_candidates_and_preserves_provider_failure(
     assert plan.items[0].identity is not None
     assert plan.items[0].identity.pmcid == "PMC12345"
     assert plan.items[0].selected_observation_provider == "pubmed"
+
+
+def test_plan_duration_ms_measures_build_acquisition_plan_wall_time(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Issue #433's candidate-funnel counts were previously not paired with
+    any timing; ``duration_ms`` must reflect this call's own elapsed time,
+    not merely default to zero."""
+
+    run_id = _record_run(tmp_path)
+    request = GeneralQuestionAcquisitionRequest(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq-creatine",
+        candidate_ids=("doi:10.1000/creatine",),
+        max_candidates=1,
+        max_full_text_acquisitions=1,
+    )
+
+    ticks = iter([100.0, 100.25])
+    monkeypatch.setattr(
+        "knowledge_engine.general_question_acquisition.time.monotonic",
+        lambda: next(ticks),
+    )
+
+    plan = build_acquisition_plan(request, ledger_root=tmp_path)
+
+    assert plan.duration_ms == 250
 
 
 def test_full_text_budget_is_enforced_deterministically(tmp_path: Path) -> None:

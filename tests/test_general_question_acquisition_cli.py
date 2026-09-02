@@ -194,6 +194,9 @@ def test_cli_reports_already_indexed_candidate_by_default(
     assert plan["full_text_selected_count"] == 0
     assert plan["items"][0]["disposition"] == "already_indexed"
     assert plan["items"][0]["existing_paper_id"] is not None
+    assert isinstance(plan["duration_ms"], int)
+    assert plan["duration_ms"] >= 0
+    assert "Duration:" in _unwrapped(result.output)
 
 
 def test_cli_no_database_flag_skips_already_indexed_lookup(

@@ -6107,7 +6107,8 @@ def _print_acquisition_plan(plan: GeneralQuestionAcquisitionPlan) -> None:
         f"[cyan]Full text eligible:[/cyan] {plan.full_text_selected_count}  "
         f"[blue]Metadata only:[/blue] {plan.metadata_only_count}  "
         f"[yellow]Skipped (budget):[/yellow] {plan.skipped_budget_count}  "
-        f"[red]Not in run:[/red] {plan.missing_candidate_count}"
+        f"[red]Not in run:[/red] {plan.missing_candidate_count}  "
+        f"[bold]Duration:[/bold] {plan.duration_ms}ms"
     )
     if plan.provider_failures:
         console.print(
