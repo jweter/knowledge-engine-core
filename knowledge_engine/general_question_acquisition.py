@@ -10,6 +10,7 @@ acquisition services consume the eligible plan in the next pipeline stage.
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -157,6 +158,7 @@ class GeneralQuestionAcquisitionPlan:
     missing_candidate_count: int
     provider_failures: tuple[str, ...]
     items: tuple[AcquisitionPlanItem, ...]
+    duration_ms: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -186,8 +188,15 @@ def build_acquisition_plan(
     never compete with genuinely new candidates for a budget slot. Omitting
     ``session`` preserves this function's prior snapshot-only behavior
     unchanged.
+
+    The returned plan's ``duration_ms`` measures this function's own wall
+    time (ledger load, budget reconciliation, and the optional
+    already-indexed database lookup) -- issue #433's "candidate funnel"
+    bottleneck, which was previously exposed only as counts with no timing
+    persisted alongside them.
     """
 
+    started = time.monotonic()
     record = FederatedSearchLedger(ledger_root).load(request.search_run_id)
     _validate_request_against_run(request, record)
     by_id = {candidate.canonical_id: candidate for candidate in record.candidates}
@@ -327,6 +336,7 @@ def build_acquisition_plan(
         missing_candidate_count=missing,
         provider_failures=record.providers_failed,
         items=tuple(items),
+        duration_ms=int((time.monotonic() - started) * 1000),
     )
 
 

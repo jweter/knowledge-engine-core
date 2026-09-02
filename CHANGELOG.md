@@ -9,6 +9,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Candidate-funnel timing instrumentation (issue #433)**: `ke
+  general-question-acquisition-plan`'s `GeneralQuestionAcquisitionPlan` now
+  reports `duration_ms` -- the wall time of `build_acquisition_plan()`
+  itself (ledger load, budget reconciliation, and the optional
+  already-indexed database lookup). The plan's `already_indexed_count`/
+  `full_text_selected_count`/`metadata_only_count`/`skipped_budget_count`/
+  `missing_candidate_count` funnel counts existed before this change but
+  were never paired with any timing; `duration_ms` is now persisted
+  alongside them in both the console summary line and the existing
+  `--output <path.json>` payload. Additive field only (defaults to `0`);
+  existing callers that ignore it are unaffected. This is Core's second
+  slice of #433's cross-repository research-loop bottleneck-instrumentation
+  ask (companion to `knowledge-engine-ai`#84); federated-provider latency,
+  CLI/process-startup cost, bounded-concurrency acquisition throughput, and
+  re-retrieval readiness remain unaddressed follow-up work.
+
 - **Extraction/promotion timing instrumentation (issue #433)**: `ke
   general-question-extract-and-promote`'s `GeneralQuestionExtractionPromotionSummary`
   now reports `duration_ms` (total call time), `extraction_duration_ms` (the

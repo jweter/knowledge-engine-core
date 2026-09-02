@@ -504,7 +504,11 @@ itself, but may need to trigger for a specific paper):**
   never competing with genuinely new candidates for the full-text budget
   (see CORE-GQR-2 above). `--no-database` skips that lookup entirely,
   matching `build_acquisition_plan`'s own `session=None` snapshot-only
-  contract. `--output <path.json>` additionally saves the full plan
+  contract. The plan also carries `duration_ms` --
+  `build_acquisition_plan`'s own wall time (ledger load, budget
+  reconciliation, and the optional already-indexed lookup), the issue #433
+  "candidate funnel" timing paired with the disposition counts above.
+  `--output <path.json>` additionally saves the full plan
   (`GeneralQuestionAcquisitionPlan.to_dict()`) for a programmatic caller --
   `knowledge-engine-ai`, which consumes Core only through this CLI JSON
   boundary, is the intended caller once its own orchestration
