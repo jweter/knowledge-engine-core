@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from typing import cast
 
@@ -175,6 +176,96 @@ def test_broker_rejects_duplicate_provider_names() -> None:
         assert "unique" in str(exc)
     else:
         raise AssertionError("duplicate provider names should fail")
+
+
+@dataclass(frozen=True)
+class SlowProvider:
+    name: str
+    result: FederatedSearchResult | None = None
+    error: Exception | None = None
+    delay_seconds: float = 0.0
+
+    def search(self, query: DiscoveryQuery) -> FederatedSearchResult:
+        time.sleep(self.delay_seconds)
+        if self.error is not None:
+            raise self.error
+        assert self.result is not None
+        return self.result
+
+
+def test_broker_measures_latency_for_a_successful_provider_attempt() -> None:
+    query = DiscoveryQuery(text="measured latency")
+    candidate = _candidate("openalex", "W9", "Measured latency")
+    broker = FederatedDiscoveryBroker(
+        (
+            SlowProvider(
+                "openalex",
+                _result(query, "openalex", ProviderOutcome.SUCCESS, (candidate,)),
+                delay_seconds=0.02,
+            ),
+        )
+    )
+
+    result = broker.search(query)
+
+    latency_ms = result.provider_statuses[0].latency_ms
+    assert latency_ms is not None
+    assert latency_ms >= 20
+
+
+def test_broker_measures_latency_for_a_failed_provider_attempt() -> None:
+    query = DiscoveryQuery(text="measured failure latency")
+    broker = FederatedDiscoveryBroker(
+        (SlowProvider("openalex", error=TimeoutError(), delay_seconds=0.02),)
+    )
+
+    result = broker.search(query)
+
+    latency_ms = result.provider_statuses[0].latency_ms
+    assert latency_ms is not None
+    assert latency_ms >= 20
+
+
+def test_broker_does_not_fabricate_latency_for_a_skipped_provider() -> None:
+    query = DiscoveryQuery(text="sleep apnea")
+    broker = FederatedDiscoveryBroker(
+        (
+            FakeProvider(
+                "openalex",
+                _result(
+                    query,
+                    "openalex",
+                    ProviderOutcome.DISABLED,
+                    attempted=False,
+                    reason="missing_api_key",
+                ),
+            ),
+        )
+    )
+
+    result = broker.search(query)
+
+    assert result.provider_statuses[0].latency_ms is None
+
+
+def test_broker_preserves_an_adapter_reported_latency() -> None:
+    query = DiscoveryQuery(text="adapter reported its own latency")
+    preset_result = FederatedSearchResult(
+        query=query,
+        provider_statuses=(
+            ProviderStatus(
+                provider="openalex",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                latency_ms=42,
+            ),
+        ),
+    )
+    broker = FederatedDiscoveryBroker((FakeProvider("openalex", preset_result),))
+
+    result = broker.search(query)
+
+    assert result.provider_statuses[0].latency_ms == 42
 
 
 def test_broker_records_contract_mismatch_without_accepting_candidates() -> None:
