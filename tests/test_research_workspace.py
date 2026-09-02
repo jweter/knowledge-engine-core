@@ -84,6 +84,8 @@ def _make_snapshot_missing_current_paper_columns(snapshot: Path) -> None:
 
         connection = sqlite3.connect(raw_path)
         try:
+            connection.execute("DROP INDEX IF EXISTS ix_papers_pmid")
+            connection.execute("DROP INDEX IF EXISTS ix_papers_arxiv_id")
             connection.execute("ALTER TABLE papers RENAME COLUMN pmid TO legacy_pmid")
             connection.execute("ALTER TABLE papers RENAME COLUMN arxiv_id TO legacy_arxiv_id")
             connection.commit()
