@@ -12,9 +12,10 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from knowledge_engine.config import Settings
-from knowledge_engine.corpus_library import import_corpus_library
+from knowledge_engine.corpus_library import ImportSummary, import_corpus_library
 from knowledge_engine.database import Database
 from knowledge_engine.models import Paper
 
@@ -44,10 +45,10 @@ class ResearchWorkspaceBootstrapSummary:
 
 def _import_snapshot_with_schema_compatibility(
     *,
-    target_session: Any,
+    target_session: Session,
     snapshot_path: Path,
     evidence_output_path: Path,
-) -> Any:
+) -> ImportSummary:
     """Import a compressed corpus snapshot after migrating a temporary copy.
 
     Corpus-library snapshots intentionally omit the working database's schema
