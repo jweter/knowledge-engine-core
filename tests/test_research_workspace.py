@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import gzip
 import json
+import shutil
+import sqlite3
+import tempfile
 from pathlib import Path
 
 from sqlalchemy import select
@@ -70,6 +74,27 @@ def _seed_snapshot(tmp_path: Path) -> Path:
         source.engine.dispose()
 
 
+def _make_snapshot_missing_current_paper_columns(snapshot: Path) -> None:
+    """Simulate a committed snapshot that predates the current Paper mapping."""
+
+    with tempfile.TemporaryDirectory() as raw_dir:
+        raw_path = Path(raw_dir) / "snapshot.sqlite3"
+        with gzip.open(snapshot, "rb") as compressed_file, raw_path.open("wb") as raw_file:
+            shutil.copyfileobj(compressed_file, raw_file)
+
+        connection = sqlite3.connect(raw_path)
+        try:
+            connection.execute("ALTER TABLE papers RENAME COLUMN pmid TO legacy_pmid")
+            connection.execute("ALTER TABLE papers RENAME COLUMN arxiv_id TO legacy_arxiv_id")
+            connection.commit()
+        finally:
+            connection.close()
+
+        snapshot.unlink()
+        with raw_path.open("rb") as raw_file, gzip.GzipFile(snapshot, "wb", mtime=0) as compressed_file:
+            shutil.copyfileobj(raw_file, compressed_file)
+
+
 def test_bootstrap_research_workspace_seeds_database_and_evidence(tmp_path: Path) -> None:
     snapshot = _seed_snapshot(tmp_path)
     workspace = tmp_path / "persistent"
@@ -98,6 +123,19 @@ def test_bootstrap_research_workspace_seeds_database_and_evidence(tmp_path: Path
             assert len(paper.pages) == 1
     finally:
         database.engine.dispose()
+
+
+def test_bootstrap_research_workspace_migrates_stale_snapshot_copy(tmp_path: Path) -> None:
+    snapshot = _seed_snapshot(tmp_path)
+    _make_snapshot_missing_current_paper_columns(snapshot)
+
+    summary = bootstrap_research_workspace(
+        workspace_dir=tmp_path / "persistent-stale",
+        snapshot_path=snapshot,
+    )
+
+    assert summary.imported_paper_count == 1
+    assert summary.total_paper_count == 1
 
 
 def test_bootstrap_research_workspace_is_idempotent(tmp_path: Path) -> None:
