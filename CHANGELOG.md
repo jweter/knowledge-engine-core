@@ -9,6 +9,24 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Bounded-concurrency PMC OA acquisition downloads (issue #433, item 4)**:
+  `PmcOaAcquisitionService.acquire()` previously fetched every approved PDF
+  sequentially. It now submits them to a bounded thread pool (new
+  keyword-only `max_concurrent_downloads` constructor parameter, default 4)
+  and still consumes the results back in deterministic plan order, so
+  receipt ordering, atomic rollback, and per-approval failure-ordinal error
+  messages are unchanged -- only multi-PDF batch wall-clock time improves.
+  Downloads are submitted in a sliding window bounded by
+  `max_concurrent_downloads` rather than all at once, and each completed
+  download's result is dropped from the in-flight set the moment it is
+  consumed, so a large batch (e.g. M14 mass discovery's hundreds of
+  candidates) cannot accumulate every up-to-`max_pdf_bytes` response in
+  memory at once -- caught in review before merge (Codex P1) when the first
+  version submitted every planned download up front and kept every
+  completed `Future` reachable for the whole method. Europe PMC, CORE, and
+  Unpaywall acquisition remain sequential and are the natural next slices
+  for the same pattern.
+
 - **New `ke process-startup-timing` command (issue #433, item 1, now
   complete)**: measures one `ke` invocation's own fixed overhead.
   `import_to_command_ms` (elapsed time from `knowledge_engine`'s own package
@@ -29,7 +47,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   caller such as `knowledge-engine-ai`, giving issue #433's "AI currently
   invokes Core through `ke` subprocesses" persistent-host decision real
   elapsed-time data instead of a guess. Item 4 (bounded-concurrency
-  acquisition throughput) remains the last unaddressed item on issue #433.
+  acquisition throughput) is addressed for PMC OA by the entry above; Europe
+  PMC, CORE, and Unpaywall remain.
 
 - **Federated-provider latency instrumentation (issue #433)**:
   `ProviderStatus.latency_ms` (`federated_discovery.py`) already existed and

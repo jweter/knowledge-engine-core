@@ -7,6 +7,7 @@ import json
 import os
 import re
 from collections.abc import Mapping
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Protocol
@@ -75,10 +76,14 @@ class PmcOaAcquisitionService:
         *,
         timeout_seconds: float = 30.0,
         max_pdf_bytes: int = 100_000_000,
+        max_concurrent_downloads: int = 4,
     ) -> None:
+        if isinstance(max_concurrent_downloads, bool) or max_concurrent_downloads < 1:
+            raise ValueError("max_concurrent_downloads must be at least 1.")
         self.transport = transport
         self.timeout_seconds = timeout_seconds
         self.max_pdf_bytes = max_pdf_bytes
+        self.max_concurrent_downloads = max_concurrent_downloads
 
     def acquire(
         self,
@@ -107,27 +112,60 @@ class PmcOaAcquisitionService:
         attempted_temp_paths: list[Path] = []
         committed: list[Path] = []
         try:
-            for ordinal, plan in enumerate(plans, start=1):
-                response = self._get_pdf(plan.pdf_url, pmcid=plan.pmcid, ordinal=ordinal)
-                if not response.body.startswith(PDF_SIGNATURE):
-                    raise AcquisitionError("PMC OA resource was not a PDF payload.")
-                temporary = output_directory / f".{plan.filename}.tmp"
-                attempted_temp_paths.append(temporary)
-                temporary.write_bytes(response.body)
-                staged.append(
-                    (
-                        plan,
-                        temporary,
-                        AcquisitionReceiptItem(
-                            pmid=plan.pmid,
-                            pmcid=plan.pmcid,
-                            license=plan.license,
-                            filename=plan.filename,
-                            byte_count=len(response.body),
-                            sha256=hashlib.sha256(response.body).hexdigest(),
-                        ),
+            # Each approved PDF is an independent, already license/approval-gated
+            # network fetch, so bound-concurrency downloading them shortens
+            # acquisition wall-clock time without changing what gets approved.
+            # Only a sliding window of at most max_workers downloads is ever
+            # in flight or holding a completed body in memory at once -- a
+            # large batch (e.g. M14 mass discovery's hundreds of candidates)
+            # must not let workers race ahead through the whole plan and pile
+            # up every up-to-max_pdf_bytes response while a single slow
+            # download is still being consumed. Results are still consumed in
+            # deterministic plan order below, so staging, receipt ordering,
+            # and failure-ordinal reporting are identical to a sequential
+            # fetch.
+            max_workers = min(self.max_concurrent_downloads, len(plans))
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                in_flight: dict[int, Future[TransportResponse]] = {}
+
+                def _submit(index: int) -> None:
+                    plan = plans[index]
+                    in_flight[index] = executor.submit(
+                        self._get_pdf, plan.pdf_url, pmcid=plan.pmcid, ordinal=index + 1
                     )
-                )
+
+                for index in range(max_workers):
+                    _submit(index)
+                next_unsubmitted = max_workers
+
+                try:
+                    for index, plan in enumerate(plans):
+                        response = in_flight.pop(index).result()
+                        if next_unsubmitted < len(plans):
+                            _submit(next_unsubmitted)
+                            next_unsubmitted += 1
+                        if not response.body.startswith(PDF_SIGNATURE):
+                            raise AcquisitionError("PMC OA resource was not a PDF payload.")
+                        temporary = output_directory / f".{plan.filename}.tmp"
+                        attempted_temp_paths.append(temporary)
+                        temporary.write_bytes(response.body)
+                        staged.append(
+                            (
+                                plan,
+                                temporary,
+                                AcquisitionReceiptItem(
+                                    pmid=plan.pmid,
+                                    pmcid=plan.pmcid,
+                                    license=plan.license,
+                                    filename=plan.filename,
+                                    byte_count=len(response.body),
+                                    sha256=hashlib.sha256(response.body).hexdigest(),
+                                ),
+                            )
+                        )
+                finally:
+                    for pending in in_flight.values():
+                        pending.cancel()
 
             for plan, temporary, _ in staged:
                 destination = output_directory / plan.filename
