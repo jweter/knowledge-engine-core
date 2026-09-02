@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,9 @@ import pytest
 
 from knowledge_engine.ncbi_http import TransportResponse
 from knowledge_engine.pmc_acquisition import AcquisitionError, PmcOaAcquisitionService
+
+PMC999_URL = "https://pmc-oa-opendata.s3.amazonaws.com/PMC999.1/PMC999.1.pdf"
+PMC1000_URL = "https://pmc-oa-opendata.s3.amazonaws.com/PMC1000.1/PMC1000.1.pdf"
 
 
 @dataclass
@@ -19,9 +23,17 @@ class FakeResponse:
 
 
 class FakeTransport:
-    def __init__(self, responses: list[FakeResponse]) -> None:
-        self.responses = responses
+    """Responds by request URL, not call order.
+
+    Downloads now run on a bounded thread pool, so two concurrent requests can
+    reach ``get`` in either order; keying by URL keeps each planned PDF's
+    response deterministic regardless of thread scheduling.
+    """
+
+    def __init__(self, responses: dict[str, FakeResponse]) -> None:
+        self.responses = dict(responses)
         self.urls: list[str] = []
+        self._lock = threading.Lock()
 
     def get(
         self,
@@ -32,15 +44,16 @@ class FakeTransport:
         max_response_bytes: int,
     ) -> TransportResponse:
         del headers, timeout_seconds, max_response_bytes
-        self.urls.append(url)
-        return self.responses.pop(0)
+        with self._lock:
+            self.urls.append(url)
+            return self.responses[url]
 
 
 def test_acquire_requires_exact_approval_and_writes_sanitized_receipt(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path, selected_count=1)
     output = tmp_path / "papers"
-    transport = FakeTransport([FakeResponse(200, b"%PDF-1.7\nbody", {})])
+    transport = FakeTransport({PMC999_URL: FakeResponse(200, b"%PDF-1.7\nbody", {})})
 
     receipt = PmcOaAcquisitionService(transport).acquire(
         candidates_path=candidates,
@@ -63,7 +76,7 @@ def test_acquire_requires_exact_approval_and_writes_sanitized_receipt(tmp_path: 
 def test_expected_count_mismatch_fails_before_network(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path, selected_count=1)
-    transport = FakeTransport([])
+    transport = FakeTransport({})
 
     with pytest.raises(AcquisitionError, match="expected selected count"):
         PmcOaAcquisitionService(transport).acquire(
@@ -79,7 +92,7 @@ def test_expected_count_mismatch_fails_before_network(tmp_path: Path) -> None:
 def test_boolean_selected_count_fails_before_network(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path, selected_count=True)
-    transport = FakeTransport([])
+    transport = FakeTransport({})
 
     with pytest.raises(AcquisitionError, match="selected count does not reconcile"):
         PmcOaAcquisitionService(transport).acquire(
@@ -94,7 +107,7 @@ def test_boolean_selected_count_fails_before_network(tmp_path: Path) -> None:
 def test_approval_mismatch_fails_before_network(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path, license_name="CC BY-SA")
-    transport = FakeTransport([])
+    transport = FakeTransport({})
 
     with pytest.raises(AcquisitionError, match="does not match"):
         PmcOaAcquisitionService(transport).acquire(
@@ -109,7 +122,7 @@ def test_approval_mismatch_fails_before_network(tmp_path: Path) -> None:
 def test_duplicate_pmcids_fail_before_network(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path, count=2, duplicate_pmcid=True)
     approvals = _write_approvals(tmp_path, count=2, duplicate_pmcid=True)
-    transport = FakeTransport([])
+    transport = FakeTransport({})
 
     with pytest.raises(AcquisitionError, match="duplicate PMCID"):
         PmcOaAcquisitionService(transport).acquire(
@@ -158,7 +171,7 @@ def test_unallowlisted_pdf_host_fails_before_network(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    transport = FakeTransport([])
+    transport = FakeTransport({})
 
     with pytest.raises(AcquisitionError, match="not an allowlisted"):
         PmcOaAcquisitionService(transport).acquire(
@@ -173,7 +186,7 @@ def test_unallowlisted_pdf_host_fails_before_network(tmp_path: Path) -> None:
 def test_duplicate_filenames_fail_before_network(tmp_path: Path) -> None:
     candidates = _write_candidates(tmp_path, count=2)
     approvals = _write_approvals(tmp_path, count=2, duplicate_filename=True)
-    transport = FakeTransport([])
+    transport = FakeTransport({})
 
     with pytest.raises(AcquisitionError, match="duplicate PDF filename"):
         PmcOaAcquisitionService(transport).acquire(
@@ -189,7 +202,7 @@ def test_non_pdf_payload_is_rejected_without_persisting_file(tmp_path: Path) -> 
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path)
     output = tmp_path / "papers"
-    transport = FakeTransport([FakeResponse(200, b"<html>not pdf</html>", {})])
+    transport = FakeTransport({PMC999_URL: FakeResponse(200, b"<html>not pdf</html>", {})})
 
     with pytest.raises(AcquisitionError, match="not a PDF"):
         PmcOaAcquisitionService(transport).acquire(
@@ -207,7 +220,7 @@ def test_partial_write_failure_does_not_leave_a_stray_temp_file(
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path)
     output = tmp_path / "papers"
-    transport = FakeTransport([FakeResponse(200, b"%PDF-1.7\nbody", {})])
+    transport = FakeTransport({PMC999_URL: FakeResponse(200, b"%PDF-1.7\nbody", {})})
 
     original_write_bytes = Path.write_bytes
 
@@ -233,7 +246,7 @@ def test_non_success_status_is_reported_with_status_code_and_locator(tmp_path: P
     candidates = _write_candidates(tmp_path)
     approvals = _write_approvals(tmp_path)
     output = tmp_path / "papers"
-    transport = FakeTransport([FakeResponse(403, b"forbidden", {})])
+    transport = FakeTransport({PMC999_URL: FakeResponse(403, b"forbidden", {})})
 
     with pytest.raises(AcquisitionError, match=r"non-success status \(403\).*approval 1.*PMC999"):
         PmcOaAcquisitionService(transport).acquire(
@@ -251,10 +264,10 @@ def test_second_download_failure_rolls_back_entire_batch(tmp_path: Path) -> None
     approvals = _write_approvals(tmp_path, count=2)
     output = tmp_path / "papers"
     transport = FakeTransport(
-        [
-            FakeResponse(200, b"%PDF-1.7\nfirst", {}),
-            FakeResponse(200, b"<html>not pdf</html>", {}),
-        ]
+        {
+            PMC999_URL: FakeResponse(200, b"%PDF-1.7\nfirst", {}),
+            PMC1000_URL: FakeResponse(200, b"<html>not pdf</html>", {}),
+        }
     )
 
     with pytest.raises(AcquisitionError, match="not a PDF"):
@@ -272,10 +285,10 @@ def test_non_success_status_locator_uses_failing_approvals_ordinal(tmp_path: Pat
     approvals = _write_approvals(tmp_path, count=2)
     output = tmp_path / "papers"
     transport = FakeTransport(
-        [
-            FakeResponse(200, b"%PDF-1.7\nfirst", {}),
-            FakeResponse(503, b"unavailable", {}),
-        ]
+        {
+            PMC999_URL: FakeResponse(200, b"%PDF-1.7\nfirst", {}),
+            PMC1000_URL: FakeResponse(503, b"unavailable", {}),
+        }
     )
 
     with pytest.raises(AcquisitionError, match=r"non-success status \(503\).*approval 2.*PMC1000"):
@@ -294,7 +307,7 @@ def test_existing_output_fails_before_network(tmp_path: Path) -> None:
     output = tmp_path / "papers"
     output.mkdir()
     (output / "PMC999.pdf").write_bytes(b"existing")
-    transport = FakeTransport([])
+    transport = FakeTransport({})
 
     with pytest.raises(AcquisitionError, match="already exists"):
         PmcOaAcquisitionService(transport).acquire(
@@ -304,6 +317,58 @@ def test_existing_output_fails_before_network(tmp_path: Path) -> None:
         )
 
     assert transport.urls == []
+
+
+def test_downloads_run_concurrently_up_to_the_bound(tmp_path: Path) -> None:
+    candidates = _write_candidates(tmp_path, count=2)
+    approvals = _write_approvals(tmp_path, count=2)
+    output = tmp_path / "papers"
+    # A 2-party barrier only releases once both PDF requests are in flight at
+    # the same time; a sequential (non-concurrent) implementation would leave
+    # one thread waiting alone and time out, failing this test.
+    barrier = threading.Barrier(2, timeout=5)
+
+    class BarrierTransport:
+        def __init__(self) -> None:
+            self.urls: list[str] = []
+            self._lock = threading.Lock()
+
+        def get(
+            self,
+            *,
+            url: str,
+            headers: Mapping[str, str],
+            timeout_seconds: float,
+            max_response_bytes: int,
+        ) -> TransportResponse:
+            del headers, timeout_seconds, max_response_bytes
+            with self._lock:
+                self.urls.append(url)
+            barrier.wait()
+            body = b"%PDF-1.7\nfirst" if url == PMC999_URL else b"%PDF-1.7\nsecond"
+            return FakeResponse(200, body, {})
+
+    transport = BarrierTransport()
+
+    receipt = PmcOaAcquisitionService(transport, max_concurrent_downloads=2).acquire(
+        candidates_path=candidates,
+        approvals_path=approvals,
+        output_directory=output,
+    )
+
+    assert receipt.acquired_count == 2
+    assert {item.pmcid for item in receipt.items} == {"PMC999", "PMC1000"}
+    # Receipt/staging order must stay deterministic (plan order) even though
+    # the two downloads completed on different threads in unpredictable order.
+    assert [item.pmcid for item in receipt.items] == ["PMC999", "PMC1000"]
+
+
+def test_max_concurrent_downloads_must_be_at_least_one() -> None:
+    with pytest.raises(ValueError, match="at least 1"):
+        PmcOaAcquisitionService(FakeTransport({}), max_concurrent_downloads=0)
+
+    with pytest.raises(ValueError, match="at least 1"):
+        PmcOaAcquisitionService(FakeTransport({}), max_concurrent_downloads=True)
 
 
 def _write_candidates(
