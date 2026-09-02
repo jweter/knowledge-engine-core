@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import tomllib
 from pathlib import Path
-from typing import Any
 
 VECTOR_ONLY_DEPENDENCIES = frozenset(
     {
@@ -27,7 +26,7 @@ VECTOR_ONLY_DEPENDENCIES = frozenset(
 
 
 def research_runtime_requirements(pyproject_path: Path) -> tuple[str, ...]:
-    """Return PEP 508-ish pip requirements for the slim Research runtime.
+    """Return pip requirement strings for the slim Research runtime.
 
     Only the four Phase-3/vector dependencies are excluded. Every other declared
     main dependency must have a string constraint that this module can translate;
