@@ -507,6 +507,25 @@ ProcessStartupTimingOutputOption = Annotated[
         ),
     ),
 ]
+ProcessStartupTimingGeneratorOption = Annotated[
+    str | None,
+    typer.Option(
+        "--generator",
+        help=(
+            "Optionally also measure how long the named embedding generator "
+            "('local' or 'openai') takes to become ready to embed -- for "
+            "'local', this is the sentence-transformers model load cost, "
+            "issue #433 item 1's other named bottleneck -- timed "
+            "independently of the import/database costs above. Omitted by "
+            "default: loading a local model has a real one-time cost, and "
+            "'openai' requires KE_OPENAI_API_KEY."
+        ),
+    ),
+]
+ProcessStartupTimingModelOption = Annotated[
+    str | None,
+    typer.Option("--model", help="Override --generator's default model name."),
+]
 SnowballSeedsOption = Annotated[
     str,
     typer.Option(
@@ -5850,6 +5869,8 @@ def general_question_acquisition_plan(
 @app.command("process-startup-timing")
 def process_startup_timing(
     output: ProcessStartupTimingOutputOption = None,
+    generator: ProcessStartupTimingGeneratorOption = None,
+    model: ProcessStartupTimingModelOption = None,
 ) -> None:
     """Measure this invocation's own `ke` startup cost (issue #433 item 1).
 
@@ -5857,14 +5878,32 @@ def process_startup_timing(
     command pays a fixed process-startup cost (module imports plus Typer
     argument parsing) and, for most commands, a separate local-database-open
     cost before any of its own retrieval/search/acquisition work begins.
-    This command measures only those two costs, timed independently of each
+    This command measures those two costs, timed independently of each
     other and of any command's own `duration_ms`, so a persistent-host
     redesign decision can be based on real elapsed time rather than a guess.
     `--output <path.json>` additionally saves the full
     `ProcessStartupTiming.to_dict()` for a programmatic caller.
+
+    `--generator local|openai` (with optional `--model`) additionally
+    measures how long that embedding generator takes to become ready to
+    embed -- for `local`, the `sentence-transformers` model load cost,
+    issue #433 item 1's other named bottleneck. This is opt-in: unlike
+    process/database startup, every `ke` invocation does not pay this cost,
+    and measuring it has a real one-time cost of its own (a local model's
+    weights, or a required `KE_OPENAI_API_KEY`).
     """
 
-    timing = measure_process_startup_timing(_local_database)
+    if model is not None and generator is None:
+        console.print("[red]--model is only used with --generator.[/red]")
+        raise typer.Exit(1)
+
+    build_embedding_generator = (
+        (lambda: _build_embedding_generator(generator, model)) if generator is not None else None
+    )
+
+    timing = measure_process_startup_timing(
+        _local_database, build_embedding_generator=build_embedding_generator
+    )
 
     if output is not None:
         _write_output(output, timing.to_json())
@@ -5873,6 +5912,11 @@ def process_startup_timing(
         f"[bold]Import to command:[/bold] {timing.import_to_command_ms}ms  "
         f"[bold]Database open:[/bold] {timing.database_open_ms}ms"
     )
+    if timing.embedding_generator_ready_ms is not None:
+        console.print(
+            f"[bold]Embedding generator ready:[/bold] {timing.embedding_generator_ready_ms}ms "
+            f"({timing.embedding_generator_model_id})"
+        )
 
 
 @app.command("general-question-acquire-pmc")

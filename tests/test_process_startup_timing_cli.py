@@ -28,6 +28,21 @@ def _build_database(tmp_path: Path) -> Database:
     )
 
 
+class _FakeEmbeddingGenerator:
+    """Minimal `EmbeddingGenerator` double -- no real model load or network call."""
+
+    @property
+    def model_id(self) -> str:
+        return "fake:test-v1"
+
+    @property
+    def dimension(self) -> int:
+        return 2
+
+    def generate(self, text: str) -> tuple[float, ...]:
+        return (1.0, 0.0)
+
+
 def test_cli_prints_both_timings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     database = _build_database(tmp_path)
     monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
@@ -73,3 +88,69 @@ def test_cli_uses_the_injected_database_builder(
 
     assert result.exit_code == 0, result.output
     assert calls == 1
+
+
+def test_cli_omits_embedding_generator_timing_by_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    output_path = tmp_path / "timing.json"
+
+    result = CliRunner().invoke(app, ["process-startup-timing", "--output", str(output_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "Embedding generator ready" not in _unwrapped(result.output)
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["embedding_generator_ready_ms"] is None
+    assert payload["embedding_generator_model_id"] is None
+
+
+def test_cli_measures_embedding_generator_when_requested(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    calls: list[tuple[str, str | None]] = []
+
+    def fake_build_embedding_generator(generator: str, model: str | None) -> object:
+        calls.append((generator, model))
+        return _FakeEmbeddingGenerator()
+
+    monkeypatch.setattr(entrypoint, "_build_embedding_generator", fake_build_embedding_generator)
+    output_path = tmp_path / "timing.json"
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "process-startup-timing",
+            "--generator",
+            "local",
+            "--model",
+            "custom-model",
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls == [("local", "custom-model")]
+    unwrapped = _unwrapped(result.output)
+    assert "Embedding generator ready:" in unwrapped
+    assert "fake:test-v1" in unwrapped
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["embedding_generator_ready_ms"] >= 0
+    assert payload["embedding_generator_model_id"] == "fake:test-v1"
+
+
+def test_cli_rejects_model_without_generator(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    result = CliRunner().invoke(app, ["process-startup-timing", "--model", "custom-model"])
+
+    assert result.exit_code == 1
+    assert "--model is only used with --generator" in _unwrapped(result.output)

@@ -9,23 +9,27 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **New `ke process-startup-timing` command (issue #433, item 1)**: measures
-  one `ke` invocation's own fixed overhead, split into two independently
-  timed costs neither folded into any command's own `duration_ms`:
+- **New `ke process-startup-timing` command (issue #433, item 1, now
+  complete)**: measures one `ke` invocation's own fixed overhead.
   `import_to_command_ms` (elapsed time from `knowledge_engine`'s own package
   import -- the earliest point this process's code can observe, captured
   once at import time -- to the command running, i.e. every submodule
   import the `ke` command surface needs plus Typer's argument parsing and
   dispatch) and `database_open_ms` (constructing and initializing the local
-  `Database` -- schema/index readiness -- kept separate from startup and
-  from a command's own retrieval/search/acquisition work). `--output
+  `Database` -- schema/index readiness) are always measured, independently
+  of each other and of a command's own `duration_ms`. New optional
+  `--generator local|openai [--model <name>]` additionally measures
+  `embedding_generator_ready_ms`/`embedding_generator_model_id` -- for
+  `local`, the `sentence-transformers` model-load cost, item 1's other
+  named bottleneck (forced by reading the built generator's `dimension`
+  property); `openai`'s `dimension` is a fixed local lookup, so it reports
+  near-zero by design. Opt-in, since unlike the two costs above not every
+  invocation pays it and measuring it has a real cost of its own. `--output
   <path.json>` saves `ProcessStartupTiming.to_dict()` for a programmatic
   caller such as `knowledge-engine-ai`, giving issue #433's "AI currently
   invokes Core through `ke` subprocesses" persistent-host decision real
-  elapsed-time data instead of a guess. This addresses the process-startup
-  half of item 1; the model-load half (e.g. `ke vector-search`'s
-  sentence-transformers embedding model) remains unaddressed follow-up
-  work, as does item 4 (bounded-concurrency acquisition throughput).
+  elapsed-time data instead of a guess. Item 4 (bounded-concurrency
+  acquisition throughput) remains the last unaddressed item on issue #433.
 
 - **Federated-provider latency instrumentation (issue #433)**:
   `ProviderStatus.latency_ms` (`federated_discovery.py`) already existed and

@@ -522,24 +522,33 @@ itself, but may need to trigger for a specific paper):**
   `research_question_id` mismatch against the persisted run each exit `1`
   with a plain console error, never a stack trace or a silently-adjusted
   plan.
-- `ke process-startup-timing [--output <path.json>]` (issue #433 item 1,
-  `process_startup_timing.py`): measures one `ke` invocation's own fixed
-  overhead as two independently timed costs, neither folded into any
-  command's own `duration_ms`: `import_to_command_ms` (elapsed time from
-  `knowledge_engine`'s own package import -- the earliest point this
-  process's code can observe, captured once at import time as
-  `knowledge_engine._PACKAGE_IMPORT_MONOTONIC` -- to this command running,
-  covering every submodule import the `ke` command surface needs plus
-  Typer's argument parsing and dispatch) and `database_open_ms`
+- `ke process-startup-timing [--output <path.json>] [--generator local|openai
+  [--model <name>]]` (issue #433 item 1, `process_startup_timing.py`):
+  measures one `ke` invocation's own fixed overhead. `import_to_command_ms`
+  (elapsed time from `knowledge_engine`'s own package import -- the
+  earliest point this process's code can observe, captured once at import
+  time as `knowledge_engine._PACKAGE_IMPORT_MONOTONIC` -- to this command
+  running, covering every submodule import the `ke` command surface needs
+  plus Typer's argument parsing and dispatch) and `database_open_ms`
   (constructing and initializing the local `Database` -- schema/index
-  readiness -- timed separately from startup and from a command's own
-  retrieval/search/acquisition work). `--output <path.json>` saves
+  readiness) are always measured, independently of each other and of any
+  command's own `duration_ms`. `--generator` additionally, and only when
+  given, measures `embedding_generator_ready_ms`/
+  `embedding_generator_model_id`: the time `_build_embedding_generator`'s
+  returned generator takes to become ready to embed (its `dimension`
+  property is read to force it) -- for `local`, this is the
+  `sentence-transformers` model-load cost, item 1's other named bottleneck;
+  for `openai`, `dimension` is a fixed local lookup with no comparable
+  cost, so this reports near-zero for it by design. Opt-in because,
+  unlike the two costs above, not every invocation pays it and measuring it
+  has a real cost of its own (a local model's weights, or a required
+  `KE_OPENAI_API_KEY`). `--output <path.json>` saves
   `ProcessStartupTiming.to_dict()` for a programmatic caller such as
   `knowledge-engine-ai`, which invokes Core only through `ke` subprocesses
   -- the data issue #433 asks for so a persistent-host redesign decision
-  can be made from real elapsed time. Addresses the process-startup half
-  of item 1 only; the model-load half (e.g. `ke vector-search`'s
-  sentence-transformers embedding model) is unaddressed follow-up work.
+  can be made from real elapsed time. This closes item 1 in full; item 4
+  (bounded-concurrency acquisition throughput) remains unaddressed
+  follow-up work.
 - **`ProviderObservation` publication-status fields (FRD-5 follow-up):**
   `knowledge_engine.federated_discovery.ProviderObservation` -- and its
   ledger mirror, `federated_search_ledger.CandidateObservationRecord` --
