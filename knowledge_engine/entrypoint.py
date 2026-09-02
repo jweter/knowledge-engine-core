@@ -179,6 +179,7 @@ from knowledge_engine.pmc_acquisition import (
     AcquisitionTransport,
     PmcOaAcquisitionService,
 )
+from knowledge_engine.process_startup_timing import measure_process_startup_timing
 from knowledge_engine.pubchem_http import UrllibPubchemTransport
 from knowledge_engine.pubchem_lookup import GetTransport as PubchemLookupGetTransport
 from knowledge_engine.pubchem_lookup import (
@@ -491,6 +492,18 @@ GeneralQuestionAcquisitionNoDatabaseOption = Annotated[
             "Skip the local already-indexed lookup (DOI/PMID/arXiv ID against the "
             "persisted corpus) and report every resolved candidate purely against "
             "the search-run snapshot, ignoring what Core has already acquired."
+        ),
+    ),
+]
+ProcessStartupTimingOutputOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--output",
+        help=(
+            "Optional path to also save this invocation's startup timing "
+            "(ProcessStartupTiming.to_dict()) as JSON, for a programmatic "
+            "caller -- e.g. knowledge-engine-ai -- rather than parsing the "
+            "console line."
         ),
     ),
 ]
@@ -5832,6 +5845,34 @@ def general_question_acquisition_plan(
         _write_output(output, plan.to_json())
 
     _print_acquisition_plan(plan)
+
+
+@app.command("process-startup-timing")
+def process_startup_timing(
+    output: ProcessStartupTimingOutputOption = None,
+) -> None:
+    """Measure this invocation's own `ke` startup cost (issue #433 item 1).
+
+    `knowledge-engine-ai` invokes Core through `ke` subprocesses; every
+    command pays a fixed process-startup cost (module imports plus Typer
+    argument parsing) and, for most commands, a separate local-database-open
+    cost before any of its own retrieval/search/acquisition work begins.
+    This command measures only those two costs, timed independently of each
+    other and of any command's own `duration_ms`, so a persistent-host
+    redesign decision can be based on real elapsed time rather than a guess.
+    `--output <path.json>` additionally saves the full
+    `ProcessStartupTiming.to_dict()` for a programmatic caller.
+    """
+
+    timing = measure_process_startup_timing(_local_database)
+
+    if output is not None:
+        _write_output(output, timing.to_json())
+
+    console.print(
+        f"[bold]Import to command:[/bold] {timing.import_to_command_ms}ms  "
+        f"[bold]Database open:[/bold] {timing.database_open_ms}ms"
+    )
 
 
 @app.command("general-question-acquire-pmc")
