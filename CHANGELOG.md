@@ -9,6 +9,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Federated-provider latency instrumentation (issue #433)**:
+  `ProviderStatus.latency_ms` (`federated_discovery.py`) already existed and
+  was already persisted by `FederatedSearchLedger`, but every provider
+  adapter (Semantic Scholar, OpenAlex, arXiv, PubMed, Crossref, Europe PMC)
+  left it unset, so the field was always `null` in practice.
+  `FederatedDiscoveryBroker._search_provider` -- the one chokepoint every
+  provider attempt already passes through regardless of adapter -- now
+  times each attempt with `time.monotonic()` and fills `latency_ms` in only
+  when the returned status left it unset, so a future adapter that measures
+  its own sub-attempt timing is unaffected. Skipped/disabled providers
+  (`attempted=False`) are never timed, since the broker did no real work for
+  them to measure. `ProviderOutcome.RATE_LIMITED` was already reported by
+  real adapters, so this closes the specific verified gap in issue #433's
+  item 2 (federated-provider latency/degradation): elapsed time per attempt
+  is now real, non-null data end to end (broker -> ledger ->
+  `ke federated-coverage-report`). An explicit retry-attempt count and a
+  cache/reuse-hit flag remain unaddressed follow-up work for item 2, as do
+  items 1 (CLI/process-startup cost), 4 (bounded-concurrency acquisition
+  throughput), and 6 (re-retrieval readiness).
+
 - **Candidate-funnel timing instrumentation (issue #433)**: `ke
   general-question-acquisition-plan`'s `GeneralQuestionAcquisitionPlan` now
   reports `duration_ms` -- the wall time of `build_acquisition_plan()`
