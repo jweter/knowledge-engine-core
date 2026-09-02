@@ -92,23 +92,46 @@ The normal `poetry install` / `ke` installation is unchanged and still receives 
 
 CI now constructs that lean runtime in a fresh virtual environment, asserts that `faiss`, `torch`, `sentence_transformers`, and `qdrant_client` are genuinely absent, runs `ke-research research-runtime-capabilities`, requires `complete == true` and `missing_commands == []`, and then requires every command in the manifest to answer `--help`. This is an installation-level gate, not merely an import-unit-test claim.
 
+## Persistent Core operational workspace
+
+Hosted Research needs a writable Core database with the complete schema and paper-page state; Web's trimmed read-oriented alpha snapshot is not sufficient for acquisition, extraction, grounding, promotion, and reuse.
+
+`ke-research-workspace` is the additive deployment bootstrap for that state. It requires both a persistent writable directory and an explicit corpus-library seed snapshot:
+
+```text
+ke-research-workspace \
+  --workspace /var/data/knowledge-engine \
+  --snapshot data/corpus_library/obesity_metabolic_disease_library.sqlite3.gz
+```
+
+The bootstrap:
+
+- initializes and verifies the full current Core schema in `<workspace>/knowledge_engine.sqlite3`;
+- imports the existing corpus-library snapshot through Core's established idempotent content-hash import path, including page text and search-index population;
+- restores embedded EvidenceRecords into `<workspace>/evidence_records.jsonl` by `evidence_record_id` when the snapshot carries them;
+- creates an empty evidence JSONL when an older snapshot contains no embedded evidence so downstream paths have a stable writable location;
+- preserves papers and evidence acquired after the initial seed because repeated bootstrap runs merge/dedupe rather than replace the persistent workspace; and
+- emits a machine-readable JSON summary containing imported/skipped paper and evidence counts plus the resulting total paper count.
+
+The command does not provision a persistent disk. Deployment configuration still has to mount durable storage at the chosen workspace path; otherwise the process will honestly rebuild ephemeral state on each redeploy.
+
 ## Hosted deployment gates
 
-The import/dependency boundary is now covered by two independent regressions:
+The import/dependency boundary is covered by two independent regressions:
 
 1. `tests/test_research_command_surface.py::test_slim_runtime_import_does_not_require_phase3_vector_modules` poisons `faiss`, `torch`, `sentence_transformers`, `qdrant_client`, and `knowledge_engine.vector_search` in a fresh subprocess interpreter and proves that importing `knowledge_engine.research_runtime` does not touch them.
 2. the `Slim Research runtime install` CI job creates an actual isolated environment without those packages and proves that the complete Research command manifest is still executable.
 
-Three distinct gates remain before hosted Web can truthfully expose full Research:
+The persistent-workspace bootstrap has its own deterministic regression coverage for initial seed, repeated idempotent reconciliation, EvidenceRecord deduplication, and fail-closed missing-snapshot behavior.
 
-1. **Persistent Core operational workspace.** The Web alpha's trimmed read-oriented SQLite snapshot is not sufficient. Hosted Core needs a writable database with the complete schema and paper-page state required for acquisition, extraction, grounding, promotion, and reuse.
-2. **Web adoption contract.** Web must install this lean runtime and point `KE_WEB_KE_EXECUTABLE` at its `ke-research` executable; Web's own hosted command preflight remains an independent fail-closed guard.
-3. **Inference boundary.** `evidence-review-automate` and final narration still require a configured, reachable model endpoint. Command completeness and lean packaging do not make that endpoint exist.
+Two distinct software gates remain before hosted Web can truthfully expose full Research, plus one infrastructure requirement:
 
-Durable session/discovery/paper storage remains part of the deployment contract as well: declaring `/var/data` paths in a hosting blueprint does not provision a persistent disk.
+1. **Web adoption contract.** Web must install this lean runtime, point `KE_WEB_KE_EXECUTABLE` at its `ke-research` executable, and configure all Core research-session/discovery/evidence paths inside the persistent workspace. Web's own hosted command preflight remains an independent fail-closed guard.
+2. **Inference boundary.** `evidence-review-automate` and final narration still require a configured, reachable model endpoint. Command completeness and lean packaging do not make that endpoint exist.
+3. **Real persistent mount.** The host must provision durable storage at the workspace path. Declaring `/var/data` paths in a blueprint without an attached disk is not persistence.
 
 ## Next slice
 
-The next highest-value hosted slice is the **persistent Core operational workspace**. It should define a deterministic bootstrap/seed procedure that starts from the committed public snapshot, initializes the full writable Core schema, preserves the existing indexed evidence and source metadata, and creates a persistent location where newly acquired paper/page state can survive subsequent research sessions and redeploys.
+The next dependency-safe hosted slice is **Web adoption of the tested Core runtime/workspace contract**. Core now has both the lean `ke-research` install path and a deterministic writable-workspace bootstrap, so the Web repository can install the slim runtime, bind its research paths to one persistent mount, and retain its existing fail-closed capability checks.
 
-Only after that workspace, Web's `ke-research` adoption, a real persistent mount, and reachable inference all pass their own capability probes should the public hosted Ask experience claim full Research capability.
+Only after Web adoption, a real persistent mount, and reachable inference all pass their own capability probes should the public hosted Ask experience claim full Research capability.

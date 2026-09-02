@@ -44,6 +44,8 @@ ke = "knowledge_engine.command_surface:app"
 # capability-gated until `research-runtime-capabilities` reports complete=true.
 # The normal `ke` interface remains unchanged.
 ke-research = "knowledge_engine.research_runtime:app"
+# Deployment bootstrap for a persistent, writable hosted Research workspace.
+ke-research-workspace = "knowledge_engine.research_workspace:main"
 ke-drive-backup-pilot = "knowledge_engine.drive_backup_pilot:main"
 ke-corpus-pdf-backup = "knowledge_engine.corpus_pdf_backup:main"
 ke-corpus-library-drive-backup = "knowledge_engine.corpus_library_drive_backup:main"
