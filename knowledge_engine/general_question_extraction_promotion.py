@@ -211,19 +211,25 @@ def _write_rejection_records(
 
 
 def _count_evidence_records(evidence_output_path: Path) -> int:
-    """Count valid Evidence Records currently in `evidence_output_path`.
+    """Count only schema-valid Evidence Records in `evidence_output_path`.
 
-    Mirrors the same tolerant line-by-line parsing
-    `cli._promote_evidence_records` already uses to detect pre-existing
-    `evidence_record_id`s: a blank line, invalid JSON, or a non-object line
-    is skipped rather than raised, since this is a read-only count, not a
-    validation pass -- `ke evidence-validate` remains the sole correctness
-    gate. Returns 0 when the file does not exist yet (no record has ever
-    been promoted to it).
+    A "ready to re-retrieve" count must not include a record downstream
+    validation would reject -- Core prefers missing data over invented
+    metadata, so an unusable record must never inflate this signal. Reuses
+    `cli._validate_evidence_record` -- the exact per-record gate
+    `_promote_evidence_records` itself already applies with
+    `require_review_fields=True` -- against each line, tracking
+    `seen_ids` across the whole file so a duplicate/malformed
+    `evidence_record_id` is not double-counted either. A blank line,
+    invalid JSON, or non-object line is skipped, not raised, since this is
+    a read-only count, not the correctness gate itself -- `ke
+    evidence-validate` remains that. Returns 0 when the file does not
+    exist yet (no record has ever been promoted to it).
     """
 
     if not evidence_output_path.exists():
         return 0
+    seen_ids: set[str] = set()
     count = 0
     for line in evidence_output_path.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
@@ -233,7 +239,13 @@ def _count_evidence_records(evidence_output_path: Path) -> int:
             record = json.loads(stripped)
         except json.JSONDecodeError:
             continue
-        if isinstance(record, dict) and isinstance(record.get("evidence_record_id"), str):
+        if not isinstance(record, dict):
+            continue
+        record_errors: list[str] = []
+        cli._validate_evidence_record(
+            record, 0, seen_ids, record_errors, require_review_fields=True
+        )
+        if not record_errors:
             count += 1
     return count
 
@@ -386,6 +398,8 @@ def run_general_question_extraction_and_promotion(
         rejections=rejections,
     )
 
+    evidence_store_record_count = _count_evidence_records(evidence_output_path)
+
     return GeneralQuestionExtractionPromotionSummary(
         schema_version=GENERAL_QUESTION_EXTRACTION_PROMOTION_RULES_VERSION,
         search_run_id=search_run_id,
@@ -399,7 +413,7 @@ def run_general_question_extraction_and_promotion(
         duration_ms=round((time.monotonic() - run_started) * 1000),
         extraction_duration_ms=extraction_duration_ms,
         promotion_duration_ms=promotion_duration_ms,
-        evidence_store_record_count=_count_evidence_records(evidence_output_path),
+        evidence_store_record_count=evidence_store_record_count,
     )
 
 

@@ -7,6 +7,7 @@ from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.general_question_extraction_promotion import (
     GENERAL_QUESTION_EXTRACTION_PROMOTION_RULES_VERSION,
+    _count_evidence_records,
     extraction_rejection_record_path,
     run_general_question_extraction_and_promotion,
 )
@@ -347,6 +348,48 @@ def test_evidence_store_record_count_accumulates_across_receipts(tmp_path: Path)
     assert second.evidence_store_record_count == first.evidence_store_record_count + (
         second.promoted_count
     )
+
+
+def test_evidence_store_record_count_excludes_malformed_and_duplicate_lines(
+    tmp_path: Path,
+) -> None:
+    """A record `ke evidence-validate` would reject must never inflate the
+    readiness signal -- Core prefers missing data over invented metadata, so
+    a transported/hand-edited/malformed line must not look like new,
+    usable evidence became available.
+    """
+
+    database = _database(tmp_path)
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(
+            _parsed_paper(tmp_path, "a" * 64, title="Rich Paper", text=_RICH_TEXT)
+        )
+        paper_id = paper.id
+
+    receipt_path = _receipt(tmp_path, name="receipt.json", paper_ids=[(paper_id, "persisted")])
+    evidence_path = tmp_path / "evidence.jsonl"
+    with database.session() as session:
+        summary = run_general_question_extraction_and_promotion(
+            session, receipt_path=receipt_path, evidence_output_path=evidence_path
+        )
+    genuinely_valid_count = summary.promoted_count
+    assert genuinely_valid_count >= 1
+    valid_record = json.loads(evidence_path.read_text(encoding="utf-8").splitlines()[0])
+
+    missing_required_field_record = {
+        "schema_version": 1,
+        "evidence_record_id": "auto-malformed-1",
+        "review_status": "draft",
+        "review_checklist": {},
+        "review_notes": "",
+        # Missing source_doi/source_title/claim_text/research_question/etc.
+    }
+    duplicate_id_record = dict(valid_record)  # Same evidence_record_id as valid_record.
+    with evidence_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(missing_required_field_record) + "\n")
+        handle.write(json.dumps(duplicate_id_record) + "\n")
+
+    assert _count_evidence_records(evidence_path) == genuinely_valid_count
 
 
 def test_ignores_receipt_items_that_are_not_persisted_or_reused(tmp_path: Path) -> None:
