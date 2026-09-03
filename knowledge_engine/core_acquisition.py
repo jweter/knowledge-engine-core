@@ -12,6 +12,7 @@ import hashlib
 import os
 import re
 from collections.abc import Mapping
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from email.message import Message
 from http.client import HTTPMessage
@@ -201,10 +202,14 @@ class CoreOaAcquisitionService:
         *,
         timeout_seconds: float = 30.0,
         max_pdf_bytes: int = 100_000_000,
+        max_concurrent_downloads: int = 4,
     ) -> None:
+        if isinstance(max_concurrent_downloads, bool) or max_concurrent_downloads < 1:
+            raise ValueError("max_concurrent_downloads must be at least 1.")
         self.transport = transport
         self.timeout_seconds = timeout_seconds
         self.max_pdf_bytes = max_pdf_bytes
+        self.max_concurrent_downloads = max_concurrent_downloads
 
     def acquire(
         self,
@@ -273,42 +278,69 @@ class CoreOaAcquisitionService:
         committed: list[Path] = []
         attempted_temp_paths: list[Path] = []
         try:
-            for ordinal, approval in enumerate(approvals, start=1):
+            # Each approved PDF is an independent, already license/approval-gated
+            # network fetch, so bound-concurrency downloading them shortens
+            # acquisition wall-clock time without changing what gets approved.
+            # Only a sliding window of at most max_workers downloads is ever
+            # in flight or holding a completed body in memory at once. Results
+            # are still consumed in deterministic approval order below, so
+            # staging, receipt ordering, and failure-ordinal reporting are
+            # identical to a sequential fetch.
+            max_workers = min(self.max_concurrent_downloads, len(approvals))
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                in_flight: dict[int, Future[TransportResponse]] = {}
+
+                def _submit(index: int) -> None:
+                    approval = approvals[index]
+                    in_flight[index] = executor.submit(
+                        self._get_pdf, approval.pdf_url, ordinal=index + 1
+                    )
+
+                for index in range(max_workers):
+                    _submit(index)
+                next_unsubmitted = max_workers
+
                 try:
-                    response = self.transport.get(
-                        url=approval.pdf_url,
-                        headers=DEFAULT_HEADERS,
-                        timeout_seconds=self.timeout_seconds,
-                        max_response_bytes=self.max_pdf_bytes,
-                    )
-                except (OSError, TimeoutError) as exc:
-                    raise CoreAcquisitionError(
-                        f"CORE PDF request failed for approval {ordinal}."
-                    ) from exc
-                if response.status_code != 200:
-                    raise CoreAcquisitionError(
-                        f"CORE PDF request returned a non-success status ({response.status_code})."
-                    )
-                if not response.body.startswith(PDF_SIGNATURE):
-                    raise CoreAcquisitionError("CORE resource was not a PDF payload.")
-                temporary = output_directory / f".{approval.filename}.tmp"
-                destination = output_directory / approval.filename
-                attempted_temp_paths.append(temporary)
-                temporary.write_bytes(response.body)
-                staged.append(
-                    (
-                        temporary,
-                        destination,
-                        CoreAcquisitionReceiptItem(
-                            core_id=approval.core_id,
-                            doi=normalize_doi(approval.doi),
-                            license=approval.license,
-                            filename=approval.filename,
-                            byte_count=len(response.body),
-                            sha256=hashlib.sha256(response.body).hexdigest(),
-                        ),
-                    )
-                )
+                    for index, approval in enumerate(approvals):
+                        response = in_flight.pop(index).result()
+                        if not response.body.startswith(PDF_SIGNATURE):
+                            raise CoreAcquisitionError("CORE resource was not a PDF payload.")
+                        temporary = output_directory / f".{approval.filename}.tmp"
+                        destination = output_directory / approval.filename
+                        attempted_temp_paths.append(temporary)
+                        temporary.write_bytes(response.body)
+                        staged.append(
+                            (
+                                temporary,
+                                destination,
+                                CoreAcquisitionReceiptItem(
+                                    core_id=approval.core_id,
+                                    doi=normalize_doi(approval.doi),
+                                    license=approval.license,
+                                    filename=approval.filename,
+                                    byte_count=len(response.body),
+                                    sha256=hashlib.sha256(response.body).hexdigest(),
+                                ),
+                            )
+                        )
+                        # Only refill the submission window after the current
+                        # response body is fully consumed -- submitting the
+                        # next download before that point could leave
+                        # max_concurrent_downloads new bodies in flight
+                        # alongside this one still being processed, exceeding
+                        # the documented in-memory bound by one. Drop this
+                        # loop's own reference first so the just-staged body
+                        # is not itself an extra body held alongside the
+                        # newly submitted download's eventual response
+                        # (Codex review, PR #459).
+                        del response
+                        if next_unsubmitted < len(approvals):
+                            _submit(next_unsubmitted)
+                            next_unsubmitted += 1
+                finally:
+                    for pending in in_flight.values():
+                        pending.cancel()
+
             for temporary, destination, _ in staged:
                 os.replace(temporary, destination)
                 committed.append(destination)
@@ -324,6 +356,22 @@ class CoreOaAcquisitionService:
             acquired_count=len(staged),
             items=tuple(item for _, _, item in staged),
         )
+
+    def _get_pdf(self, url: str, *, ordinal: int) -> TransportResponse:
+        try:
+            response = self.transport.get(
+                url=url,
+                headers=DEFAULT_HEADERS,
+                timeout_seconds=self.timeout_seconds,
+                max_response_bytes=self.max_pdf_bytes,
+            )
+        except (OSError, TimeoutError) as exc:
+            raise CoreAcquisitionError(f"CORE PDF request failed for approval {ordinal}.") from exc
+        if response.status_code != 200:
+            raise CoreAcquisitionError(
+                f"CORE PDF request returned a non-success status ({response.status_code})."
+            )
+        return response
 
 
 def _rollback(temporaries: list[Path], committed: list[Path]) -> None:

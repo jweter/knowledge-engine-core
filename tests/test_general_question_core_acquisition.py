@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from collections.abc import Mapping
 from hashlib import sha256
 from pathlib import Path
@@ -276,6 +277,88 @@ def test_core_service_rejects_non_pdf_and_rolls_back(tmp_path: Path) -> None:
             output_directory=tmp_path / "papers",
         )
     assert not (tmp_path / "papers" / "core-123.pdf").exists()
+
+
+def test_core_downloads_run_concurrently_up_to_the_bound(tmp_path: Path) -> None:
+    url_a = "https://core.ac.uk/download/123.pdf"
+    url_b = "https://core.ac.uk/download/456.pdf"
+    candidate_a = _candidate(pdf_url=url_a)
+    candidate_b = CoreCandidate(
+        core_id="456",
+        doi="10.1000/other",
+        title="Other work from CORE",
+        abstract=None,
+        authors=(),
+        publication_year=2025,
+        venue=None,
+        document_type="article",
+        pdf_url=url_b,
+        pdf_host="core.ac.uk",
+        source_fulltext_urls=(),
+    )
+    approval_a = CoreAcquisitionApproval(
+        core_id="123",
+        doi="10.1000/creatine",
+        license="cc by",
+        pdf_url=url_a,
+        filename="core-123.pdf",
+    )
+    approval_b = CoreAcquisitionApproval(
+        core_id="456",
+        doi="10.1000/other",
+        license="cc by",
+        pdf_url=url_b,
+        filename="core-456.pdf",
+    )
+
+    # A 2-party barrier only releases once both PDF requests are in flight at
+    # the same time; a sequential (non-concurrent) implementation would leave
+    # one thread waiting alone and time out, failing this test.
+    barrier = threading.Barrier(2, timeout=5)
+
+    class BarrierTransport:
+        def __init__(self) -> None:
+            self.urls: list[str] = []
+            self._lock = threading.Lock()
+
+        def get(
+            self,
+            *,
+            url: str,
+            headers: Mapping[str, str],
+            timeout_seconds: float,
+            max_response_bytes: int,
+        ) -> FakePdfResponse:
+            del headers, timeout_seconds, max_response_bytes
+            with self._lock:
+                self.urls.append(url)
+            barrier.wait()
+            body = b"%PDF-1.7\nfirst" if url == url_a else b"%PDF-1.7\nsecond"
+            return FakePdfResponse(body)
+
+    transport = BarrierTransport()
+    output = tmp_path / "papers"
+
+    receipt = CoreOaAcquisitionService(transport, max_concurrent_downloads=2).acquire(
+        candidates=(candidate_a, candidate_b),
+        approvals=(approval_a, approval_b),
+        output_directory=output,
+    )
+
+    assert receipt.acquired_count == 2
+    assert {item.core_id for item in receipt.items} == {"123", "456"}
+    # Receipt/staging order must stay deterministic (approval order) even
+    # though the two downloads completed on different threads in
+    # unpredictable order.
+    assert [item.core_id for item in receipt.items] == ["123", "456"]
+
+
+def test_core_max_concurrent_downloads_must_be_at_least_one() -> None:
+    with pytest.raises(ValueError, match="at least 1"):
+        CoreOaAcquisitionService(FakePdfTransport(), max_concurrent_downloads=0)
+
+    with pytest.raises(ValueError, match="at least 1"):
+        CoreOaAcquisitionService(FakePdfTransport(), max_concurrent_downloads=True)
 
 
 def test_persists_verified_core_acquisition_with_import_lineage(tmp_path: Path) -> None:

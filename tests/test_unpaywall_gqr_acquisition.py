@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
@@ -280,6 +281,80 @@ def test_acquisition_service_rejects_non_pdf_and_rolls_back(tmp_path: Path) -> N
         )
 
     assert not (tmp_path / "papers" / approval.filename).exists()
+
+
+def test_unpaywall_downloads_run_concurrently_up_to_the_bound(tmp_path: Path) -> None:
+    url_a = "https://core.ac.uk/download/123.pdf"
+    url_b = "https://pmc.ncbi.nlm.nih.gov/articles/PMC999/pdf/999.pdf"
+    resolved_a = _resolved(pdf_url=url_a)
+    resolved_b = UnpaywallResolvedPdf(
+        doi="10.1000/other",
+        landing_url="https://pmc.ncbi.nlm.nih.gov/articles/PMC999/",
+        pdf_url=url_b,
+        license="CC BY",
+        source_host="pmc.ncbi.nlm.nih.gov",
+    )
+    approval_a = UnpaywallAcquisitionApproval(
+        doi=resolved_a.doi,
+        pdf_url=resolved_a.pdf_url,
+        license=resolved_a.license,
+        filename=deterministic_pdf_filename(resolved_a.doi),
+    )
+    approval_b = UnpaywallAcquisitionApproval(
+        doi=resolved_b.doi,
+        pdf_url=resolved_b.pdf_url,
+        license=resolved_b.license,
+        filename=deterministic_pdf_filename(resolved_b.doi),
+    )
+
+    # A 2-party barrier only releases once both PDF requests are in flight at
+    # the same time; a sequential (non-concurrent) implementation would leave
+    # one thread waiting alone and time out, failing this test.
+    barrier = threading.Barrier(2, timeout=5)
+
+    class BarrierTransport:
+        def __init__(self) -> None:
+            self.urls: list[str] = []
+            self._lock = threading.Lock()
+
+        def get(
+            self,
+            *,
+            url: str,
+            headers: Mapping[str, str],
+            timeout_seconds: float,
+            max_response_bytes: int,
+        ) -> UnpaywallPdfResponse:
+            del headers, timeout_seconds, max_response_bytes
+            with self._lock:
+                self.urls.append(url)
+            barrier.wait()
+            body = b"%PDF-1.7\nfirst" if url == url_a else b"%PDF-1.7\nsecond"
+            return UnpaywallPdfResponse(status_code=200, body=body, headers={})
+
+    transport = BarrierTransport()
+    output = tmp_path / "papers"
+
+    receipt = UnpaywallOaAcquisitionService(transport, max_concurrent_downloads=2).acquire(
+        resolved=(resolved_a, resolved_b),
+        approvals=(approval_a, approval_b),
+        output_directory=output,
+    )
+
+    assert receipt.acquired_count == 2
+    assert {item.doi for item in receipt.items} == {resolved_a.doi, resolved_b.doi}
+    # Receipt/staging order must stay deterministic (approval order) even
+    # though the two downloads completed on different threads in
+    # unpredictable order.
+    assert [item.doi for item in receipt.items] == [resolved_a.doi, resolved_b.doi]
+
+
+def test_unpaywall_max_concurrent_downloads_must_be_at_least_one() -> None:
+    with pytest.raises(ValueError, match="at least 1"):
+        UnpaywallOaAcquisitionService(FakePdfTransport(), max_concurrent_downloads=0)
+
+    with pytest.raises(ValueError, match="at least 1"):
+        UnpaywallOaAcquisitionService(FakePdfTransport(), max_concurrent_downloads=True)
 
 
 def test_execute_reconciles_current_url_and_plan_license(tmp_path: Path) -> None:
