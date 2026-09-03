@@ -102,11 +102,26 @@ class PublicationStatusSignal:
 
 @dataclass(frozen=True)
 class MetadataProviderResult:
-    """Candidates and diagnostics returned by one provider lookup."""
+    """Candidates and diagnostics returned by one provider lookup.
+
+    ``retry_attempt_count``/``rate_limited_observed`` mirror
+    `federated_discovery.ProviderStatus`'s same-named fields (issue #433 item
+    2): how many bounded retries the provider's transport needed before
+    reaching this result (``0`` if the first attempt already settled it), and
+    whether any attempt observed an HTTP 429 along the way. Both default to
+    the honest "no retry happened" state so providers that do not implement
+    retries report them correctly without change.
+    """
 
     candidates: tuple[MetadataCandidate, ...] = ()
     diagnostics: tuple[ProviderDiagnostic, ...] = ()
     publication_status: PublicationStatusSignal | None = None
+    retry_attempt_count: int = 0
+    rate_limited_observed: bool = False
+
+    def __post_init__(self) -> None:
+        if self.retry_attempt_count < 0:
+            raise ValueError("MetadataProviderResult retry_attempt_count must not be negative.")
 
 
 class MetadataProvider(Protocol):

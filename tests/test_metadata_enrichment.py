@@ -39,6 +39,18 @@ def _accepts_provider(provider: MetadataProvider) -> MetadataProvider:
     return provider
 
 
+def test_metadata_provider_result_defaults_report_no_retries() -> None:
+    result = MetadataProviderResult()
+
+    assert result.retry_attempt_count == 0
+    assert result.rate_limited_observed is False
+
+
+def test_metadata_provider_result_rejects_negative_retry_attempt_count() -> None:
+    with pytest.raises(ValueError, match="retry_attempt_count must not be negative"):
+        MetadataProviderResult(retry_attempt_count=-1)
+
+
 def test_fake_provider_satisfies_contract() -> None:
     provider = _accepts_provider(FakeProvider())
 

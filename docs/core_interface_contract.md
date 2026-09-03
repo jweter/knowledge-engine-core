@@ -493,6 +493,13 @@ itself, but may need to trigger for a specific paper):**
   four adapters themselves is deliberately deferred as the next slices,
   following this repo's own established per-adapter precedent (see
   issue #433 item 4's PMC/Europe PMC/CORE/Unpaywall sequence, PRs
+  #457-#459). **Update (later session): all four have since gained the
+  same bounded-retry treatment** -- `openalex_provider.py`,
+  `arxiv_provider.py`, and `pubmed_federated_adapter.py`/its underlying
+  `pubmed_discovery.py` first, then `crossref_provider.py` last (issue
+  #433 item 2's final per-provider slice). None is single-attempt
+  anymore; every federated adapter now reports real
+  `retry_attempt_count`/`rate_limited_observed` facts.
   #457-#459).
 - `ke general-question-acquire-pmc <request.json> --ledger-root <dir>
   --papers-dir <dir> --receipt <path.json>` (CORE-GQR-4): executes only

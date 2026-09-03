@@ -130,7 +130,7 @@ These transports also use dependency-injected transport/opening seams so tests c
 - default timeout is 10 seconds;
 - default response limit is 1,000,000 bytes;
 - `404`, `429`, `5xx`, malformed JSON, oversized responses, timeouts, and transport failures are classified deterministically; and
-- retryability is represented as metadata rather than an unbounded automatic retry loop.
+- a `429`, `5xx`, timeout, or connection-level transport error is retried automatically with a bounded exponential backoff (`max_attempts=3` by default) -- never a `404`, an oversized/malformed response, or any other unsupported HTTP status; a `429`'s `Retry-After` header is honored when present but capped at `MAX_RETRY_AFTER_SECONDS` and rejected outright if non-finite, so a provider-controlled header can never make the loop block for an unbounded duration.
 
 Assessment: **strong**. This is a good reference shape for future provider clients.
 
@@ -324,9 +324,9 @@ Provider-specific hosts, response types, diagnostics, and provenance should rema
 
 The reviewed low-level transports do not implement unbounded automatic retry loops.
 
-Crossref orchestration explicitly marks selected failures as retryable (`timeout`, `429`, selected provider failures) without automatically retrying inside the transport.
+Every federated discovery provider adapter (Semantic Scholar, OpenAlex, arXiv, PubMed, Crossref) now retries a `429`, a `5xx`, a timeout, or a connection-level transport error automatically, bounded by a fixed `max_attempts` (`3` by default) with exponential backoff -- never a non-transient outcome such as a `404`, an oversized/malformed response, or any other unsupported HTTP status. Crossref's `Retry-After` handling additionally rejects non-finite values and caps a finite one at a fixed maximum, so a provider-controlled header can never make the loop block for an unbounded duration.
 
-Policy result: **acceptable**. Future retry orchestration must remain separately bounded and testable.
+Policy result: **acceptable**. Retry orchestration remains separately bounded and testable per adapter.
 
 ## 7. Host-control matrix
 
