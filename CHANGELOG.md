@@ -9,6 +9,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **arXiv retry/rate-limit tracking (issue #433, item 2)**:
+  `ArxivProvider` now retries transient failures (HTTP 429 rate-limiting
+  and provider-unavailable/connection-level errors) with a bounded
+  exponential backoff (3 attempts by default) instead of making exactly one
+  attempt -- never retrying a non-transient 4xx client error, an oversized
+  result page, or a malformed response. This applies the same
+  `max_attempts`/`retry_backoff_seconds`/`sleep` constructor parameters and
+  retry-loop structure `semantic_scholar_provider.py`/`openalex_provider.py`
+  established; no further shared-infrastructure change was needed since
+  `ProviderStatus`'s outcome-derived `rate_limited_observed` and the
+  ledger/coverage-report plumbing were already generalized across every
+  adapter by the prior Semantic Scholar slice. Unlike the other adapters,
+  the default retry backoff is arXiv's own documented minimum request
+  interval (3 seconds, per arXiv's API terms of use) rather than a shorter
+  generic default, and a 429 response's `Retry-After` header is honored
+  when it asks for longer than the computed exponential backoff (Codex
+  review finding on the initial slice).
+  `pubmed_federated_adapter.py`/`crossref_federated_adapter.py` remain
+  single-attempt and are the next natural slice.
+
 - **OpenAlex retry/rate-limit tracking (issue #433, item 2)**:
   `OpenAlexProvider` now retries transient failures (HTTP 429 rate-limiting
   and provider-unavailable/connection-level errors) with a bounded

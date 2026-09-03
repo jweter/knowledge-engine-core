@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import time
 import xml.etree.ElementTree as ET
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -32,6 +33,28 @@ _ARXIV_ID_RE = re.compile(
     r"(?:v(?P<version>[1-9]\d*))?$"
 )
 
+# Issue #433 item 2's third per-provider slice, following
+# semantic_scholar_provider.py/openalex_provider.py's established pattern: a
+# bounded, exponential-backoff retry for transient failures only.
+# `DEFAULT_MAX_ATTEMPTS` counts the *first* attempt plus every retry (3 ==
+# up to 2 retries). Retries are triggered only by outcomes that genuinely
+# indicate a transient condition -- an HTTP 429 rate-limit response or a
+# provider-unavailable/connection-level failure -- never a non-transient 4xx
+# client error, an oversized result page, or a malformed response body,
+# which are real outcomes rather than transient conditions worth retrying.
+#
+# Unlike the other federated adapters, arXiv publishes an explicit minimum
+# request interval (https://info.arxiv.org/help/api/tou.html: "make no more
+# than one request every three seconds"). `DEFAULT_RETRY_BACKOFF_SECONDS`
+# is set to that floor so this provider's default retry schedule never
+# itself violates arXiv's own terms of use; a 429's `Retry-After` header, if
+# present, is additionally honored when it asks for longer than the
+# computed exponential backoff.
+DEFAULT_MAX_ATTEMPTS = 3
+ARXIV_MIN_REQUEST_INTERVAL_SECONDS = 3.0
+DEFAULT_RETRY_BACKOFF_SECONDS = ARXIV_MIN_REQUEST_INTERVAL_SECONDS
+_TRANSIENT_OUTCOMES = frozenset({ProviderOutcome.RATE_LIMITED, ProviderOutcome.UNAVAILABLE})
+
 
 class ResponseTooLargeError(OSError):
     """Raised when an arXiv response exceeds the configured byte limit."""
@@ -44,6 +67,29 @@ class TransportResponse:
     status_code: int
     body: bytes
     headers: Mapping[str, str]
+
+
+@dataclass(frozen=True)
+class _RequestFailure:
+    outcome: ProviderOutcome
+    reason: str
+    retry_after_seconds: float | None = None
+
+
+@dataclass(frozen=True)
+class _RequestOutcome:
+    """Result of one logical (possibly retried) request.
+
+    Exactly one of ``response``/``failure`` is set. ``retry_attempt_count`` and
+    ``rate_limited_observed`` describe the whole retry loop, not just the final
+    attempt, so a caller building a `ProviderStatus` from either branch reports
+    accurate retry/rate-limit facts either way.
+    """
+
+    response: TransportResponse | None
+    failure: _RequestFailure | None
+    retry_attempt_count: int
+    rate_limited_observed: bool
 
 
 class ArxivTransport(Protocol):
@@ -71,6 +117,9 @@ class ArxivProvider:
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
         max_response_bytes: int = DEFAULT_MAX_RESPONSE_BYTES,
         user_agent: str = DEFAULT_USER_AGENT,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+        retry_backoff_seconds: float = DEFAULT_RETRY_BACKOFF_SECONDS,
+        sleep: Callable[[float], None] | None = None,
     ) -> None:
         if timeout_seconds <= 0:
             raise ValueError("arXiv timeout must be positive.")
@@ -78,12 +127,19 @@ class ArxivProvider:
             raise ValueError("arXiv response limit must be positive.")
         if not user_agent.strip():
             raise ValueError("arXiv User-Agent must not be blank.")
+        if max_attempts < 1:
+            raise ValueError("arXiv max_attempts must be at least 1.")
+        if retry_backoff_seconds < 0:
+            raise ValueError("arXiv retry backoff must not be negative.")
 
         self._transport = transport
         self._clock = clock or (lambda: datetime.now(UTC))
         self._timeout_seconds = timeout_seconds
         self._max_response_bytes = max_response_bytes
         self._user_agent = user_agent
+        self._max_attempts = max_attempts
+        self._retry_backoff_seconds = retry_backoff_seconds
+        self._sleep = sleep or time.sleep
 
     @property
     def name(self) -> str:
@@ -103,41 +159,89 @@ class ArxivProvider:
             "sortOrder": "descending",
         }
         url = f"{ARXIV_API_URL}?{urlencode(params)}"
-        response_or_result = self._request(query=query, url=url)
-        if isinstance(response_or_result, FederatedSearchResult):
-            return response_or_result
+        outcome = self._raw_request(url=url)
+        if outcome.failure is not None:
+            return _failure_result(
+                query, outcome.failure.reason, outcome.failure.outcome, outcome=outcome
+            )
+        response = outcome.response
+        assert response is not None
 
         try:
-            root = ET.fromstring(response_or_result.body)
+            root = ET.fromstring(response.body)
         except (ET.ParseError, UnicodeDecodeError):
-            return _failure_result(query, "malformed_response")
+            return _failure_result(query, "malformed_response", outcome=outcome)
 
         entries = root.findall(f"{_ATOM}entry")
         if len(entries) > query.limit_per_provider:
-            return _failure_result(query, "oversized_result_page")
+            return _failure_result(query, "oversized_result_page", outcome=outcome)
         if not entries:
-            return _empty_result(query)
+            return _empty_result(query, outcome=outcome)
 
         retrieved_at = self._clock()
         candidates: list[FederatedCandidate] = []
         for entry in entries:
             candidate = _parse_entry(entry, retrieved_at=retrieved_at)
             if candidate is None:
-                return _failure_result(query, "malformed_response")
+                return _failure_result(query, "malformed_response", outcome=outcome)
             candidates.append(candidate)
 
-        return _success_result(query, tuple(candidates))
+        return _success_result(query, tuple(candidates), outcome=outcome)
 
-    def _request(
-        self,
-        *,
-        query: DiscoveryQuery,
-        url: str,
-    ) -> TransportResponse | FederatedSearchResult:
-        headers = {
+    def _raw_request(self, *, url: str) -> _RequestOutcome:
+        """Perform one logical request, retrying transient failures in place.
+
+        A bounded loop (`self._max_attempts` total attempts, exponential
+        backoff between them via `self._sleep`) retries only
+        `_TRANSIENT_OUTCOMES` (HTTP 429 rate-limiting, provider-unavailable/
+        connection-level failures) -- never a non-transient 4xx client error
+        or an oversized/malformed response, both of which indicate a real
+        outcome rather than a transient condition worth retrying. The final
+        response or failure is returned alongside how many retries were
+        actually needed and whether any attempt observed a rate-limit
+        response, so a caller can build an honest `ProviderStatus` regardless
+        of which branch it takes.
+        """
+
+        headers: dict[str, str] = {
             "Accept": "application/atom+xml, application/xml;q=0.9",
             "User-Agent": self._user_agent,
         }
+
+        retry_attempt_count = 0
+        rate_limited_observed = False
+        attempt = 0
+        while True:
+            attempt += 1
+            attempt_result = self._attempt(url=url, headers=headers)
+            if isinstance(attempt_result, TransportResponse):
+                return _RequestOutcome(
+                    response=attempt_result,
+                    failure=None,
+                    retry_attempt_count=retry_attempt_count,
+                    rate_limited_observed=rate_limited_observed,
+                )
+            if attempt_result.outcome is ProviderOutcome.RATE_LIMITED:
+                rate_limited_observed = True
+            if attempt_result.outcome in _TRANSIENT_OUTCOMES and attempt < self._max_attempts:
+                retry_attempt_count += 1
+                backoff_seconds = self._retry_backoff_seconds * (2 ** (attempt - 1))
+                if attempt_result.retry_after_seconds is not None:
+                    backoff_seconds = max(backoff_seconds, attempt_result.retry_after_seconds)
+                self._sleep(backoff_seconds)
+                continue
+            return _RequestOutcome(
+                response=None,
+                failure=attempt_result,
+                retry_attempt_count=retry_attempt_count,
+                rate_limited_observed=rate_limited_observed,
+            )
+
+    def _attempt(
+        self, *, url: str, headers: Mapping[str, str]
+    ) -> TransportResponse | _RequestFailure:
+        """Perform exactly one HTTP attempt and map it to a response or failure."""
+
         try:
             response = self._transport.get(
                 url=url,
@@ -146,21 +250,45 @@ class ArxivProvider:
                 max_response_bytes=self._max_response_bytes,
             )
         except ResponseTooLargeError:
-            return _failure_result(query, "oversized_response")
+            return _RequestFailure(ProviderOutcome.FAILED, "oversized_response")
         except TimeoutError:
-            return _failure_result(query, "timeout", ProviderOutcome.UNAVAILABLE)
+            return _RequestFailure(ProviderOutcome.UNAVAILABLE, "timeout")
         except OSError:
-            return _failure_result(query, "transport_error", ProviderOutcome.UNAVAILABLE)
+            return _RequestFailure(ProviderOutcome.UNAVAILABLE, "transport_error")
 
         if len(response.body) > self._max_response_bytes:
-            return _failure_result(query, "oversized_response")
+            return _RequestFailure(ProviderOutcome.FAILED, "oversized_response")
         if response.status_code == 429:
-            return _failure_result(query, "rate_limited", ProviderOutcome.RATE_LIMITED)
+            return _RequestFailure(
+                ProviderOutcome.RATE_LIMITED,
+                "rate_limited",
+                retry_after_seconds=_parse_retry_after_seconds(response.headers),
+            )
         if 500 <= response.status_code <= 599:
-            return _failure_result(query, "provider_unavailable", ProviderOutcome.UNAVAILABLE)
+            return _RequestFailure(ProviderOutcome.UNAVAILABLE, "provider_unavailable")
         if response.status_code < 200 or response.status_code >= 300:
-            return _failure_result(query, "unsupported_http_status")
+            return _RequestFailure(ProviderOutcome.FAILED, "unsupported_http_status")
         return response
+
+
+def _parse_retry_after_seconds(headers: Mapping[str, str]) -> float | None:
+    """Parse a 429 response's ``Retry-After`` header, if present and a delay-seconds form.
+
+    Only the numeric delay-seconds form is honored (arXiv's API never sends the
+    HTTP-date form in practice); a missing, non-numeric, or negative value
+    returns `None` so the caller falls back to its own computed backoff rather
+    than fabricating a wait time.
+    """
+
+    for key, value in headers.items():
+        if key.lower() != "retry-after":
+            continue
+        try:
+            seconds = float(value.strip())
+        except ValueError:
+            return None
+        return seconds if seconds >= 0 else None
+    return None
 
 
 def _build_search_query(query: DiscoveryQuery) -> str:
@@ -295,6 +423,8 @@ def _normalize_doi(value: str | None) -> str | None:
 def _success_result(
     query: DiscoveryQuery,
     candidates: tuple[FederatedCandidate, ...],
+    *,
+    outcome: _RequestOutcome,
 ) -> FederatedSearchResult:
     return FederatedSearchResult(
         query=query,
@@ -304,13 +434,15 @@ def _success_result(
                 outcome=ProviderOutcome.SUCCESS,
                 attempted=True,
                 result_count=len(candidates),
+                retry_attempt_count=outcome.retry_attempt_count,
+                rate_limited_observed=outcome.rate_limited_observed,
             ),
         ),
         candidates=candidates,
     )
 
 
-def _empty_result(query: DiscoveryQuery) -> FederatedSearchResult:
+def _empty_result(query: DiscoveryQuery, *, outcome: _RequestOutcome) -> FederatedSearchResult:
     return FederatedSearchResult(
         query=query,
         provider_statuses=(
@@ -318,6 +450,8 @@ def _empty_result(query: DiscoveryQuery) -> FederatedSearchResult:
                 provider="arxiv",
                 outcome=ProviderOutcome.EMPTY,
                 attempted=True,
+                retry_attempt_count=outcome.retry_attempt_count,
+                rate_limited_observed=outcome.rate_limited_observed,
             ),
         ),
     )
@@ -326,16 +460,22 @@ def _empty_result(query: DiscoveryQuery) -> FederatedSearchResult:
 def _failure_result(
     query: DiscoveryQuery,
     reason: str,
-    outcome: ProviderOutcome = ProviderOutcome.FAILED,
+    provider_outcome: ProviderOutcome = ProviderOutcome.FAILED,
+    *,
+    outcome: _RequestOutcome | None = None,
 ) -> FederatedSearchResult:
     return FederatedSearchResult(
         query=query,
         provider_statuses=(
             ProviderStatus(
                 provider="arxiv",
-                outcome=outcome,
+                outcome=provider_outcome,
                 attempted=True,
                 reason=reason,
+                retry_attempt_count=outcome.retry_attempt_count if outcome is not None else 0,
+                rate_limited_observed=(
+                    outcome.rate_limited_observed if outcome is not None else False
+                ),
             ),
         ),
     )
