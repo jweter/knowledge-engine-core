@@ -20,7 +20,12 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   established; no further shared-infrastructure change was needed since
   `ProviderStatus`'s outcome-derived `rate_limited_observed` and the
   ledger/coverage-report plumbing were already generalized across every
-  adapter by the prior Semantic Scholar slice.
+  adapter by the prior Semantic Scholar slice. Unlike the other adapters,
+  the default retry backoff is arXiv's own documented minimum request
+  interval (3 seconds, per arXiv's API terms of use) rather than a shorter
+  generic default, and a 429 response's `Retry-After` header is honored
+  when it asks for longer than the computed exponential backoff (Codex
+  review finding on the initial slice).
   `pubmed_federated_adapter.py`/`crossref_federated_adapter.py` remain
   single-attempt and are the next natural slice.
 

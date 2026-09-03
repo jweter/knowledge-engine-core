@@ -42,8 +42,17 @@ _ARXIV_ID_RE = re.compile(
 # provider-unavailable/connection-level failure -- never a non-transient 4xx
 # client error, an oversized result page, or a malformed response body,
 # which are real outcomes rather than transient conditions worth retrying.
+#
+# Unlike the other federated adapters, arXiv publishes an explicit minimum
+# request interval (https://info.arxiv.org/help/api/tou.html: "make no more
+# than one request every three seconds"). `DEFAULT_RETRY_BACKOFF_SECONDS`
+# is set to that floor so this provider's default retry schedule never
+# itself violates arXiv's own terms of use; a 429's `Retry-After` header, if
+# present, is additionally honored when it asks for longer than the
+# computed exponential backoff.
 DEFAULT_MAX_ATTEMPTS = 3
-DEFAULT_RETRY_BACKOFF_SECONDS = 0.5
+ARXIV_MIN_REQUEST_INTERVAL_SECONDS = 3.0
+DEFAULT_RETRY_BACKOFF_SECONDS = ARXIV_MIN_REQUEST_INTERVAL_SECONDS
 _TRANSIENT_OUTCOMES = frozenset({ProviderOutcome.RATE_LIMITED, ProviderOutcome.UNAVAILABLE})
 
 
@@ -64,6 +73,7 @@ class TransportResponse:
 class _RequestFailure:
     outcome: ProviderOutcome
     reason: str
+    retry_after_seconds: float | None = None
 
 
 @dataclass(frozen=True)
@@ -215,7 +225,10 @@ class ArxivProvider:
                 rate_limited_observed = True
             if attempt_result.outcome in _TRANSIENT_OUTCOMES and attempt < self._max_attempts:
                 retry_attempt_count += 1
-                self._sleep(self._retry_backoff_seconds * (2 ** (attempt - 1)))
+                backoff_seconds = self._retry_backoff_seconds * (2 ** (attempt - 1))
+                if attempt_result.retry_after_seconds is not None:
+                    backoff_seconds = max(backoff_seconds, attempt_result.retry_after_seconds)
+                self._sleep(backoff_seconds)
                 continue
             return _RequestOutcome(
                 response=None,
@@ -246,12 +259,36 @@ class ArxivProvider:
         if len(response.body) > self._max_response_bytes:
             return _RequestFailure(ProviderOutcome.FAILED, "oversized_response")
         if response.status_code == 429:
-            return _RequestFailure(ProviderOutcome.RATE_LIMITED, "rate_limited")
+            return _RequestFailure(
+                ProviderOutcome.RATE_LIMITED,
+                "rate_limited",
+                retry_after_seconds=_parse_retry_after_seconds(response.headers),
+            )
         if 500 <= response.status_code <= 599:
             return _RequestFailure(ProviderOutcome.UNAVAILABLE, "provider_unavailable")
         if response.status_code < 200 or response.status_code >= 300:
             return _RequestFailure(ProviderOutcome.FAILED, "unsupported_http_status")
         return response
+
+
+def _parse_retry_after_seconds(headers: Mapping[str, str]) -> float | None:
+    """Parse a 429 response's ``Retry-After`` header, if present and a delay-seconds form.
+
+    Only the numeric delay-seconds form is honored (arXiv's API never sends the
+    HTTP-date form in practice); a missing, non-numeric, or negative value
+    returns `None` so the caller falls back to its own computed backoff rather
+    than fabricating a wait time.
+    """
+
+    for key, value in headers.items():
+        if key.lower() != "retry-after":
+            continue
+        try:
+            seconds = float(value.strip())
+        except ValueError:
+            return None
+        return seconds if seconds >= 0 else None
+    return None
 
 
 def _build_search_query(query: DiscoveryQuery) -> str:

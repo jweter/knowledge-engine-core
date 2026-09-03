@@ -369,3 +369,80 @@ def test_unsupported_limit_is_rejected_without_a_transport_attempt() -> None:
     assert status.retry_attempt_count == 0
     assert status.rate_limited_observed is False
     assert transport.calls == []
+
+
+def test_default_retry_backoff_respects_arxivs_three_second_minimum_interval() -> None:
+    # arXiv's terms of use (https://info.arxiv.org/help/api/tou.html) require
+    # at least three seconds between requests; a caller that builds this
+    # provider with no explicit retry_backoff_seconds override (as both
+    # production registries do) must never retry sooner than that.
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(429, b"rate limited", {}),
+            TransportResponse(200, _feed(_entry()), {}),
+        ]
+    )
+    sleeps: list[float] = []
+
+    ArxivProvider(transport=transport, clock=lambda: _NOW, sleep=sleeps.append).search(
+        DiscoveryQuery(text="preprint semantics")
+    )
+
+    assert sleeps == [3.0]
+
+
+def test_retry_after_header_is_honored_when_longer_than_computed_backoff() -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(429, b"rate limited", {"Retry-After": "10"}),
+            TransportResponse(200, _feed(_entry()), {}),
+        ]
+    )
+    sleeps: list[float] = []
+
+    ArxivProvider(
+        transport=transport,
+        clock=lambda: _NOW,
+        retry_backoff_seconds=3.0,
+        sleep=sleeps.append,
+    ).search(DiscoveryQuery(text="preprint semantics"))
+
+    assert sleeps == [10.0]
+
+
+def test_retry_after_header_never_shortens_the_computed_backoff() -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(429, b"rate limited", {"Retry-After": "1"}),
+            TransportResponse(200, _feed(_entry()), {}),
+        ]
+    )
+    sleeps: list[float] = []
+
+    ArxivProvider(
+        transport=transport,
+        clock=lambda: _NOW,
+        retry_backoff_seconds=3.0,
+        sleep=sleeps.append,
+    ).search(DiscoveryQuery(text="preprint semantics"))
+
+    assert sleeps == [3.0]
+
+
+def test_malformed_retry_after_header_falls_back_to_computed_backoff() -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(429, b"rate limited", {"Retry-After": "not-a-number"}),
+            TransportResponse(200, _feed(_entry()), {}),
+        ]
+    )
+    sleeps: list[float] = []
+
+    ArxivProvider(
+        transport=transport,
+        clock=lambda: _NOW,
+        retry_backoff_seconds=3.0,
+        sleep=sleeps.append,
+    ).search(DiscoveryQuery(text="preprint semantics"))
+
+    assert sleeps == [3.0]
