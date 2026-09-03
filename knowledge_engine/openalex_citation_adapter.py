@@ -86,11 +86,27 @@ class OpenAlexCitationAdapter:
 
         candidates: list[FederatedCandidate] = []
         edges: list[CitationEdge] = []
+        retry_attempt_count = 0
+        rate_limited_observed = False
         for discovered_id, legacy_edge in zip(legacy.discovered_ids, legacy.edges, strict=True):
             lookup = self._work_lookup.lookup(discovered_id)
+            lookup_status = (
+                lookup.provider_statuses[0] if len(lookup.provider_statuses) == 1 else None
+            )
+            if lookup_status is not None:
+                retry_attempt_count += lookup_status.retry_attempt_count
+                rate_limited_observed = rate_limited_observed or lookup_status.rate_limited_observed
             candidate = _single_openalex_candidate(lookup, expected_provider_id=discovered_id)
             if candidate is None:
-                return _failure_result(query, "candidate_hydration_failed")
+                return CitationTraversalResult(
+                    query=query,
+                    provider_status=_status(
+                        ProviderOutcome.FAILED,
+                        reason="candidate_hydration_failed",
+                        retry_attempt_count=retry_attempt_count,
+                        rate_limited_observed=rate_limited_observed,
+                    ),
+                )
             candidates.append(candidate)
             edges.append(
                 CitationEdge(
@@ -104,7 +120,12 @@ class OpenAlexCitationAdapter:
 
         return CitationTraversalResult(
             query=query,
-            provider_status=_status(ProviderOutcome.SUCCESS, result_count=len(candidates)),
+            provider_status=_status(
+                ProviderOutcome.SUCCESS,
+                result_count=len(candidates),
+                retry_attempt_count=retry_attempt_count,
+                rate_limited_observed=rate_limited_observed,
+            ),
             candidates=tuple(candidates),
             edges=tuple(edges),
         )
@@ -194,6 +215,8 @@ def _status(
     *,
     result_count: int = 0,
     reason: str | None = None,
+    retry_attempt_count: int = 0,
+    rate_limited_observed: bool = False,
 ) -> ProviderStatus:
     return ProviderStatus(
         provider="openalex",
@@ -201,6 +224,8 @@ def _status(
         attempted=True,
         result_count=result_count,
         reason=reason,
+        retry_attempt_count=retry_attempt_count,
+        rate_limited_observed=rate_limited_observed,
     )
 
 
