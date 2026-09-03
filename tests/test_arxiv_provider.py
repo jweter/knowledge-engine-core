@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from urllib.parse import parse_qs, urlparse
 
+import pytest
+
 from knowledge_engine.arxiv_provider import ArxivProvider, TransportResponse
 from knowledge_engine.federated_discovery import DiscoveryQuery, ProviderOutcome
 
@@ -76,9 +78,24 @@ class FakeTransport:
         return self.response
 
 
-def _provider(body: bytes, status_code: int = 200) -> tuple[ArxivProvider, FakeTransport]:
+def _provider(
+    body: bytes,
+    status_code: int = 200,
+    *,
+    max_attempts: int = 1,
+) -> tuple[ArxivProvider, FakeTransport]:
+    # max_attempts defaults to 1 (no retries) so status-code/transport-failure
+    # tests that reuse a single fixed FakeTransport response test outcome
+    # mapping, not the retry loop -- see the dedicated retry tests below, which
+    # pass max_attempts explicitly with a SequenceTransport and a captured
+    # sleep function.
     transport = FakeTransport(TransportResponse(status_code=status_code, body=body, headers={}))
-    provider = ArxivProvider(transport=transport, clock=lambda: _NOW)
+    provider = ArxivProvider(
+        transport=transport,
+        clock=lambda: _NOW,
+        max_attempts=max_attempts,
+        sleep=lambda _seconds: None,
+    )
     return provider, transport
 
 
@@ -171,6 +188,7 @@ def test_rate_limit_is_visible_in_provider_status() -> None:
     status = result.provider_statuses[0]
     assert status.outcome is ProviderOutcome.RATE_LIMITED
     assert status.reason == "rate_limited"
+    assert status.retry_attempt_count == 0
 
 
 def test_malformed_entry_fails_closed_instead_of_silently_dropping_it() -> None:
@@ -204,3 +222,150 @@ def test_provider_rejects_result_page_larger_than_requested_limit() -> None:
     assert status.outcome is ProviderOutcome.FAILED
     assert status.reason == "oversized_result_page"
     assert result.candidates == ()
+
+
+def test_rejects_non_positive_max_attempts() -> None:
+    with pytest.raises(ValueError, match="max_attempts must be at least 1"):
+        ArxivProvider(
+            transport=FakeTransport(TransportResponse(200, _feed(), {})),
+            max_attempts=0,
+        )
+
+
+def test_rejects_negative_retry_backoff() -> None:
+    with pytest.raises(ValueError, match="retry backoff must not be negative"):
+        ArxivProvider(
+            transport=FakeTransport(TransportResponse(200, _feed(), {})),
+            retry_backoff_seconds=-1.0,
+        )
+
+
+class SequenceTransport:
+    """Fake transport returning a different response for each successive call."""
+
+    def __init__(self, responses: list[TransportResponse]) -> None:
+        self.responses = responses
+        self.calls: list[str] = []
+
+    def get(
+        self,
+        *,
+        url: str,
+        headers: Mapping[str, str],
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> TransportResponse:
+        self.calls.append(url)
+        return self.responses[len(self.calls) - 1]
+
+
+def test_rate_limit_is_retried_and_eventually_succeeds() -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(429, b"rate limited", {}),
+            TransportResponse(200, _feed(_entry()), {}),
+        ]
+    )
+    sleeps: list[float] = []
+    provider = ArxivProvider(transport=transport, clock=lambda: _NOW, sleep=sleeps.append)
+
+    result = provider.search(DiscoveryQuery(text="preprint semantics"))
+
+    assert len(transport.calls) == 2
+    status = result.provider_statuses[0]
+    assert status.outcome is ProviderOutcome.SUCCESS
+    assert status.retry_attempt_count == 1
+    assert status.rate_limited_observed is True
+    assert result.candidates[0].canonical_id == "arxiv:2408.12345v2"
+    assert len(sleeps) == 1
+    assert sleeps[0] > 0
+
+
+def test_provider_unavailable_is_retried_up_to_the_configured_bound_then_reported() -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(503, b"unavailable", {}),
+            TransportResponse(503, b"unavailable", {}),
+            TransportResponse(503, b"unavailable", {}),
+        ]
+    )
+    sleeps: list[float] = []
+    provider = ArxivProvider(
+        transport=transport,
+        clock=lambda: _NOW,
+        max_attempts=3,
+        sleep=sleeps.append,
+    )
+
+    result = provider.search(DiscoveryQuery(text="preprint semantics"))
+
+    # 3 total attempts (1 initial + 2 retries), then the final failure is
+    # reported honestly rather than silently swallowed.
+    assert len(transport.calls) == 3
+    status = result.provider_statuses[0]
+    assert status.outcome is ProviderOutcome.UNAVAILABLE
+    assert status.reason == "provider_unavailable"
+    assert status.retry_attempt_count == 2
+    assert status.rate_limited_observed is False
+    assert len(sleeps) == 2
+
+
+def test_non_transient_client_error_is_never_retried() -> None:
+    transport = SequenceTransport(responses=[TransportResponse(400, b"bad request", {})])
+    sleeps: list[float] = []
+    provider = ArxivProvider(transport=transport, clock=lambda: _NOW, sleep=sleeps.append)
+
+    result = provider.search(DiscoveryQuery(text="preprint semantics"))
+
+    assert len(transport.calls) == 1
+    status = result.provider_statuses[0]
+    assert status.outcome is ProviderOutcome.FAILED
+    assert status.reason == "unsupported_http_status"
+    assert status.retry_attempt_count == 0
+    assert sleeps == []
+
+
+def test_successful_first_attempt_reports_zero_retries() -> None:
+    transport = SequenceTransport(responses=[TransportResponse(200, _feed(_entry()), {})])
+    provider = ArxivProvider(transport=transport, clock=lambda: _NOW)
+
+    result = provider.search(DiscoveryQuery(text="preprint semantics"))
+
+    assert len(transport.calls) == 1
+    status = result.provider_statuses[0]
+    assert status.retry_attempt_count == 0
+    assert status.rate_limited_observed is False
+
+
+def test_retry_backoff_is_exponential() -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(429, b"rate limited", {}),
+            TransportResponse(429, b"rate limited", {}),
+            TransportResponse(200, _feed(_entry()), {}),
+        ]
+    )
+    sleeps: list[float] = []
+
+    ArxivProvider(
+        transport=transport,
+        clock=lambda: _NOW,
+        max_attempts=3,
+        retry_backoff_seconds=0.5,
+        sleep=sleeps.append,
+    ).search(DiscoveryQuery(text="preprint semantics"))
+
+    assert sleeps == [0.5, 1.0]
+
+
+def test_unsupported_limit_is_rejected_without_a_transport_attempt() -> None:
+    provider, transport = _provider(_feed())
+
+    result = provider.search(DiscoveryQuery(text="too broad", limit_per_provider=101))
+
+    status = result.provider_statuses[0]
+    assert status.outcome is ProviderOutcome.FAILED
+    assert status.reason == "unsupported_limit"
+    assert status.retry_attempt_count == 0
+    assert status.rate_limited_observed is False
+    assert transport.calls == []
