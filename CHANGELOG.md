@@ -9,6 +9,26 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Semantic Scholar retry/rate-limit tracking (issue #433, item 2)**:
+  `SemanticScholarProvider` now retries transient failures (HTTP 429
+  rate-limiting and provider-unavailable/connection-level errors) with a
+  bounded exponential backoff (3 attempts by default) instead of making
+  exactly one attempt -- never retrying a non-transient 4xx client error, a
+  legitimate not-found, or a malformed response. `ProviderStatus` gains
+  `retry_attempt_count` (how many retries were needed, `0` if none) and
+  `rate_limited_observed` (whether any attempt saw a 429, even if a later
+  retry succeeded); `ProviderCoverageRecord` persists both, and
+  `SearchCoverageReport` gains the derived `total_retry_attempts` and
+  `providers_rate_limited` for the whole run. Purely additive: no ledger
+  `schema_version` change, every previously persisted run loads the new
+  fields as `0`/`False`/`()`. Exposed through `ke federated-coverage-report`
+  (console and `--output` JSON) and `ke federated-discover --output`. Only
+  `semantic_scholar_provider.py` (the default federated-discovery/citation-
+  snowball provider) is retried this session; the other four provider
+  adapters (`openalex_provider.py`, `arxiv_provider.py`,
+  `pubmed_federated_adapter.py`, `crossref_federated_adapter.py`) remain
+  single-attempt, deliberately deferred as the next slices.
+
 - **Discovered-vs-deduplicated candidate funnel count (issue #433, item
   3)**: `SearchCoverageReport` gains `raw_observation_count`, the sum of
   every attempted provider's own `result_count` for a federated search run

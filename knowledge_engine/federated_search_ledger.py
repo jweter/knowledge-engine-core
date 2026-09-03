@@ -34,7 +34,17 @@ _SUCCESSFUL_OUTCOMES = {ProviderOutcome.SUCCESS, ProviderOutcome.EMPTY}
 
 @dataclass(frozen=True)
 class ProviderCoverageRecord:
-    """Persisted coverage facts for one requested provider."""
+    """Persisted coverage facts for one requested provider.
+
+    ``retry_attempt_count``/``rate_limited_observed`` postdate this record's
+    original field set (issue #433 item 2's federated provider
+    latency/degradation follow-up), added the same additive way `candidates`
+    itself postdated `LEDGER_SCHEMA_VERSION` 1's original shape: a run
+    persisted before these fields existed simply omits the keys, and the
+    loader defaults them to ``0``/``False`` -- the honest "no retry happened"
+    state for every adapter that did not yet implement retries when the run
+    was recorded -- so no schema-version bump was needed.
+    """
 
     provider: str
     outcome: str
@@ -42,6 +52,8 @@ class ProviderCoverageRecord:
     result_count: int
     latency_ms: int | None
     reason: str | None
+    retry_attempt_count: int = 0
+    rate_limited_observed: bool = False
 
 
 @dataclass(frozen=True)
@@ -187,6 +199,17 @@ class SearchCoverageReport:
     exactly how much a run's raw provider results were narrowed by
     deduplication -- previously only reconstructible by re-loading the full
     ``SearchRunRecord`` and summing ``providers[].result_count`` by hand.
+
+    ``total_retry_attempts``/``providers_rate_limited`` answer issue #433
+    item 2's "federated provider latency/degradation" ask the same way:
+    ``total_retry_attempts`` is the sum of every attempted provider's own
+    ``retry_attempt_count`` (how many bounded retries providers needed across
+    this run), and ``providers_rate_limited`` names every attempted provider
+    that observed an HTTP 429 rate-limit response at least once, even if a
+    later retry ultimately succeeded. Both derive at read time from
+    already-persisted per-provider facts, so a run recorded before any
+    adapter implemented retries reports them correctly as ``0``/``()``
+    without a backfill.
     """
 
     search_run_id: str
@@ -197,11 +220,13 @@ class SearchCoverageReport:
     limit_per_provider: int
     completeness: str
     raw_observation_count: int
+    total_retry_attempts: int
     candidate_count: int
     providers_requested: tuple[str, ...]
     providers_attempted: tuple[str, ...]
     providers_completed: tuple[str, ...]
     providers_failed: tuple[str, ...]
+    providers_rate_limited: tuple[str, ...]
 
     def to_dict(self) -> dict[str, Any]:
         """Return the public coverage contract as JSON-ready primitives.
@@ -221,11 +246,13 @@ class SearchCoverageReport:
             "limit_per_provider": self.limit_per_provider,
             "completeness": self.completeness,
             "raw_observation_count": self.raw_observation_count,
+            "total_retry_attempts": self.total_retry_attempts,
             "candidate_count": self.candidate_count,
             "providers_requested": list(self.providers_requested),
             "providers_attempted": list(self.providers_attempted),
             "providers_completed": list(self.providers_completed),
             "providers_failed": list(self.providers_failed),
+            "providers_rate_limited": list(self.providers_rate_limited),
         }
 
 
@@ -266,6 +293,8 @@ class FederatedSearchLedger:
                 result_count=status.result_count,
                 latency_ms=status.latency_ms,
                 reason=status.reason,
+                retry_attempt_count=status.retry_attempt_count,
+                rate_limited_observed=status.rate_limited_observed,
             )
             for status in result.provider_statuses
         )
@@ -399,11 +428,19 @@ def build_search_coverage_report(record: SearchRunRecord) -> SearchCoverageRepor
         raw_observation_count=sum(
             provider.result_count for provider in record.providers if provider.attempted
         ),
+        total_retry_attempts=sum(
+            provider.retry_attempt_count for provider in record.providers if provider.attempted
+        ),
         candidate_count=record.candidate_count,
         providers_requested=record.providers_requested,
         providers_attempted=record.providers_attempted,
         providers_completed=record.providers_completed,
         providers_failed=record.providers_failed,
+        providers_rate_limited=tuple(
+            provider.provider
+            for provider in record.providers
+            if provider.attempted and provider.rate_limited_observed
+        ),
     )
 
 
@@ -463,6 +500,22 @@ def _provider_from_payload(payload: object) -> ProviderCoverageRecord:
     if not isinstance(attempted, bool):
         raise ValueError("Federated provider coverage attempted must be boolean.")
 
+    # `retry_attempt_count`/`rate_limited_observed` postdate this record's
+    # original field set (issue #433 item 2). A run persisted before these
+    # fields existed simply omits the keys; defaulting to `0`/`False` is the
+    # honest "no retry happened" state for an adapter that made exactly one
+    # attempt, which was true for every provider before this change.
+    retry_attempt_count = payload.get("retry_attempt_count", 0)
+    if (
+        isinstance(retry_attempt_count, bool)
+        or not isinstance(retry_attempt_count, int)
+        or retry_attempt_count < 0
+    ):
+        raise ValueError("Federated search-run field retry_attempt_count is invalid.")
+    rate_limited_observed = payload.get("rate_limited_observed", False)
+    if not isinstance(rate_limited_observed, bool):
+        raise ValueError("Federated search-run field rate_limited_observed is invalid.")
+
     return ProviderCoverageRecord(
         provider=_required_string(payload, "provider"),
         outcome=outcome,
@@ -470,6 +523,8 @@ def _provider_from_payload(payload: object) -> ProviderCoverageRecord:
         result_count=_required_nonnegative_int(payload, "result_count"),
         latency_ms=_optional_nonnegative_int(payload, "latency_ms"),
         reason=_payload_optional_string(payload, "reason"),
+        retry_attempt_count=retry_attempt_count,
+        rate_limited_observed=rate_limited_observed,
     )
 
 

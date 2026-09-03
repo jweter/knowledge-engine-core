@@ -18,6 +18,7 @@ from knowledge_engine.federated_discovery import (
 from knowledge_engine.federated_search_ledger import (
     LEDGER_SCHEMA_VERSION,
     FederatedSearchLedger,
+    build_search_coverage_report,
 )
 
 _RUN_ID = UUID("11111111-2222-3333-4444-555555555555")
@@ -117,6 +118,8 @@ def test_record_persists_reproducible_run_and_provider_facts(tmp_path: Path) -> 
         "provider": "openalex",
         "reason": "rate_limited",
         "result_count": 0,
+        "retry_attempt_count": 0,
+        "rate_limited_observed": False,
     }
     assert "api_key" not in persisted
     assert "headers" not in persisted
@@ -228,6 +231,134 @@ def test_raw_observation_count_excludes_unattempted_providers(tmp_path: Path) ->
     report = ledger.coverage_report(record.search_run_id)
 
     assert report.raw_observation_count == 2
+
+
+def test_total_retry_attempts_and_rate_limited_providers_are_derived_from_facts(
+    tmp_path: Path,
+) -> None:
+    """Issue #433 item 2: retry/rate-limit facts must round-trip through the ledger.
+
+    `total_retry_attempts` sums `retry_attempt_count` across attempted
+    providers only (mirroring `raw_observation_count`'s own attempted-only
+    contract); `providers_rate_limited` names every attempted provider that
+    observed a 429 at least once, even one -- like Semantic Scholar here --
+    whose retries ultimately succeeded.
+    """
+
+    ledger = _ledger(tmp_path)
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="protein folding"),
+        provider_statuses=(
+            ProviderStatus(
+                provider="semantic_scholar",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=3,
+                retry_attempt_count=2,
+                rate_limited_observed=True,
+            ),
+            ProviderStatus(
+                provider="PubMed",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+            ),
+            ProviderStatus(
+                provider="Crossref",
+                outcome=ProviderOutcome.SKIPPED,
+                attempted=False,
+                reason="unsupported_query",
+            ),
+        ),
+    )
+
+    record = ledger.record(result)
+    report = ledger.coverage_report(record.search_run_id)
+
+    assert record.providers[0].retry_attempt_count == 2
+    assert record.providers[0].rate_limited_observed is True
+    assert report.total_retry_attempts == 2
+    assert report.providers_rate_limited == ("semantic_scholar",)
+    assert report.to_dict()["total_retry_attempts"] == 2
+    assert report.to_dict()["providers_rate_limited"] == ["semantic_scholar"]
+
+
+def test_unattempted_provider_never_reports_a_fabricated_retry_count(tmp_path: Path) -> None:
+    """A skipped provider was never retried; it must not inflate the run total."""
+
+    ledger = _ledger(tmp_path)
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="protein folding"),
+        provider_statuses=(
+            ProviderStatus(
+                provider="PubMed", outcome=ProviderOutcome.SUCCESS, attempted=True, result_count=1
+            ),
+            ProviderStatus(
+                provider="Crossref",
+                outcome=ProviderOutcome.SKIPPED,
+                attempted=False,
+                reason="unsupported_query",
+            ),
+        ),
+    )
+
+    record = ledger.record(result)
+    report = ledger.coverage_report(record.search_run_id)
+
+    assert record.providers[1].retry_attempt_count == 0
+    assert record.providers[1].rate_limited_observed is False
+    assert report.total_retry_attempts == 0
+    assert report.providers_rate_limited == ()
+
+
+def test_load_defaults_retry_fields_to_zero_for_pre_existing_records(tmp_path: Path) -> None:
+    """Records persisted before retry tracking existed must remain loadable.
+
+    Mirrors `test_load_defaults_candidates_to_empty_tuple_for_pre_existing_records`:
+    a run recorded before `retry_attempt_count`/`rate_limited_observed` existed
+    simply omits those keys, and must load with the honest "no retry
+    happened" state (`0`/`False`) rather than fail to parse or fabricate a
+    retry that was never recorded.
+    """
+
+    root = tmp_path / "search-runs"
+    root.mkdir()
+    payload = {
+        "schema_version": LEDGER_SCHEMA_VERSION,
+        "search_run_id": str(_RUN_ID),
+        "created_at": "2026-08-16T02:45:00+00:00",
+        "query_text": "protein folding",
+        "year_from": 2020,
+        "year_to": 2026,
+        "limit_per_provider": 25,
+        "completeness": "complete",
+        "candidate_count": 0,
+        "providers": [
+            {
+                "provider": "semantic_scholar",
+                "outcome": "success",
+                "attempted": True,
+                "result_count": 1,
+                "latency_ms": 120,
+                "reason": None,
+                # deliberately no "retry_attempt_count"/"rate_limited_observed"
+                # keys -- pre-existing record shape
+            }
+        ],
+        "initiated_by": None,
+        "project_id": None,
+        "research_question_id": None,
+        "candidates": [],
+    }
+    (root / f"{_RUN_ID}.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = FederatedSearchLedger(root).load(str(_RUN_ID))
+
+    assert loaded.providers[0].retry_attempt_count == 0
+    assert loaded.providers[0].rate_limited_observed is False
+    report = build_search_coverage_report(loaded)
+    assert report.total_retry_attempts == 0
+    assert report.providers_rate_limited == ()
 
 
 def test_record_is_immutable_and_refuses_overwrite(tmp_path: Path) -> None:

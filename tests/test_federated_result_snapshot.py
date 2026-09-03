@@ -77,11 +77,13 @@ def _coverage() -> SearchCoverageReport:
         limit_per_provider=25,
         completeness="complete",
         raw_observation_count=1,
+        total_retry_attempts=0,
         candidate_count=1,
         providers_requested=("pubmed",),
         providers_attempted=("pubmed",),
         providers_completed=("pubmed",),
         providers_failed=(),
+        providers_rate_limited=(),
     )
 
 
@@ -101,6 +103,8 @@ def _mismatched_coverage(field: str) -> SearchCoverageReport:
         return replace(coverage, candidate_count=0)
     if field == "raw_observation_count":
         return replace(coverage, raw_observation_count=0)
+    if field == "total_retry_attempts":
+        return replace(coverage, total_retry_attempts=5)
     raise AssertionError(f"Unhandled mismatch field: {field}")
 
 
@@ -120,11 +124,13 @@ def test_public_snapshot_includes_safe_coverage_and_result_contract() -> None:
         "limit_per_provider": 25,
         "completeness": "complete",
         "raw_observation_count": 1,
+        "total_retry_attempts": 0,
         "candidate_count": 1,
         "providers_requested": ["pubmed"],
         "providers_attempted": ["pubmed"],
         "providers_completed": ["pubmed"],
         "providers_failed": [],
+        "providers_rate_limited": [],
     }
     assert payload["provider_disagreements"] == {
         "candidates": (),
@@ -174,6 +180,7 @@ def test_public_snapshot_exposes_provider_disagreement_without_picking_a_winner(
         "limit_per_provider",
         "completeness",
         "raw_observation_count",
+        "total_retry_attempts",
         "candidate_count",
     ],
 )

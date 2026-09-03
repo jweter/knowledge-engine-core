@@ -142,6 +142,48 @@ def test_provider_status_rejects_ambiguous_skipped_attempt() -> None:
         )
 
 
+def test_provider_status_rejects_retry_count_on_unattempted_provider() -> None:
+    with pytest.raises(ValueError, match="must not report retries or rate-limit"):
+        ProviderStatus(
+            provider="arxiv",
+            outcome=ProviderOutcome.SKIPPED,
+            attempted=False,
+            reason="not relevant",
+            retry_attempt_count=1,
+        )
+
+
+def test_provider_status_rejects_rate_limit_flag_on_unattempted_provider() -> None:
+    with pytest.raises(ValueError, match="must not report retries or rate-limit"):
+        ProviderStatus(
+            provider="arxiv",
+            outcome=ProviderOutcome.SKIPPED,
+            attempted=False,
+            reason="not relevant",
+            rate_limited_observed=True,
+        )
+
+
+def test_provider_status_rejects_negative_retry_attempt_count() -> None:
+    with pytest.raises(ValueError, match="retry_attempt_count must not be negative"):
+        ProviderStatus(
+            provider="pubmed",
+            outcome=ProviderOutcome.SUCCESS,
+            attempted=True,
+            result_count=1,
+            retry_attempt_count=-1,
+        )
+
+
+def test_provider_status_defaults_retry_fields_to_no_retry_state() -> None:
+    status = ProviderStatus(
+        provider="pubmed", outcome=ProviderOutcome.SUCCESS, attempted=True, result_count=1
+    )
+
+    assert status.retry_attempt_count == 0
+    assert status.rate_limited_observed is False
+
+
 def test_complete_search_allows_success_and_empty_providers() -> None:
     result = FederatedSearchResult(
         query=DiscoveryQuery("query"),

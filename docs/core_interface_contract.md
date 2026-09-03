@@ -449,6 +449,35 @@ itself, but may need to trigger for a specific paper):**
   needed and every previously persisted run reports it correctly. Exposed
   through `federated-coverage-report`, `federated-discover-history`, and
   both commands' `--output` JSON alongside the existing `candidate_count`.
+- `SemanticScholarProvider` / `ProviderStatus` / `SearchCoverageReport`
+  (issue #433 item 2's federated provider latency/degradation follow-up,
+  first slice): `SemanticScholarProvider` -- the default federated-discovery
+  and citation-snowball provider -- now retries HTTP 429 rate-limit and
+  provider-unavailable/connection-level failures with a bounded exponential
+  backoff (`max_attempts=3` by default) instead of making exactly one
+  attempt; a non-transient 4xx client error, a legitimate not-found, an
+  oversized response, or a malformed body is never retried. `ProviderStatus`
+  gains `retry_attempt_count` (retries actually needed, `0` if the first
+  attempt succeeded or failed non-transiently) and `rate_limited_observed`
+  (whether any attempt saw a 429, even if a later retry succeeded); an
+  unattempted (`SKIPPED`/`DISABLED`) provider is rejected if it reports
+  either. `ProviderCoverageRecord` persists both per-provider, and
+  `SearchCoverageReport` gains the derived `total_retry_attempts` (sum
+  across attempted providers) and `providers_rate_limited` (names of
+  attempted providers that saw a 429), both computed at read time from
+  already-persisted facts. Purely additive: no ledger `schema_version`
+  change, every previously persisted run loads the new
+  `ProviderCoverageRecord` fields as `0`/`False`. Exposed through
+  `federated-coverage-report` (console `Retries:` line, `Rate limited`
+  table column, `--output` JSON) and `federated-discover --output`. Only
+  `semantic_scholar_provider.py` implements retries as of this change; the
+  other four provider adapters (`openalex_provider.py`, `arxiv_provider.py`,
+  `pubmed_federated_adapter.py`, `crossref_federated_adapter.py`) remain
+  single-attempt and always report `retry_attempt_count=0`/
+  `rate_limited_observed=False` -- deliberately deferred as the next
+  slices, following this repo's own established per-adapter precedent (see
+  issue #433 item 4's PMC/Europe PMC/CORE/Unpaywall sequence, PRs
+  #457-#459).
 - `ke general-question-acquire-pmc <request.json> --ledger-root <dir>
   --papers-dir <dir> --receipt <path.json>` (CORE-GQR-4): executes only
   `eligible_full_text` items routed to `pmc_oa`. It rebuilds the plan with

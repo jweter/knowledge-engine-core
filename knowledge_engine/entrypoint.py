@@ -6312,6 +6312,7 @@ def federated_discover_history(
 def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: str) -> None:
     providers_completed = set(coverage.providers_completed)
     providers_failed = set(coverage.providers_failed)
+    providers_rate_limited = set(coverage.providers_rate_limited)
 
     completeness_color = {
         "complete": "green",
@@ -6326,9 +6327,17 @@ def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: 
         f"({coverage.raw_observation_count} raw observation(s) -> "
         f"{coverage.candidate_count} deduplicated candidate(s))"
     )
+    rate_limited_text = (
+        ", ".join(sorted(providers_rate_limited)) if providers_rate_limited else "none"
+    )
+    console.print(
+        f"[bold]Retries:[/bold] {coverage.total_retry_attempts} total attempt(s); "
+        f"rate-limited providers: {rate_limited_text}"
+    )
     table = Table(title="Provider coverage")
     table.add_column("Provider")
     table.add_column("Status")
+    table.add_column("Rate limited")
     for provider in coverage.providers_requested:
         if provider in providers_completed:
             status = "[green]completed[/green]"
@@ -6336,7 +6345,8 @@ def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: 
             status = "[red]failed/unavailable[/red]"
         else:
             status = "[yellow]not attempted[/yellow]"
-        table.add_row(provider, status)
+        rate_limited = "[yellow]yes[/yellow]" if provider in providers_rate_limited else "no"
+        table.add_row(provider, status, rate_limited)
     console.print(table)
 
 
