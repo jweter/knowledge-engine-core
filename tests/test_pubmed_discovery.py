@@ -395,6 +395,44 @@ def test_discovery_rejects_unexpected_object_uri_in_pmc_cloud_metadata() -> None
         _service(transport).discover("semaglutide obesity", limit=1)
 
 
+def test_discovery_preserves_retry_facts_when_oa_metadata_is_malformed() -> None:
+    """A retry/rate-limit earlier in `discover()` must survive even when the call
+
+    ultimately fails inside `_s3_metadata_url`/`_s3_uri_to_https` -- free functions
+    with no `self` to read accumulated retry state from, unlike every other raise
+    site in this module (Codex review finding on PR #464).
+    """
+
+    transport = FakeTransport(
+        [
+            FakeResponse(429, b"rate limited", {}),
+            _search_response("222"),
+            _metadata_response(),
+            _id_converter_response({"requested-id": "222", "pmid": 222, "pmcid": "PMC999"}),
+            _s3_listing_response("PMC999", 1),
+            FakeResponse(
+                200,
+                json.dumps(
+                    {
+                        "pmcid": "PMC999",
+                        "version": 1,
+                        "is_pmc_openaccess": True,
+                        "license_code": "CC BY",
+                        "pdf_url": "https://attacker.example/PMC999.1.pdf",
+                    }
+                ).encode(),
+                {},
+            ),
+        ]
+    )
+
+    with pytest.raises(NcbiDiscoveryError, match="unexpected object URI") as error:
+        _service(transport, max_attempts=3).discover("semaglutide obesity", limit=1)
+
+    assert error.value.retry_attempt_count == 1
+    assert error.value.rate_limited_observed is True
+
+
 def test_discovery_retries_bounded_transient_provider_failures() -> None:
     transport = FakeTransport(
         [

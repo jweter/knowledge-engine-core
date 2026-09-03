@@ -362,11 +362,18 @@ class PubmedPmcDiscoveryService:
         license_name = metadata.get("license_code")
         if license_name is not None and not isinstance(license_name, str):
             raise self._error("PMC Cloud Service metadata was malformed.")
-        return _OaRecord(
-            license=license_name,
-            pdf_url=_s3_metadata_url(metadata, "pdf_url"),
-            xml_url=_s3_metadata_url(metadata, "xml_url"),
-        )
+        try:
+            pdf_url = _s3_metadata_url(metadata, "pdf_url")
+            xml_url = _s3_metadata_url(metadata, "xml_url")
+        except NcbiDiscoveryError as exc:
+            # `_s3_metadata_url`/`_s3_uri_to_https` are free functions with no
+            # `self` to read this call's accumulated retry/rate-limit facts
+            # from, so they raise with the honest zero/false default; reattach
+            # the real accumulated facts here so a retry/429 earlier in this
+            # same `discover()` call is not lost the moment this malformed-
+            # metadata error is raised (Codex review finding on PR #464).
+            raise self._error(str(exc)) from exc
+        return _OaRecord(license=license_name, pdf_url=pdf_url, xml_url=xml_url)
 
     def _latest_pmc_cloud_version(self, pmcid: str) -> int | None:
         """Discover the highest PMC Cloud Service article version for a PMCID.
