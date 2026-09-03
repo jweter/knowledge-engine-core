@@ -9,6 +9,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Bounded-concurrency Europe PMC OA acquisition downloads (issue #433,
+  item 4)**: `EuropePmcOaAcquisitionService.acquire()` previously fetched
+  every approved PDF sequentially. It now applies the same bounded
+  thread-pool pattern used for PMC OA acquisition -- a new keyword-only
+  `max_concurrent_downloads` constructor parameter (default 4), a sliding
+  submission window so at most `max_concurrent_downloads` downloads are ever
+  in flight or holding a completed response body in memory at once, and
+  results are still consumed back in deterministic plan order so receipt
+  ordering, atomic rollback, and per-approval failure-ordinal error messages
+  are unchanged -- only multi-PDF batch wall-clock time improves. CORE and
+  Unpaywall acquisition remain sequential and are the natural next slices
+  for the same pattern.
+
 - **Bounded-concurrency PMC OA acquisition downloads (issue #433, item 4)**:
   `PmcOaAcquisitionService.acquire()` previously fetched every approved PDF
   sequentially. It now submits them to a bounded thread pool (new
