@@ -71,6 +71,8 @@ def _lookup_result(
     outcome: ProviderOutcome = ProviderOutcome.SUCCESS,
     candidate: FederatedCandidate | None = None,
     provider: str = "openalex",
+    retry_attempt_count: int = 0,
+    rate_limited_observed: bool = False,
 ) -> FederatedSearchResult:
     candidates = (
         ()
@@ -88,6 +90,8 @@ def _lookup_result(
                 reason=None
                 if outcome in {ProviderOutcome.SUCCESS, ProviderOutcome.EMPTY}
                 else "failed",
+                retry_attempt_count=retry_attempt_count,
+                rate_limited_observed=rate_limited_observed,
             ),
         ),
         candidates=candidates,
@@ -248,6 +252,44 @@ def test_hydration_failure_marks_the_traversal_failed() -> None:
     assert result.provider_status.reason == "candidate_hydration_failed"
     assert result.candidates == ()
     assert result.edges == ()
+
+
+def test_hydration_retries_and_rate_limiting_are_aggregated_into_the_traversal_status() -> None:
+    source = FakeCitationSource(_legacy_references("W1", ("W2", "W3"), limit=2))
+    lookup = FakeWorkLookup(
+        {
+            "W2": _lookup_result("W2", retry_attempt_count=1, rate_limited_observed=True),
+            "W3": _lookup_result("W3", retry_attempt_count=2, rate_limited_observed=False),
+        }
+    )
+
+    result = OpenAlexCitationAdapter(source, lookup).references("W1", limit=2)
+
+    assert result.provider_status.outcome is ProviderOutcome.SUCCESS
+    assert result.provider_status.retry_attempt_count == 3
+    assert result.provider_status.rate_limited_observed is True
+
+
+def test_hydration_failure_still_reports_retries_observed_before_the_failure() -> None:
+    source = FakeCitationSource(_legacy_references("W1", ("W2", "W3"), limit=2))
+    lookup = FakeWorkLookup(
+        {
+            "W2": _lookup_result("W2", retry_attempt_count=1, rate_limited_observed=True),
+            "W3": _lookup_result(
+                "W3",
+                outcome=ProviderOutcome.UNAVAILABLE,
+                candidate=None,
+                retry_attempt_count=2,
+            ),
+        }
+    )
+
+    result = OpenAlexCitationAdapter(source, lookup).references("W1", limit=2)
+
+    assert result.provider_status.outcome is ProviderOutcome.FAILED
+    assert result.provider_status.reason == "candidate_hydration_failed"
+    assert result.provider_status.retry_attempt_count == 3
+    assert result.provider_status.rate_limited_observed is True
 
 
 def test_hydration_provider_identity_mismatch_fails_closed() -> None:

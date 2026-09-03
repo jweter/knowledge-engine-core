@@ -8,6 +8,7 @@ FRD provider-status contract without leaking provider-specific response objects.
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -29,6 +30,18 @@ DEFAULT_TIMEOUT_SECONDS = 10.0
 DEFAULT_MAX_RESPONSE_BYTES = 2_000_000
 DEFAULT_USER_AGENT = "knowledge-engine-core/0.2 federated-discovery"
 
+# Issue #433 item 2's second per-provider slice, following semantic_scholar_provider.py's
+# established pattern: a bounded, exponential-backoff retry for transient failures only.
+# `DEFAULT_MAX_ATTEMPTS` counts the *first* attempt plus every retry (3 == up to 2
+# retries). Retries are triggered only by outcomes that genuinely indicate a transient
+# condition -- an HTTP 429 rate-limit response or a provider-unavailable/connection-level
+# failure -- never by a non-transient 4xx client error (401/403/404/oversized page, etc.),
+# and never by a malformed response body, which is a parsing failure, not a transport
+# failure.
+DEFAULT_MAX_ATTEMPTS = 3
+DEFAULT_RETRY_BACKOFF_SECONDS = 0.5
+_TRANSIENT_OUTCOMES = frozenset({ProviderOutcome.RATE_LIMITED, ProviderOutcome.UNAVAILABLE})
+
 
 class ResponseTooLargeError(OSError):
     """Raised when a provider response exceeds the configured byte limit."""
@@ -41,6 +54,28 @@ class TransportResponse:
     status_code: int
     body: bytes
     headers: Mapping[str, str]
+
+
+@dataclass(frozen=True)
+class _RequestFailure:
+    outcome: ProviderOutcome
+    reason: str
+
+
+@dataclass(frozen=True)
+class _RequestOutcome:
+    """Result of one logical (possibly retried) request.
+
+    Exactly one of ``response``/``failure`` is set. ``retry_attempt_count`` and
+    ``rate_limited_observed`` describe the whole retry loop, not just the final
+    attempt, so a caller building a `ProviderStatus` from either branch reports
+    accurate retry/rate-limit facts either way.
+    """
+
+    response: TransportResponse | None
+    failure: _RequestFailure | None
+    retry_attempt_count: int
+    rate_limited_observed: bool
 
 
 class OpenAlexTransport(Protocol):
@@ -69,6 +104,9 @@ class OpenAlexProvider:
         max_response_bytes: int = DEFAULT_MAX_RESPONSE_BYTES,
         user_agent: str = DEFAULT_USER_AGENT,
         api_key: str | None = None,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+        retry_backoff_seconds: float = DEFAULT_RETRY_BACKOFF_SECONDS,
+        sleep: Callable[[float], None] | None = None,
     ) -> None:
         if timeout_seconds <= 0:
             raise ValueError("OpenAlex timeout must be positive.")
@@ -78,6 +116,10 @@ class OpenAlexProvider:
             raise ValueError("OpenAlex User-Agent must not be blank.")
         if api_key is not None and not api_key.strip():
             raise ValueError("OpenAlex API key must not be blank when provided.")
+        if max_attempts < 1:
+            raise ValueError("OpenAlex max_attempts must be at least 1.")
+        if retry_backoff_seconds < 0:
+            raise ValueError("OpenAlex retry backoff must not be negative.")
 
         self._transport = transport
         self._clock = clock or (lambda: datetime.now(UTC))
@@ -85,6 +127,9 @@ class OpenAlexProvider:
         self._max_response_bytes = max_response_bytes
         self._user_agent = user_agent
         self._api_key = api_key.strip() if api_key is not None else None
+        self._max_attempts = max_attempts
+        self._retry_backoff_seconds = retry_backoff_seconds
+        self._sleep = sleep or time.sleep
 
     @property
     def name(self) -> str:
@@ -142,39 +187,55 @@ class OpenAlexProvider:
         return f"{url}?{urlencode({'api_key': self._api_key})}"
 
     def _fetch_single(self, *, query: DiscoveryQuery, url: str) -> FederatedSearchResult:
-        response_or_result = self._request(query=query, url=url)
-        if isinstance(response_or_result, FederatedSearchResult):
-            return response_or_result
+        outcome_or_result = self._request(query=query, url=url)
+        if isinstance(outcome_or_result, FederatedSearchResult):
+            return outcome_or_result
+        outcome = outcome_or_result
+        response = outcome.response
+        assert response is not None
 
-        response = response_or_result
         try:
             payload = json.loads(response.body)
         except (JSONDecodeError, UnicodeDecodeError):
-            return _failure_result(query, ProviderOutcome.FAILED, "malformed_response")
+            return _failure_result(
+                query, ProviderOutcome.FAILED, "malformed_response", outcome=outcome
+            )
         if not isinstance(payload, Mapping):
-            return _failure_result(query, ProviderOutcome.FAILED, "malformed_response")
+            return _failure_result(
+                query, ProviderOutcome.FAILED, "malformed_response", outcome=outcome
+            )
 
         candidate = _parse_work(payload, retrieved_at=self._clock())
         if candidate is None:
-            return _failure_result(query, ProviderOutcome.FAILED, "malformed_response")
-        return _success_result(query, (candidate,))
+            return _failure_result(
+                query, ProviderOutcome.FAILED, "malformed_response", outcome=outcome
+            )
+        return _success_result(query, (candidate,), outcome=outcome)
 
     def _fetch_list(self, *, query: DiscoveryQuery, url: str) -> FederatedSearchResult:
-        response_or_result = self._request(query=query, url=url)
-        if isinstance(response_or_result, FederatedSearchResult):
-            return response_or_result
+        outcome_or_result = self._request(query=query, url=url)
+        if isinstance(outcome_or_result, FederatedSearchResult):
+            return outcome_or_result
+        outcome = outcome_or_result
+        response = outcome.response
+        assert response is not None
 
-        response = response_or_result
         try:
             payload = json.loads(response.body)
         except (JSONDecodeError, UnicodeDecodeError):
-            return _failure_result(query, ProviderOutcome.FAILED, "malformed_response")
+            return _failure_result(
+                query, ProviderOutcome.FAILED, "malformed_response", outcome=outcome
+            )
         if not isinstance(payload, Mapping):
-            return _failure_result(query, ProviderOutcome.FAILED, "malformed_response")
+            return _failure_result(
+                query, ProviderOutcome.FAILED, "malformed_response", outcome=outcome
+            )
 
         raw_results = payload.get("results")
         if not isinstance(raw_results, list):
-            return _failure_result(query, ProviderOutcome.FAILED, "malformed_response")
+            return _failure_result(
+                query, ProviderOutcome.FAILED, "malformed_response", outcome=outcome
+            )
 
         retrieved_at = self._clock()
         candidates = tuple(
@@ -185,19 +246,78 @@ class OpenAlexProvider:
             if candidate is not None
         )
         if not candidates:
-            return _empty_result(query)
-        return _success_result(query, candidates)
+            return _empty_result(query, outcome=outcome)
+        return _success_result(query, candidates, outcome=outcome)
 
     def _request(
         self,
         *,
         query: DiscoveryQuery,
         url: str,
-    ) -> TransportResponse | FederatedSearchResult:
-        headers = {
+    ) -> _RequestOutcome | FederatedSearchResult:
+        outcome = self._raw_request(url=url)
+        if outcome.failure is not None:
+            if outcome.failure.reason == "not_found":
+                return _empty_result(query, outcome=outcome)
+            return _failure_result(
+                query,
+                outcome.failure.outcome,
+                outcome.failure.reason,
+                outcome=outcome,
+            )
+        return outcome
+
+    def _raw_request(self, *, url: str) -> _RequestOutcome:
+        """Perform one logical request, retrying transient failures in place.
+
+        A bounded loop (`self._max_attempts` total attempts, exponential
+        backoff between them via `self._sleep`) retries only
+        `_TRANSIENT_OUTCOMES` (HTTP 429 rate-limiting, provider-unavailable/
+        connection-level failures) -- never a non-transient 4xx client error, a
+        not-found (404 -> EMPTY), or an oversized/malformed response, all of
+        which indicate a real outcome rather than a transient condition worth
+        retrying. The final response or failure is returned alongside how many
+        retries were actually needed and whether any attempt observed a
+        rate-limit response, so a caller can build an honest `ProviderStatus`
+        regardless of which branch it takes.
+        """
+
+        headers: dict[str, str] = {
             "Accept": "application/json",
             "User-Agent": self._user_agent,
         }
+
+        retry_attempt_count = 0
+        rate_limited_observed = False
+        attempt = 0
+        while True:
+            attempt += 1
+            attempt_result = self._attempt(url=url, headers=headers)
+            if isinstance(attempt_result, TransportResponse):
+                return _RequestOutcome(
+                    response=attempt_result,
+                    failure=None,
+                    retry_attempt_count=retry_attempt_count,
+                    rate_limited_observed=rate_limited_observed,
+                )
+            if attempt_result.outcome is ProviderOutcome.RATE_LIMITED:
+                rate_limited_observed = True
+            if attempt_result.outcome in _TRANSIENT_OUTCOMES and attempt < self._max_attempts:
+                retry_attempt_count += 1
+                self._sleep(self._retry_backoff_seconds * (2 ** (attempt - 1)))
+                continue
+            return _RequestOutcome(
+                response=None,
+                failure=attempt_result,
+                retry_attempt_count=retry_attempt_count,
+                rate_limited_observed=rate_limited_observed,
+            )
+
+    def _attempt(
+        self, *, url: str, headers: Mapping[str, str]
+    ) -> TransportResponse | _RequestFailure:
+        """Perform exactly one HTTP attempt and map it to a response or failure."""
+
         try:
             response = self._transport.get(
                 url=url,
@@ -206,24 +326,24 @@ class OpenAlexProvider:
                 max_response_bytes=self._max_response_bytes,
             )
         except ResponseTooLargeError:
-            return _failure_result(query, ProviderOutcome.FAILED, "oversized_response")
+            return _RequestFailure(ProviderOutcome.FAILED, "oversized_response")
         except TimeoutError:
-            return _failure_result(query, ProviderOutcome.UNAVAILABLE, "timeout")
+            return _RequestFailure(ProviderOutcome.UNAVAILABLE, "timeout")
         except OSError:
-            return _failure_result(query, ProviderOutcome.UNAVAILABLE, "transport_error")
+            return _RequestFailure(ProviderOutcome.UNAVAILABLE, "transport_error")
 
         if len(response.body) > self._max_response_bytes:
-            return _failure_result(query, ProviderOutcome.FAILED, "oversized_response")
+            return _RequestFailure(ProviderOutcome.FAILED, "oversized_response")
         if response.status_code == 404:
-            return _empty_result(query)
+            return _RequestFailure(ProviderOutcome.EMPTY, "not_found")
         if response.status_code == 429:
-            return _failure_result(query, ProviderOutcome.RATE_LIMITED, "rate_limited")
+            return _RequestFailure(ProviderOutcome.RATE_LIMITED, "rate_limited")
         if response.status_code in {401, 403}:
-            return _failure_result(query, ProviderOutcome.FAILED, "authentication_failed")
+            return _RequestFailure(ProviderOutcome.FAILED, "authentication_failed")
         if 500 <= response.status_code <= 599:
-            return _failure_result(query, ProviderOutcome.UNAVAILABLE, "provider_unavailable")
+            return _RequestFailure(ProviderOutcome.UNAVAILABLE, "provider_unavailable")
         if response.status_code < 200 or response.status_code >= 300:
-            return _failure_result(query, ProviderOutcome.FAILED, "unsupported_http_status")
+            return _RequestFailure(ProviderOutcome.FAILED, "unsupported_http_status")
         return response
 
 
@@ -355,6 +475,8 @@ def _optional_text(value: object) -> str | None:
 def _success_result(
     query: DiscoveryQuery,
     candidates: tuple[FederatedCandidate, ...],
+    *,
+    outcome: _RequestOutcome,
 ) -> FederatedSearchResult:
     return FederatedSearchResult(
         query=query,
@@ -364,13 +486,15 @@ def _success_result(
                 outcome=ProviderOutcome.SUCCESS,
                 attempted=True,
                 result_count=len(candidates),
+                retry_attempt_count=outcome.retry_attempt_count,
+                rate_limited_observed=outcome.rate_limited_observed,
             ),
         ),
         candidates=candidates,
     )
 
 
-def _empty_result(query: DiscoveryQuery) -> FederatedSearchResult:
+def _empty_result(query: DiscoveryQuery, *, outcome: _RequestOutcome) -> FederatedSearchResult:
     return FederatedSearchResult(
         query=query,
         provider_statuses=(
@@ -379,6 +503,8 @@ def _empty_result(query: DiscoveryQuery) -> FederatedSearchResult:
                 outcome=ProviderOutcome.EMPTY,
                 attempted=True,
                 result_count=0,
+                retry_attempt_count=outcome.retry_attempt_count,
+                rate_limited_observed=outcome.rate_limited_observed,
             ),
         ),
     )
@@ -401,18 +527,22 @@ def _disabled_result(query: DiscoveryQuery, reason: str) -> FederatedSearchResul
 
 def _failure_result(
     query: DiscoveryQuery,
-    outcome: ProviderOutcome,
+    provider_outcome: ProviderOutcome,
     reason: str,
+    *,
+    outcome: _RequestOutcome,
 ) -> FederatedSearchResult:
     return FederatedSearchResult(
         query=query,
         provider_statuses=(
             ProviderStatus(
                 provider="openalex",
-                outcome=outcome,
+                outcome=provider_outcome,
                 attempted=True,
                 result_count=0,
                 reason=reason,
+                retry_attempt_count=outcome.retry_attempt_count,
+                rate_limited_observed=outcome.rate_limited_observed,
             ),
         ),
     )
