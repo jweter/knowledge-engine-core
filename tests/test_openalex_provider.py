@@ -40,7 +40,13 @@ def _provider(
     response: TransportResponse | Exception,
     *,
     api_key: str | None = "test-key",
+    max_attempts: int = 1,
 ) -> tuple[OpenAlexProvider, FakeTransport]:
+    # max_attempts defaults to 1 (no retries) so status-code/transport-failure
+    # tests that reuse a single fixed FakeTransport response test outcome
+    # mapping, not the retry loop -- see the dedicated retry tests below, which
+    # pass max_attempts explicitly with a SequenceTransport and a captured
+    # sleep function.
     transport = FakeTransport(response)
     provider = OpenAlexProvider(
         transport=transport,
@@ -49,6 +55,8 @@ def _provider(
         max_response_bytes=10_000,
         user_agent="knowledge-engine-test/1",
         api_key=api_key,
+        max_attempts=max_attempts,
+        sleep=lambda _seconds: None,
     )
     return provider, transport
 
@@ -201,6 +209,7 @@ def test_openalex_classifies_http_statuses(
     status = result.provider_statuses[0]
     assert status.outcome == outcome
     assert status.reason == reason
+    assert status.retry_attempt_count == 0
 
 
 @pytest.mark.parametrize(
@@ -231,6 +240,7 @@ def test_openalex_sanitizes_transport_failures(
     status = result.provider_statuses[0]
     assert status.outcome == outcome
     assert status.reason == reason
+    assert status.retry_attempt_count == 0
     assert "secret transport detail" not in (status.reason or "")
     assert "raw response detail" not in (status.reason or "")
 
@@ -307,3 +317,147 @@ def test_openalex_rejects_invalid_configuration(
             user_agent=user_agent,
             api_key=api_key,
         )
+
+
+def test_openalex_rejects_non_positive_max_attempts() -> None:
+    with pytest.raises(ValueError, match="max_attempts must be at least 1"):
+        OpenAlexProvider(transport=FakeTransport(_response(200)), max_attempts=0)
+
+
+def test_openalex_rejects_negative_retry_backoff() -> None:
+    with pytest.raises(ValueError, match="retry backoff must not be negative"):
+        OpenAlexProvider(transport=FakeTransport(_response(200)), retry_backoff_seconds=-1.0)
+
+
+class SequenceTransport:
+    """Fake transport returning a different response/error for each successive call."""
+
+    def __init__(self, responses: list[TransportResponse | Exception]) -> None:
+        self.responses = responses
+        self.calls: list[str] = []
+
+    def get(
+        self,
+        *,
+        url: str,
+        headers: Mapping[str, str],
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> TransportResponse:
+        self.calls.append(url)
+        outcome = self.responses[len(self.calls) - 1]
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+
+def test_openalex_rate_limit_is_retried_and_eventually_succeeds() -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(429, b"{}", {}),
+            _response(200, _work_payload()),
+        ]
+    )
+    sleeps: list[float] = []
+    provider = OpenAlexProvider(
+        transport=transport,
+        user_agent="knowledge-engine-test/1",
+        api_key="test-key",
+        sleep=sleeps.append,
+    )
+
+    result = provider.search(DiscoveryQuery(text="protein folding"))
+
+    assert len(transport.calls) == 2
+    assert result.provider_statuses[0].outcome is ProviderOutcome.SUCCESS
+    assert result.provider_statuses[0].retry_attempt_count == 1
+    assert result.provider_statuses[0].rate_limited_observed is True
+    assert result.candidates[0].canonical_id == "openalex:W123456789"
+    assert len(sleeps) == 1
+    assert sleeps[0] > 0
+
+
+def test_openalex_provider_unavailable_is_retried_up_to_the_configured_bound_then_reported() -> (
+    None
+):
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(503, b"{}", {}),
+            TransportResponse(503, b"{}", {}),
+            TransportResponse(503, b"{}", {}),
+        ]
+    )
+    sleeps: list[float] = []
+    provider = OpenAlexProvider(
+        transport=transport,
+        user_agent="knowledge-engine-test/1",
+        api_key="test-key",
+        max_attempts=3,
+        sleep=sleeps.append,
+    )
+
+    result = provider.search(DiscoveryQuery(text="protein folding"))
+
+    # 3 total attempts (1 initial + 2 retries), then the final failure is
+    # reported honestly rather than silently swallowed.
+    assert len(transport.calls) == 3
+    assert result.provider_statuses[0].outcome is ProviderOutcome.UNAVAILABLE
+    assert result.provider_statuses[0].reason == "provider_unavailable"
+    assert result.provider_statuses[0].retry_attempt_count == 2
+    assert result.provider_statuses[0].rate_limited_observed is False
+    assert len(sleeps) == 2
+
+
+def test_openalex_non_transient_client_error_is_never_retried() -> None:
+    transport = SequenceTransport(responses=[TransportResponse(404, b"{}", {})])
+    sleeps: list[float] = []
+    provider = OpenAlexProvider(
+        transport=transport,
+        user_agent="knowledge-engine-test/1",
+        api_key="test-key",
+        sleep=sleeps.append,
+    )
+
+    result = provider.search(DiscoveryQuery(text="protein folding"))
+
+    assert len(transport.calls) == 1
+    assert result.provider_statuses[0].outcome is ProviderOutcome.EMPTY
+    assert result.provider_statuses[0].retry_attempt_count == 0
+    assert sleeps == []
+
+
+def test_openalex_successful_first_attempt_reports_zero_retries() -> None:
+    transport = SequenceTransport(responses=[_response(200, _work_payload())])
+    provider = OpenAlexProvider(
+        transport=transport,
+        user_agent="knowledge-engine-test/1",
+        api_key="test-key",
+    )
+
+    result = provider.search(DiscoveryQuery(text="protein folding"))
+
+    assert len(transport.calls) == 1
+    assert result.provider_statuses[0].retry_attempt_count == 0
+    assert result.provider_statuses[0].rate_limited_observed is False
+
+
+def test_openalex_retry_backoff_is_exponential() -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(429, b"{}", {}),
+            TransportResponse(429, b"{}", {}),
+            _response(200, _work_payload()),
+        ]
+    )
+    sleeps: list[float] = []
+
+    OpenAlexProvider(
+        transport=transport,
+        user_agent="knowledge-engine-test/1",
+        api_key="test-key",
+        max_attempts=3,
+        retry_backoff_seconds=0.5,
+        sleep=sleeps.append,
+    ).search(DiscoveryQuery(text="protein folding"))
+
+    assert sleeps == [0.5, 1.0]
