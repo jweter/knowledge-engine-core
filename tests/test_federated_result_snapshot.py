@@ -99,6 +99,8 @@ def _mismatched_coverage(field: str) -> SearchCoverageReport:
         return replace(coverage, completeness="partial")
     if field == "candidate_count":
         return replace(coverage, candidate_count=0)
+    if field == "raw_observation_count":
+        return replace(coverage, raw_observation_count=0)
     raise AssertionError(f"Unhandled mismatch field: {field}")
 
 
@@ -171,6 +173,7 @@ def test_public_snapshot_exposes_provider_disagreement_without_picking_a_winner(
         "year_to",
         "limit_per_provider",
         "completeness",
+        "raw_observation_count",
         "candidate_count",
     ],
 )

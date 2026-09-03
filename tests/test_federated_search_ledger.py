@@ -196,6 +196,40 @@ def test_raw_observation_count_exceeds_candidate_count_after_dedup(tmp_path: Pat
     assert report.to_dict()["raw_observation_count"] == 2
 
 
+def test_raw_observation_count_excludes_unattempted_providers(tmp_path: Path) -> None:
+    """A skipped/disabled provider's own `result_count` must never count as discovered.
+
+    `ProviderStatus`/`ProviderCoverageRecord` permit a `SKIPPED` or `DISABLED`
+    record (`attempted=False`) to still carry a nonzero `result_count` --
+    nothing in that type rules it out. `raw_observation_count` is documented
+    as the sum over *attempted* providers only, so such a record must not
+    inflate the funnel count with observations from a provider that was
+    never actually queried.
+    """
+
+    ledger = _ledger(tmp_path)
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="protein folding"),
+        provider_statuses=(
+            ProviderStatus(
+                provider="PubMed", outcome=ProviderOutcome.SUCCESS, attempted=True, result_count=2
+            ),
+            ProviderStatus(
+                provider="Crossref",
+                outcome=ProviderOutcome.SKIPPED,
+                attempted=False,
+                result_count=5,
+                reason="unsupported_query",
+            ),
+        ),
+    )
+
+    record = ledger.record(result)
+    report = ledger.coverage_report(record.search_run_id)
+
+    assert report.raw_observation_count == 2
+
+
 def test_record_is_immutable_and_refuses_overwrite(tmp_path: Path) -> None:
     ledger = _ledger(tmp_path)
     ledger.record(_result())

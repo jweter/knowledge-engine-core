@@ -396,7 +396,9 @@ def build_search_coverage_report(record: SearchRunRecord) -> SearchCoverageRepor
         year_to=record.year_to,
         limit_per_provider=record.limit_per_provider,
         completeness=record.completeness,
-        raw_observation_count=sum(provider.result_count for provider in record.providers),
+        raw_observation_count=sum(
+            provider.result_count for provider in record.providers if provider.attempted
+        ),
         candidate_count=record.candidate_count,
         providers_requested=record.providers_requested,
         providers_attempted=record.providers_attempted,
