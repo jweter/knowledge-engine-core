@@ -346,7 +346,12 @@ class UnpaywallOaAcquisitionService:
                         # next download before that point could leave
                         # max_concurrent_downloads new bodies in flight
                         # alongside this one still being processed, exceeding
-                        # the documented in-memory bound by one.
+                        # the documented in-memory bound by one. Drop this
+                        # loop's own reference first so the just-staged body
+                        # is not itself an extra body held alongside the
+                        # newly submitted download's eventual response
+                        # (Codex review, PR #459).
+                        del response
                         if next_unsubmitted < len(approvals):
                             _submit(next_unsubmitted)
                             next_unsubmitted += 1
