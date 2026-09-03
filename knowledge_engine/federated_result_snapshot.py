@@ -38,6 +38,11 @@ def build_public_federated_result_payload(
         mismatches.append("limit_per_provider")
     if coverage.completeness != result.completeness.value:
         mismatches.append("completeness")
+    expected_raw_observation_count = sum(
+        status.result_count for status in result.provider_statuses if status.attempted
+    )
+    if coverage.raw_observation_count != expected_raw_observation_count:
+        mismatches.append("raw_observation_count")
     if coverage.candidate_count != len(result.candidates):
         mismatches.append("candidate_count")
 

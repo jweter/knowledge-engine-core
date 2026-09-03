@@ -736,6 +736,24 @@ named as the remaining unblock; the corresponding `knowledge-engine-ai`
 `ke_client` wrapper and Web's candidate-level diff rendering remain out of
 scope for this repo and are tracked in their own repositories.
 
+**Third follow-up (still FRD-6): discovered-vs-deduplicated candidate-funnel
+count.** Issue #433 item 3 ("candidate funnel") asks for persisted counts
+from discovered through deduplicated through the acquisition-side
+dispositions. The acquisition-side half was already covered by
+`GeneralQuestionAcquisitionPlan`, but `SearchCoverageReport` -- the public
+view `federated-coverage-report`/`federated-discover-history` re-fetch by
+ID -- exposed only the post-dedup `candidate_count`, not how many raw
+provider observations were discovered before deduplication; that total was
+only reconstructible by re-loading the full `SearchRunRecord` and summing
+`providers[].result_count` by hand. `SearchCoverageReport` now also carries
+`raw_observation_count`, the sum of every *attempted* provider's own
+`result_count` for the run (unattempted/skipped/disabled providers never
+contribute, even if a caller left a nonzero `result_count` on such a
+record). Purely additive and derived at read time from already-persisted
+per-provider facts, so no ledger `schema_version` change or backfill is
+needed and every previously persisted run reports it correctly. See
+`docs/core_interface_contract.md`'s `SearchCoverageReport` entry.
+
 ### FRD-7 -- Citation snowball discovery
 
 Add bounded references/citations expansion as a reproducible discovery strategy.

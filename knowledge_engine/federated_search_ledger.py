@@ -175,7 +175,19 @@ class SearchRunRecord:
 
 @dataclass(frozen=True)
 class SearchCoverageReport:
-    """Deterministic public coverage/provenance view for later AI/Web rendering."""
+    """Deterministic public coverage/provenance view for later AI/Web rendering.
+
+    ``raw_observation_count`` and ``candidate_count`` together answer issue
+    #433's "candidate funnel" bottleneck-instrumentation ask for this run's
+    discovery stage: ``raw_observation_count`` is the sum of every attempted
+    provider's own ``result_count`` (the total scholarly-work observations
+    providers returned, before cross-provider deduplication), and
+    ``candidate_count`` is how many distinct canonical candidates survived
+    deduplication into ``FederatedCandidate``s. The gap between the two is
+    exactly how much a run's raw provider results were narrowed by
+    deduplication -- previously only reconstructible by re-loading the full
+    ``SearchRunRecord`` and summing ``providers[].result_count`` by hand.
+    """
 
     search_run_id: str
     created_at: str
@@ -184,6 +196,7 @@ class SearchCoverageReport:
     year_to: int | None
     limit_per_provider: int
     completeness: str
+    raw_observation_count: int
     candidate_count: int
     providers_requested: tuple[str, ...]
     providers_attempted: tuple[str, ...]
@@ -207,6 +220,7 @@ class SearchCoverageReport:
             "year_to": self.year_to,
             "limit_per_provider": self.limit_per_provider,
             "completeness": self.completeness,
+            "raw_observation_count": self.raw_observation_count,
             "candidate_count": self.candidate_count,
             "providers_requested": list(self.providers_requested),
             "providers_attempted": list(self.providers_attempted),
@@ -382,6 +396,9 @@ def build_search_coverage_report(record: SearchRunRecord) -> SearchCoverageRepor
         year_to=record.year_to,
         limit_per_provider=record.limit_per_provider,
         completeness=record.completeness,
+        raw_observation_count=sum(
+            provider.result_count for provider in record.providers if provider.attempted
+        ),
         candidate_count=record.candidate_count,
         providers_requested=record.providers_requested,
         providers_attempted=record.providers_attempted,

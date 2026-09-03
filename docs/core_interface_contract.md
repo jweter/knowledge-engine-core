@@ -439,6 +439,16 @@ itself, but may need to trigger for a specific paper):**
   `schema_version` is unchanged (candidates is an optional field older
   records simply omit), so every existing invocation, consumer, and
   previously persisted run keeps working exactly as before.
+- `SearchCoverageReport` (issue #433 item 3's candidate-funnel follow-up:
+  discovered vs deduplicated counts): gains `raw_observation_count`, the sum
+  of every attempted provider's own `result_count` for the run -- the total
+  raw scholarly-work observations providers returned, before cross-provider
+  deduplication into `candidate_count`'s distinct canonical candidates. It is
+  derived at read time from the ledger's already-persisted per-provider
+  `result_count` facts, so no ledger `schema_version` change or backfill is
+  needed and every previously persisted run reports it correctly. Exposed
+  through `federated-coverage-report`, `federated-discover-history`, and
+  both commands' `--output` JSON alongside the existing `candidate_count`.
 - `ke general-question-acquire-pmc <request.json> --ledger-root <dir>
   --papers-dir <dir> --receipt <path.json>` (CORE-GQR-4): executes only
   `eligible_full_text` items routed to `pmc_oa`. It rebuilds the plan with

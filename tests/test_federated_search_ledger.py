@@ -139,11 +139,95 @@ def test_coverage_report_is_deterministic_and_does_not_guess(tmp_path: Path) -> 
 
     assert report.search_run_id == str(_RUN_ID)
     assert report.completeness == "partial"
+    assert report.raw_observation_count == 1
     assert report.candidate_count == 1
     assert report.providers_requested == ("pubmed", "openalex", "crossref")
     assert report.providers_attempted == ("pubmed", "openalex")
     assert report.providers_completed == ("pubmed",)
     assert report.providers_failed == ("openalex",)
+
+
+def test_raw_observation_count_exceeds_candidate_count_after_dedup(tmp_path: Path) -> None:
+    """Issue #433's candidate-funnel ask: expose discovered vs deduplicated counts.
+
+    Two providers each report one raw observation of the *same* underlying
+    work, already deduplicated upstream into a single `FederatedCandidate`
+    with two observations. `raw_observation_count` (sum of per-provider
+    `result_count`) must reflect the two raw observations providers actually
+    returned, while `candidate_count` reflects the one canonical candidate
+    that survived deduplication -- the gap between them is exactly the
+    funnel's dedup narrowing, previously only reconstructible by hand.
+    """
+
+    ledger = _ledger(tmp_path)
+    shared_candidate = FederatedCandidate(
+        canonical_id="doi:10.1/shared",
+        title="A shared protein folding study",
+        observations=(
+            ProviderObservation(
+                provider="PubMed", provider_id="1", title="A shared protein folding study"
+            ),
+            ProviderObservation(
+                provider="OpenAlex", provider_id="W1", title="A shared protein folding study"
+            ),
+        ),
+    )
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="protein folding"),
+        provider_statuses=(
+            ProviderStatus(
+                provider="PubMed", outcome=ProviderOutcome.SUCCESS, attempted=True, result_count=1
+            ),
+            ProviderStatus(
+                provider="OpenAlex",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+            ),
+        ),
+        candidates=(shared_candidate,),
+    )
+
+    record = ledger.record(result)
+    report = ledger.coverage_report(record.search_run_id)
+
+    assert report.raw_observation_count == 2
+    assert report.candidate_count == 1
+    assert report.to_dict()["raw_observation_count"] == 2
+
+
+def test_raw_observation_count_excludes_unattempted_providers(tmp_path: Path) -> None:
+    """A skipped/disabled provider's own `result_count` must never count as discovered.
+
+    `ProviderStatus`/`ProviderCoverageRecord` permit a `SKIPPED` or `DISABLED`
+    record (`attempted=False`) to still carry a nonzero `result_count` --
+    nothing in that type rules it out. `raw_observation_count` is documented
+    as the sum over *attempted* providers only, so such a record must not
+    inflate the funnel count with observations from a provider that was
+    never actually queried.
+    """
+
+    ledger = _ledger(tmp_path)
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="protein folding"),
+        provider_statuses=(
+            ProviderStatus(
+                provider="PubMed", outcome=ProviderOutcome.SUCCESS, attempted=True, result_count=2
+            ),
+            ProviderStatus(
+                provider="Crossref",
+                outcome=ProviderOutcome.SKIPPED,
+                attempted=False,
+                result_count=5,
+                reason="unsupported_query",
+            ),
+        ),
+    )
+
+    record = ledger.record(result)
+    report = ledger.coverage_report(record.search_run_id)
+
+    assert report.raw_observation_count == 2
 
 
 def test_record_is_immutable_and_refuses_overwrite(tmp_path: Path) -> None:
