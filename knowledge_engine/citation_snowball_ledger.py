@@ -17,13 +17,28 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from knowledge_engine.citation_snowball import CitationSnowballResult
+from knowledge_engine.federated_discovery import ProviderOutcome
 
 LEDGER_SCHEMA_VERSION = 1
 
 
 @dataclass(frozen=True)
 class CitationTraversalRecord:
-    """Persisted outcome of one provider traversal inside a snowball run."""
+    """Persisted outcome of one provider traversal inside a snowball run.
+
+    ``retry_attempt_count``/``rate_limited_observed`` mirror
+    `federated_search_ledger.ProviderCoverageRecord`'s issue #433 item 2
+    fields, added the same additive way: a run persisted before these fields
+    existed simply omits the keys, and the loader defaults them to
+    ``0``/``False`` -- the honest "no retry happened" state for every
+    traversal that did not go through a retrying provider adapter -- so no
+    schema-version bump is needed. ``rate_limited_observed`` is then
+    corrected in ``__post_init__`` when the record's own ``outcome`` is
+    ``rate_limited``, the same derivation `ProviderCoverageRecord` applies,
+    so an old record missing the key still loads as ``True`` rather than
+    fabricating an absence of rate-limiting the outcome field itself
+    contradicts.
+    """
 
     seed_identifier: str
     direction: str
@@ -31,6 +46,12 @@ class CitationTraversalRecord:
     attempted: bool
     result_count: int
     reason: str | None
+    retry_attempt_count: int = 0
+    rate_limited_observed: bool = False
+
+    def __post_init__(self) -> None:
+        if self.outcome == ProviderOutcome.RATE_LIMITED.value and not self.rate_limited_observed:
+            object.__setattr__(self, "rate_limited_observed", True)
 
 
 @dataclass(frozen=True)
@@ -115,6 +136,8 @@ class CitationSnowballLedger:
                     attempted=item.provider_status.attempted,
                     result_count=item.provider_status.result_count,
                     reason=item.provider_status.reason,
+                    retry_attempt_count=item.provider_status.retry_attempt_count,
+                    rate_limited_observed=item.provider_status.rate_limited_observed,
                 )
                 for item in result.traversals
             ),
@@ -214,6 +237,8 @@ def _traversal_tuple(payload: object) -> tuple[CitationTraversalRecord, ...]:
                 attempted=_required_bool(item, "attempted"),
                 result_count=_nonnegative_int(item, "result_count"),
                 reason=_optional_string(item, "reason"),
+                retry_attempt_count=_nonnegative_int_default(item, "retry_attempt_count", 0),
+                rate_limited_observed=_bool_default(item, "rate_limited_observed", False),
             )
         )
     return tuple(records)
@@ -286,4 +311,24 @@ def _nonnegative_int(payload: dict[str, Any], field: str) -> int:
     value = payload.get(field)
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"Citation snowball field {field} must be non-negative.")
+    return value
+
+
+def _nonnegative_int_default(payload: dict[str, Any], field: str, default: int) -> int:
+    # `retry_attempt_count` postdates this record's original field set
+    # (issue #433 item 2); a traversal persisted before it existed simply
+    # omits the key.
+    if field not in payload:
+        return default
+    return _nonnegative_int(payload, field)
+
+
+def _bool_default(payload: dict[str, Any], field: str, default: bool) -> bool:
+    # `rate_limited_observed` postdates this record's original field set
+    # (issue #433 item 2); a traversal persisted before it existed simply
+    # omits the key. `CitationTraversalRecord.__post_init__` corrects this
+    # default to `True` when the record's own `outcome` is `rate_limited`.
+    value = payload.get(field, default)
+    if not isinstance(value, bool):
+        raise ValueError(f"Citation snowball field {field} must be boolean.")
     return value

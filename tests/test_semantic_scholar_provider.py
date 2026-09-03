@@ -162,10 +162,16 @@ def test_http_failures_map_to_explicit_provider_status(
 ) -> None:
     transport = FakeTransport(TransportResponse(status_code, b"{}", {}))
 
-    result = SemanticScholarProvider(transport=transport).search(DiscoveryQuery(text="test"))
+    # max_attempts=1: this test is about status-code -> ProviderStatus mapping,
+    # not the retry loop itself (see test_semantic_scholar_retry.py-equivalent
+    # cases below), so retries are disabled to keep it fast and focused.
+    result = SemanticScholarProvider(transport=transport, max_attempts=1).search(
+        DiscoveryQuery(text="test")
+    )
 
     assert result.provider_statuses[0].outcome is outcome
     assert result.provider_statuses[0].reason == reason
+    assert result.provider_statuses[0].retry_attempt_count == 0
 
 
 @pytest.mark.parametrize(
@@ -181,12 +187,135 @@ def test_transport_failures_are_contained(
     outcome: ProviderOutcome,
     reason: str,
 ) -> None:
-    result = SemanticScholarProvider(transport=FakeTransport(error=error)).search(
+    result = SemanticScholarProvider(transport=FakeTransport(error=error), max_attempts=1).search(
         DiscoveryQuery(text="test")
     )
 
     assert result.provider_statuses[0].outcome is outcome
     assert result.provider_statuses[0].reason == reason
+    assert result.provider_statuses[0].retry_attempt_count == 0
+
+
+@dataclass
+class SequenceTransport:
+    """Fake transport returning a different response/error for each successive call."""
+
+    responses: list[TransportResponse | Exception] = field(default_factory=list)
+    calls: list[str] = field(default_factory=list)
+
+    def get(
+        self,
+        *,
+        url: str,
+        headers: Mapping[str, str],
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> TransportResponse:
+        self.calls.append(url)
+        outcome = self.responses[len(self.calls) - 1]
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+
+def test_rate_limit_is_retried_and_eventually_succeeds() -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(429, b"{}", {}),
+            _response({"data": [_paper()]}),
+        ]
+    )
+    sleeps: list[float] = []
+
+    result = SemanticScholarProvider(transport=transport, sleep=sleeps.append).search(
+        DiscoveryQuery(text="test")
+    )
+
+    assert len(transport.calls) == 2
+    assert result.provider_statuses[0].outcome is ProviderOutcome.SUCCESS
+    assert result.provider_statuses[0].retry_attempt_count == 1
+    assert result.provider_statuses[0].rate_limited_observed is True
+    assert result.candidates[0].canonical_id == "semantic_scholar:abc123"
+    assert len(sleeps) == 1
+    assert sleeps[0] > 0
+
+
+def test_provider_unavailable_is_retried_up_to_the_configured_bound_then_reported() -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(503, b"{}", {}),
+            TransportResponse(503, b"{}", {}),
+            TransportResponse(503, b"{}", {}),
+        ]
+    )
+    sleeps: list[float] = []
+
+    result = SemanticScholarProvider(
+        transport=transport, max_attempts=3, sleep=sleeps.append
+    ).search(DiscoveryQuery(text="test"))
+
+    # 3 total attempts (1 initial + 2 retries), then the final failure is
+    # reported honestly rather than silently swallowed.
+    assert len(transport.calls) == 3
+    assert result.provider_statuses[0].outcome is ProviderOutcome.UNAVAILABLE
+    assert result.provider_statuses[0].reason == "provider_unavailable"
+    assert result.provider_statuses[0].retry_attempt_count == 2
+    assert result.provider_statuses[0].rate_limited_observed is False
+    assert len(sleeps) == 2
+
+
+def test_non_transient_client_error_is_never_retried() -> None:
+    transport = SequenceTransport(responses=[TransportResponse(404, b"{}", {})])
+    sleeps: list[float] = []
+
+    result = SemanticScholarProvider(transport=transport, sleep=sleeps.append).search(
+        DiscoveryQuery(text="test")
+    )
+
+    assert len(transport.calls) == 1
+    assert result.provider_statuses[0].outcome is ProviderOutcome.EMPTY
+    assert result.provider_statuses[0].retry_attempt_count == 0
+    assert sleeps == []
+
+
+def test_successful_first_attempt_reports_zero_retries() -> None:
+    transport = SequenceTransport(responses=[_response({"data": [_paper()]})])
+
+    result = SemanticScholarProvider(transport=transport).search(DiscoveryQuery(text="test"))
+
+    assert len(transport.calls) == 1
+    assert result.provider_statuses[0].retry_attempt_count == 0
+    assert result.provider_statuses[0].rate_limited_observed is False
+
+
+def test_retry_backoff_is_exponential() -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(429, b"{}", {}),
+            TransportResponse(429, b"{}", {}),
+            _response({"data": [_paper()]}),
+        ]
+    )
+    sleeps: list[float] = []
+
+    SemanticScholarProvider(
+        transport=transport,
+        max_attempts=3,
+        retry_backoff_seconds=0.5,
+        sleep=sleeps.append,
+    ).search(DiscoveryQuery(text="test"))
+
+    assert sleeps == [0.5, 1.0]
+
+
+def test_rejects_non_positive_max_attempts() -> None:
+    with pytest.raises(ValueError, match="max_attempts must be at least 1"):
+        SemanticScholarProvider(transport=FakeTransport(), max_attempts=0)
+
+
+def test_rejects_negative_retry_backoff() -> None:
+    with pytest.raises(ValueError, match="retry backoff must not be negative"):
+        SemanticScholarProvider(transport=FakeTransport(), retry_backoff_seconds=-1.0)
 
 
 def test_malformed_search_item_fails_closed() -> None:

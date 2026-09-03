@@ -9,6 +9,7 @@ is deliberately not requested or mapped into the scientific-evidence contract.
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -39,6 +40,17 @@ DEFAULT_MAX_RESPONSE_BYTES = 2_000_000
 DEFAULT_USER_AGENT = "knowledge-engine-core/0.2 federated-discovery"
 _FIELDS = "title,authors,year,venue,abstract,externalIds,url,openAccessPdf,citationCount"
 
+# Issue #433 item 2: a bounded, exponential-backoff retry for transient
+# failures only. `DEFAULT_MAX_ATTEMPTS` counts the *first* attempt plus every
+# retry (3 == up to 2 retries). Retries are triggered only by outcomes that
+# genuinely indicate a transient condition -- an HTTP 429 rate-limit response
+# or a provider-unavailable/connection-level failure -- never by a non-transient
+# 4xx client error (401/403/404/oversized page, etc.), and never by a malformed
+# response body, which is a parsing failure, not a transport failure.
+DEFAULT_MAX_ATTEMPTS = 3
+DEFAULT_RETRY_BACKOFF_SECONDS = 0.5
+_TRANSIENT_OUTCOMES = frozenset({ProviderOutcome.RATE_LIMITED, ProviderOutcome.UNAVAILABLE})
+
 
 class ResponseTooLargeError(OSError):
     """Raised when a provider response exceeds the configured byte limit."""
@@ -57,6 +69,22 @@ class TransportResponse:
 class _RequestFailure:
     outcome: ProviderOutcome
     reason: str
+
+
+@dataclass(frozen=True)
+class _RequestOutcome:
+    """Result of one logical (possibly retried) request.
+
+    Exactly one of ``response``/``failure`` is set. ``retry_attempt_count`` and
+    ``rate_limited_observed`` describe the whole retry loop, not just the final
+    attempt, so a caller building a `ProviderStatus` from either branch reports
+    accurate retry/rate-limit facts either way.
+    """
+
+    response: TransportResponse | None
+    failure: _RequestFailure | None
+    retry_attempt_count: int
+    rate_limited_observed: bool
 
 
 class SemanticScholarTransport(Protocol):
@@ -85,6 +113,9 @@ class SemanticScholarProvider:
         max_response_bytes: int = DEFAULT_MAX_RESPONSE_BYTES,
         user_agent: str = DEFAULT_USER_AGENT,
         api_key: str | None = None,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+        retry_backoff_seconds: float = DEFAULT_RETRY_BACKOFF_SECONDS,
+        sleep: Callable[[float], None] | None = None,
     ) -> None:
         if timeout_seconds <= 0:
             raise ValueError("Semantic Scholar timeout must be positive.")
@@ -94,6 +125,10 @@ class SemanticScholarProvider:
             raise ValueError("Semantic Scholar User-Agent must not be blank.")
         if api_key is not None and not api_key.strip():
             raise ValueError("Semantic Scholar API key must not be blank when provided.")
+        if max_attempts < 1:
+            raise ValueError("Semantic Scholar max_attempts must be at least 1.")
+        if retry_backoff_seconds < 0:
+            raise ValueError("Semantic Scholar retry backoff must not be negative.")
 
         self._transport = transport
         self._clock = clock or (lambda: datetime.now(UTC))
@@ -101,6 +136,9 @@ class SemanticScholarProvider:
         self._max_response_bytes = max_response_bytes
         self._user_agent = user_agent
         self._api_key = api_key.strip() if api_key is not None else None
+        self._max_attempts = max_attempts
+        self._retry_backoff_seconds = retry_backoff_seconds
+        self._sleep = sleep or time.sleep
 
     @property
     def name(self) -> str:
@@ -193,45 +231,65 @@ class SemanticScholarProvider:
         return self._fetch_traversal_page(query=query, url=url)
 
     def _fetch_single(self, *, query: DiscoveryQuery, url: str) -> FederatedSearchResult:
-        response_or_result = self._request(query=query, url=url)
-        if isinstance(response_or_result, FederatedSearchResult):
-            return response_or_result
+        outcome_or_result = self._request(query=query, url=url)
+        if isinstance(outcome_or_result, FederatedSearchResult):
+            return outcome_or_result
+        outcome = outcome_or_result
+        response = outcome.response
+        assert response is not None
 
-        payload = _decode_mapping(response_or_result.body)
+        payload = _decode_mapping(response.body)
         if payload is None:
-            return _failure_result(query, ProviderOutcome.FAILED, "malformed_response")
+            return _failure_result(
+                query, ProviderOutcome.FAILED, "malformed_response", outcome=outcome
+            )
         candidate = _parse_paper(payload, retrieved_at=self._clock())
         if candidate is None:
-            return _failure_result(query, ProviderOutcome.FAILED, "malformed_response")
-        return _success_result(query, (candidate,))
+            return _failure_result(
+                query, ProviderOutcome.FAILED, "malformed_response", outcome=outcome
+            )
+        return _success_result(query, (candidate,), outcome=outcome)
 
     def _fetch_list(self, *, query: DiscoveryQuery, url: str) -> FederatedSearchResult:
-        response_or_result = self._request(query=query, url=url)
-        if isinstance(response_or_result, FederatedSearchResult):
-            return response_or_result
+        outcome_or_result = self._request(query=query, url=url)
+        if isinstance(outcome_or_result, FederatedSearchResult):
+            return outcome_or_result
+        outcome = outcome_or_result
+        response = outcome.response
+        assert response is not None
 
-        payload = _decode_mapping(response_or_result.body)
+        payload = _decode_mapping(response.body)
         if payload is None:
-            return _failure_result(query, ProviderOutcome.FAILED, "malformed_response")
+            return _failure_result(
+                query, ProviderOutcome.FAILED, "malformed_response", outcome=outcome
+            )
         raw_data = payload.get("data")
         if not isinstance(raw_data, list):
-            return _failure_result(query, ProviderOutcome.FAILED, "malformed_response")
+            return _failure_result(
+                query, ProviderOutcome.FAILED, "malformed_response", outcome=outcome
+            )
         if len(raw_data) > query.limit_per_provider:
-            return _failure_result(query, ProviderOutcome.FAILED, "oversized_result_page")
+            return _failure_result(
+                query, ProviderOutcome.FAILED, "oversized_result_page", outcome=outcome
+            )
 
         retrieved_at = self._clock()
         candidates: list[FederatedCandidate] = []
         for item in raw_data:
             if not isinstance(item, Mapping):
-                return _failure_result(query, ProviderOutcome.FAILED, "malformed_response")
+                return _failure_result(
+                    query, ProviderOutcome.FAILED, "malformed_response", outcome=outcome
+                )
             candidate = _parse_paper(item, retrieved_at=retrieved_at)
             if candidate is None:
-                return _failure_result(query, ProviderOutcome.FAILED, "malformed_response")
+                return _failure_result(
+                    query, ProviderOutcome.FAILED, "malformed_response", outcome=outcome
+                )
             candidates.append(candidate)
 
         if not candidates:
-            return _empty_result(query)
-        return _success_result(query, tuple(candidates))
+            return _empty_result(query, outcome=outcome)
+        return _success_result(query, tuple(candidates), outcome=outcome)
 
     def _fetch_traversal_page(
         self,
@@ -239,26 +297,31 @@ class SemanticScholarProvider:
         query: CitationTraversalQuery,
         url: str,
     ) -> CitationTraversalResult:
-        response_or_failure = self._raw_request(url=url)
-        if isinstance(response_or_failure, _RequestFailure):
-            if response_or_failure.reason == "not_found":
+        outcome = self._raw_request(url=url)
+        if outcome.failure is not None:
+            if outcome.failure.reason == "not_found":
                 return _traversal_failure_result(
                     query,
                     ProviderOutcome.FAILED,
                     "seed_not_found",
+                    outcome=outcome,
                 )
             return _traversal_failure_result(
                 query,
-                response_or_failure.outcome,
-                response_or_failure.reason,
+                outcome.failure.outcome,
+                outcome.failure.reason,
+                outcome=outcome,
             )
 
-        payload = _decode_mapping(response_or_failure.body)
+        response = outcome.response
+        assert response is not None
+        payload = _decode_mapping(response.body)
         if payload is None:
             return _traversal_failure_result(
                 query,
                 ProviderOutcome.FAILED,
                 "malformed_response",
+                outcome=outcome,
             )
         raw_data = payload.get("data")
         if not isinstance(raw_data, list):
@@ -266,12 +329,14 @@ class SemanticScholarProvider:
                 query,
                 ProviderOutcome.FAILED,
                 "malformed_response",
+                outcome=outcome,
             )
         if len(raw_data) > query.limit:
             return _traversal_failure_result(
                 query,
                 ProviderOutcome.FAILED,
                 "oversized_result_page",
+                outcome=outcome,
             )
 
         next_offset = payload.get("next")
@@ -280,6 +345,7 @@ class SemanticScholarProvider:
                 query,
                 ProviderOutcome.FAILED,
                 "malformed_response",
+                outcome=outcome,
             )
 
         retrieved_at = self._clock()
@@ -295,6 +361,7 @@ class SemanticScholarProvider:
                     query,
                     ProviderOutcome.FAILED,
                     "malformed_response",
+                    outcome=outcome,
                 )
             raw_paper = item.get(paper_key)
             if not isinstance(raw_paper, Mapping):
@@ -302,6 +369,7 @@ class SemanticScholarProvider:
                     query,
                     ProviderOutcome.FAILED,
                     "malformed_response",
+                    outcome=outcome,
                 )
             candidate = _parse_paper(raw_paper, retrieved_at=retrieved_at)
             if candidate is None:
@@ -309,6 +377,7 @@ class SemanticScholarProvider:
                     query,
                     ProviderOutcome.FAILED,
                     "malformed_response",
+                    outcome=outcome,
                 )
             related_provider_id = candidate.observations[0].provider_id
             candidates.append(candidate)
@@ -323,12 +392,13 @@ class SemanticScholarProvider:
             )
 
         if not candidates:
-            return _traversal_empty_result(query, next_offset=next_offset)
+            return _traversal_empty_result(query, next_offset=next_offset, outcome=outcome)
         return _traversal_success_result(
             query,
             candidates=tuple(candidates),
             edges=tuple(edges),
             next_offset=next_offset,
+            outcome=outcome,
         )
 
     def _request(
@@ -336,25 +406,72 @@ class SemanticScholarProvider:
         *,
         query: DiscoveryQuery,
         url: str,
-    ) -> TransportResponse | FederatedSearchResult:
-        response_or_failure = self._raw_request(url=url)
-        if isinstance(response_or_failure, TransportResponse):
-            return response_or_failure
-        if response_or_failure.reason == "not_found":
-            return _empty_result(query)
+    ) -> _RequestOutcome | FederatedSearchResult:
+        outcome = self._raw_request(url=url)
+        if outcome.response is not None:
+            return outcome
+        assert outcome.failure is not None
+        if outcome.failure.reason == "not_found":
+            return _empty_result(query, outcome=outcome)
         return _failure_result(
             query,
-            response_or_failure.outcome,
-            response_or_failure.reason,
+            outcome.failure.outcome,
+            outcome.failure.reason,
+            outcome=outcome,
         )
 
-    def _raw_request(self, *, url: str) -> TransportResponse | _RequestFailure:
+    def _raw_request(self, *, url: str) -> _RequestOutcome:
+        """Perform one logical request, retrying transient failures in place.
+
+        A bounded loop (`self._max_attempts` total attempts, exponential
+        backoff between them via `self._sleep`) retries only
+        `_TRANSIENT_OUTCOMES` (HTTP 429 rate-limiting, provider-unavailable/
+        connection-level failures) -- never a non-transient 4xx client error, a
+        not-found (404 -> EMPTY), or an oversized/malformed response, all of
+        which indicate a real outcome rather than a transient condition worth
+        retrying. The final response or failure is returned alongside how many
+        retries were actually needed and whether any attempt observed a
+        rate-limit response, so a caller can build an honest `ProviderStatus`
+        regardless of which branch it takes.
+        """
+
         headers: dict[str, str] = {
             "Accept": "application/json",
             "User-Agent": self._user_agent,
         }
         if self._api_key is not None:
             headers["x-api-key"] = self._api_key
+
+        retry_attempt_count = 0
+        rate_limited_observed = False
+        attempt = 0
+        while True:
+            attempt += 1
+            attempt_result = self._attempt(url=url, headers=headers)
+            if isinstance(attempt_result, TransportResponse):
+                return _RequestOutcome(
+                    response=attempt_result,
+                    failure=None,
+                    retry_attempt_count=retry_attempt_count,
+                    rate_limited_observed=rate_limited_observed,
+                )
+            if attempt_result.outcome is ProviderOutcome.RATE_LIMITED:
+                rate_limited_observed = True
+            if attempt_result.outcome in _TRANSIENT_OUTCOMES and attempt < self._max_attempts:
+                retry_attempt_count += 1
+                self._sleep(self._retry_backoff_seconds * (2 ** (attempt - 1)))
+                continue
+            return _RequestOutcome(
+                response=None,
+                failure=attempt_result,
+                retry_attempt_count=retry_attempt_count,
+                rate_limited_observed=rate_limited_observed,
+            )
+
+    def _attempt(
+        self, *, url: str, headers: Mapping[str, str]
+    ) -> TransportResponse | _RequestFailure:
+        """Perform exactly one HTTP attempt and map it to a response or failure."""
 
         try:
             response = self._transport.get(
@@ -494,6 +611,8 @@ def _optional_text(value: object) -> str | None:
 def _success_result(
     query: DiscoveryQuery,
     candidates: tuple[FederatedCandidate, ...],
+    *,
+    outcome: _RequestOutcome,
 ) -> FederatedSearchResult:
     return FederatedSearchResult(
         query=query,
@@ -503,13 +622,15 @@ def _success_result(
                 outcome=ProviderOutcome.SUCCESS,
                 attempted=True,
                 result_count=len(candidates),
+                retry_attempt_count=outcome.retry_attempt_count,
+                rate_limited_observed=outcome.rate_limited_observed,
             ),
         ),
         candidates=candidates,
     )
 
 
-def _empty_result(query: DiscoveryQuery) -> FederatedSearchResult:
+def _empty_result(query: DiscoveryQuery, *, outcome: _RequestOutcome) -> FederatedSearchResult:
     return FederatedSearchResult(
         query=query,
         provider_statuses=(
@@ -517,6 +638,8 @@ def _empty_result(query: DiscoveryQuery) -> FederatedSearchResult:
                 provider="semantic_scholar",
                 outcome=ProviderOutcome.EMPTY,
                 attempted=True,
+                retry_attempt_count=outcome.retry_attempt_count,
+                rate_limited_observed=outcome.rate_limited_observed,
             ),
         ),
     )
@@ -524,17 +647,21 @@ def _empty_result(query: DiscoveryQuery) -> FederatedSearchResult:
 
 def _failure_result(
     query: DiscoveryQuery,
-    outcome: ProviderOutcome,
+    provider_outcome: ProviderOutcome,
     reason: str,
+    *,
+    outcome: _RequestOutcome,
 ) -> FederatedSearchResult:
     return FederatedSearchResult(
         query=query,
         provider_statuses=(
             ProviderStatus(
                 provider="semantic_scholar",
-                outcome=outcome,
+                outcome=provider_outcome,
                 attempted=True,
                 reason=reason,
+                retry_attempt_count=outcome.retry_attempt_count,
+                rate_limited_observed=outcome.rate_limited_observed,
             ),
         ),
     )
@@ -546,6 +673,7 @@ def _traversal_success_result(
     candidates: tuple[FederatedCandidate, ...],
     edges: tuple[CitationEdge, ...],
     next_offset: int | None,
+    outcome: _RequestOutcome,
 ) -> CitationTraversalResult:
     return CitationTraversalResult(
         query=query,
@@ -554,6 +682,8 @@ def _traversal_success_result(
             outcome=ProviderOutcome.SUCCESS,
             attempted=True,
             result_count=len(candidates),
+            retry_attempt_count=outcome.retry_attempt_count,
+            rate_limited_observed=outcome.rate_limited_observed,
         ),
         candidates=candidates,
         edges=edges,
@@ -565,6 +695,7 @@ def _traversal_empty_result(
     query: CitationTraversalQuery,
     *,
     next_offset: int | None,
+    outcome: _RequestOutcome,
 ) -> CitationTraversalResult:
     return CitationTraversalResult(
         query=query,
@@ -572,6 +703,8 @@ def _traversal_empty_result(
             provider="semantic_scholar",
             outcome=ProviderOutcome.EMPTY,
             attempted=True,
+            retry_attempt_count=outcome.retry_attempt_count,
+            rate_limited_observed=outcome.rate_limited_observed,
         ),
         next_offset=next_offset,
     )
@@ -579,15 +712,19 @@ def _traversal_empty_result(
 
 def _traversal_failure_result(
     query: CitationTraversalQuery,
-    outcome: ProviderOutcome,
+    provider_outcome: ProviderOutcome,
     reason: str,
+    *,
+    outcome: _RequestOutcome,
 ) -> CitationTraversalResult:
     return CitationTraversalResult(
         query=query,
         provider_status=ProviderStatus(
             provider="semantic_scholar",
-            outcome=outcome,
+            outcome=provider_outcome,
             attempted=True,
             reason=reason,
+            retry_attempt_count=outcome.retry_attempt_count,
+            rate_limited_observed=outcome.rate_limited_observed,
         ),
     )

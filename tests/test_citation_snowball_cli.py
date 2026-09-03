@@ -71,6 +71,8 @@ def _result(
     limit: int = 25,
     outcome: ProviderOutcome = ProviderOutcome.SUCCESS,
     reason: str | None = None,
+    retry_attempt_count: int = 0,
+    rate_limited_observed: bool = False,
 ) -> CitationTraversalResult:
     query = CitationTraversalQuery(seed_identifier=seed, direction=direction, limit=limit)
     candidates = tuple(_candidate(provider_id) for provider_id in discovered)
@@ -92,6 +94,8 @@ def _result(
             attempted=True,
             result_count=len(discovered),
             reason=reason,
+            retry_attempt_count=retry_attempt_count,
+            rate_limited_observed=rate_limited_observed,
         ),
         candidates=candidates,
         edges=edges,
@@ -364,6 +368,75 @@ def test_citation_snowball_report_reads_back_a_persisted_run(
     assert snowball_run_id in unwrapped
     assert "Completeness: complete" in unwrapped
     assert "semantic_scholar" in unwrapped
+
+
+def test_citation_snowball_output_and_report_surface_retry_facts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A citation-snowball run that retried past a 429 must remain visible
+    once persisted, both in `--output` JSON's `traversals` array and in
+    `citation-snowball-report`'s console Traversals table -- not silently
+    discarded the moment the run is recorded (issue #433 item 2, Codex
+    review finding 2)."""
+
+    _patch_provider(
+        monkeypatch,
+        [
+            _result(
+                "W1",
+                CitationDirection.REFERENCES,
+                ("W2",),
+                retry_attempt_count=2,
+                rate_limited_observed=True,
+            ),
+            _result("W1", CitationDirection.CITATIONS, ()),
+        ],
+    )
+
+    ledger_root = tmp_path / "ledger"
+    output_path = tmp_path / "snowball.json"
+    run_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "citation-snowball",
+            "--seeds",
+            "W1",
+            "--ledger-root",
+            str(ledger_root),
+            "--output",
+            str(output_path),
+        ],
+    )
+    assert run_result.exit_code == 0, run_result.output
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    references_traversal = next(
+        item for item in payload["traversals"] if item["direction"] == "references"
+    )
+    assert references_traversal["retry_attempt_count"] == 2
+    assert references_traversal["rate_limited_observed"] is True
+    citations_traversal = next(
+        item for item in payload["traversals"] if item["direction"] == "citations"
+    )
+    assert citations_traversal["retry_attempt_count"] == 0
+    assert citations_traversal["rate_limited_observed"] is False
+
+    snowball_run_id = payload["snowball_run_id"]
+    report_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "citation-snowball-report",
+            snowball_run_id,
+            "--ledger-root",
+            str(ledger_root),
+        ],
+    )
+
+    assert report_result.exit_code == 0, report_result.output
+    unwrapped = _unwrapped(report_result.output)
+    assert "Retries" in unwrapped
+    assert "Rate limited" in unwrapped
+    assert "yes" in unwrapped
 
 
 def test_citation_snowball_report_rejects_an_unknown_run_id(

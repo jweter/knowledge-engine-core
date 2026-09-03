@@ -188,7 +188,20 @@ class FederatedCandidate:
 
 @dataclass(frozen=True)
 class ProviderStatus:
-    """One provider's recorded outcome for one federated search run."""
+    """One provider's recorded outcome for one federated search run.
+
+    ``retry_attempt_count`` and ``rate_limited_observed`` answer issue #433
+    item 2's "federated provider latency/degradation" ask: how many bounded
+    retries a provider adapter needed before reaching its final outcome
+    (``0`` when the first attempt already succeeded or failed non-transiently),
+    and whether any attempt observed an HTTP 429 rate-limit response along the
+    way -- even if a later retry ultimately succeeded. Both default to the
+    honest "no retry happened" state so every adapter that does not yet
+    implement retries (most of them, as of this field's introduction) reports
+    them correctly without change. An unattempted (``SKIPPED``/``DISABLED``)
+    provider can never report a retry or a rate-limit observation -- there was
+    no attempt to retry.
+    """
 
     provider: str
     outcome: ProviderOutcome
@@ -196,6 +209,8 @@ class ProviderStatus:
     result_count: int = 0
     latency_ms: int | None = None
     reason: str | None = None
+    retry_attempt_count: int = 0
+    rate_limited_observed: bool = False
 
     def __post_init__(self) -> None:
         if not self.provider.strip():
@@ -215,6 +230,19 @@ class ProviderStatus:
             raise ValueError("Successful/empty provider outcomes must not carry a failure reason.")
         if self.outcome == ProviderOutcome.EMPTY and self.result_count != 0:
             raise ValueError("An empty provider result must have result_count == 0.")
+        if self.retry_attempt_count < 0:
+            raise ValueError("Provider retry_attempt_count must not be negative.")
+        if not self.attempted and (self.retry_attempt_count != 0 or self.rate_limited_observed):
+            raise ValueError(
+                "Unattempted providers must not report retries or rate-limit observations."
+            )
+        # A RATE_LIMITED outcome is itself proof a rate limit was observed, even
+        # for adapters that do not implement the Semantic Scholar retry loop's
+        # own bookkeeping. Derive the flag here so every current and future
+        # adapter reports it consistently rather than requiring each call site
+        # to remember to set it.
+        if self.outcome == ProviderOutcome.RATE_LIMITED and not self.rate_limited_observed:
+            object.__setattr__(self, "rate_limited_observed", True)
 
 
 @dataclass(frozen=True)

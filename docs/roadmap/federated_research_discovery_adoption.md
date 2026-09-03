@@ -520,6 +520,31 @@ Exit criteria:
 - rate-limit behavior visible in provider status. **met, live-verified**
   (see above)
 
+**Follow-up, 2026-09-03 (issue #433 item 2, first slice): bounded retry and
+retry/rate-limit tracking.** The live-verified 429 above was surfaced but
+never retried -- `SemanticScholarProvider` made exactly one attempt per
+logical request, same as every other federated adapter. Since this is the
+default provider for both `federated-discover` and `citation-snowball`, it
+is the highest-value first slice of issue #433 item 2's "preserve per-provider
+elapsed time, retries/rate-limit state, result count, and cache/reuse status"
+ask. `SemanticScholarProvider` now retries only genuinely transient failures
+(HTTP 429, provider-unavailable/connection-level errors) with a bounded
+exponential backoff (`max_attempts=3` by default, injectable `sleep` for
+tests) -- never a non-transient 4xx, a legitimate not-found, or a malformed
+response. `ProviderStatus` gains `retry_attempt_count` and
+`rate_limited_observed`; `ProviderCoverageRecord`/`SearchCoverageReport`
+carry them through the ledger and `federated-coverage-report` the same
+additive way `raw_observation_count` did (no `schema_version` change,
+pre-existing records default to `0`/`False`). See
+`docs/core_interface_contract.md`'s corresponding entry for the full
+contract. Following this repo's own established per-adapter precedent
+(issue #433 item 4's PMC/Europe PMC/CORE/Unpaywall sequence across PRs
+#457-#459), the other four federated adapters --
+`openalex_provider.py`/FRD-2, `arxiv_provider.py`/FRD-4,
+`pubmed_federated_adapter.py`, and `crossref_federated_adapter.py`/FRD-5 --
+remain deliberately unretried, single-attempt providers for now; each is a
+natural, independently reviewable follow-up slice.
+
 ### FRD-4 -- arXiv adapter and version identity
 
 **Status: implemented and live-verified.** `arxiv_provider.py`'s

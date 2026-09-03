@@ -43,6 +43,11 @@ def build_public_federated_result_payload(
     )
     if coverage.raw_observation_count != expected_raw_observation_count:
         mismatches.append("raw_observation_count")
+    expected_total_retry_attempts = sum(
+        status.retry_attempt_count for status in result.provider_statuses if status.attempted
+    )
+    if coverage.total_retry_attempts != expected_total_retry_attempts:
+        mismatches.append("total_retry_attempts")
     if coverage.candidate_count != len(result.candidates):
         mismatches.append("candidate_count")
 

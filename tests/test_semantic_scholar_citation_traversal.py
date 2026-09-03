@@ -175,8 +175,12 @@ def test_missing_seed_is_distinct_from_valid_empty_page() -> None:
 def test_traversal_surfaces_rate_limit_without_candidates() -> None:
     transport = FakeTransport(_response({}, status_code=429))
 
-    result = SemanticScholarProvider(transport=transport).citations("seed")
+    # max_attempts=1: this test is about the RATE_LIMITED outcome mapping
+    # itself, not the retry loop -- see test_semantic_scholar_provider.py's
+    # dedicated retry tests for that.
+    result = SemanticScholarProvider(transport=transport, max_attempts=1).citations("seed")
 
     assert result.provider_status.outcome is ProviderOutcome.RATE_LIMITED
     assert result.provider_status.reason == "rate_limited"
+    assert result.provider_status.retry_attempt_count == 0
     assert result.candidates == ()

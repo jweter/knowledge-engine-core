@@ -6312,6 +6312,7 @@ def federated_discover_history(
 def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: str) -> None:
     providers_completed = set(coverage.providers_completed)
     providers_failed = set(coverage.providers_failed)
+    providers_rate_limited = set(coverage.providers_rate_limited)
 
     completeness_color = {
         "complete": "green",
@@ -6326,9 +6327,17 @@ def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: 
         f"({coverage.raw_observation_count} raw observation(s) -> "
         f"{coverage.candidate_count} deduplicated candidate(s))"
     )
+    rate_limited_text = (
+        ", ".join(sorted(providers_rate_limited)) if providers_rate_limited else "none"
+    )
+    console.print(
+        f"[bold]Retries:[/bold] {coverage.total_retry_attempts} retry attempt(s); "
+        f"rate-limited providers: {rate_limited_text}"
+    )
     table = Table(title="Provider coverage")
     table.add_column("Provider")
     table.add_column("Status")
+    table.add_column("Rate limited")
     for provider in coverage.providers_requested:
         if provider in providers_completed:
             status = "[green]completed[/green]"
@@ -6336,7 +6345,8 @@ def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: 
             status = "[red]failed/unavailable[/red]"
         else:
             status = "[yellow]not attempted[/yellow]"
-        table.add_row(provider, status)
+        rate_limited = "[yellow]yes[/yellow]" if provider in providers_rate_limited else "no"
+        table.add_row(provider, status, rate_limited)
     console.print(table)
 
 
@@ -6436,7 +6446,9 @@ def citation_snowball(
     resolve is reported as an explicit, labeled traversal outcome, never
     silently dropped -- completeness must never be inferred from candidate
     count alone. `--output <path.json>` additionally saves the full result
-    (plan, every traversal's outcome, discovered candidates with their
+    (plan, every traversal's outcome -- including `retry_attempt_count`/
+    `rate_limited_observed`, issue #433 item 2's federated provider
+    latency/degradation facts -- discovered candidates with their
     provider observations, and edge provenance) for a programmatic caller;
     the ledger under `--ledger-root` is the durable, replayable record
     either way, re-fetchable later via `citation-snowball-report`.
@@ -6486,6 +6498,7 @@ def citation_snowball(
             },
             "completeness": result.completeness.value,
             "truncated": result.truncated,
+            "traversals": [asdict(traversal) for traversal in record.traversals],
             "candidates": [asdict(candidate) for candidate in result.candidates],
             "edges": [{**asdict(edge), "direction": edge.direction.value} for edge in result.edges],
         }
@@ -6540,13 +6553,18 @@ def citation_snowball_report(
     table.add_column("Direction")
     table.add_column("Outcome")
     table.add_column("Results")
+    table.add_column("Retries")
+    table.add_column("Rate limited")
     for traversal in record.traversals:
         outcome_color = "green" if traversal.outcome in {"success", "empty"} else "red"
+        rate_limited = "[yellow]yes[/yellow]" if traversal.rate_limited_observed else "no"
         table.add_row(
             escape(traversal.seed_identifier),
             traversal.direction,
             f"[{outcome_color}]{traversal.outcome}[/{outcome_color}]",
             str(traversal.result_count),
+            str(traversal.retry_attempt_count),
+            rate_limited,
         )
     console.print(table)
 

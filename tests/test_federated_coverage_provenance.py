@@ -50,6 +50,8 @@ def test_coverage_report_carries_search_method_provenance(tmp_path: Path) -> Non
     assert report.limit_per_provider == 17
     assert report.completeness == "complete"
     assert report.raw_observation_count == 3
+    assert report.total_retry_attempts == 0
+    assert report.providers_rate_limited == ()
     assert report.providers_requested == ("pubmed",)
     assert report.providers_completed == ("pubmed",)
 
@@ -106,12 +108,51 @@ def test_coverage_report_serializes_only_public_provenance(tmp_path: Path) -> No
         "limit_per_provider": 17,
         "completeness": "partial",
         "raw_observation_count": 3,
+        "total_retry_attempts": 0,
         "candidate_count": 0,
         "providers_requested": ["pubmed", "crossref"],
         "providers_attempted": ["pubmed", "crossref"],
         "providers_completed": ["pubmed"],
         "providers_failed": ["crossref"],
+        "providers_rate_limited": [],
     }
     assert "initiated_by" not in payload
     assert "project_id" not in payload
     assert "research_question_id" not in payload
+
+
+def test_coverage_report_surfaces_retry_and_rate_limit_facts(tmp_path: Path) -> None:
+    """Issue #433 item 2: retries/rate-limit state must reach the public coverage view."""
+
+    ledger = FederatedSearchLedger(
+        tmp_path,
+        clock=lambda: _CREATED_AT,
+        id_factory=lambda: _RUN_ID,
+    )
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="obesity treatment"),
+        provider_statuses=(
+            ProviderStatus(
+                provider="semantic_scholar",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=2,
+                retry_attempt_count=2,
+                rate_limited_observed=True,
+            ),
+            ProviderStatus(
+                provider="PubMed",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+            ),
+        ),
+    )
+
+    record = ledger.record(result)
+    report = ledger.coverage_report(record.search_run_id)
+
+    assert report.total_retry_attempts == 2
+    assert report.providers_rate_limited == ("semantic_scholar",)
+    assert report.to_dict()["total_retry_attempts"] == 2
+    assert report.to_dict()["providers_rate_limited"] == ["semantic_scholar"]

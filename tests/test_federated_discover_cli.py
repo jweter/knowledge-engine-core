@@ -274,6 +274,46 @@ def test_federated_coverage_report_reads_back_a_persisted_run(
     assert "Coverage: complete" in unwrapped
 
 
+def test_federated_coverage_report_labels_retry_count_as_retries_not_total_attempts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`total_retry_attempts` counts retries only (excludes each provider's
+    initial request); the console line must say so, not "total attempt(s)",
+    which would understate real request count (issue #433 item 2, Codex
+    review finding 3)."""
+
+    provider_a = FakeProvider(
+        "alpha", _success_result("alpha", candidate_id="A1", doi="10.1000/alpha-1")
+    )
+    monkeypatch.setattr(
+        entrypoint, "_federated_discovery_registry", lambda **kwargs: _registry_with(provider_a)
+    )
+
+    ledger_root = tmp_path / "ledger"
+    discover_result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "federated-discover",
+            "--query",
+            "obesity treatment",
+            "--ledger-root",
+            str(ledger_root),
+        ],
+    )
+    assert discover_result.exit_code == 0, discover_result.output
+    search_run_id = list(ledger_root.glob("*.json"))[0].stem
+
+    report_result = CliRunner().invoke(
+        entrypoint.app,
+        ["federated-coverage-report", search_run_id, "--ledger-root", str(ledger_root)],
+    )
+
+    assert report_result.exit_code == 0, report_result.output
+    unwrapped = _unwrapped(report_result.output)
+    assert "retry attempt(s)" in unwrapped
+    assert "total attempt" not in unwrapped
+
+
 def test_federated_coverage_report_output_includes_candidate_snapshot(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

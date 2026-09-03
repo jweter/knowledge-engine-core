@@ -142,6 +142,80 @@ def test_provider_status_rejects_ambiguous_skipped_attempt() -> None:
         )
 
 
+def test_provider_status_rejects_retry_count_on_unattempted_provider() -> None:
+    with pytest.raises(ValueError, match="must not report retries or rate-limit"):
+        ProviderStatus(
+            provider="arxiv",
+            outcome=ProviderOutcome.SKIPPED,
+            attempted=False,
+            reason="not relevant",
+            retry_attempt_count=1,
+        )
+
+
+def test_provider_status_rejects_rate_limit_flag_on_unattempted_provider() -> None:
+    with pytest.raises(ValueError, match="must not report retries or rate-limit"):
+        ProviderStatus(
+            provider="arxiv",
+            outcome=ProviderOutcome.SKIPPED,
+            attempted=False,
+            reason="not relevant",
+            rate_limited_observed=True,
+        )
+
+
+def test_provider_status_rejects_negative_retry_attempt_count() -> None:
+    with pytest.raises(ValueError, match="retry_attempt_count must not be negative"):
+        ProviderStatus(
+            provider="pubmed",
+            outcome=ProviderOutcome.SUCCESS,
+            attempted=True,
+            result_count=1,
+            retry_attempt_count=-1,
+        )
+
+
+def test_provider_status_defaults_retry_fields_to_no_retry_state() -> None:
+    status = ProviderStatus(
+        provider="pubmed", outcome=ProviderOutcome.SUCCESS, attempted=True, result_count=1
+    )
+
+    assert status.retry_attempt_count == 0
+    assert status.rate_limited_observed is False
+
+
+def test_provider_status_derives_rate_limited_observed_from_outcome() -> None:
+    """A RATE_LIMITED outcome is itself proof of rate-limiting, regardless of
+    whether the caller separately tracked it -- covers the other four
+    federated adapters (openalex/arxiv/pubmed/crossref), none of which go
+    through the Semantic Scholar retry loop's own bookkeeping, so they must
+    not silently report rate_limited_observed=False for a self-contradicting
+    RATE_LIMITED outcome (issue #433 item 2, Codex review finding 1)."""
+
+    status = ProviderStatus(
+        provider="openalex",
+        outcome=ProviderOutcome.RATE_LIMITED,
+        attempted=True,
+        reason="rate_limited",
+    )
+
+    assert status.rate_limited_observed is True
+
+
+def test_provider_status_rate_limited_derivation_does_not_override_explicit_true() -> None:
+    status = ProviderStatus(
+        provider="semantic_scholar",
+        outcome=ProviderOutcome.RATE_LIMITED,
+        attempted=True,
+        reason="rate_limited",
+        retry_attempt_count=2,
+        rate_limited_observed=True,
+    )
+
+    assert status.rate_limited_observed is True
+    assert status.retry_attempt_count == 2
+
+
 def test_complete_search_allows_success_and_empty_providers() -> None:
     result = FederatedSearchResult(
         query=DiscoveryQuery("query"),
