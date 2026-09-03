@@ -543,7 +543,15 @@ contract. Following this repo's own established per-adapter precedent
 `openalex_provider.py`/FRD-2, `arxiv_provider.py`/FRD-4,
 `pubmed_federated_adapter.py`, and `crossref_federated_adapter.py`/FRD-5 --
 remain deliberately unretried, single-attempt providers for now; each is a
-natural, independently reviewable follow-up slice.
+natural, independently reviewable follow-up slice. **Update (later
+session):** all four follow-up slices have since landed --
+`openalex_provider.py` and `arxiv_provider.py` gained the same bounded
+exponential-backoff retry loop, `pubmed_federated_adapter.py`'s
+already-retrying `pubmed_discovery.py` gained matching
+`retry_attempt_count`/`rate_limited_observed` instrumentation, and
+`crossref_provider.py`/`crossref_federated_adapter.py` (issue #433 item
+2's final slice) gained the same bounded retry loop last. No federated
+adapter is single-attempt anymore.
 
 ### FRD-4 -- arXiv adapter and version identity
 

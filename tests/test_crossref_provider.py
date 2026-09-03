@@ -381,6 +381,57 @@ def test_crossref_provider_retry_after_header_is_honored_when_longer() -> None:
     assert sleeps == [10.0]
 
 
+def test_crossref_provider_caps_an_abnormally_large_but_finite_retry_after_header() -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(429, b"rate limited", {"Retry-After": "99999"}),
+            TransportResponse(200, b'{"message":{"DOI":"10.1000/example","title":["Paper"]}}', {}),
+        ]
+    )
+    sleeps: list[float] = []
+
+    result = CrossrefProvider(
+        transport=transport,
+        clock=lambda: datetime(2026, 7, 18, tzinfo=UTC),
+        retry_backoff_seconds=1.0,
+        sleep=sleeps.append,
+    ).lookup(MetadataQuery(doi="10.1000/example"))
+
+    # A huge but finite Retry-After must be capped at MAX_RETRY_AFTER_SECONDS
+    # rather than handed straight to `sleep`, which would otherwise block a
+    # "bounded" retry loop for an effectively unbounded duration.
+    assert sleeps == [120.0]
+    assert result.diagnostics == ()
+    assert result.retry_attempt_count == 1
+
+
+@pytest.mark.parametrize("retry_after_header", ["1e309", "nan", "-1e309"])
+def test_crossref_provider_ignores_a_non_finite_or_invalid_retry_after_header(
+    retry_after_header: str,
+) -> None:
+    transport = SequenceTransport(
+        responses=[
+            TransportResponse(429, b"rate limited", {"Retry-After": retry_after_header}),
+            TransportResponse(200, b'{"message":{"DOI":"10.1000/example","title":["Paper"]}}', {}),
+        ]
+    )
+    sleeps: list[float] = []
+
+    # "1e309"/"-1e309" overflow a bare `float()` call to +/-inf rather than
+    # raising, and `inf` must never reach `sleep` (which raises OverflowError
+    # on a non-finite duration): the header is rejected as invalid and the
+    # loop falls back to its own computed backoff instead of fabricating or
+    # crashing on a wait time.
+    CrossrefProvider(
+        transport=transport,
+        clock=lambda: datetime(2026, 7, 18, tzinfo=UTC),
+        retry_backoff_seconds=3.0,
+        sleep=sleeps.append,
+    ).lookup(MetadataQuery(doi="10.1000/example"))
+
+    assert sleeps == [3.0]
+
+
 def test_crossref_provider_oversized_response_is_never_retried() -> None:
     transport = SequenceTransport(responses=[TransportResponse(200, b"x" * 200, {})])
     sleeps: list[float] = []

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import math
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -38,6 +39,12 @@ DEFAULT_USER_AGENT = "knowledge-engine-core/0.2 metadata-preview"
 # `ProviderDiagnostic.retryable` classification for each of those codes.
 DEFAULT_MAX_ATTEMPTS = 3
 DEFAULT_RETRY_BACKOFF_SECONDS = 1.0
+# A 429's `Retry-After` header is provider-controlled input, not a trusted
+# bound: an abnormally large or non-finite value (e.g. `inf`, which a bare
+# `float()` call accepts from a string like "1e309") must never be handed
+# directly to `sleep`, which raises `OverflowError` on a non-finite duration
+# and would otherwise block a "bounded" retry loop indefinitely.
+MAX_RETRY_AFTER_SECONDS = 120.0
 
 
 class ResponseTooLargeError(OSError):
@@ -293,9 +300,13 @@ class CrossrefProvider:
 def _parse_retry_after_seconds(headers: Mapping[str, str]) -> float | None:
     """Parse a 429 response's ``Retry-After`` header, if present and a delay-seconds form.
 
-    Only the numeric delay-seconds form is honored; a missing, non-numeric, or
-    negative value returns `None` so the caller falls back to its own computed
-    backoff rather than fabricating a wait time.
+    Only the numeric delay-seconds form is honored; a missing, non-numeric,
+    non-finite (``inf``/``nan``, which a bare ``float()`` call otherwise
+    accepts from a string like ``"1e309"``), or negative value returns
+    `None` so the caller falls back to its own computed backoff rather than
+    fabricating a wait time. A large but finite value is capped at
+    `MAX_RETRY_AFTER_SECONDS` so a provider-controlled header can never make
+    a bounded retry loop sleep for an effectively unbounded duration.
     """
 
     for key, value in headers.items():
@@ -305,7 +316,9 @@ def _parse_retry_after_seconds(headers: Mapping[str, str]) -> float | None:
             seconds = float(value.strip())
         except ValueError:
             return None
-        return seconds if seconds >= 0 else None
+        if not math.isfinite(seconds) or seconds < 0:
+            return None
+        return min(seconds, MAX_RETRY_AFTER_SECONDS)
     return None
 
 
