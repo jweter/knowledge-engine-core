@@ -9,6 +9,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Crossref retry/rate-limit tracking (issue #433, item 2 -- final slice)**:
+  `CrossrefProvider` (`crossref_provider.py`) previously made a single raw
+  HTTP attempt with no retry of its own. It now retries only the four
+  genuinely transient outcomes -- HTTP 429, a 5xx response, a request
+  timeout, or a connection-level transport error -- with a bounded
+  exponential backoff (`max_attempts=3` by default), never a 404 no-match,
+  an oversized/malformed response, or any other unsupported HTTP status.
+  `MetadataProviderResult` (`metadata_enrichment.py`) gains the same
+  additive `retry_attempt_count`/`rate_limited_observed` fields
+  `ProviderStatus` already carries, and `CrossrefFederatedAdapter.search()`
+  threads them from every provider lookup into `ProviderStatus` on the
+  success, no-match/EMPTY, and every failure path. This closes issue #433
+  item 2's per-provider retry/rate-limit visibility sequence across all
+  five federated adapters (Semantic Scholar, OpenAlex, arXiv, PubMed,
+  Crossref).
+
 - **PubMed retry/rate-limit visibility (issue #433, item 2)**:
   `PubmedPmcDiscoveryService` (`pubmed_discovery.py`) already retried
   transient NCBI failures internally via its own pre-existing `_get()`

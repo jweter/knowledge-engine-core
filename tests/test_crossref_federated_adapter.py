@@ -266,3 +266,55 @@ def test_crossref_adapter_requires_title_for_federated_candidate() -> None:
 
     assert result.provider_statuses[0].outcome == ProviderOutcome.FAILED
     assert result.provider_statuses[0].reason == "candidate_contract_mismatch"
+
+
+def test_crossref_adapter_surfaces_retry_facts_on_success() -> None:
+    provider = FakeCrossrefProvider(
+        MetadataProviderResult(
+            candidates=(
+                _candidate("doi", "10.1000/example"),
+                _candidate("title", "Example Paper"),
+            ),
+            retry_attempt_count=2,
+            rate_limited_observed=True,
+        )
+    )
+
+    result = CrossrefFederatedAdapter(provider).search(DiscoveryQuery(text="10.1000/example"))
+
+    assert result.provider_statuses[0].outcome == ProviderOutcome.SUCCESS
+    assert result.provider_statuses[0].retry_attempt_count == 2
+    assert result.provider_statuses[0].rate_limited_observed is True
+
+
+def test_crossref_adapter_surfaces_retry_facts_on_no_match() -> None:
+    provider = FakeCrossrefProvider(
+        MetadataProviderResult(
+            diagnostics=(
+                ProviderDiagnostic(
+                    provider="crossref",
+                    code="no_match",
+                    message="Crossref did not return a record for this DOI.",
+                ),
+            ),
+            retry_attempt_count=1,
+            rate_limited_observed=False,
+        )
+    )
+
+    result = CrossrefFederatedAdapter(provider).search(DiscoveryQuery(text="10.1000/example"))
+
+    assert result.provider_statuses[0].outcome == ProviderOutcome.EMPTY
+    assert result.provider_statuses[0].retry_attempt_count == 1
+    assert result.provider_statuses[0].rate_limited_observed is False
+
+
+def test_crossref_adapter_reports_zero_retries_for_pre_lookup_rejections() -> None:
+    provider = FakeCrossrefProvider(MetadataProviderResult())
+
+    result = CrossrefFederatedAdapter(provider).search(
+        DiscoveryQuery(text="semaglutide body weight")
+    )
+
+    assert result.provider_statuses[0].retry_attempt_count == 0
+    assert result.provider_statuses[0].rate_limited_observed is False

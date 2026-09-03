@@ -56,19 +56,50 @@ class CrossrefFederatedAdapter:
             return _failure_result(query, ProviderOutcome.FAILED, "unsupported_query")
 
         result = self._provider.lookup(MetadataQuery(doi=doi))
+        retry_attempt_count = result.retry_attempt_count
+        rate_limited_observed = result.rate_limited_observed
         if result.candidates and result.diagnostics:
-            return _failure_result(query, ProviderOutcome.FAILED, "provider_result_mismatch")
+            return _failure_result(
+                query,
+                ProviderOutcome.FAILED,
+                "provider_result_mismatch",
+                retry_attempt_count=retry_attempt_count,
+                rate_limited_observed=rate_limited_observed,
+            )
 
         if result.diagnostics:
             if len(result.diagnostics) != 1:
-                return _failure_result(query, ProviderOutcome.FAILED, "provider_result_mismatch")
+                return _failure_result(
+                    query,
+                    ProviderOutcome.FAILED,
+                    "provider_result_mismatch",
+                    retry_attempt_count=retry_attempt_count,
+                    rate_limited_observed=rate_limited_observed,
+                )
             diagnostic = result.diagnostics[0]
             if diagnostic.provider.strip().lower() != "crossref":
-                return _failure_result(query, ProviderOutcome.FAILED, "provider_result_mismatch")
-            return _diagnostic_result(query, diagnostic.code)
+                return _failure_result(
+                    query,
+                    ProviderOutcome.FAILED,
+                    "provider_result_mismatch",
+                    retry_attempt_count=retry_attempt_count,
+                    rate_limited_observed=rate_limited_observed,
+                )
+            return _diagnostic_result(
+                query,
+                diagnostic.code,
+                retry_attempt_count=retry_attempt_count,
+                rate_limited_observed=rate_limited_observed,
+            )
 
         if not result.candidates:
-            return _failure_result(query, ProviderOutcome.FAILED, "candidate_contract_mismatch")
+            return _failure_result(
+                query,
+                ProviderOutcome.FAILED,
+                "candidate_contract_mismatch",
+                retry_attempt_count=retry_attempt_count,
+                rate_limited_observed=rate_limited_observed,
+            )
 
         try:
             candidate = _to_federated_candidate(
@@ -77,7 +108,13 @@ class CrossrefFederatedAdapter:
                 publication_status=result.publication_status,
             )
         except (TypeError, ValueError):
-            return _failure_result(query, ProviderOutcome.FAILED, "candidate_contract_mismatch")
+            return _failure_result(
+                query,
+                ProviderOutcome.FAILED,
+                "candidate_contract_mismatch",
+                retry_attempt_count=retry_attempt_count,
+                rate_limited_observed=rate_limited_observed,
+            )
 
         return FederatedSearchResult(
             query=query,
@@ -87,13 +124,21 @@ class CrossrefFederatedAdapter:
                     outcome=ProviderOutcome.SUCCESS,
                     attempted=True,
                     result_count=1,
+                    retry_attempt_count=retry_attempt_count,
+                    rate_limited_observed=rate_limited_observed,
                 ),
             ),
             candidates=(candidate,),
         )
 
 
-def _diagnostic_result(query: DiscoveryQuery, code: str) -> FederatedSearchResult:
+def _diagnostic_result(
+    query: DiscoveryQuery,
+    code: str,
+    *,
+    retry_attempt_count: int,
+    rate_limited_observed: bool,
+) -> FederatedSearchResult:
     if code == "no_match":
         return FederatedSearchResult(
             query=query,
@@ -102,16 +147,42 @@ def _diagnostic_result(query: DiscoveryQuery, code: str) -> FederatedSearchResul
                     provider="crossref",
                     outcome=ProviderOutcome.EMPTY,
                     attempted=True,
+                    retry_attempt_count=retry_attempt_count,
+                    rate_limited_observed=rate_limited_observed,
                 ),
             ),
         )
     if code == "rate_limited":
-        return _failure_result(query, ProviderOutcome.RATE_LIMITED, "rate_limited")
+        return _failure_result(
+            query,
+            ProviderOutcome.RATE_LIMITED,
+            "rate_limited",
+            retry_attempt_count=retry_attempt_count,
+            rate_limited_observed=rate_limited_observed,
+        )
     if code in {"provider_unavailable", "timeout", "transport_error"}:
-        return _failure_result(query, ProviderOutcome.UNAVAILABLE, code)
+        return _failure_result(
+            query,
+            ProviderOutcome.UNAVAILABLE,
+            code,
+            retry_attempt_count=retry_attempt_count,
+            rate_limited_observed=rate_limited_observed,
+        )
     if code in {"malformed_response", "oversized_response"}:
-        return _failure_result(query, ProviderOutcome.FAILED, code)
-    return _failure_result(query, ProviderOutcome.FAILED, "provider_error")
+        return _failure_result(
+            query,
+            ProviderOutcome.FAILED,
+            code,
+            retry_attempt_count=retry_attempt_count,
+            rate_limited_observed=rate_limited_observed,
+        )
+    return _failure_result(
+        query,
+        ProviderOutcome.FAILED,
+        "provider_error",
+        retry_attempt_count=retry_attempt_count,
+        rate_limited_observed=rate_limited_observed,
+    )
 
 
 def _to_federated_candidate(
@@ -201,6 +272,9 @@ def _failure_result(
     query: DiscoveryQuery,
     outcome: ProviderOutcome,
     reason: str,
+    *,
+    retry_attempt_count: int = 0,
+    rate_limited_observed: bool = False,
 ) -> FederatedSearchResult:
     return FederatedSearchResult(
         query=query,
@@ -210,6 +284,8 @@ def _failure_result(
                 outcome=outcome,
                 attempted=True,
                 reason=reason,
+                retry_attempt_count=retry_attempt_count,
+                rate_limited_observed=rate_limited_observed,
             ),
         ),
     )
