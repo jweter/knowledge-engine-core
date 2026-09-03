@@ -9,6 +9,22 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **PubMed retry/rate-limit visibility (issue #433, item 2)**:
+  `PubmedPmcDiscoveryService` (`pubmed_discovery.py`) already retried
+  transient NCBI failures internally via its own pre-existing `_get()`
+  bounded exponential-backoff loop -- unlike the other adapters in this
+  slice sequence, it never made a single raw attempt with no retry at all.
+  The gap was that this retry/rate-limit activity was invisible to
+  `ProviderStatus`/the coverage ledger. `DiscoveryResult` and
+  `NcbiDiscoveryError` now both carry `retry_attempt_count`/
+  `rate_limited_observed`, accumulated across every underlying request one
+  `discover()`/`resolve_pmids()` call issues (search, efetch metadata, PMC
+  id-converter linking, PMC Cloud OA lookup) and reset at the start of each
+  call so a reused service instance never leaks a prior call's counts
+  forward. `pubmed_federated_adapter.py` threads both into `ProviderStatus`
+  on the success, empty, and failure paths. `crossref_federated_adapter.py`
+  is the one remaining genuinely single-attempt adapter in this sequence.
+
 - **arXiv retry/rate-limit tracking (issue #433, item 2)**:
   `ArxivProvider` now retries transient failures (HTTP 429 rate-limiting
   and provider-unavailable/connection-level errors) with a bounded

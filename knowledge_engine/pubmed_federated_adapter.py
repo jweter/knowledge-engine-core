@@ -55,7 +55,13 @@ class PubmedFederatedAdapter:
             )
         except NcbiDiscoveryError as exc:
             outcome, reason = _classify_ncbi_failure(str(exc))
-            return _failure_result(query, outcome, reason)
+            return _failure_result(
+                query,
+                outcome,
+                reason,
+                retry_attempt_count=exc.retry_attempt_count,
+                rate_limited_observed=exc.rate_limited_observed,
+            )
 
         if (
             result.query != provider_query
@@ -63,7 +69,13 @@ class PubmedFederatedAdapter:
             or result.limit != query.limit_per_provider
             or len(result.candidates) > query.limit_per_provider
         ):
-            return _failure_result(query, ProviderOutcome.FAILED, "provider_result_mismatch")
+            return _failure_result(
+                query,
+                ProviderOutcome.FAILED,
+                "provider_result_mismatch",
+                retry_attempt_count=result.retry_attempt_count,
+                rate_limited_observed=result.rate_limited_observed,
+            )
 
         retrieved_at = self._clock().astimezone(UTC).isoformat()
         try:
@@ -72,7 +84,13 @@ class PubmedFederatedAdapter:
                 for candidate in result.candidates
             )
         except ValueError:
-            return _failure_result(query, ProviderOutcome.FAILED, "candidate_contract_mismatch")
+            return _failure_result(
+                query,
+                ProviderOutcome.FAILED,
+                "candidate_contract_mismatch",
+                retry_attempt_count=result.retry_attempt_count,
+                rate_limited_observed=result.rate_limited_observed,
+            )
 
         if not candidates:
             return FederatedSearchResult(
@@ -82,6 +100,8 @@ class PubmedFederatedAdapter:
                         provider="pubmed",
                         outcome=ProviderOutcome.EMPTY,
                         attempted=True,
+                        retry_attempt_count=result.retry_attempt_count,
+                        rate_limited_observed=result.rate_limited_observed,
                     ),
                 ),
             )
@@ -94,6 +114,8 @@ class PubmedFederatedAdapter:
                     outcome=ProviderOutcome.SUCCESS,
                     attempted=True,
                     result_count=len(candidates),
+                    retry_attempt_count=result.retry_attempt_count,
+                    rate_limited_observed=result.rate_limited_observed,
                 ),
             ),
             candidates=candidates,
@@ -158,6 +180,9 @@ def _failure_result(
     query: DiscoveryQuery,
     outcome: ProviderOutcome,
     reason: str,
+    *,
+    retry_attempt_count: int = 0,
+    rate_limited_observed: bool = False,
 ) -> FederatedSearchResult:
     return FederatedSearchResult(
         query=query,
@@ -167,6 +192,8 @@ def _failure_result(
                 outcome=outcome,
                 attempted=True,
                 reason=reason,
+                retry_attempt_count=retry_attempt_count,
+                rate_limited_observed=rate_limited_observed,
             ),
         ),
     )

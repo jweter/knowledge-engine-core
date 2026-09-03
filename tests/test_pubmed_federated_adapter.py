@@ -114,7 +114,11 @@ def test_pubmed_adapter_maps_empty_discovery() -> None:
 
 def test_pubmed_adapter_maps_rate_limit_without_leaking_error_text() -> None:
     service = FakePubmedService(
-        error=NcbiDiscoveryError("PubMed search returned private detail (429) after 3 attempts.")
+        error=NcbiDiscoveryError(
+            "PubMed search returned private detail (429) after 3 attempts.",
+            retry_attempt_count=2,
+            rate_limited_observed=True,
+        )
     )
 
     result = PubmedFederatedAdapter(service).search(DiscoveryQuery(text="aging"))
@@ -122,7 +126,61 @@ def test_pubmed_adapter_maps_rate_limit_without_leaking_error_text() -> None:
     status = result.provider_statuses[0]
     assert status.outcome is ProviderOutcome.RATE_LIMITED
     assert status.reason == "rate_limited"
+    assert status.retry_attempt_count == 2
+    assert status.rate_limited_observed is True
     assert "private" not in result.to_json()
+
+
+def test_pubmed_adapter_surfaces_retry_facts_on_success() -> None:
+    service = FakePubmedService(
+        result=DiscoveryResult(
+            query="aging",
+            retstart=0,
+            limit=20,
+            candidates=(_candidate(),),
+            retry_attempt_count=1,
+            rate_limited_observed=True,
+        )
+    )
+
+    result = PubmedFederatedAdapter(service).search(DiscoveryQuery(text="aging"))
+
+    status = result.provider_statuses[0]
+    assert status.outcome is ProviderOutcome.SUCCESS
+    assert status.retry_attempt_count == 1
+    assert status.rate_limited_observed is True
+
+
+def test_pubmed_adapter_surfaces_retry_facts_on_empty_result() -> None:
+    service = FakePubmedService(
+        result=DiscoveryResult(
+            query="aging",
+            retstart=0,
+            limit=20,
+            candidates=(),
+            retry_attempt_count=1,
+            rate_limited_observed=False,
+        )
+    )
+
+    result = PubmedFederatedAdapter(service).search(DiscoveryQuery(text="aging"))
+
+    status = result.provider_statuses[0]
+    assert status.outcome is ProviderOutcome.EMPTY
+    assert status.retry_attempt_count == 1
+    assert status.rate_limited_observed is False
+
+
+def test_pubmed_adapter_reports_zero_retries_for_unattempted_unsupported_limit() -> None:
+    service = FakePubmedService()
+
+    result = PubmedFederatedAdapter(service).search(
+        DiscoveryQuery(text="aging", limit_per_provider=101)
+    )
+
+    status = result.provider_statuses[0]
+    assert status.retry_attempt_count == 0
+    assert status.rate_limited_observed is False
 
 
 def test_pubmed_adapter_maps_transport_failure_to_unavailable() -> None:
