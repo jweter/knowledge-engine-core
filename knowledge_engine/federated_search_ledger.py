@@ -43,7 +43,13 @@ class ProviderCoverageRecord:
     persisted before these fields existed simply omits the keys, and the
     loader defaults them to ``0``/``False`` -- the honest "no retry happened"
     state for every adapter that did not yet implement retries when the run
-    was recorded -- so no schema-version bump was needed.
+    was recorded -- so no schema-version bump was needed. ``rate_limited_observed``
+    is then corrected in ``__post_init__`` when the record's own ``outcome``
+    is ``rate_limited``: a rate-limited outcome is itself proof a rate limit
+    was observed, so an old record missing the key (or, in principle, a
+    caller passing an inconsistent ``False``) still loads as ``True`` rather
+    than fabricating an absence of rate-limiting the outcome field itself
+    contradicts.
     """
 
     provider: str
@@ -54,6 +60,16 @@ class ProviderCoverageRecord:
     reason: str | None
     retry_attempt_count: int = 0
     rate_limited_observed: bool = False
+
+    def __post_init__(self) -> None:
+        # Mirrors `federated_discovery.ProviderStatus.__post_init__`: a
+        # `rate_limited` outcome is itself proof a rate limit was observed,
+        # regardless of whether the caller (a live adapter result, or a
+        # pre-existing persisted record loaded before this field existed)
+        # separately tracked it. This covers both forward construction and
+        # backward-compatible loading of old records missing the key.
+        if self.outcome == ProviderOutcome.RATE_LIMITED.value and not self.rate_limited_observed:
+            object.__setattr__(self, "rate_limited_observed", True)
 
 
 @dataclass(frozen=True)

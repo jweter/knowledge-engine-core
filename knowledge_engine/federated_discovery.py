@@ -236,6 +236,13 @@ class ProviderStatus:
             raise ValueError(
                 "Unattempted providers must not report retries or rate-limit observations."
             )
+        # A RATE_LIMITED outcome is itself proof a rate limit was observed, even
+        # for adapters that do not implement the Semantic Scholar retry loop's
+        # own bookkeeping. Derive the flag here so every current and future
+        # adapter reports it consistently rather than requiring each call site
+        # to remember to set it.
+        if self.outcome == ProviderOutcome.RATE_LIMITED and not self.rate_limited_observed:
+            object.__setattr__(self, "rate_limited_observed", True)
 
 
 @dataclass(frozen=True)

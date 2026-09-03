@@ -461,21 +461,37 @@ itself, but may need to trigger for a specific paper):**
   attempt succeeded or failed non-transiently) and `rate_limited_observed`
   (whether any attempt saw a 429, even if a later retry succeeded); an
   unattempted (`SKIPPED`/`DISABLED`) provider is rejected if it reports
-  either. `ProviderCoverageRecord` persists both per-provider, and
+  either. `rate_limited_observed` is additionally derived in
+  `ProviderStatus.__post_init__` (mirrored in `ProviderCoverageRecord` and
+  `CitationTraversalRecord`) whenever `outcome == RATE_LIMITED`, regardless
+  of which adapter produced it -- not only from the Semantic Scholar retry
+  loop's own bookkeeping -- so a genuinely rate-limited provider never
+  self-contradicts by reporting `rate_limited_observed=False`.
+  `ProviderCoverageRecord` persists both per-provider, and
   `SearchCoverageReport` gains the derived `total_retry_attempts` (sum
   across attempted providers) and `providers_rate_limited` (names of
   attempted providers that saw a 429), both computed at read time from
   already-persisted facts. Purely additive: no ledger `schema_version`
   change, every previously persisted run loads the new
-  `ProviderCoverageRecord` fields as `0`/`False`. Exposed through
-  `federated-coverage-report` (console `Retries:` line, `Rate limited`
-  table column, `--output` JSON) and `federated-discover --output`. Only
-  `semantic_scholar_provider.py` implements retries as of this change; the
-  other four provider adapters (`openalex_provider.py`, `arxiv_provider.py`,
+  `ProviderCoverageRecord` fields as `0`/`False` (or `True` for
+  `rate_limited_observed` when the record's own outcome is already
+  `rate_limited`). Exposed through `federated-coverage-report` (console
+  `Retries:` line -- labeled "retry attempt(s)", since the count excludes
+  each provider's initial request -- `Rate limited` table column,
+  `--output` JSON), `federated-discover --output`, and
+  `citation-snowball`/`citation-snowball-report` (`CitationSnowballLedger`
+  persists the same two fields per traversal; `citation-snowball --output`'s
+  `traversals` array and `citation-snowball-report`'s Traversals table
+  surface them). Only `semantic_scholar_provider.py` implements retries as
+  of this change; the other four provider adapters
+  (`openalex_provider.py`, `arxiv_provider.py`,
   `pubmed_federated_adapter.py`, `crossref_federated_adapter.py`) remain
-  single-attempt and always report `retry_attempt_count=0`/
-  `rate_limited_observed=False` -- deliberately deferred as the next
-  slices, following this repo's own established per-adapter precedent (see
+  single-attempt and always report `retry_attempt_count=0`, but a
+  `RATE_LIMITED` outcome from any of them -- present since before this
+  change -- now correctly reports `rate_limited_observed=True` via the
+  derivation above rather than the honest-default `False`. Retrying those
+  four adapters themselves is deliberately deferred as the next slices,
+  following this repo's own established per-adapter precedent (see
   issue #433 item 4's PMC/Europe PMC/CORE/Unpaywall sequence, PRs
   #457-#459).
 - `ke general-question-acquire-pmc <request.json> --ledger-root <dir>

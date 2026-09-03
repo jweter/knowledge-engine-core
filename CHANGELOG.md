@@ -17,17 +17,35 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   legitimate not-found, or a malformed response. `ProviderStatus` gains
   `retry_attempt_count` (how many retries were needed, `0` if none) and
   `rate_limited_observed` (whether any attempt saw a 429, even if a later
-  retry succeeded); `ProviderCoverageRecord` persists both, and
+  retry succeeded). `rate_limited_observed` is derived in
+  `ProviderStatus.__post_init__` (and mirrored in
+  `ProviderCoverageRecord.__post_init__` and `CitationTraversalRecord.__post_init__`
+  for the same field persisted/loaded elsewhere) whenever `outcome ==
+  RATE_LIMITED`, so every provider adapter reports it correctly -- not only
+  the new Semantic Scholar retry loop's own bookkeeping -- and a
+  pre-existing persisted record whose `outcome` is already `rate_limited`
+  loads as `rate_limited_observed=True` even though the field itself
+  predates that record. `ProviderCoverageRecord` persists both fields, and
   `SearchCoverageReport` gains the derived `total_retry_attempts` and
   `providers_rate_limited` for the whole run. Purely additive: no ledger
   `schema_version` change, every previously persisted run loads the new
-  fields as `0`/`False`/`()`. Exposed through `ke federated-coverage-report`
-  (console and `--output` JSON) and `ke federated-discover --output`. Only
-  `semantic_scholar_provider.py` (the default federated-discovery/citation-
-  snowball provider) is retried this session; the other four provider
-  adapters (`openalex_provider.py`, `arxiv_provider.py`,
-  `pubmed_federated_adapter.py`, `crossref_federated_adapter.py`) remain
-  single-attempt, deliberately deferred as the next slices.
+  fields as `0`/`False`/`()` (or `True` for `rate_limited_observed` when the
+  record's own outcome says so). Exposed through
+  `ke federated-coverage-report` (console -- labeled "retry attempt(s)", not
+  "total attempts", since the count excludes each provider's initial
+  request -- and `--output` JSON), `ke federated-discover --output`, and
+  `ke citation-snowball`/`ke citation-snowball-report` (`CitationSnowballLedger`
+  now persists `retry_attempt_count`/`rate_limited_observed` per traversal
+  the same additive way, surfaced through `citation-snowball --output`
+  JSON's new `traversals` array and `citation-snowball-report`'s Traversals
+  table). Only `semantic_scholar_provider.py` (the default
+  federated-discovery/citation-snowball provider) is retried this session;
+  the other four provider adapters (`openalex_provider.py`,
+  `arxiv_provider.py`, `pubmed_federated_adapter.py`,
+  `crossref_federated_adapter.py`) remain single-attempt, deliberately
+  deferred as the next slices -- though a `RATE_LIMITED` outcome from any of
+  them, present since before this change, now correctly reports
+  `rate_limited_observed=True` via the same derivation.
 
 - **Discovered-vs-deduplicated candidate funnel count (issue #433, item
   3)**: `SearchCoverageReport` gains `raw_observation_count`, the sum of

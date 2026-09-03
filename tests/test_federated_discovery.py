@@ -184,6 +184,38 @@ def test_provider_status_defaults_retry_fields_to_no_retry_state() -> None:
     assert status.rate_limited_observed is False
 
 
+def test_provider_status_derives_rate_limited_observed_from_outcome() -> None:
+    """A RATE_LIMITED outcome is itself proof of rate-limiting, regardless of
+    whether the caller separately tracked it -- covers the other four
+    federated adapters (openalex/arxiv/pubmed/crossref), none of which go
+    through the Semantic Scholar retry loop's own bookkeeping, so they must
+    not silently report rate_limited_observed=False for a self-contradicting
+    RATE_LIMITED outcome (issue #433 item 2, Codex review finding 1)."""
+
+    status = ProviderStatus(
+        provider="openalex",
+        outcome=ProviderOutcome.RATE_LIMITED,
+        attempted=True,
+        reason="rate_limited",
+    )
+
+    assert status.rate_limited_observed is True
+
+
+def test_provider_status_rate_limited_derivation_does_not_override_explicit_true() -> None:
+    status = ProviderStatus(
+        provider="semantic_scholar",
+        outcome=ProviderOutcome.RATE_LIMITED,
+        attempted=True,
+        reason="rate_limited",
+        retry_attempt_count=2,
+        rate_limited_observed=True,
+    )
+
+    assert status.rate_limited_observed is True
+    assert status.retry_attempt_count == 2
+
+
 def test_complete_search_allows_success_and_empty_providers() -> None:
     result = FederatedSearchResult(
         query=DiscoveryQuery("query"),

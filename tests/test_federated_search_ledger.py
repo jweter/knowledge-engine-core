@@ -119,7 +119,11 @@ def test_record_persists_reproducible_run_and_provider_facts(tmp_path: Path) -> 
         "reason": "rate_limited",
         "result_count": 0,
         "retry_attempt_count": 0,
-        "rate_limited_observed": False,
+        # A RATE_LIMITED outcome is itself proof of rate-limiting, derived by
+        # `ProviderStatus.__post_init__` regardless of which adapter produced
+        # it (issue #433 item 2, Codex review finding 1) -- OpenAlex does not
+        # go through Semantic Scholar's retry loop's own bookkeeping.
+        "rate_limited_observed": True,
     }
     assert "api_key" not in persisted
     assert "headers" not in persisted
@@ -359,6 +363,58 @@ def test_load_defaults_retry_fields_to_zero_for_pre_existing_records(tmp_path: P
     report = build_search_coverage_report(loaded)
     assert report.total_retry_attempts == 0
     assert report.providers_rate_limited == ()
+
+
+def test_load_derives_rate_limited_observed_for_pre_existing_rate_limited_records(
+    tmp_path: Path,
+) -> None:
+    """A pre-existing record whose own outcome is already "rate_limited" must
+    not load as rate_limited_observed=False merely because that field
+    postdates the record.
+
+    Defaulting the missing key to False would fabricate an absence of
+    rate-limiting the record's own `outcome` field already contradicts
+    (issue #433 item 2, Codex review finding 4 -- the backward-compatible-
+    loading counterpart to finding 1's forward-construction fix; both are
+    derived by the same `ProviderCoverageRecord.__post_init__`).
+    """
+
+    root = tmp_path / "search-runs"
+    root.mkdir()
+    payload = {
+        "schema_version": LEDGER_SCHEMA_VERSION,
+        "search_run_id": str(_RUN_ID),
+        "created_at": "2026-08-16T02:45:00+00:00",
+        "query_text": "protein folding",
+        "year_from": 2020,
+        "year_to": 2026,
+        "limit_per_provider": 25,
+        "completeness": "partial",
+        "candidate_count": 0,
+        "providers": [
+            {
+                "provider": "openalex",
+                "outcome": "rate_limited",
+                "attempted": True,
+                "result_count": 0,
+                "latency_ms": 80,
+                "reason": "rate_limited",
+                # deliberately no "rate_limited_observed" key -- pre-existing
+                # record shape, persisted before this field existed
+            }
+        ],
+        "initiated_by": None,
+        "project_id": None,
+        "research_question_id": None,
+        "candidates": [],
+    }
+    (root / f"{_RUN_ID}.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = FederatedSearchLedger(root).load(str(_RUN_ID))
+
+    assert loaded.providers[0].rate_limited_observed is True
+    report = build_search_coverage_report(loaded)
+    assert report.providers_rate_limited == ("openalex",)
 
 
 def test_record_is_immutable_and_refuses_overwrite(tmp_path: Path) -> None:
