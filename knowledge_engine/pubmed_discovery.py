@@ -29,7 +29,28 @@ _ID_CONVERTER_BATCH_SIZE = 100
 
 
 class NcbiDiscoveryError(RuntimeError):
-    """Sanitized provider or response failure."""
+    """Sanitized provider or response failure.
+
+    ``retry_attempt_count``/``rate_limited_observed`` answer issue #433 item 2
+    ("federated provider latency/degradation") for the failure path: how many
+    retries the whole `discover()`/`resolve_pmids()` call needed before this
+    error was raised, and whether any attempt saw an HTTP 429, mirroring the
+    fields `federated_discovery.ProviderStatus` already carries for the
+    success path. Both default to the honest zero/false state so a caller
+    that raises this directly (outside `PubmedPmcDiscoveryService`) does not
+    fabricate retry activity that never happened.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        retry_attempt_count: int = 0,
+        rate_limited_observed: bool = False,
+    ) -> None:
+        super().__init__(message)
+        self.retry_attempt_count = retry_attempt_count
+        self.rate_limited_observed = rate_limited_observed
 
 
 class GetTransport(Protocol):
@@ -76,6 +97,8 @@ class DiscoveryResult:
     retstart: int
     limit: int
     candidates: tuple[PubmedCandidate, ...]
+    retry_attempt_count: int = 0
+    rate_limited_observed: bool = False
 
     def to_json(self) -> str:
         """Render stable, reviewable JSON."""
@@ -128,9 +151,29 @@ class PubmedPmcDiscoveryService:
         self.retry_backoff_seconds = retry_backoff_seconds
         self.sleep = sleep
         self._request_count = 0
+        # Accumulated retry/rate-limit facts for the public call (`discover()`
+        # or `resolve_pmids()`) currently in progress -- reset at each such
+        # entry point and read back at its end, since one logical call issues
+        # several underlying `_get()` requests (search, metadata, PMC linking,
+        # OA lookup) and issue #433 item 2 asks for one honest total per call,
+        # not per individual HTTP request.
+        self._call_retry_attempts = 0
+        self._call_rate_limited = False
+
+    def _error(self, message: str) -> NcbiDiscoveryError:
+        """Raise-site helper that attaches the current call's retry/rate-limit facts."""
+
+        return NcbiDiscoveryError(
+            message,
+            retry_attempt_count=self._call_retry_attempts,
+            rate_limited_observed=self._call_rate_limited,
+        )
 
     def discover(self, query: str, *, limit: int, retstart: int = 0) -> DiscoveryResult:
         """Return a bounded, deterministic page of candidates."""
+
+        self._call_retry_attempts = 0
+        self._call_rate_limited = False
 
         normalized_query = query.strip()
         if not normalized_query:
@@ -141,15 +184,21 @@ class PubmedPmcDiscoveryService:
             raise ValueError("Discovery retstart must be non-negative.")
 
         pmids = self._search(normalized_query, limit=limit, retstart=retstart)
+        candidates = self._resolve_candidates(pmids)
         return DiscoveryResult(
             query=normalized_query,
             retstart=retstart,
             limit=limit,
-            candidates=self._resolve_candidates(pmids),
+            candidates=candidates,
+            retry_attempt_count=self._call_retry_attempts,
+            rate_limited_observed=self._call_rate_limited,
         )
 
     def resolve_pmids(self, pmids: tuple[str, ...]) -> tuple[PubmedCandidate, ...]:
         """Resolve an explicit bounded PMID selection without running a new search."""
+
+        self._call_retry_attempts = 0
+        self._call_rate_limited = False
 
         if not 1 <= len(pmids) <= 100:
             raise ValueError("PMID resolution requires between 1 and 100 identifiers.")
@@ -206,10 +255,10 @@ class PubmedPmcDiscoveryService:
         )
         esearchresult = body.get("esearchresult")
         if not isinstance(esearchresult, dict):
-            raise NcbiDiscoveryError("PubMed search response was malformed.")
+            raise self._error("PubMed search response was malformed.")
         values = esearchresult.get("idlist")
         if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
-            raise NcbiDiscoveryError("PubMed search response was malformed.")
+            raise self._error("PubMed search response was malformed.")
         return values
 
     def _fetch_metadata(self, pmids: list[str]) -> dict[str, _PubmedMetadata]:
@@ -254,7 +303,7 @@ class PubmedPmcDiscoveryService:
             chunk_result = self._link_pmc_chunk(chunk)
             overlap = set(result).intersection(chunk_result)
             if overlap:
-                raise NcbiDiscoveryError("PMC identifier response did not reconcile.")
+                raise self._error("PMC identifier response did not reconcile.")
             result.update(chunk_result)
         return result
 
@@ -275,29 +324,29 @@ class PubmedPmcDiscoveryService:
         )
         records = body.get("records")
         if body.get("status") != "ok" or not isinstance(records, list):
-            raise NcbiDiscoveryError("PMC identifier response was malformed.")
+            raise self._error("PMC identifier response was malformed.")
 
         requested_pmids = set(pmids)
         seen_pmids: set[str] = set()
         result: dict[str, str] = {}
         for record in records:
             if not isinstance(record, dict):
-                raise NcbiDiscoveryError("PMC identifier response was malformed.")
+                raise self._error("PMC identifier response was malformed.")
             requested_id = record.get("requested-id")
             pmid = record.get("pmid")
             if not isinstance(requested_id, str) or requested_id not in requested_pmids:
-                raise NcbiDiscoveryError("PMC identifier response did not reconcile.")
+                raise self._error("PMC identifier response did not reconcile.")
             if pmid is not None and str(pmid) != requested_id:
-                raise NcbiDiscoveryError("PMC identifier response did not reconcile.")
+                raise self._error("PMC identifier response did not reconcile.")
             if requested_id in seen_pmids:
-                raise NcbiDiscoveryError("PMC identifier response did not reconcile.")
+                raise self._error("PMC identifier response did not reconcile.")
             seen_pmids.add(requested_id)
 
             pmcid = record.get("pmcid")
             if pmcid is None:
                 continue
             if not isinstance(pmcid, str) or not pmcid.startswith("PMC"):
-                raise NcbiDiscoveryError("PMC identifier response was malformed.")
+                raise self._error("PMC identifier response was malformed.")
             result[requested_id] = pmcid
         return result
 
@@ -307,12 +356,12 @@ class PubmedPmcDiscoveryService:
             return None
         metadata = self._get_json(f"{PMC_CLOUD_BASE_URL}/metadata/{pmcid}.{version}.json")
         if metadata.get("pmcid") != pmcid or metadata.get("version") != version:
-            raise NcbiDiscoveryError("PMC Cloud Service metadata did not reconcile.")
+            raise self._error("PMC Cloud Service metadata did not reconcile.")
         if metadata.get("is_pmc_openaccess") is not True:
             return None
         license_name = metadata.get("license_code")
         if license_name is not None and not isinstance(license_name, str):
-            raise NcbiDiscoveryError("PMC Cloud Service metadata was malformed.")
+            raise self._error("PMC Cloud Service metadata was malformed.")
         return _OaRecord(
             license=license_name,
             pdf_url=_s3_metadata_url(metadata, "pdf_url"),
@@ -337,7 +386,7 @@ class PubmedPmcDiscoveryService:
             prefix = _element_text(prefix_element)
             suffix = prefix.removeprefix(f"{pmcid}.").rstrip("/")
             if not suffix.isdigit():
-                raise NcbiDiscoveryError("PMC Cloud Service listing did not reconcile.")
+                raise self._error("PMC Cloud Service listing did not reconcile.")
             versions.append(int(suffix))
         return max(versions) if versions else None
 
@@ -346,9 +395,9 @@ class PubmedPmcDiscoveryService:
         try:
             value = json.loads(response.body)
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise NcbiDiscoveryError("NCBI returned malformed JSON.") from exc
+            raise self._error("NCBI returned malformed JSON.") from exc
         if not isinstance(value, dict):
-            raise NcbiDiscoveryError("NCBI returned malformed JSON.")
+            raise self._error("NCBI returned malformed JSON.")
         return value
 
     def _get_xml(self, url: str) -> ET.Element:
@@ -356,7 +405,7 @@ class PubmedPmcDiscoveryService:
         try:
             return ET.fromstring(response.body)
         except ET.ParseError as exc:
-            raise NcbiDiscoveryError("NCBI returned malformed XML.") from exc
+            raise self._error("NCBI returned malformed XML.") from exc
 
     def _get(self, url: str) -> TransportResponse:
         operation = _provider_operation(url)
@@ -364,8 +413,10 @@ class PubmedPmcDiscoveryService:
             if attempt == 0:
                 if self._request_count and self.request_interval_seconds:
                     self.sleep(self.request_interval_seconds)
-            elif self.retry_backoff_seconds:
-                self.sleep(self.retry_backoff_seconds * (2 ** (attempt - 1)))
+            else:
+                self._call_retry_attempts += 1
+                if self.retry_backoff_seconds:
+                    self.sleep(self.retry_backoff_seconds * (2 ** (attempt - 1)))
             self._request_count += 1
             try:
                 response = self.transport.get(
@@ -376,21 +427,23 @@ class PubmedPmcDiscoveryService:
                 )
             except (IncompleteRead, OSError, TimeoutError) as exc:
                 if attempt + 1 == self.max_attempts:
-                    raise NcbiDiscoveryError(
+                    raise self._error(
                         f"{operation} request failed after {attempt + 1} attempt(s)."
                     ) from exc
                 continue
+            if response.status_code == 429:
+                self._call_rate_limited = True
             if response.status_code == 200:
                 return response
             if (
                 response.status_code not in _RETRYABLE_STATUS_CODES
                 or attempt + 1 == self.max_attempts
             ):
-                raise NcbiDiscoveryError(
+                raise self._error(
                     f"{operation} request returned a non-success status "
                     f"({response.status_code}) after {attempt + 1} attempt(s)."
                 )
-        raise NcbiDiscoveryError(f"{operation} request retry state was invalid.")
+        raise self._error(f"{operation} request retry state was invalid.")
 
 
 def _provider_operation(url: str) -> str:

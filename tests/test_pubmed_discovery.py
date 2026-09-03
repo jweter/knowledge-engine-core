@@ -471,6 +471,88 @@ def test_discovery_backs_off_exponentially_between_retries() -> None:
     assert delays == [2.0, 4.0]
     assert "429" in str(error.value)
     assert "3 attempt" in str(error.value)
+    assert error.value.retry_attempt_count == 2
+    assert error.value.rate_limited_observed is True
+
+
+def test_discovery_reports_zero_retry_facts_on_first_attempt_success() -> None:
+    transport = FakeTransport([_search_response()])
+
+    result = _service(transport).discover("semaglutide obesity", limit=1)
+
+    assert result.candidates == ()
+    assert result.retry_attempt_count == 0
+    assert result.rate_limited_observed is False
+
+
+def test_discovery_reports_retry_and_rate_limit_facts_on_success() -> None:
+    transport = FakeTransport(
+        [
+            FakeResponse(429, b"rate limited", {}),
+            _search_response(),
+        ]
+    )
+
+    result = _service(transport, max_attempts=3).discover("semaglutide obesity", limit=1)
+
+    assert result.candidates == ()
+    assert result.retry_attempt_count == 1
+    assert result.rate_limited_observed is True
+
+
+def test_discovery_accumulates_retry_facts_across_underlying_requests() -> None:
+    """A single `discover()` call issues several `_get()` requests (search, metadata,
+
+    PMC linking, OA lookup); a transient failure anywhere in that chain must still be
+    reflected in the one total `DiscoveryResult.retry_attempt_count` issue #433 item 2
+    asks each provider to report, not just retries within whichever request happened
+    to need one.
+    """
+
+    transport = FakeTransport(
+        [
+            _search_response("222", "111"),
+            _metadata_response(),
+            FakeResponse(503, b"unavailable", {}),
+            _id_converter_response(
+                {"requested-id": "222", "pmid": 222, "pmcid": "PMC999"},
+                {"requested-id": "111", "pmid": 111, "errmsg": "not found"},
+            ),
+            _s3_listing_response("PMC999", 1),
+            _pmc_cloud_metadata_response(
+                pmcid="PMC999",
+                version=1,
+                license_code="CC BY",
+                pdf_key="PMC999.1.pdf",
+                xml_key="PMC999.1.xml",
+            ),
+        ]
+    )
+
+    result = _service(transport, max_attempts=3).discover("semaglutide obesity", limit=2)
+
+    assert [candidate.pmid for candidate in result.candidates] == ["222", "111"]
+    assert result.retry_attempt_count == 1
+    assert result.rate_limited_observed is False
+
+
+def test_discovery_resets_retry_facts_between_calls() -> None:
+    transport = FakeTransport(
+        [
+            FakeResponse(429, b"rate limited", {}),
+            _search_response(),
+            _search_response(),
+        ]
+    )
+    service = _service(transport, max_attempts=3)
+
+    first = service.discover("semaglutide obesity", limit=1)
+    second = service.discover("semaglutide obesity", limit=1)
+
+    assert first.retry_attempt_count == 1
+    assert first.rate_limited_observed is True
+    assert second.retry_attempt_count == 0
+    assert second.rate_limited_observed is False
 
 
 def test_discovery_rejects_negative_retry_backoff() -> None:
