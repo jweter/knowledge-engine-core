@@ -155,9 +155,6 @@ class EuropePmcOaAcquisitionService:
                 try:
                     for index, plan in enumerate(plans):
                         response = in_flight.pop(index).result()
-                        if next_unsubmitted < len(plans):
-                            _submit(next_unsubmitted)
-                            next_unsubmitted += 1
                         if not response.body.startswith(PDF_SIGNATURE):
                             raise EuropePmcAcquisitionError(
                                 "Europe PMC OA resource was not a PDF payload."
@@ -179,6 +176,17 @@ class EuropePmcOaAcquisitionService:
                                 ),
                             )
                         )
+                        # Only refill the submission window after the current
+                        # response body is fully consumed (validated, hashed,
+                        # written to disk, and dropped from `response` on the
+                        # next loop iteration) -- submitting the next download
+                        # before that point could leave max_concurrent_downloads
+                        # new bodies in flight alongside this one still being
+                        # processed, exceeding the documented in-memory bound
+                        # by one (Codex review, PR #458).
+                        if next_unsubmitted < len(plans):
+                            _submit(next_unsubmitted)
+                            next_unsubmitted += 1
                 finally:
                     for pending in in_flight.values():
                         pending.cancel()
