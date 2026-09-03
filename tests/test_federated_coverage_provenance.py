@@ -49,6 +49,7 @@ def test_coverage_report_carries_search_method_provenance(tmp_path: Path) -> Non
     assert report.year_to == 2026
     assert report.limit_per_provider == 17
     assert report.completeness == "complete"
+    assert report.raw_observation_count == 3
     assert report.providers_requested == ("pubmed",)
     assert report.providers_completed == ("pubmed",)
 
@@ -104,6 +105,7 @@ def test_coverage_report_serializes_only_public_provenance(tmp_path: Path) -> No
         "year_to": 2026,
         "limit_per_provider": 17,
         "completeness": "partial",
+        "raw_observation_count": 3,
         "candidate_count": 0,
         "providers_requested": ["pubmed", "crossref"],
         "providers_attempted": ["pubmed", "crossref"],

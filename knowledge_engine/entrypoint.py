@@ -6323,7 +6323,8 @@ def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: 
     console.print(
         f"[bold]Coverage:[/bold] "
         f"[{completeness_color}]{coverage.completeness}[/{completeness_color}] "
-        f"({coverage.candidate_count} deduplicated candidate(s))"
+        f"({coverage.raw_observation_count} raw observation(s) -> "
+        f"{coverage.candidate_count} deduplicated candidate(s))"
     )
     table = Table(title="Provider coverage")
     table.add_column("Provider")

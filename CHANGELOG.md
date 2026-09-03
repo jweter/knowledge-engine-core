@@ -9,6 +9,19 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Discovered-vs-deduplicated candidate funnel count (issue #433, item
+  3)**: `SearchCoverageReport` gains `raw_observation_count`, the sum of
+  every attempted provider's own `result_count` for a federated search run
+  -- the total raw scholarly-work observations providers returned, before
+  cross-provider deduplication into `candidate_count`'s distinct canonical
+  candidates. Previously the gap between "discovered" and "deduplicated"
+  was only reconstructible by re-loading the full `SearchRunRecord` and
+  summing `providers[].result_count` by hand. Derived at read time from
+  already-persisted per-provider facts, so no ledger `schema_version`
+  change is needed and every previously persisted run reports it
+  correctly. Exposed through `ke federated-coverage-report`,
+  `ke federated-discover-history`, and both commands' `--output` JSON.
+
 - **Bounded-concurrency CORE and Unpaywall OA acquisition downloads (issue
   #433, item 4)**: `CoreOaAcquisitionService.acquire()` and
   `UnpaywallOaAcquisitionService.acquire()` previously fetched every
