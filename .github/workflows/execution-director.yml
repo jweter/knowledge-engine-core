@@ -2,11 +2,13 @@ name: Execution Director
 
 on:
   workflow_dispatch:
+  pull_request:
   schedule:
     - cron: "23 * * * *"
 
 permissions:
   actions: read
+  checks: read
   contents: read
   issues: read
   pull-requests: read
