@@ -44,8 +44,21 @@ def main() -> int:
     if missing:
         errors.append("missing top-level keys: " + ", ".join(missing))
 
-    if data.get("schema_version") != 3:
-        errors.append("schema_version must be 3")
+    schema_version = data.get("schema_version")
+    if schema_version not in (3, 4):
+        errors.append("schema_version must be 3 or 4")
+    elif schema_version == 4:
+        growth_engine = data.get("growth_engine")
+        if not isinstance(growth_engine, dict) or not growth_engine:
+            errors.append("schema_version 4 requires a growth_engine contract")
+        else:
+            required_growth_keys = {"schema_version", "executable", "capabilities"}
+            missing_growth = sorted(required_growth_keys - set(growth_engine))
+            if missing_growth:
+                errors.append("growth_engine missing required keys: " + ", ".join(missing_growth))
+            capabilities = growth_engine.get("capabilities")
+            if not isinstance(capabilities, list) or not capabilities:
+                errors.append("growth_engine.capabilities must be a non-empty list")
 
     repository = data.get("repository")
     github_repository = os.getenv("GITHUB_REPOSITORY")
