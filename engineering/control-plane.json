@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "portfolio_project": "Knowledge Engine",
   "repository": "jweter/knowledge-engine-core",
   "repository_role": "core",
@@ -109,5 +109,65 @@
       "lane": "research_report_core_golden",
       "rule": "portfolio scenario is VERIFIED only when core, web, and ai component lanes are green on their current exact heads"
     }
-  ]
+  ],
+  "preflight": {
+    "required_before_pr": true,
+    "evidence_file": "preflight-evidence.json",
+    "format_apply": [
+      "poetry",
+      "run",
+      "ruff",
+      "format",
+      "."
+    ],
+    "checks": [
+      {
+        "id": "quality_preflight",
+        "argv": [
+          "poetry",
+          "run",
+          "python",
+          "scripts/quality_preflight.py"
+        ],
+        "kind": "quality",
+        "fast": false
+      },
+      {
+        "id": "golden",
+        "argv": [
+          "poetry",
+          "run",
+          "python",
+          "engineering/run_verification.py",
+          "--lane",
+          "research_report_core_golden"
+        ],
+        "kind": "golden",
+        "fast": false
+      }
+    ],
+    "policy": "ordinary PRs require GREEN full preflight evidence on the exact head; use PREFLIGHT_UNVERIFIED only for a legitimate environment limitation and record the reason"
+  },
+  "promotion": {
+    "states": [
+      "IMPLEMENTING",
+      "PREFLIGHT_UNVERIFIED",
+      "PREFLIGHT_GREEN",
+      "PR_OPEN",
+      "CI_PENDING",
+      "GREEN",
+      "MERGED",
+      "PRODUCT_REALITY_PENDING",
+      "PRODUCT_REALITY_VERIFIED"
+    ],
+    "rule": "advance only from verified evidence; never skip FAILED/PENDING/UNCERTAIN gates"
+  },
+  "orchestration": {
+    "promotion_workflow": ".github/workflows/promote-preflight-green.yml",
+    "promotion_branch_prefix": "orchestrator/",
+    "product_reality_recorder": "engineering/orchestrator_ops.py record-product-reality",
+    "live_status_file": "engineering/live-status.json",
+    "live_status_workflow": ".github/workflows/reconcile-live-status.yml",
+    "rule": "automatic promotion is limited to orchestrator-owned branches; Product Reality PASS requires concrete evidence; status reconciliation opens a PR rather than pushing directly to main"
+  }
 }
