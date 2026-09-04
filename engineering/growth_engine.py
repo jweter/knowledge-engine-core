@@ -300,9 +300,7 @@ def assign_specialist_lanes(
             continue
 
         area = issue_area(candidate)
-        conflict = bool(
-            area and (area in occupied_components or area in reserved_areas)
-        )
+        conflict = bool(area and (area in occupied_components or area in reserved_areas))
         assignments.append(
             {
                 "lane": lane,
