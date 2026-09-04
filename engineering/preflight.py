@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
-import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -33,6 +32,11 @@ def main() -> int:
         help="Apply the repository-approved formatter before validation.",
     )
     parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="Run only checks marked safe for pre-commit use.",
+    )
+    parser.add_argument(
         "--evidence",
         default="preflight-evidence.json",
         help="Path for machine-readable preflight evidence.",
@@ -46,14 +50,14 @@ def main() -> int:
     preflight = control["preflight"]
     evidence_path = root / args.evidence
 
-    if args.fix:
-        formatter = preflight.get("format_apply")
-        if formatter and run_step(formatter, root) != 0:
-            return 1
+    if args.fix and run_step(preflight["format_apply"], root) != 0:
+        return 1
 
     results: list[dict[str, object]] = []
     overall = "GREEN"
     for check in preflight["checks"]:
+        if args.fast and not check["fast"]:
+            continue
         returncode = run_step(check["argv"], root)
         status = "PASS" if returncode == 0 else "FAIL"
         results.append(
@@ -72,10 +76,12 @@ def main() -> int:
         "schema_version": 1,
         "repository": control["repository"],
         "head_sha": git_head(root),
+        "mode": "FAST" if args.fast else "FULL",
         "generated_at": datetime.now(UTC).isoformat(),
         "status": overall,
         "checks": results,
     }
+    evidence_path.parent.mkdir(parents=True, exist_ok=True)
     evidence_path.write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(evidence, indent=2))
 
