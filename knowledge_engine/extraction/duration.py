@@ -75,6 +75,18 @@ fabricated/misleading metadata if labeled `duration`:
   below, which both real corpus false positives failed and every real
   corpus true positive (a "3-year follow-up", a "5-year duration of
   response") passed.
+- **A treatment-relative measurement timepoint, not a duration.** "Blood
+  pressure was measured 3 months after treatment" and "Symptoms were
+  assessed 6 weeks before the intervention" are fixed timepoints stated
+  relative to an event -- the same false-positive category as the
+  anchor-event bullet above -- but "after"/"before"/"following" as filler
+  between the number-unit and a genuine duration noun like "treatment"/
+  "intervention" was not itself excluded, so it bridged past the temporal
+  filler to reach the context word and matched. "after"/"before"/
+  "following" are excluded from the trailing-context filler words for the
+  same reason the anchor-event words and the survival/population filler
+  words are: they mark the following noun as an anchor point in time, not
+  something the number-unit is a duration *of*.
 
 After these exclusions, a manual review of every one of the ~27 sentences
 the final pattern matches across all three corpora confirmed each is a
@@ -107,7 +119,7 @@ _DURATION_CONTEXT_WORD = (
 _NON_DURATION_FILLER_WORD = (
     r"(?:landmark|analysis|hazard|survival|response|endpoint|time\s?point|"
     r"visit|cox|model|index|cohort|population|group|arm|participant|patient|"
-    r"subject|sample|hr|pfs|os|rate)"
+    r"subject|sample|hr|pfs|os|rate|after|before|following)"
 )
 _ANCHOR_EVENT_WORD = r"(?:start|onset|initiation|baseline|diagnosis|randomi[sz]ation)"
 
