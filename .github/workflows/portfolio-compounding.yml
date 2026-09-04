@@ -1,0 +1,50 @@
+name: Portfolio Compounding
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * *"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Download latest repository evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p portfolio-input
+          for repo in knowledge-engine-core knowledge-engine-web knowledge-engine-ai rocksmith-cdlc-generator Project-Everward; do
+            mkdir -p "portfolio-input/$repo"
+            run_id="$(gh api "/repos/jweter/$repo/actions/runs?status=success&per_page=100" --jq '.workflow_runs[] | select(.name == "Engineering Compounding Report" and .head_branch == .repository.default_branch) | .id' | head -n 1)"
+            if [ -z "$run_id" ]; then
+              echo "No successful default-branch compounding run for $repo; evidence remains UNKNOWN."
+              continue
+            fi
+            artifact_id="$(gh api "/repos/jweter/$repo/actions/runs/$run_id/artifacts" --jq '.artifacts[] | select(.name == "engineering-compounding-report" and .expired == false) | .id' | head -n 1)"
+            if [ -z "$artifact_id" ]; then
+              echo "No unexpired compounding artifact for $repo; evidence remains UNKNOWN."
+              continue
+            fi
+            gh api "/repos/jweter/$repo/actions/artifacts/$artifact_id/zip" > "/tmp/$repo.zip"
+            unzip -q "/tmp/$repo.zip" -d "portfolio-input/$repo"
+          done
+      - name: Aggregate portfolio evidence
+        run: >
+          python engineering/portfolio_compounding.py
+          --input-dir portfolio-input
+          --output portfolio-compounding-report.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: portfolio-compounding-report
+          path: portfolio-compounding-report.json
+          retention-days: 90
