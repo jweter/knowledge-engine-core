@@ -41,18 +41,18 @@ def main() -> int:
 
     if not evidence_path.is_file():
         state = "PREFLIGHT_UNVERIFIED"
-        reason = "no preflight evidence for the current working tree"
+        reason = "no preflight evidence for the current HEAD"
     else:
         evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
-        if evidence.get("head_sha") != head:
+        if evidence.get("head_sha") != head or evidence.get("mode") != "FULL":
             state = "PREFLIGHT_UNVERIFIED"
-            reason = "preflight evidence does not match current HEAD"
+            reason = "full preflight evidence does not match current HEAD"
         elif evidence.get("status") == "GREEN":
             state = "PREFLIGHT_GREEN"
-            reason = "canonical preflight passed on current HEAD"
+            reason = "canonical full preflight passed on current HEAD"
         else:
             state = "IMPLEMENTING"
-            reason = "canonical preflight is not green"
+            reason = "canonical full preflight is not green"
 
     payload = {
         "schema_version": 1,
