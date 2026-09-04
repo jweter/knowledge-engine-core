@@ -16,9 +16,13 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   structured field -- report consumers could only find it, if at all, by
   re-scanning `claim_text`'s free text. New
   `knowledge_engine/extraction/confidence_interval.py`
-  (`extract_confidence_interval`) matches the same CI shape and returns the
-  matched sentence itself (never parsed lower/upper bounds, which would
-  risk inventing structure real papers state in too many different ways).
+  (`extract_confidence_interval`) matches a percentage (any confidence
+  level found in the checked-in corpora -- `80%`/`90%`/`95%`/`99%`, not
+  just 95/99) directly adjacent to a `CI`/`CIs`/`confidence interval(s)`
+  marker in either order, and returns the matched sentence itself (never
+  parsed lower/upper bounds, which would risk inventing structure real
+  papers state in too many different ways; `v2`, post-review, broadened
+  the initial 95%/99%-only pattern after a real-corpus review-bot finding).
   Unlike PICO's population/intervention/comparator/outcome, a CI is a
   claim-level fact, not a paper-level one, so `build_draft_evidence_item`
   (`extraction/evidence_items.py`) derives it directly from each candidate's

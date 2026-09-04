@@ -23,29 +23,51 @@ inventing structure the source sentence does not unambiguously state. The
 matched sentence itself is the value, the same "quote, never parse or
 paraphrase" contract `extract_pico` already established for its own fields.
 A sentence with no CI mention is `None`, never an empty/guessed placeholder.
+
+v2 (post-review): v1's pattern only matched a literal "95%"/"99%" immediately
+followed by "CI", the same narrow shape
+`knowledge_engine.extraction.claims`'s `confidence_interval` signal and
+`knowledge_engine.extraction.pico`'s statistical-result guard use for their
+own, different purposes (picking which candidate sentence to keep;
+excluding a statistical-result sentence from a PICO field). Checking the
+checked-in corpora's own `evidence_records.jsonl` files found real claim
+sentences this missed entirely: other confidence levels ("80% CI", "90%
+CI" -- not just 95/99), the plural "CIs", the spelled-out "confidence
+interval"/"confidence intervals", and the reversed "CI 95%" order. The
+pattern now accepts any of these, still requiring a percentage number
+directly adjacent to the CI marker (either order) so an unrelated "CI"
+usage elsewhere in a long sentence, or a methods-only mention with no
+stated interval, is not mistaken for one -- absence is still never guessed
+into a placeholder.
 """
 
 from __future__ import annotations
 
 import re
 
-CONFIDENCE_INTERVAL_EXTRACTION_RULES_VERSION = "m74-confidence-interval-v1"
+CONFIDENCE_INTERVAL_EXTRACTION_RULES_VERSION = "m74-confidence-interval-v2"
 
-_CONFIDENCE_INTERVAL_PATTERN = re.compile(r"(?i)\b(?:95|99)\s*%\s*ci\b")
+_PERCENT_THEN_CI_PATTERN = re.compile(
+    r"(?i)\d{1,3}(?:\.\d+)?\s*%\s*,?\s*(?:CIs?\b|confidence intervals?\b)"
+)
+_CI_THEN_PERCENT_PATTERN = re.compile(r"(?i)\bCIs?\s*,?\s*\d{1,3}(?:\.\d+)?\s*%")
 
 
 def extract_confidence_interval(sentence_text: str) -> str | None:
     """Return `sentence_text` unchanged when it states an explicit CI, else `None`.
 
-    Matches a bare "95% CI"/"99% CI" mention (case-insensitive, tolerant of
-    stray whitespace around the "%"), the same shape
-    `knowledge_engine.extraction.claims`'s `confidence_interval` signal and
-    `knowledge_engine.extraction.pico`'s statistical-result guard already
-    use, so detection stays consistent across every module that reasons
-    about CI mentions.
+    Matches a percentage (any value, e.g. "80%"/"90%"/"95%"/"99%", not just
+    95/99) directly adjacent to a "CI"/"CIs"/"confidence interval(s)"
+    marker, in either order ("95% CI" or "CI 95%") and tolerant of stray
+    whitespace, a newline, or a comma between them. A percentage and a CI
+    marker that are not directly adjacent -- e.g. two unrelated numbers
+    elsewhere in a long sentence -- are not matched, keeping detection
+    conservative.
     """
 
-    if _CONFIDENCE_INTERVAL_PATTERN.search(sentence_text):
+    if _PERCENT_THEN_CI_PATTERN.search(sentence_text) or _CI_THEN_PERCENT_PATTERN.search(
+        sentence_text
+    ):
         return sentence_text
     return None
 
