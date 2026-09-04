@@ -199,6 +199,22 @@ def test_returns_none_for_a_measurement_timepoint_following_the_intervention() -
     assert extract_duration(sentence) is None
 
 
+def test_matches_a_leading_duration_noun_followed_by_after_as_intervening_text() -> None:
+    """The after/before/following exclusion is trailing-only: here "after"
+    is legitimate text between a leading duration noun ("period") and the
+    unit, not a bridge past an anchor reached from the trailing direction."""
+
+    sentence = "The follow-up period after surgery was 6 months."
+
+    assert extract_duration(sentence) == sentence
+
+
+def test_matches_a_leading_duration_noun_followed_by_following_as_intervening_text() -> None:
+    sentence = "The study duration following enrollment was 6 months."
+
+    assert extract_duration(sentence) == sentence
+
+
 def test_rules_version_is_a_non_empty_string() -> None:
     assert DURATION_EXTRACTION_RULES_VERSION
     assert isinstance(DURATION_EXTRACTION_RULES_VERSION, str)
