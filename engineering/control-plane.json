@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "portfolio_project": "Knowledge Engine",
   "repository": "jweter/knowledge-engine-core",
   "repository_role": "core",
@@ -47,7 +47,7 @@
     "rule": "never convert missing human evidence into PASS; keep implementation status separate from Product Reality acceptance",
     "executable_lanes": [
       {
-        "id": "golden_evidence_grounding",
+        "id": "research_report_core_golden",
         "steps": [
           [
             "poetry",
@@ -55,10 +55,11 @@
             "pytest",
             "tests/test_golden_map_grounding.py",
             "tests/test_evidence_map_grounding_verify.py",
+            "tests/test_research_runtime_packaging.py",
             "-q"
           ]
         ],
-        "evidence": "Core golden evidence-map grounding regression"
+        "evidence": "Core evidence grounding, verification, and Research runtime contract"
       }
     ]
   },
@@ -72,8 +73,8 @@
     "rule": "do not duplicate or compete with active work; prefer finishing existing work"
   },
   "regression_memory": {
-    "rule": "a reproduced correctness defect should gain regression protection before closure when practical",
-    "authoritative_history": "repository tests plus issue/PR/error-resolution history"
+    "path": "engineering/regression-memory.json",
+    "rule": "record significant or recurring reproduced failures with root cause, fix, verification, regression protection, and residual risk"
   },
   "readiness_scoring": {
     "mode": "evidence-derived",
@@ -89,5 +90,24 @@
     "rule": "report unknown when evidence is insufficient"
   },
   "continuation": "derive from canonical roadmap, open issues, PR state, and Research Report v1 acceptance",
-  "cross_repo_authorities": []
+  "cross_repo_authorities": [],
+  "portfolio_aggregation": {
+    "project_key": "knowledge-engine",
+    "component_role": "core",
+    "required_components": [
+      "core",
+      "web",
+      "ai"
+    ],
+    "authority": "hourly portfolio orchestrator",
+    "rule": "aggregate only verified repository evidence; never infer missing component state"
+  },
+  "golden_scenarios": [
+    {
+      "id": "research-report-v1",
+      "component": "core",
+      "lane": "research_report_core_golden",
+      "rule": "portfolio scenario is VERIFIED only when core, web, and ai component lanes are green on their current exact heads"
+    }
+  ]
 }
