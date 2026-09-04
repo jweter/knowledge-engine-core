@@ -279,6 +279,7 @@ def assign_specialist_lanes(
     }
     assignments: list[dict[str, Any]] = []
     used_lanes: set[str] = set()
+    reserved_areas: set[str] = set()
     for candidate in candidates:
         if candidate.blocked:
             continue
@@ -299,7 +300,9 @@ def assign_specialist_lanes(
             continue
 
         area = issue_area(candidate)
-        conflict = bool(area and area in occupied_components)
+        conflict = bool(
+            area and (area in occupied_components or area in reserved_areas)
+        )
         assignments.append(
             {
                 "lane": lane,
@@ -314,6 +317,8 @@ def assign_specialist_lanes(
             }
         )
         used_lanes.add(lane)
+        if area and not conflict:
+            reserved_areas.add(area)
         if len(assignments) >= len(SPECIALIST_LANES):
             break
     return assignments
@@ -372,7 +377,13 @@ def learning_summary(
     for event in events:
         event_type = str(event.get("type") or "unknown")
         event_types[event_type] = event_types.get(event_type, 0) + 1
-    regression_count = len(regression_memory) if isinstance(regression_memory, list) else 0
+    if isinstance(regression_memory, dict):
+        entries = regression_memory.get("entries", [])
+        regression_count = len(entries) if isinstance(entries, list) else 0
+    elif isinstance(regression_memory, list):
+        regression_count = len(regression_memory)
+    else:
+        regression_count = 0
     return {
         "event_count": len(events),
         "event_types": event_types,
@@ -465,6 +476,17 @@ def snapshot(output: Path) -> int:
     issues = [item for item in github_pages("/issues?state=open") if "pull_request" not in item]
     open_prs = github_pages("/pulls?state=open")
     ownership = active_ownership(open_prs)
+    pr_triage = [
+        {
+            "number": pr["number"],
+            "title": pr.get("title"),
+            "draft": bool(pr.get("draft")),
+            "head": pr.get("head", {}).get("ref"),
+            "priority": "P1" if pr.get("mergeable") is False else "P2",
+            "rule": "existing PR work must be cleared before new issue development",
+        }
+        for pr in open_prs
+    ]
     candidates = sorted(
         (score_issue(item) for item in issues),
         key=lambda candidate: (-candidate.score, candidate.number),
@@ -496,12 +518,17 @@ def snapshot(output: Path) -> int:
         "repository": repository,
         "generated_at": datetime.now(UTC).isoformat(),
         "learning": learning_summary(memory, regression_memory),
-        "ranked_next_slices": ranked[:10],
+        "open_pr_triage": pr_triage,
+        "ranked_next_slices": [] if open_prs else ranked[:10],
         "dependency_graph": dependencies,
         "cross_repo_dependency_graph": cross_repo_graph(control),
-        "specialist_lane_plan": assign_specialist_lanes(
-            candidates,
-            ownership,
+        "specialist_lane_plan": (
+            []
+            if open_prs
+            else assign_specialist_lanes(
+                candidates,
+                ownership,
+            )
         ),
         "active_ownership": ownership,
         "product_reality_attestations": attestations,
