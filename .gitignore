@@ -35,3 +35,6 @@ papers/**/*.pdf
 data/corpora/**/reports/*.md
 *.log
 work/
+
+# Private Product Reality source evidence
+private/product-reality-inbox/
