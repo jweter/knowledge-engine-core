@@ -131,7 +131,8 @@
           "--check",
           "."
         ],
-        "kind": "quality"
+        "kind": "quality",
+        "fast": true
       },
       {
         "id": "lint",
@@ -142,7 +143,30 @@
           "check",
           "."
         ],
-        "kind": "quality"
+        "kind": "quality",
+        "fast": true
+      },
+      {
+        "id": "control_plane",
+        "argv": [
+          "poetry",
+          "run",
+          "python",
+          "engineering/validate_control_plane.py"
+        ],
+        "kind": "governance",
+        "fast": true
+      },
+      {
+        "id": "regression_memory",
+        "argv": [
+          "poetry",
+          "run",
+          "python",
+          "engineering/validate_regression_memory.py"
+        ],
+        "kind": "governance",
+        "fast": true
       },
       {
         "id": "types",
@@ -153,7 +177,8 @@
           "knowledge_engine",
           "tests"
         ],
-        "kind": "quality"
+        "kind": "quality",
+        "fast": false
       },
       {
         "id": "tests",
@@ -163,27 +188,8 @@
           "pytest",
           "-q"
         ],
-        "kind": "test"
-      },
-      {
-        "id": "control_plane",
-        "argv": [
-          "poetry",
-          "run",
-          "python",
-          "engineering/validate_control_plane.py"
-        ],
-        "kind": "governance"
-      },
-      {
-        "id": "regression_memory",
-        "argv": [
-          "poetry",
-          "run",
-          "python",
-          "engineering/validate_regression_memory.py"
-        ],
-        "kind": "governance"
+        "kind": "test",
+        "fast": false
       },
       {
         "id": "golden",
@@ -195,10 +201,11 @@
           "--lane",
           "research_report_core_golden"
         ],
-        "kind": "golden"
+        "kind": "golden",
+        "fast": false
       }
     ],
-    "policy": "ordinary PRs require GREEN preflight evidence on the exact head; use PREFLIGHT_UNVERIFIED only for a legitimate environment limitation and record the reason"
+    "policy": "ordinary PRs require GREEN full preflight evidence on the exact head; use PREFLIGHT_UNVERIFIED only for a legitimate environment limitation and record the reason"
   },
   "promotion": {
     "states": [
