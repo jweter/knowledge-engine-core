@@ -35,6 +35,10 @@ from knowledge_engine.extraction.confidence_interval import (
     extract_confidence_interval,
 )
 from knowledge_engine.extraction.direction import ClaimFraming
+from knowledge_engine.extraction.duration import (
+    DURATION_EXTRACTION_RULES_VERSION,
+    extract_duration,
+)
 
 DRAFT_EVIDENCE_ITEM_RULES_VERSION = "m19-draft-evidence-item-v1"
 
@@ -98,6 +102,8 @@ class DraftEvidenceItem:
     evidence_record_id: str | None = None
     confidence_interval: str | None = None
     confidence_interval_extraction_rules_version: str | None = None
+    duration: str | None = None
+    duration_extraction_rules_version: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-ready dict for a review-queue file.
@@ -105,15 +111,17 @@ class DraftEvidenceItem:
         Every `REQUIRED_EVIDENCE_FIELDS` schema field is present, including
         the `None`-valued ones, so a reviewer sees exactly what still needs
         completing. `extraction_context` and `confidence_interval`/
-        `confidence_interval_extraction_rules_version` are not part of
+        `confidence_interval_extraction_rules_version`/`duration`/
+        `duration_extraction_rules_version` are not part of
         `REQUIRED_EVIDENCE_FIELDS`: `extraction_context` carries the M17/M18
         audit trail (matched signal, framing, matched cue, rule versions) a
         reviewer needs to judge the extraction without re-deriving it, and
-        `confidence_interval` is a newer (M74), purely additive field --
-        keeping it out of the required set means an evidence record promoted
-        before M74 and still missing the key remains valid, matching this
-        project's established additive-schema precedent (e.g. `federated_
-        discovery.ProviderObservation`'s `corrected`/`withdrawn` fields).
+        `confidence_interval`/`duration` are newer (M74/M75), purely
+        additive fields -- keeping them out of the required set means an
+        evidence record promoted before M74/M75 and still missing the keys
+        remains valid, matching this project's established additive-schema
+        precedent (e.g. `federated_discovery.ProviderObservation`'s
+        `corrected`/`withdrawn` fields).
         """
 
         candidate = self.claim_framing.candidate
@@ -144,6 +152,8 @@ class DraftEvidenceItem:
             "confidence_interval_extraction_rules_version": (
                 self.confidence_interval_extraction_rules_version
             ),
+            "duration": self.duration,
+            "duration_extraction_rules_version": self.duration_extraction_rules_version,
             "extraction_context": {
                 "matched_signal": candidate.matched_signal,
                 "section_type": candidate.section_type,
@@ -182,9 +192,11 @@ def build_draft_evidence_item(
     `framing_rules_version`, so a later ruleset revision doesn't leave a
     draft item's provenance unrecorded.
 
-    `confidence_interval` is different: unlike the paper-level fields above,
-    a CI is a claim-level fact (two results in the same paper can carry two
-    different intervals), so it is derived here, directly from this one
+    `confidence_interval`/`duration` are different: unlike the paper-level
+    fields above, a CI or a duration is a claim-level fact (two results in
+    the same paper can carry two different intervals, and a paper can
+    separately state a study duration, an intervention duration, and a
+    follow-up duration), so both are derived here, directly from this one
     candidate's own `sentence_text`, every time -- never broadcast from a
     paper-level value and never a caller-supplied parameter.
     """
@@ -217,6 +229,8 @@ def build_draft_evidence_item(
         pico_extraction_rules_version=pico_extraction_rules_version,
         confidence_interval=extract_confidence_interval(candidate.sentence_text),
         confidence_interval_extraction_rules_version=(CONFIDENCE_INTERVAL_EXTRACTION_RULES_VERSION),
+        duration=extract_duration(candidate.sentence_text),
+        duration_extraction_rules_version=DURATION_EXTRACTION_RULES_VERSION,
     )
 
 
