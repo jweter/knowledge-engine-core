@@ -583,7 +583,27 @@ itself, but may need to trigger for a specific paper):**
   console table. An unresolvable `search_run_id`, a malformed request, or a
   `research_question_id` mismatch against the persisted run each exit `1`
   with a plain console error, never a stack trace or a silently-adjusted
-  plan.
+  plan. Every resolved plan's candidate-funnel counts
+  (`already_indexed_count`, `full_text_selected_count`,
+  `metadata_only_count`, `skipped_budget_count`, `missing_candidate_count`)
+  and `duration_ms` are also durably persisted under
+  `<ledger-root>/acquisition_plans/` (issue #433 item 3,
+  `acquisition_plan_ledger.py`) -- previously these counts existed only in
+  this command's own return value/console output for the single invocation
+  that computed them, unlike the discovery-stage funnel counts
+  `federated-discover` already persists via `federated_search_ledger.py`.
+  This has no effect on this command's own console/`--output` shape.
+- `ke general-question-acquisition-history <search_run_id> --ledger-root
+  <dir> [--output <path.json>]` (issue #433 item 3,
+  `acquisition_plan_ledger.py`): lists every
+  `general-question-acquisition-plan` run durably persisted for one
+  `search_run_id`, newest first -- the first ledger read that discovers
+  which acquisition plans exist for a given federated-discover run, the
+  same role `federated-discover-history` plays for search runs themselves.
+  `--output` saves `search_run_id`, `plan_count`, and each matched plan's
+  full funnel-count record as JSON. No matching plans is reported plainly,
+  never as an error: a search run with no prior acquisition plan is an
+  expected, honest state, not a failure.
 - `ke process-startup-timing [--output <path.json>] [--generator local|openai
   [--model <name>]]` (issue #433 item 1, `process_startup_timing.py`):
   measures one `ke` invocation's own fixed overhead. `import_to_command_ms`

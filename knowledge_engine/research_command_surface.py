@@ -23,6 +23,7 @@ from typing import Annotated, Any, cast
 import typer
 
 import knowledge_engine.cli as cli
+from knowledge_engine.acquisition_plan_ledger import AcquisitionPlanLedger
 from knowledge_engine.arxiv_http import UrllibArxivTransport
 from knowledge_engine.arxiv_provider import ArxivProvider
 from knowledge_engine.citation_snowball import (
@@ -426,6 +427,8 @@ def general_question_acquisition_plan(
     except ValueError as exc:
         typer.echo(f"Acquisition request could not be resolved: {exc}", err=True)
         raise typer.Exit(1) from exc
+
+    AcquisitionPlanLedger(ledger_root / "acquisition_plans").record(plan)
 
     if output is not None:
         _write_text_output(output, plan.to_json())
