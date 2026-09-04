@@ -55,9 +55,7 @@ def main() -> int:
             required_growth_keys = {"schema_version", "executable", "capabilities"}
             missing_growth = sorted(required_growth_keys - set(growth_engine))
             if missing_growth:
-                errors.append(
-                    "growth_engine missing required keys: " + ", ".join(missing_growth)
-                )
+                errors.append("growth_engine missing required keys: " + ", ".join(missing_growth))
             capabilities = growth_engine.get("capabilities")
             if not isinstance(capabilities, list) or not capabilities:
                 errors.append("growth_engine.capabilities must be a non-empty list")
