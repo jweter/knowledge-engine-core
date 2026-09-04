@@ -25,6 +25,7 @@ jobs:
       - name: Run full preflight
         run: python engineering/preflight.py --evidence preflight-evidence.json
       - uses: actions/upload-artifact@v7
+        if: ${{ always() }}
         with:
           name: preflight-evidence
           path: preflight-evidence.json
