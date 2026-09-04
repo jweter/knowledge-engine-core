@@ -422,8 +422,7 @@ def recent_work_branches(open_pr_heads: set[str]) -> list[dict[str, Any]]:
 
 def active_ownership(control: dict[str, Any]) -> dict[str, Any]:
     mandatory_checks = frozenset(
-        str(name)
-        for name in control.get("verification", {}).get("mandatory_check_names", [])
+        str(name) for name in control.get("verification", {}).get("mandatory_check_names", [])
     )
     prs = [classify_pr(pr, mandatory_checks) for pr in pages("/pulls?state=open")]
     priority_issues = open_priority_issues()
