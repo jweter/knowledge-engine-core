@@ -65,6 +65,28 @@ def github(path: str) -> Any:
         return json.load(response)
 
 
+def graphql(query: str, variables: dict[str, Any]) -> dict[str, Any]:
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise SystemExit("GITHUB_TOKEN is required")
+    body = json.dumps({"query": query, "variables": variables}).encode()
+    request = urllib.request.Request(
+        "https://api.github.com/graphql",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json",
+            "User-Agent": "portfolio-execution-director",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        payload = json.load(response)
+    if payload.get("errors"):
+        raise SystemExit(f"GraphQL error: {payload['errors']}")
+    return payload["data"]
+
+
 def pages(path: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     separator = "&" if "?" in path else "?"
@@ -250,12 +272,79 @@ def check_runs(head_sha: str) -> list[dict[str, Any]]:
     return wrapped_pages(f"/commits/{head_sha}/check-runs", "check_runs")
 
 
-def classify_pr(pr: dict[str, Any]) -> dict[str, Any]:
+def latest_review_states(reviews: list[dict[str, Any]]) -> dict[str, str]:
+    latest: dict[str, tuple[datetime, str]] = {}
+    for review in reviews:
+        state = str(review.get("state") or "")
+        if state not in {"APPROVED", "CHANGES_REQUESTED", "DISMISSED"}:
+            continue
+        login = str((review.get("user") or {}).get("login") or "")
+        if not login:
+            continue
+        when = parse_time(review.get("submitted_at")) or datetime.min.replace(tzinfo=UTC)
+        prior = latest.get(login)
+        if prior is None or when >= prior[0]:
+            latest[login] = (when, state)
+    return {login: state for login, (_when, state) in latest.items()}
+
+
+UNRESOLVED_THREADS_QUERY = """
+query($owner: String!, $name: String!, $number: Int!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 50, after: $after) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          isResolved
+          comments(first: 1) { nodes { body } }
+        }
+      }
+    }
+  }
+}
+"""
+
+
+def has_unresolved_blocking_finding(number: int) -> bool:
+    repository = os.environ.get("GITHUB_REPOSITORY") or ""
+    if "/" not in repository:
+        raise SystemExit("GITHUB_REPOSITORY must be OWNER/NAME")
+    owner, name = repository.split("/", 1)
+    after: str | None = None
+    for _ in range(50):
+        data = graphql(
+            UNRESOLVED_THREADS_QUERY,
+            {"owner": owner, "name": name, "number": number, "after": after},
+        )
+        threads = data["repository"]["pullRequest"]["reviewThreads"]
+        for node in threads["nodes"]:
+            if node.get("isResolved"):
+                continue
+            comments = (node.get("comments") or {}).get("nodes") or []
+            body = str(comments[0].get("body") or "") if comments else ""
+            if review_severity(body) in {"P0", "P1"}:
+                return True
+        page_info = threads["pageInfo"]
+        if not page_info.get("hasNextPage"):
+            return False
+        after = page_info.get("endCursor")
+    raise SystemExit(f"Review thread pagination safety limit exceeded for PR #{number}")
+
+
+def classify_pr(pr: dict[str, Any], mandatory_checks: frozenset[str]) -> dict[str, Any]:
     number = int(pr["number"])
     detail = github(f"/pulls/{number}")
     head_sha = str(detail.get("head", {}).get("sha") or "")
     checks = check_runs(head_sha)
     reviews = pages(f"/pulls/{number}/reviews")
+    review_states = latest_review_states(reviews)
+    passed_check_names = {
+        str(check.get("name") or "")
+        for check in checks
+        if str(check.get("status") or "") == "completed"
+        and str(check.get("conclusion") or "") in PASS_CONCLUSIONS
+    }
+    missing_mandatory = mandatory_checks - passed_check_names
 
     if detail.get("mergeable") is False:
         state = "CONFLICTED"
@@ -263,8 +352,10 @@ def classify_pr(pr: dict[str, Any]) -> dict[str, Any]:
         state = "FAILED"
     elif any(str(check.get("status") or "") != "completed" for check in checks):
         state = "PENDING"
-    elif any(review.get("state") == "CHANGES_REQUESTED" for review in reviews):
+    elif "CHANGES_REQUESTED" in review_states.values() or has_unresolved_blocking_finding(number):
         state = "BLOCKED"
+    elif missing_mandatory:
+        state = "PENDING"
     elif checks and all(str(check.get("conclusion") or "") in PASS_CONCLUSIONS for check in checks):
         state = "GREEN" if detail.get("mergeable") is True else "UNCERTAIN"
     else:
@@ -329,8 +420,12 @@ def recent_work_branches(open_pr_heads: set[str]) -> list[dict[str, Any]]:
     return rows
 
 
-def active_ownership() -> dict[str, Any]:
-    prs = [classify_pr(pr) for pr in pages("/pulls?state=open")]
+def active_ownership(control: dict[str, Any]) -> dict[str, Any]:
+    mandatory_checks = frozenset(
+        str(name)
+        for name in control.get("verification", {}).get("mandatory_check_names", [])
+    )
+    prs = [classify_pr(pr, mandatory_checks) for pr in pages("/pulls?state=open")]
     priority_issues = open_priority_issues()
     pr_heads = {str(pr.get("head") or "") for pr in prs}
     branches = recent_work_branches(pr_heads)
@@ -455,7 +550,7 @@ def dependency_graph(control: dict[str, Any]) -> dict[str, Any]:
 def plan(output: Path) -> int:
     control = load(CONTROL, {})
     learning = merged_learning(load(LEARNING, {"schema_version": 1, "events": []}))
-    ownership = active_ownership()
+    ownership = active_ownership(control)
     findings = sentinel(control, ownership, learning)
     policy = action_policy(ownership, findings)
     product_reality = harvest_product_reality(control)

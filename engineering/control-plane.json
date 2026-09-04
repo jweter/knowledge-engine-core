@@ -44,6 +44,16 @@
     "product_reality_lanes": [
       "monster_79_end_to_end_research_report"
     ],
+    "mandatory_check_names": [
+      "Python quality checks",
+      "Slim Research runtime install",
+      "Python security scan",
+      "Python dependency vulnerability scan",
+      "Secret leak scan",
+      "Control Plane Contract",
+      "Canonical preflight",
+      "research-report-v1"
+    ],
     "rule": "never convert missing human evidence into PASS; keep implementation status separate from Product Reality acceptance",
     "executable_lanes": [
       {
