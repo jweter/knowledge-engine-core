@@ -44,8 +44,8 @@ def main() -> int:
     if missing:
         errors.append("missing top-level keys: " + ", ".join(missing))
 
-    if data.get("schema_version") != 3:
-        errors.append("schema_version must be 3")
+    if data.get("schema_version") not in (3, 4):
+        errors.append("schema_version must be 3 or 4")
 
     repository = data.get("repository")
     github_repository = os.getenv("GITHUB_REPOSITORY")
