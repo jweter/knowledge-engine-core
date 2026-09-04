@@ -1,14 +1,17 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "portfolio_project": "Knowledge Engine",
   "repository": "jweter/knowledge-engine-core",
   "repository_role": "core",
   "source_of_truth": "GitHub repository state plus authoritative documents listed below",
   "authoritative_documents": [
+    "docs/project-status.yaml",
+    "docs/agent-development-policy.md",
     "docs/roadmap.md",
     "docs/roadmap/research_report_v1.md",
     "docs/architecture.md",
     "SECURITY_ARCHITECTURE.md",
+    "docs/INDUSTRY_REALITY_CHECK.md",
     "AGENTS.md",
     "CLAUDE.md"
   ],
@@ -41,7 +44,23 @@
     "product_reality_lanes": [
       "monster_79_end_to_end_research_report"
     ],
-    "rule": "never convert missing human evidence into PASS; keep implementation status separate from Product Reality acceptance"
+    "rule": "never convert missing human evidence into PASS; keep implementation status separate from Product Reality acceptance",
+    "executable_lanes": [
+      {
+        "id": "golden_evidence_grounding",
+        "steps": [
+          [
+            "poetry",
+            "run",
+            "pytest",
+            "tests/test_golden_map_grounding.py",
+            "tests/test_evidence_map_grounding_verify.py",
+            "-q"
+          ]
+        ],
+        "evidence": "Core golden evidence-map grounding regression"
+      }
+    ]
   },
   "work_ownership": {
     "authority": "GitHub",
@@ -69,5 +88,6 @@
     ],
     "rule": "report unknown when evidence is insufficient"
   },
-  "continuation": "derive from canonical roadmap, open issues, PR state, and Research Report v1 acceptance"
+  "continuation": "derive from canonical roadmap, open issues, PR state, and Research Report v1 acceptance",
+  "cross_repo_authorities": []
 }
