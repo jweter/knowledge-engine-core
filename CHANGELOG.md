@@ -9,6 +9,28 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Structured `confidence_interval` field on draft evidence items (M74,
+  issue #449)**: `knowledge_engine.extraction.claims` already detected that
+  a candidate claim sentence *mentions* a 95%/99% CI (its own
+  `"confidence_interval"` `matched_signal`), but nothing surfaced that as a
+  structured field -- report consumers could only find it, if at all, by
+  re-scanning `claim_text`'s free text. New
+  `knowledge_engine/extraction/confidence_interval.py`
+  (`extract_confidence_interval`) matches the same CI shape and returns the
+  matched sentence itself (never parsed lower/upper bounds, which would
+  risk inventing structure real papers state in too many different ways).
+  Unlike PICO's population/intervention/comparator/outcome, a CI is a
+  claim-level fact, not a paper-level one, so `build_draft_evidence_item`
+  (`extraction/evidence_items.py`) derives it directly from each candidate's
+  own sentence rather than broadcasting one paper-wide value.
+  `DraftEvidenceItem` gains `confidence_interval`/
+  `confidence_interval_extraction_rules_version`, deliberately kept out of
+  `REQUIRED_EVIDENCE_FIELDS` (purely additive; an evidence record promoted
+  before M74 and missing the key remains valid). First slice of issue
+  #449's "effect size and confidence interval when extractable" acceptance
+  criterion; `dose`, `duration`, `measurement_method`, and `effect_size`
+  remain unaddressed follow-up work.
+
 - **Durable acquisition-plan funnel-count persistence (issue #433, item 3
   remainder)**: `ke general-question-acquisition-plan` computed candidate-
   funnel counts (`already_indexed`/`full_text_selected`/`metadata_only`/

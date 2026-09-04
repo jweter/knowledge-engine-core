@@ -1,6 +1,6 @@
 from typing import Any
 
-from knowledge_engine.cli import _validate_evidence_record
+from knowledge_engine.cli import REQUIRED_EVIDENCE_FIELDS, _validate_evidence_record
 from knowledge_engine.extraction import (
     CLAIM_FRAMING_RULES_VERSION,
     ClaimCandidate,
@@ -98,6 +98,36 @@ def test_mechanically_derivable_fields_are_populated() -> None:
     assert item.source_type == "paper"
     assert item.extraction_status == "draft_review_required"
     assert item.created_for_milestone == "M19"
+
+
+def test_confidence_interval_is_extracted_from_the_candidate_sentence_itself() -> None:
+    """Unlike PICO, a CI is claim-level, not paper-level: it must come from
+    this exact candidate's own sentence, not a value broadcast paper-wide."""
+
+    sentence = "Mean weight loss was greater with the study drug (95% CI, 1.1 to 3.4 kg)."
+    item = build_draft_evidence_item(_paper(), _framing(_candidate(sentence)))
+
+    assert item.confidence_interval == sentence
+    assert item.confidence_interval_extraction_rules_version
+
+
+def test_confidence_interval_is_none_when_the_sentence_states_no_ci() -> None:
+    item = build_draft_evidence_item(_paper(), _framing())
+
+    assert item.confidence_interval is None
+    assert item.confidence_interval_extraction_rules_version is not None
+
+
+def test_confidence_interval_is_not_broadcast_across_a_papers_other_candidates() -> None:
+    paper = _paper()
+    with_ci = "Response rate improved significantly (95% CI, 1.2 to 4.8)."
+    without_ci = "Patients tolerated the regimen well."
+    framings = [_framing(_candidate(with_ci)), _framing(_candidate(without_ci))]
+
+    items = build_draft_evidence_items(paper, framings)
+
+    assert items[0].confidence_interval == with_ci
+    assert items[1].confidence_interval is None
 
 
 def test_fields_requiring_human_input_are_none() -> None:
@@ -199,6 +229,27 @@ def test_draft_item_fails_validator_on_missing_provenance_too() -> None:
     )
 
     assert any("provenance must be a non-empty object" in error for error in errors)
+
+
+def test_confidence_interval_is_additive_not_required() -> None:
+    """A record promoted before M74's confidence_interval field existed, and
+    still missing the key entirely, must remain valid -- adding a new
+    required key would retroactively break every already-promoted evidence
+    record in the corpus. `_to_record_dict` never sets the key, matching
+    that pre-M74 shape exactly."""
+
+    assert "confidence_interval" not in REQUIRED_EVIDENCE_FIELDS
+
+    item = build_draft_evidence_item(_paper(), _framing())
+    record = _to_record_dict(item, provenance={"created_by": "test"})
+    assert "confidence_interval" not in record
+
+    errors: list[str] = []
+    _validate_evidence_record(
+        record, line_number=1, seen_ids=set(), errors=errors, require_review_fields=False
+    )
+
+    assert not any("confidence_interval" in error for error in errors)
 
 
 def test_draft_item_mechanically_derived_fields_pass_their_own_validator_checks() -> None:
