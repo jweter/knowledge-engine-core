@@ -9,6 +9,46 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Structured `duration` field on draft evidence items (M75, issue #449)**:
+  second slice of #449's structured-field list, following M74's
+  `confidence_interval` exactly. New `knowledge_engine/extraction/
+  duration.py` (`extract_duration`) matches a claim candidate's own sentence
+  for a study/intervention/follow-up duration mention and returns the
+  matched sentence itself (never a parsed number/unit -- same "quote, never
+  parse or paraphrase" contract as `confidence_interval`). A naive "number +
+  day/week/month/year unit" match was tuned against real phrasing in the
+  three checked-in corpora's `evidence_records.jsonl` files (~1,900
+  sentences) after finding it would otherwise be dominated by false
+  positives: ages ("the median age was 69 years", "65-year-old"), fixed
+  survival/response timepoints that share the same hyphenated shape as a
+  real duration ("2-year OS", "12-week landmark analysis", "6-month PFS
+  rate"), a population/cohort word bridging to an unrelated number ("the
+  study population was 2.5 months"), a measurement window anchored to an
+  event rather than describing how long something lasted ("90 days of
+  treatment start"), a context word matched mid-word inside an unrelated
+  word ("retreatment" containing "treatment"), and an age/eligibility
+  threshold phrased with "over" ("patients over 60 years"). The final
+  pattern requires an explicit duration-context word (trial/study/period/
+  treatment/follow-up/intervention/regimen/course/phase/pilot/program/
+  protocol/duration) adjacent to the number -- either a lead-in preposition
+  before it (over/for/during/lasted/administered for/continued for) or the
+  context word itself immediately before or after -- plus a dedicated age
+  guard, all confirmed by manually reviewing every sentence the final
+  pattern matches across all three corpora. `DraftEvidenceItem`
+  (`evidence_items.py`) gains `duration`/`duration_extraction_rules_version`
+  ("m75-duration-v1"), derived claim-level from each candidate's own
+  `sentence_text` (not broadcast paper-wide, matching `confidence_interval`'s
+  precedent, since a study duration, an intervention duration, and a
+  follow-up duration are routinely different values in the same paper), and
+  deliberately kept out of `REQUIRED_EVIDENCE_FIELDS` (purely additive; an
+  evidence record promoted before M75 and missing the key remains valid).
+  New `tests/test_duration.py` (positive matches across the confirmed
+  corpus variants, case/whitespace tolerance, and explicit negative cases
+  for every false-positive shape above) plus claim-level/backward-compat
+  cases added to `tests/test_extraction_evidence_items.py`. `dose`,
+  `measurement_method`, and `effect_size` remain unaddressed follow-up
+  slices of #449's structured-field list.
+
 - **Structured `confidence_interval` field on draft evidence items (M74,
   issue #449)**: `knowledge_engine.extraction.claims` already detected that
   a candidate claim sentence *mentions* a 95%/99% CI (its own
