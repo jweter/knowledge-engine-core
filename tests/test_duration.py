@@ -178,6 +178,43 @@ def test_returns_none_for_an_age_threshold_using_over() -> None:
     assert extract_duration(sentence) is None
 
 
+def test_returns_none_for_a_measurement_timepoint_after_treatment() -> None:
+    """A fixed timepoint stated relative to treatment ("after treatment") is
+    not the same as how long the treatment itself lasted."""
+
+    sentence = "Blood pressure was measured 3 months after treatment."
+
+    assert extract_duration(sentence) is None
+
+
+def test_returns_none_for_a_measurement_timepoint_before_the_intervention() -> None:
+    sentence = "Symptoms were assessed 6 weeks before the intervention."
+
+    assert extract_duration(sentence) is None
+
+
+def test_returns_none_for_a_measurement_timepoint_following_the_intervention() -> None:
+    sentence = "Quality of life was assessed 12 weeks following the intervention."
+
+    assert extract_duration(sentence) is None
+
+
+def test_matches_a_leading_duration_noun_followed_by_after_as_intervening_text() -> None:
+    """The after/before/following exclusion is trailing-only: here "after"
+    is legitimate text between a leading duration noun ("period") and the
+    unit, not a bridge past an anchor reached from the trailing direction."""
+
+    sentence = "The follow-up period after surgery was 6 months."
+
+    assert extract_duration(sentence) == sentence
+
+
+def test_matches_a_leading_duration_noun_followed_by_following_as_intervening_text() -> None:
+    sentence = "The study duration following enrollment was 6 months."
+
+    assert extract_duration(sentence) == sentence
+
+
 def test_rules_version_is_a_non_empty_string() -> None:
     assert DURATION_EXTRACTION_RULES_VERSION
     assert isinstance(DURATION_EXTRACTION_RULES_VERSION, str)

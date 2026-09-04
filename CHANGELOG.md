@@ -36,7 +36,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   guard, all confirmed by manually reviewing every sentence the final
   pattern matches across all three corpora. `DraftEvidenceItem`
   (`evidence_items.py`) gains `duration`/`duration_extraction_rules_version`
-  ("m75-duration-v1"), derived claim-level from each candidate's own
+  ("m75-duration-v2"), derived claim-level from each candidate's own
   `sentence_text` (not broadcast paper-wide, matching `confidence_interval`'s
   precedent, since a study duration, an intervention duration, and a
   follow-up duration are routinely different values in the same paper), and
@@ -45,7 +45,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   New `tests/test_duration.py` (positive matches across the confirmed
   corpus variants, case/whitespace tolerance, and explicit negative cases
   for every false-positive shape above) plus claim-level/backward-compat
-  cases added to `tests/test_extraction_evidence_items.py`. `dose`,
+  cases added to `tests/test_extraction_evidence_items.py`. `v2`,
+  post-review, excludes `after`/`before`/`following` from the *trailing*
+  (after-the-unit) filler only -- a temporal-relative preposition bridging
+  the unit to a duration noun marks a fixed measurement timepoint, not a
+  duration (e.g. "measured 3 months after treatment"), the same
+  false-positive category as the anchor-event exclusion above, reached from
+  the other side; scoping the exclusion to trailing-only (rather than also
+  the leading, before-the-unit filler) preserves legitimate leading-context
+  matches like "duration following enrollment was 6 months". `dose`,
   `measurement_method`, and `effect_size` remain unaddressed follow-up
   slices of #449's structured-field list.
 

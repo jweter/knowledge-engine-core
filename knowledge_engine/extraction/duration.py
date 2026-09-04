@@ -75,6 +75,30 @@ fabricated/misleading metadata if labeled `duration`:
   below, which both real corpus false positives failed and every real
   corpus true positive (a "3-year follow-up", a "5-year duration of
   response") passed.
+- **A treatment-relative measurement timepoint, not a duration.** "Blood
+  pressure was measured 3 months after treatment" and "Symptoms were
+  assessed 6 weeks before the intervention" are fixed timepoints stated
+  relative to an event -- the same false-positive category as the
+  anchor-event bullet above -- but "after"/"before"/"following" as filler
+  between the number-unit and a genuine duration noun like "treatment"/
+  "intervention" was not itself excluded, so it bridged past the temporal
+  filler to reach the context word and matched. "after"/"before"/
+  "following" are excluded from the *trailing* (after-the-unit) context
+  filler words for the same reason the anchor-event words and the
+  survival/population filler words are: they mark the following noun as an
+  anchor point in time, not something the number-unit is a duration *of*.
+  This exclusion is deliberately scoped to trailing filler only, not the
+  leading (before-the-unit) filler `_LEADING_CONTEXT_BEFORE_UNIT_PATTERN`
+  uses -- "the study duration following enrollment was 6 months" and "the
+  follow-up period after surgery was 6 months" are genuine durations where
+  a duration noun precedes the unit and "following"/"after" is legitimate
+  intervening text before "was"/"is"/"were", not a bridge past an anchor
+  reached from the other direction. A first version of this exclusion
+  applied to a shared filler-word set both directions used, which silently
+  broke those leading-context matches; a review-bot finding on the fix
+  itself caught it, and `_NON_DURATION_FILLER_WORD_TRAILING`/
+  `_FILLER_COMMA_TOLERANT_TRAILING`/`_FILLER_SAME_CLAUSE_TRAILING` now keep
+  the two directions' exclusions independent.
 
 After these exclusions, a manual review of every one of the ~27 sentences
 the final pattern matches across all three corpora confirmed each is a
@@ -92,7 +116,7 @@ from __future__ import annotations
 
 import re
 
-DURATION_EXTRACTION_RULES_VERSION = "m75-duration-v1"
+DURATION_EXTRACTION_RULES_VERSION = "m75-duration-v2"
 
 _NUMBER = r"\d+(?:\.\d+)?"
 _UNIT = r"(?:day|week|month|year)s?"
@@ -109,10 +133,26 @@ _NON_DURATION_FILLER_WORD = (
     r"visit|cox|model|index|cohort|population|group|arm|participant|patient|"
     r"subject|sample|hr|pfs|os|rate)"
 )
+# Trailing-only: a temporal-relative preposition between the unit and a
+# duration noun marks a fixed measurement timepoint, not a duration (see
+# module docstring). Excluded only from the *trailing* (after-the-unit)
+# filler -- not the leading (before-the-unit) filler below, where the same
+# words are legitimate intervening text ("duration following enrollment was
+# 6 months", "period after surgery was 6 months").
+_NON_DURATION_FILLER_WORD_TRAILING = (
+    r"(?:landmark|analysis|hazard|survival|response|endpoint|time\s?point|"
+    r"visit|cox|model|index|cohort|population|group|arm|participant|patient|"
+    r"subject|sample|hr|pfs|os|rate|after|before|following)"
+)
 _ANCHOR_EVENT_WORD = r"(?:start|onset|initiation|baseline|diagnosis|randomi[sz]ation)"
 
 _FILLER_COMMA_TOLERANT = rf"(?:(?!{_NON_DURATION_FILLER_WORD}\b)[A-Za-z][\w/-]*[\s,]+){{0,4}}"
-_FILLER_SAME_CLAUSE = rf"(?:(?!{_NON_DURATION_FILLER_WORD}\b)[A-Za-z][\w/-]*\s+){{0,3}}"
+_FILLER_COMMA_TOLERANT_TRAILING = (
+    rf"(?:(?!{_NON_DURATION_FILLER_WORD_TRAILING}\b)[A-Za-z][\w/-]*[\s,]+){{0,4}}"
+)
+_FILLER_SAME_CLAUSE_TRAILING = (
+    rf"(?:(?!{_NON_DURATION_FILLER_WORD_TRAILING}\b)[A-Za-z][\w/-]*\s+){{0,3}}"
+)
 
 # A lead-in preposition immediately before the unit: "for 4 weeks", "over the
 # 8-week follow-up", "during 52 weeks". Comma-tolerant filler is deliberately
@@ -126,7 +166,7 @@ _PREPOSITION_BEFORE_PATTERN = re.compile(
 # list of intervening adjectives is still matched: "8-week, multicentre,
 # double-blind, randomized, controlled trial".
 _TRAILING_CONTEXT_AFTER_HYPHENATED_UNIT = re.compile(
-    rf"(?i)\A\s*,?\s*{_FILLER_COMMA_TOLERANT}"
+    rf"(?i)\A\s*,?\s*{_FILLER_COMMA_TOLERANT_TRAILING}"
     rf"\b{_DURATION_CONTEXT_WORD}\b(?!\s+{_ANCHOR_EVENT_WORD}\b)"
 )
 
@@ -134,7 +174,7 @@ _TRAILING_CONTEXT_AFTER_HYPHENATED_UNIT = re.compile(
 # clause (no comma tolerance) so "aged ≥60 years, treatment with ..." (an
 # unrelated clause after an age mention) is not bridged into a false match.
 _TRAILING_CONTEXT_AFTER_BARE_UNIT = re.compile(
-    rf"(?i)\A\s+{_FILLER_SAME_CLAUSE}"
+    rf"(?i)\A\s+{_FILLER_SAME_CLAUSE_TRAILING}"
     rf"\b{_DURATION_CONTEXT_WORD}\b(?!\s+{_ANCHOR_EVENT_WORD}\b)"
 )
 
