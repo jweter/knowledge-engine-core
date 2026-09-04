@@ -8,6 +8,7 @@ import pytest
 from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
+from knowledge_engine.acquisition_plan_ledger import AcquisitionPlanLedger
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database
 from knowledge_engine.entrypoint import app
@@ -248,6 +249,104 @@ def test_cli_no_database_flag_skips_already_indexed_lookup(
     assert "Already indexed: 0" in unwrapped
     assert "Full text eligible: 1" in unwrapped
     assert "already_indexed" not in unwrapped
+
+
+def test_cli_durably_persists_acquisition_plan_funnel_counts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """issue #433 item 3: the plan's candidate-funnel counts must survive the
+    single CLI invocation that computed them, not just appear in its own
+    console/--output payload."""
+
+    ledger_root = tmp_path / "ledger"
+    run_id = _record_creatine_run(ledger_root)
+    request_path = _write_request(tmp_path / "request.json", search_run_id=run_id)
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "general-question-acquisition-plan",
+            str(request_path),
+            "--ledger-root",
+            str(ledger_root),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+
+    plan_ledger = AcquisitionPlanLedger(ledger_root / "acquisition_plans")
+    records = plan_ledger.list_by_search_run_id(run_id)
+    assert len(records) == 1
+    assert records[0].search_run_id == run_id
+    assert records[0].research_question_id == "rq-creatine"
+    assert records[0].full_text_selected_count == 1
+    assert records[0].metadata_only_count == 1
+    assert records[0].already_indexed_count == 0
+    assert isinstance(records[0].duration_ms, int)
+
+
+def test_cli_acquisition_history_lists_persisted_plans_newest_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ledger_root = tmp_path / "ledger"
+    run_id = _record_creatine_run(ledger_root)
+    request_path = _write_request(tmp_path / "request.json", search_run_id=run_id)
+    database = _build_database(tmp_path)
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    runner = CliRunner()
+    for _ in range(2):
+        result = runner.invoke(
+            app,
+            [
+                "general-question-acquisition-plan",
+                str(request_path),
+                "--ledger-root",
+                str(ledger_root),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+    output_path = tmp_path / "history.json"
+    history_result = runner.invoke(
+        app,
+        [
+            "general-question-acquisition-history",
+            run_id,
+            "--ledger-root",
+            str(ledger_root),
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert history_result.exit_code == 0, history_result.output
+    assert "2 plan(s)" in _unwrapped(history_result.output)
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["search_run_id"] == run_id
+    assert payload["plan_count"] == 2
+    assert len(payload["plans"]) == 2
+    assert payload["plans"][0]["full_text_selected_count"] == 1
+
+
+def test_cli_acquisition_history_reports_no_matches_plainly(tmp_path: Path) -> None:
+    ledger_root = tmp_path / "ledger"
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "general-question-acquisition-history",
+            "00000000-0000-0000-0000-000000000abc",
+            "--ledger-root",
+            str(ledger_root),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "No acquisition plans found" in _unwrapped(result.output)
 
 
 def test_cli_reports_missing_search_run_as_a_clean_error(

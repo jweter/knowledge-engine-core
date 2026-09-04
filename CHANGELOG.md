@@ -9,6 +9,20 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Durable acquisition-plan funnel-count persistence (issue #433, item 3
+  remainder)**: `ke general-question-acquisition-plan` computed candidate-
+  funnel counts (`already_indexed`/`full_text_selected`/`metadata_only`/
+  `skipped_budget`/`missing`) and `duration_ms`, but nothing persisted them
+  past the single CLI invocation that returned them. New
+  `acquisition_plan_ledger.py` (`AcquisitionPlanLedger`/
+  `AcquisitionPlanRunRecord`) durably persists each resolved plan under
+  `<ledger-root>/acquisition_plans/`, mirroring `citation_snowball_ledger.py`'s
+  write-once JSON-by-UUID pattern; wired into both the production `ke` CLI
+  and the `ke-research` slim surface. New `ke
+  general-question-acquisition-history <search_run_id>` command lists every
+  persisted plan for a search run, newest first, mirroring
+  `federated-discover-history`.
+
 - **Crossref retry/rate-limit tracking (issue #433, item 2 -- final slice)**:
   `CrossrefProvider` (`crossref_provider.py`) previously made a single raw
   HTTP attempt with no retry of its own. It now retries only the four

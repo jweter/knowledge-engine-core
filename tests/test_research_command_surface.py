@@ -8,6 +8,16 @@ from typing import cast
 
 from typer.testing import CliRunner
 
+from knowledge_engine.acquisition_plan_ledger import AcquisitionPlanLedger
+from knowledge_engine.federated_discovery import (
+    DiscoveryQuery,
+    FederatedCandidate,
+    FederatedSearchResult,
+    ProviderObservation,
+    ProviderOutcome,
+    ProviderStatus,
+)
+from knowledge_engine.federated_search_ledger import FederatedSearchLedger
 from knowledge_engine.research_runtime import (
     RESEARCH_RUNTIME_CONTRACT_VERSION,
     RESEARCH_RUNTIME_REQUIRED_COMMANDS,
@@ -94,3 +104,73 @@ def test_poetry_exposes_additive_ke_research_entrypoint() -> None:
 
     assert 'ke = "knowledge_engine.command_surface:app"' in pyproject
     assert 'ke-research = "knowledge_engine.research_runtime:app"' in pyproject
+
+
+def test_acquisition_plan_command_durably_persists_funnel_counts(tmp_path: Path) -> None:
+    """The ke-research slim surface's `general-question-acquisition-plan` is the
+    command knowledge-engine-ai actually invokes; it must durably persist
+    candidate-funnel counts the same way the full `ke` CLI does (issue #433
+    item 3), not just the full production surface."""
+
+    ledger_root = tmp_path / "ledger"
+    candidate = FederatedCandidate(
+        canonical_id="doi:10.1000/slim",
+        title="Slim surface acquisition plan candidate",
+        doi="10.1000/slim",
+        observations=(
+            ProviderObservation(
+                provider="crossref",
+                provider_id="10.1000/slim",
+                title="Slim surface acquisition plan candidate",
+                doi="10.1000/slim",
+            ),
+        ),
+    )
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="slim surface acquisition", limit_per_provider=10),
+        candidates=(candidate,),
+        provider_statuses=(
+            ProviderStatus(
+                provider="crossref",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+            ),
+        ),
+    )
+    run_id = (
+        FederatedSearchLedger(ledger_root)
+        .record(result, research_question_id="rq-slim")
+        .search_run_id
+    )
+
+    request_path = tmp_path / "request.json"
+    request_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "search_run_id": run_id,
+                "research_question_id": "rq-slim",
+                "candidate_ids": ["doi:10.1000/slim"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result_cli = runner.invoke(
+        app,
+        [
+            "general-question-acquisition-plan",
+            str(request_path),
+            "--ledger-root",
+            str(ledger_root),
+            "--no-database",
+        ],
+    )
+
+    assert result_cli.exit_code == 0, result_cli.output
+
+    records = AcquisitionPlanLedger(ledger_root / "acquisition_plans").list_by_search_run_id(run_id)
+    assert len(records) == 1
+    assert records[0].research_question_id == "rq-slim"
+    assert records[0].metadata_only_count == 1

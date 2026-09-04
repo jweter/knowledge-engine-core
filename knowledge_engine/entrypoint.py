@@ -16,6 +16,7 @@ from rich.markup import escape
 from rich.table import Table
 from sqlalchemy.exc import OperationalError
 
+from knowledge_engine.acquisition_plan_ledger import AcquisitionPlanLedger
 from knowledge_engine.arxiv_http import UrllibArxivTransport
 from knowledge_engine.arxiv_provider import ArxivProvider
 from knowledge_engine.candidate_review import (
@@ -492,6 +493,27 @@ GeneralQuestionAcquisitionNoDatabaseOption = Annotated[
             "Skip the local already-indexed lookup (DOI/PMID/arXiv ID against the "
             "persisted corpus) and report every resolved candidate purely against "
             "the search-run snapshot, ignoring what Core has already acquired."
+        ),
+    ),
+]
+GeneralQuestionAcquisitionHistorySearchRunIdArgument = Annotated[
+    str,
+    typer.Argument(
+        help=(
+            "Search-run UUID previously supplied to `general-question-acquisition-plan "
+            "REQUEST_PATH` -- lists every acquisition plan resolved against it, newest "
+            "first."
+        )
+    ),
+]
+GeneralQuestionAcquisitionHistoryOutputOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--output",
+        help=(
+            "Optional path to also save the full history (search_run_id, plan count, "
+            "and each matched plan's durable funnel-count record) as JSON, for a "
+            "programmatic caller rather than parsing the console table."
         ),
     ),
 ]
@@ -5836,6 +5858,15 @@ def general_question_acquisition_plan(
     (`GeneralQuestionAcquisitionPlan.to_dict()`) for a programmatic caller
     -- e.g. `knowledge-engine-ai`, which consumes Core only through this
     CLI JSON boundary -- rather than parsing the console table.
+
+    Every resolved plan's candidate-funnel counts (`already_indexed`,
+    `full_text_selected`, `metadata_only`, `skipped_budget`, `missing`) and
+    `duration_ms` are also durably persisted under
+    `<ledger-root>/acquisition_plans/` (issue #433 item 3) -- previously
+    these counts existed only in this command's own return value/console
+    output for the single invocation that computed them. `ke
+    general-question-acquisition-history <search_run_id>` lists every plan
+    persisted this way for a given search run.
     """
 
     try:
@@ -5860,10 +5891,84 @@ def general_question_acquisition_plan(
         console.print(f"[red]Acquisition request could not be resolved:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
 
+    AcquisitionPlanLedger(ledger_root / "acquisition_plans").record(plan)
+
     if output is not None:
         _write_output(output, plan.to_json())
 
     _print_acquisition_plan(plan)
+
+
+@app.command("general-question-acquisition-history")
+def general_question_acquisition_history(
+    search_run_id: GeneralQuestionAcquisitionHistorySearchRunIdArgument,
+    ledger_root: FederatedLedgerRootOption,
+    output: GeneralQuestionAcquisitionHistoryOutputOption = None,
+) -> None:
+    """List every persisted `general-question-acquisition-plan` run for one search run.
+
+    Closes issue #433 item 3 (candidate-funnel persistence).
+
+    `general-question-acquisition-plan` above durably persists each
+    resolved plan's candidate-funnel counts under
+    `<ledger-root>/acquisition_plans/`; this command is the first ledger
+    read that discovers which plans exist for a given `search_run_id`,
+    letting a caller (e.g. `knowledge-engine-ai`, tracking research-loop
+    throughput per issue #433/knowledge-engine-ai#84) fetch every past
+    acquisition plan resolved against the same federated-discover run,
+    newest first. No matching plans is reported plainly, never as an
+    error: a search run with no prior acquisition plan is an expected,
+    honest state, not a failure.
+    """
+
+    ledger = AcquisitionPlanLedger(ledger_root / "acquisition_plans")
+    try:
+        records = ledger.list_by_search_run_id(search_run_id)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    if output is not None:
+        payload = {
+            "search_run_id": search_run_id.strip(),
+            "plan_count": len(records),
+            "plans": [record.to_dict() for record in records],
+        }
+        _write_output(output, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+    if not records:
+        console.print(
+            "[yellow]No acquisition plans found for search_run_id:[/yellow] "
+            f"{escape(search_run_id)}"
+        )
+        return
+
+    console.print(
+        f"[bold]Acquisition-plan history:[/bold] {escape(search_run_id)} "
+        f"({len(records)} plan(s), newest first)"
+    )
+    table = Table(title="Acquisition plans")
+    table.add_column("acquisition_plan_id")
+    table.add_column("created_at")
+    table.add_column("resolved")
+    table.add_column("already_indexed")
+    table.add_column("full_text")
+    table.add_column("metadata_only")
+    table.add_column("skipped")
+    table.add_column("missing")
+    table.add_column("duration_ms")
+    for record in records:
+        table.add_row(
+            record.acquisition_plan_id,
+            record.created_at,
+            str(record.resolved_candidate_count),
+            str(record.already_indexed_count),
+            str(record.full_text_selected_count),
+            str(record.metadata_only_count),
+            str(record.skipped_budget_count),
+            str(record.missing_candidate_count),
+            str(record.duration_ms),
+        )
+    console.print(table)
 
 
 @app.command("process-startup-timing")
