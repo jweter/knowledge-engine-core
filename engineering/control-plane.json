@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "portfolio_project": "Knowledge Engine",
   "repository": "jweter/knowledge-engine-core",
   "repository_role": "core",
@@ -128,5 +128,67 @@
     "learning_rule": "record verified failures, root causes, successful repairs, regression protection, and residual risk; never store secrets or private Product Reality payloads",
     "dependency_rule": "prefer slices that unblock more downstream work when priority and risk are otherwise comparable",
     "sentinel_rule": "surface architecture/security/governance/readiness drift only from observable evidence; do not fabricate percentages or acceptance"
+  },
+  "preflight": {
+    "required_before_pr": true,
+    "evidence_file": "preflight-evidence.json",
+    "format_apply": [
+      "poetry",
+      "run",
+      "ruff",
+      "format",
+      "."
+    ],
+    "checks": [
+      {
+        "id": "quality_preflight",
+        "argv": [
+          "poetry",
+          "run",
+          "python",
+          "scripts/quality_preflight.py"
+        ],
+        "kind": "quality",
+        "fast": false
+      },
+      {
+        "id": "growth_engine",
+        "argv": [
+          "python",
+          "engineering/growth_engine.py",
+          "validate"
+        ],
+        "kind": "governance",
+        "fast": true
+      },
+      {
+        "id": "golden",
+        "argv": [
+          "poetry",
+          "run",
+          "python",
+          "engineering/run_verification.py",
+          "--lane",
+          "research_report_core_golden"
+        ],
+        "kind": "golden",
+        "fast": false
+      }
+    ],
+    "policy": "ordinary PRs require GREEN full preflight evidence on the exact head; use PREFLIGHT_UNVERIFIED only for a legitimate environment limitation and record the reason"
+  },
+  "promotion": {
+    "states": [
+      "IMPLEMENTING",
+      "PREFLIGHT_UNVERIFIED",
+      "PREFLIGHT_GREEN",
+      "PR_OPEN",
+      "CI_PENDING",
+      "GREEN",
+      "MERGED",
+      "PRODUCT_REALITY_PENDING",
+      "PRODUCT_REALITY_VERIFIED"
+    ],
+    "rule": "advance only from verified evidence; never skip FAILED/PENDING/UNCERTAIN gates"
   }
 }
