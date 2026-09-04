@@ -48,6 +48,9 @@ def main() -> int:
     if schema_version not in (3, 4):
         errors.append("schema_version must be 3 or 4")
     elif schema_version == 4:
+        for key in ("preflight", "promotion", "growth_engine"):
+            if key not in data:
+                errors.append(f"schema_version 4 requires top-level key: {key}")
         growth_engine = data.get("growth_engine")
         if not isinstance(growth_engine, dict) or not growth_engine:
             errors.append("schema_version 4 requires a growth_engine contract")
