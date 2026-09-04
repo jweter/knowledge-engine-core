@@ -213,6 +213,16 @@
         ],
         "kind": "governance",
         "fast": true
+      },
+      {
+        "id": "portfolio_compounding",
+        "argv": [
+          "python",
+          "engineering/portfolio_compounding.py",
+          "--self-test"
+        ],
+        "kind": "governance",
+        "fast": true
       }
     ],
     "policy": "ordinary PRs require GREEN full preflight evidence on the exact head; use PREFLIGHT_UNVERIFIED only for a legitimate environment limitation and record the reason"
@@ -338,5 +348,36 @@
     "min_system_reinvestment_fraction": 0.05,
     "max_system_reinvestment_fraction": 0.2,
     "rule": "use measured evidence to recommend bounded system reinvestment; recommendations are advisory and never override P0/P1, existing work, preflight, CI, architecture, security, privacy/provenance, or Product Reality gates"
+  },
+  "portfolio_compounding": {
+    "schema_version": 1,
+    "executable": "engineering/portfolio_compounding.py",
+    "workflow": ".github/workflows/portfolio-compounding.yml",
+    "output_artifact": "portfolio-compounding-report",
+    "authority": "Knowledge Engine Core hosts the portfolio-level evidence aggregator; it does not create cross-project implementation dependencies",
+    "repositories": [
+      "knowledge-engine-core",
+      "knowledge-engine-web",
+      "knowledge-engine-ai",
+      "rocksmith-cdlc-generator",
+      "Project-Everward"
+    ],
+    "project_grouping": {
+      "knowledge-engine": [
+        "knowledge-engine-core",
+        "knowledge-engine-web",
+        "knowledge-engine-ai"
+      ],
+      "rocksmith": [
+        "rocksmith-cdlc-generator"
+      ],
+      "everward": [
+        "Project-Everward"
+      ]
+    },
+    "aggregation_rule": "aggregate only successful default-branch repository evidence; missing evidence remains UNKNOWN and is never imputed",
+    "emf_rule": "portfolio EMF is the geometric mean of numeric repository EMFs only when all five repositories have evidence; otherwise UNKNOWN",
+    "claim_rule": "a portfolio snapshot is descriptive and never proves exponential development; longitudinal comparable evidence is required",
+    "isolation_rule": "portfolio aggregation is observability only and must not import Knowledge Engine requirements into Rocksmith or Everward"
   }
 }
