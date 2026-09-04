@@ -13,8 +13,6 @@ REPOSITORIES = {
     "rocksmith-cdlc-generator": "rocksmith",
     "Project-Everward": "everward",
 }
-LOWER_IS_BETTER = {"repeat_failure_rate", "human_intervention_rate"}
-
 
 def numeric(value: Any) -> float | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
