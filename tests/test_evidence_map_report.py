@@ -284,7 +284,15 @@ def test_cli_refuses_invalid_map_and_existing_output(tmp_path: Path) -> None:
     assert invalid.exit_code == 1
     assert "map validation failed" in invalid.output
     assert existing.exit_code == 2
-    assert "Use --force to overwrite" in unstyle(existing.output)
+    # Typer/Click render this error inside a Rich panel that word-wraps at the
+    # panel's box-drawing border, which can split "Use --force to overwrite"
+    # across two lines (e.g. "...Use \n| --force..."). Strip the border
+    # characters and collapse whitespace before asserting so the check does
+    # not depend on where a long temp path happens to push the wrap point.
+    flattened_output = " ".join(
+        unstyle(existing.output).translate({ord(c): " " for c in "│╭╮╰╯─"}).split()
+    )
+    assert "Use --force to overwrite" in flattened_output
     assert output.read_text(encoding="utf-8") == "keep"
 
     forced = CliRunner().invoke(
