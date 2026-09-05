@@ -14,6 +14,10 @@ from knowledge_engine.extraction.direction import (
     ClaimFraming,
     classify_claim_framing,
 )
+from knowledge_engine.extraction.dose import (
+    DOSE_EXTRACTION_RULES_VERSION,
+    extract_dose,
+)
 from knowledge_engine.extraction.duration import (
     DURATION_EXTRACTION_RULES_VERSION,
     extract_duration,
@@ -71,6 +75,7 @@ __all__ = [
     "CLAIM_CANDIDATE_RULES_VERSION",
     "CLAIM_FRAMING_RULES_VERSION",
     "CONFIDENCE_INTERVAL_EXTRACTION_RULES_VERSION",
+    "DOSE_EXTRACTION_RULES_VERSION",
     "DRAFT_EVIDENCE_ITEM_RULES_VERSION",
     "DURATION_EXTRACTION_RULES_VERSION",
     "EVIDENCE_CLASSIFICATION_RULES_VERSION",
@@ -100,6 +105,7 @@ __all__ = [
     "detect_claim_candidates",
     "detect_sections",
     "extract_confidence_interval",
+    "extract_dose",
     "extract_duration",
     "extract_limitations",
     "extract_pico",
