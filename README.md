@@ -628,3 +628,5 @@ systems after their prerequisites are justified.
 ## License
 
 MIT License. See [LICENSE](LICENSE).
+
+<!-- n8n Knowledge Engine Impact Router webhook verification: intentional no-op push, 2026-09-05. Safe to remove. -->
