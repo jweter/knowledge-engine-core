@@ -590,7 +590,15 @@ def test_cli_rejects_invalid_input_and_protects_outputs(tmp_path: Path) -> None:
     assert invalid_result.exit_code == 1
     assert "line 1: invalid JSON object" in invalid_result.output
     assert existing_result.exit_code == 2
-    assert "Use --force to overwrite" in unstyle(existing_result.output)
+    # Typer/Click render this error inside a Rich panel that word-wraps at the
+    # panel's box-drawing border, which can split "Use --force to overwrite"
+    # across two lines (e.g. "...Use \n| --force..."). Strip the border
+    # characters and collapse whitespace before asserting so the check does
+    # not depend on where a long temp path happens to push the wrap point.
+    flattened_output = " ".join(
+        unstyle(existing_result.output).translate({ord(c): " " for c in "│╭╮╰╯─"}).split()
+    )
+    assert "Use --force to overwrite" in flattened_output
     assert overwrite_input.exit_code == 2
     assert "must not overwrite an input file" in overwrite_input.output
     assert output.read_text(encoding="utf-8") == "keep"
