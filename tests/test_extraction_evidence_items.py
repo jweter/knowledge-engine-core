@@ -191,6 +191,40 @@ def test_dose_is_not_broadcast_across_a_papers_other_candidates() -> None:
     assert items[1].dose is None
 
 
+def test_effect_size_is_extracted_from_the_candidate_sentence_itself() -> None:
+    """Like confidence_interval/duration/dose, effect_size is claim-level,
+    not paper-level: a paper can report one endpoint's hazard ratio and
+    another's odds ratio."""
+
+    sentence = "Overall survival improved with the study drug (hazard ratio [HR] = 0.29)."
+    item = build_draft_evidence_item(_paper(), _framing(_candidate(sentence)))
+
+    assert item.effect_size == sentence
+    assert item.effect_size_extraction_rules_version
+
+
+def test_effect_size_is_none_when_the_sentence_states_no_effect_size() -> None:
+    item = build_draft_evidence_item(_paper(), _framing())
+
+    assert item.effect_size is None
+    assert item.effect_size_extraction_rules_version is not None
+
+
+def test_effect_size_is_not_broadcast_across_a_papers_other_candidates() -> None:
+    paper = _paper()
+    with_effect_size = "Response improved significantly (odds ratio 2.36, 95% CI [1.0, 5.6])."
+    without_effect_size = "Patients tolerated the regimen well."
+    framings = [
+        _framing(_candidate(with_effect_size)),
+        _framing(_candidate(without_effect_size)),
+    ]
+
+    items = build_draft_evidence_items(paper, framings)
+
+    assert items[0].effect_size == with_effect_size
+    assert items[1].effect_size is None
+
+
 def test_fields_requiring_human_input_are_none() -> None:
     item = build_draft_evidence_item(_paper(), _framing())
 
@@ -353,6 +387,27 @@ def test_dose_is_additive_not_required() -> None:
     )
 
     assert not any("dose" in error for error in errors)
+
+
+def test_effect_size_is_additive_not_required() -> None:
+    """A record promoted before M77's effect_size field existed, and still
+    missing the key entirely, must remain valid -- adding a new required key
+    would retroactively break every already-promoted evidence record in the
+    corpus. `_to_record_dict` never sets the key, matching that pre-M77
+    shape exactly."""
+
+    assert "effect_size" not in REQUIRED_EVIDENCE_FIELDS
+
+    item = build_draft_evidence_item(_paper(), _framing())
+    record = _to_record_dict(item, provenance={"created_by": "test"})
+    assert "effect_size" not in record
+
+    errors: list[str] = []
+    _validate_evidence_record(
+        record, line_number=1, seen_ids=set(), errors=errors, require_review_fields=False
+    )
+
+    assert not any("effect_size" in error for error in errors)
 
 
 def test_draft_item_mechanically_derived_fields_pass_their_own_validator_checks() -> None:

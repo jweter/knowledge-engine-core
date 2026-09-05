@@ -9,6 +9,50 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Structured `effect_size` field on draft evidence items (issue #449)**:
+  fourth slice of #449's structured-field list, following M74/M75/M76's
+  exact "quote, never parse" contract. New
+  `knowledge_engine/extraction/effect_size.py` (`extract_effect_size`)
+  matches a claim candidate's own sentence for either a case-sensitive
+  ratio abbreviation (`OR`/`RR`/`HR`/`SMD`/`WMD`/`IRR`, optionally qualified
+  by "adj"/"adjusted") or a full effect-measure phrase ("hazard ratio",
+  "odds ratio", "risk ratio", "relative risk", "mean difference" and its
+  standardized/weighted variants), each immediately followed -- via one of a
+  small set of real-corpus connectors ("=", ":", ",", "of", "was"/"were", or
+  direct adjacency) -- by a signed number, and returns the matched sentence
+  itself, never a parsed value. Grepping the three checked-in corpora's
+  `evidence_records.jsonl` files found and excluded two dominant
+  false-positive shapes: (1) a case-insensitive match on "OR" hits the
+  ordinary English conjunction throughout the corpus, fixed by matching
+  every abbreviation case-sensitively; (2) a confidence-interval percentage
+  immediately after the abbreviation/phrase ("HR (95% CI)") is not the
+  value -- the "95" in "95% CI" was otherwise mistaken for the effect size
+  itself; guarding this required a plain string check after the regex
+  match rather than an inline negative lookahead, since a lookahead placed
+  directly after a greedy digit-run match lets the engine backtrack to a
+  shorter digit run that dodges the lookahead. A third shape (an unrelated
+  number reached via a generic "for" clause, e.g. "relative risk for grade
+  3/4 TRAE") is deliberately left unmatched by omitting a bare "for"
+  connector, accepting under-matching one real corpus sentence over ever
+  fabricating an effect-size label from an unrelated number. Also
+  accepts the Unicode minus sign (U+2212) alongside the ASCII hyphen for
+  negative mean differences. `DraftEvidenceItem` (`evidence_items.py`)
+  gains `effect_size`/`effect_size_extraction_rules_version`, derived
+  claim-level from each candidate's own `sentence_text` (a paper can report
+  one endpoint's hazard ratio and another's odds ratio), and deliberately
+  kept out of `REQUIRED_EVIDENCE_FIELDS` (purely additive; an evidence
+  record promoted before this change and missing the key remains valid).
+  New `tests/test_effect_size.py` (positive matches across the
+  abbreviation/phrase/adjusted/pooled/Unicode-minus variants and explicit
+  negative cases for each false-positive shape above) plus claim-level/
+  backward-compat cases added to `tests/test_extraction_evidence_items.py`.
+  `measurement_method` remains the one unaddressed follow-up slice of
+  #449's structured-field list; a real-corpus grep this session found it a
+  materially weaker fit than any prior field (~10 real matches across
+  ~3,600 corpus sentences, mostly truncated figure-caption fragments), so
+  a future session should re-validate against real corpus text before
+  assuming a first-draft pattern is precise.
+
 - **Structured `dose` field on draft evidence items (M76, issue #449)**:
   third slice of #449's structured-field list, following M74/M75's exact
   "quote, never parse" contract. New `knowledge_engine/extraction/dose.py`
