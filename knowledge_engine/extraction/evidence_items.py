@@ -35,6 +35,10 @@ from knowledge_engine.extraction.confidence_interval import (
     extract_confidence_interval,
 )
 from knowledge_engine.extraction.direction import ClaimFraming
+from knowledge_engine.extraction.dose import (
+    DOSE_EXTRACTION_RULES_VERSION,
+    extract_dose,
+)
 from knowledge_engine.extraction.duration import (
     DURATION_EXTRACTION_RULES_VERSION,
     extract_duration,
@@ -104,6 +108,8 @@ class DraftEvidenceItem:
     confidence_interval_extraction_rules_version: str | None = None
     duration: str | None = None
     duration_extraction_rules_version: str | None = None
+    dose: str | None = None
+    dose_extraction_rules_version: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-ready dict for a review-queue file.
@@ -112,16 +118,18 @@ class DraftEvidenceItem:
         the `None`-valued ones, so a reviewer sees exactly what still needs
         completing. `extraction_context` and `confidence_interval`/
         `confidence_interval_extraction_rules_version`/`duration`/
-        `duration_extraction_rules_version` are not part of
+        `duration_extraction_rules_version`/`dose`/
+        `dose_extraction_rules_version` are not part of
         `REQUIRED_EVIDENCE_FIELDS`: `extraction_context` carries the M17/M18
         audit trail (matched signal, framing, matched cue, rule versions) a
         reviewer needs to judge the extraction without re-deriving it, and
-        `confidence_interval`/`duration` are newer (M74/M75), purely
-        additive fields -- keeping them out of the required set means an
-        evidence record promoted before M74/M75 and still missing the keys
-        remains valid, matching this project's established additive-schema
-        precedent (e.g. `federated_discovery.ProviderObservation`'s
-        `corrected`/`withdrawn` fields).
+        `confidence_interval`/`duration`/`dose` are newer (M74/M75/M76),
+        purely additive fields -- keeping them out of the required set means
+        an evidence record promoted before M74/M75/M76 and still missing the
+        keys remains valid, matching this project's established
+        additive-schema precedent (e.g.
+        `federated_discovery.ProviderObservation`'s `corrected`/`withdrawn`
+        fields).
         """
 
         candidate = self.claim_framing.candidate
@@ -154,6 +162,8 @@ class DraftEvidenceItem:
             ),
             "duration": self.duration,
             "duration_extraction_rules_version": self.duration_extraction_rules_version,
+            "dose": self.dose,
+            "dose_extraction_rules_version": self.dose_extraction_rules_version,
             "extraction_context": {
                 "matched_signal": candidate.matched_signal,
                 "section_type": candidate.section_type,
@@ -192,13 +202,15 @@ def build_draft_evidence_item(
     `framing_rules_version`, so a later ruleset revision doesn't leave a
     draft item's provenance unrecorded.
 
-    `confidence_interval`/`duration` are different: unlike the paper-level
-    fields above, a CI or a duration is a claim-level fact (two results in
-    the same paper can carry two different intervals, and a paper can
-    separately state a study duration, an intervention duration, and a
-    follow-up duration), so both are derived here, directly from this one
-    candidate's own `sentence_text`, every time -- never broadcast from a
-    paper-level value and never a caller-supplied parameter.
+    `confidence_interval`/`duration`/`dose` are different: unlike the
+    paper-level fields above, a CI, a duration, or a dose is a claim-level
+    fact (two results in the same paper can carry two different intervals, a
+    paper can separately state a study duration, an intervention duration,
+    and a follow-up duration, and a dose-escalation study can state several
+    different doses of the same intervention), so all three are derived
+    here, directly from this one candidate's own `sentence_text`, every time
+    -- never broadcast from a paper-level value and never a caller-supplied
+    parameter.
     """
 
     candidate = framing.candidate
@@ -231,6 +243,8 @@ def build_draft_evidence_item(
         confidence_interval_extraction_rules_version=(CONFIDENCE_INTERVAL_EXTRACTION_RULES_VERSION),
         duration=extract_duration(candidate.sentence_text),
         duration_extraction_rules_version=DURATION_EXTRACTION_RULES_VERSION,
+        dose=extract_dose(candidate.sentence_text),
+        dose_extraction_rules_version=DOSE_EXTRACTION_RULES_VERSION,
     )
 
 

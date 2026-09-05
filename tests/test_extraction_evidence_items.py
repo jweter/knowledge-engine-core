@@ -160,6 +160,37 @@ def test_duration_is_not_broadcast_across_a_papers_other_candidates() -> None:
     assert items[1].duration is None
 
 
+def test_dose_is_extracted_from_the_candidate_sentence_itself() -> None:
+    """Like confidence_interval/duration, dose is claim-level, not
+    paper-level: a dose-escalation study can state several different doses
+    of the same intervention within one paper."""
+
+    sentence = "Patients in the escalation cohort received liraglutide 1.8 mg once-daily."
+    item = build_draft_evidence_item(_paper(), _framing(_candidate(sentence)))
+
+    assert item.dose == sentence
+    assert item.dose_extraction_rules_version
+
+
+def test_dose_is_none_when_the_sentence_states_no_dose() -> None:
+    item = build_draft_evidence_item(_paper(), _framing())
+
+    assert item.dose is None
+    assert item.dose_extraction_rules_version is not None
+
+
+def test_dose_is_not_broadcast_across_a_papers_other_candidates() -> None:
+    paper = _paper()
+    with_dose = "The dose was increased to 20 mg after one month."
+    without_dose = "Patients tolerated the regimen well."
+    framings = [_framing(_candidate(with_dose)), _framing(_candidate(without_dose))]
+
+    items = build_draft_evidence_items(paper, framings)
+
+    assert items[0].dose == with_dose
+    assert items[1].dose is None
+
+
 def test_fields_requiring_human_input_are_none() -> None:
     item = build_draft_evidence_item(_paper(), _framing())
 
@@ -301,6 +332,27 @@ def test_duration_is_additive_not_required() -> None:
     )
 
     assert not any("duration" in error for error in errors)
+
+
+def test_dose_is_additive_not_required() -> None:
+    """A record promoted before M76's dose field existed, and still missing
+    the key entirely, must remain valid -- adding a new required key would
+    retroactively break every already-promoted evidence record in the
+    corpus. `_to_record_dict` never sets the key, matching that pre-M76
+    shape exactly."""
+
+    assert "dose" not in REQUIRED_EVIDENCE_FIELDS
+
+    item = build_draft_evidence_item(_paper(), _framing())
+    record = _to_record_dict(item, provenance={"created_by": "test"})
+    assert "dose" not in record
+
+    errors: list[str] = []
+    _validate_evidence_record(
+        record, line_number=1, seen_ids=set(), errors=errors, require_review_fields=False
+    )
+
+    assert not any("dose" in error for error in errors)
 
 
 def test_draft_item_mechanically_derived_fields_pass_their_own_validator_checks() -> None:
