@@ -43,6 +43,10 @@ from knowledge_engine.extraction.duration import (
     DURATION_EXTRACTION_RULES_VERSION,
     extract_duration,
 )
+from knowledge_engine.extraction.effect_size import (
+    EFFECT_SIZE_EXTRACTION_RULES_VERSION,
+    extract_effect_size,
+)
 
 DRAFT_EVIDENCE_ITEM_RULES_VERSION = "m19-draft-evidence-item-v1"
 
@@ -110,6 +114,8 @@ class DraftEvidenceItem:
     duration_extraction_rules_version: str | None = None
     dose: str | None = None
     dose_extraction_rules_version: str | None = None
+    effect_size: str | None = None
+    effect_size_extraction_rules_version: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-ready dict for a review-queue file.
@@ -123,10 +129,10 @@ class DraftEvidenceItem:
         `REQUIRED_EVIDENCE_FIELDS`: `extraction_context` carries the M17/M18
         audit trail (matched signal, framing, matched cue, rule versions) a
         reviewer needs to judge the extraction without re-deriving it, and
-        `confidence_interval`/`duration`/`dose` are newer (M74/M75/M76),
-        purely additive fields -- keeping them out of the required set means
-        an evidence record promoted before M74/M75/M76 and still missing the
-        keys remains valid, matching this project's established
+        `confidence_interval`/`duration`/`dose`/`effect_size` are newer
+        (M74/M75/M76/M77), purely additive fields -- keeping them out of the
+        required set means an evidence record promoted before M74/M75/M76/M77
+        and still missing the keys remains valid, matching this project's established
         additive-schema precedent (e.g.
         `federated_discovery.ProviderObservation`'s `corrected`/`withdrawn`
         fields).
@@ -164,6 +170,8 @@ class DraftEvidenceItem:
             "duration_extraction_rules_version": self.duration_extraction_rules_version,
             "dose": self.dose,
             "dose_extraction_rules_version": self.dose_extraction_rules_version,
+            "effect_size": self.effect_size,
+            "effect_size_extraction_rules_version": (self.effect_size_extraction_rules_version),
             "extraction_context": {
                 "matched_signal": candidate.matched_signal,
                 "section_type": candidate.section_type,
@@ -202,15 +210,16 @@ def build_draft_evidence_item(
     `framing_rules_version`, so a later ruleset revision doesn't leave a
     draft item's provenance unrecorded.
 
-    `confidence_interval`/`duration`/`dose` are different: unlike the
-    paper-level fields above, a CI, a duration, or a dose is a claim-level
-    fact (two results in the same paper can carry two different intervals, a
-    paper can separately state a study duration, an intervention duration,
-    and a follow-up duration, and a dose-escalation study can state several
-    different doses of the same intervention), so all three are derived
-    here, directly from this one candidate's own `sentence_text`, every time
-    -- never broadcast from a paper-level value and never a caller-supplied
-    parameter.
+    `confidence_interval`/`duration`/`dose`/`effect_size` are different:
+    unlike the paper-level fields above, a CI, a duration, a dose, or an
+    effect size is a claim-level fact (two results in the same paper can
+    carry two different intervals, a paper can separately state a study
+    duration, an intervention duration, and a follow-up duration, a
+    dose-escalation study can state several different doses of the same
+    intervention, and a paper can report one endpoint's hazard ratio and
+    another's odds ratio), so all four are derived here, directly from this
+    one candidate's own `sentence_text`, every time -- never broadcast from a
+    paper-level value and never a caller-supplied parameter.
     """
 
     candidate = framing.candidate
@@ -245,6 +254,8 @@ def build_draft_evidence_item(
         duration_extraction_rules_version=DURATION_EXTRACTION_RULES_VERSION,
         dose=extract_dose(candidate.sentence_text),
         dose_extraction_rules_version=DOSE_EXTRACTION_RULES_VERSION,
+        effect_size=extract_effect_size(candidate.sentence_text),
+        effect_size_extraction_rules_version=EFFECT_SIZE_EXTRACTION_RULES_VERSION,
     )
 
 
