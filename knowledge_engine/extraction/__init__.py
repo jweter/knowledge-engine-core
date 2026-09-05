@@ -32,6 +32,10 @@ from knowledge_engine.extraction.evidence_classification import (
     classify_evidence_direction,
     generate_research_question,
 )
+from knowledge_engine.extraction.measurement_method import (
+    MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION,
+    extract_measurement_method,
+)
 from knowledge_engine.extraction.evidence_items import (
     DRAFT_EVIDENCE_ITEM_RULES_VERSION,
     DraftEvidenceItem,
@@ -92,6 +96,7 @@ __all__ = [
     "SECTION_TYPES",
     "STUDY_DESIGN_RULES_VERSION",
     "TABLE_FILTER_RULES_VERSION",
+    "MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION",
     "ClaimCandidate",
     "ClaimFraming",
     "DraftEvidenceItem",
@@ -114,6 +119,7 @@ __all__ = [
     "extract_duration",
     "extract_effect_size",
     "extract_limitations",
+    "extract_measurement_method",
     "extract_pico",
     "extract_pico_for_candidate",
     "generate_research_question",
