@@ -41,40 +41,86 @@ misleading metadata if labeled `dose`:
   genuine "<number> g" dose, especially since no real corpus dose statement
   was lost by dropping bare grams (dose amounts in this corpus are stated in
   mg, not g).
-- **A number-unit pairing alone, with no intervention-dose context, is not
-  enough for `g`-adjacent ambiguity, but mg/mcg/IU/mL did not need an
-  additional context-word requirement.** After the concentration-denominator
-  exclusion above, every remaining mg/mcg/IU/mL occurrence across all three
-  corpora was a genuine dose statement (e.g. "once-weekly semaglutide 2.4
-  mg", "liraglutide 1.8 mg", "INBRX-105 dose: 0.3 mg/kg", "the dose was
-  increased to 20 mg", "a dose of 14 mg of oral semaglutide") -- unlike
-  `duration.py`'s bare number+day/week/month/year, which collided
-  extensively with ages and fixed timepoints even after unit selection,
-  mg/mcg/IU/mL is not otherwise used in this corpus for anything but an
-  intervention dose once lab-concentration and lab-rate denominators are
-  excluded, so no further context-word filter was needed to stay precise.
+- **mg/mcg/IU needed no additional context-word requirement.** After the
+  concentration-denominator exclusion above, every remaining mg/mcg/IU
+  occurrence across all three corpora was a genuine dose statement (e.g.
+  "once-weekly semaglutide 2.4 mg", "liraglutide 1.8 mg", "INBRX-105 dose:
+  0.3 mg/kg", "the dose was increased to 20 mg") -- unlike `duration.py`'s
+  bare number+day/week/month/year, which collided extensively with ages and
+  fixed timepoints even after unit selection, mg/mcg/IU is not otherwise
+  used in this corpus for anything but an intervention dose once
+  lab-concentration and lab-rate denominators are excluded.
+- **mL is different: it is a genuinely ambiguous unit even after the same
+  exclusion, so it needs its own context requirement.** A post-merge review
+  finding (chatgpt-codex-connector, PR #481) pointed out that mL is commonly
+  used in scientific/clinical writing for quantities that are not an
+  intervention dose at all -- surgical blood loss, urine output, and
+  specimen/sample volume ("Mean blood loss was 500 mL compared with 300 mL
+  in controls") -- none of which happened to appear in the three checked-in
+  corpora, but all of which are common enough in the broader medical
+  literature this module must also handle correctly, per this project's
+  "prefer missing data over invented metadata" standard (`AGENTS.md`). So,
+  unlike mg/mcg/IU, a bare "<number> mL" is matched only when a dosing/
+  administration-context word (dose/dosed/dosing, administer(ed), inject(ed)
+  /injection, infuse(d)/infusion, receive(d)/receiving, oral(ly), suspension,
+  solution, syrup, drops, or a dosing-frequency word like daily/once-daily/
+  once-weekly/twice-daily/BID/QD/TID/QID) appears within the same short
+  window before or after it -- e.g. "The oral suspension was dosed at 10 mL
+  twice daily" matches, but "Mean blood loss was 500 mL" does not.
 
 This module intentionally accepts under-matching a dose mention that uses an
-unsupported unit (grams, "units" of insulin, drops, tablets) or that states a
-dose with no accompanying numeric value ("received the maximum tolerated
-dose") over risking a fabricated dose label -- absence is still never guessed
-into a placeholder.
+unsupported unit (grams, "units" of insulin, drops, tablets), an mL dose with
+no nearby administration-context word, or a dose stated with no accompanying
+numeric value ("received the maximum tolerated dose") over risking a
+fabricated dose label -- absence is still never guessed into a placeholder.
 """
 
 from __future__ import annotations
 
 import re
 
-DOSE_EXTRACTION_RULES_VERSION = "m76-dose-v1"
+DOSE_EXTRACTION_RULES_VERSION = "m76-dose-v2"
 
 _NUMBER = r"\d+(?:\.\d+)?"
 _DOSE_UNIT = r"(?:mg|mcg|µg|μg|ug|IU|mL)"
 _CONCENTRATION_OR_RATE_DENOMINATOR = r"(?:dl|l|mmol|nmol|pmol|mol|min)"
 
-_DOSE_PATTERN = re.compile(
+_DOSE_OCCURRENCE_PATTERN = re.compile(
     rf"\b{_NUMBER}\s*-?\s*{_DOSE_UNIT}\b(?!\s*/\s*{_CONCENTRATION_OR_RATE_DENOMINATOR}\b)",
     re.IGNORECASE,
 )
+
+_ADMINISTRATION_CONTEXT_PATTERN = re.compile(
+    r"(?i)\b(?:dos(?:e|es|ed|ing)|administ(?:er|ered|ering)|inject(?:ed|ion)?|"
+    r"infus(?:ed|ion)|receiv(?:ed|ing)|oral(?:ly)?|suspension|solution|syrup|"
+    r"drops|daily|once-daily|once-weekly|twice-daily|three-times-daily|"
+    r"bid|qd|tid|qid)\b"
+)
+_CONTEXT_WINDOW_CHARS = 40
+
+
+def _is_unsupported_ambiguous_volume(
+    sentence_text: str, unit_text: str, start: int, end: int
+) -> bool:
+    """True when `unit_text` is an mL occurrence with no nearby dosing/
+    administration-context word -- see the module docstring's mL bullet.
+
+    Only mL needs this extra check: mg/mcg/IU were confirmed unambiguous
+    (once lab-concentration/rate denominators are excluded) by manually
+    reviewing every real-corpus occurrence, but mL has common non-dose
+    scientific uses (blood loss, urine output, specimen volume) that never
+    happened to appear in the checked corpora.
+    """
+
+    if not unit_text.strip().lower().endswith("ml"):
+        return False
+
+    before = sentence_text[max(0, start - _CONTEXT_WINDOW_CHARS) : start]
+    after = sentence_text[end : end + _CONTEXT_WINDOW_CHARS]
+    return not (
+        _ADMINISTRATION_CONTEXT_PATTERN.search(before)
+        or _ADMINISTRATION_CONTEXT_PATTERN.search(after)
+    )
 
 
 def extract_dose(sentence_text: str) -> str | None:
@@ -84,11 +130,19 @@ def extract_dose(sentence_text: str) -> str | None:
     Matches a number directly followed by a dose unit (mg/mcg/ug/IU/mL,
     optionally hyphenated, e.g. "2.4 mg", "0.3 mg/kg", "75 mg/m2") that is
     not immediately followed by a lab concentration or rate denominator
-    ("/dL", "/L", "/mmol", "/nmol", "/pmol", "/mol", "/min"). A bare gram
-    unit is deliberately not supported; see the module docstring.
+    ("/dL", "/L", "/mmol", "/nmol", "/pmol", "/mol", "/min"). An mL
+    occurrence additionally requires a dosing/administration-context word
+    within `_CONTEXT_WINDOW_CHARS` before or after it, since mL alone is
+    ambiguous with non-dose volumes (blood loss, urine output, specimen
+    volume); mg/mcg/IU need no such extra check. A bare gram unit is
+    deliberately not supported at all; see the module docstring.
     """
 
-    if _DOSE_PATTERN.search(sentence_text):
+    for match in _DOSE_OCCURRENCE_PATTERN.finditer(sentence_text):
+        if _is_unsupported_ambiguous_volume(
+            sentence_text, match.group(0), match.start(), match.end()
+        ):
+            continue
         return sentence_text
     return None
 

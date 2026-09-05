@@ -99,6 +99,30 @@ def test_returns_none_for_a_gram_effect_size() -> None:
     assert extract_dose(sentence) is None
 
 
+def test_returns_none_for_blood_loss_stated_in_ml_with_no_dosing_context() -> None:
+    """P2 review finding on PR #481: mL is commonly used for outcome/specimen
+    volumes (blood loss, urine output, sample volume), not only doses, and
+    none of these appeared in the corpora this module was originally tuned
+    against. An mL occurrence with no nearby dosing/administration-context
+    word must not be labeled a dose."""
+
+    sentence = "Mean blood loss was 500 mL compared with 300 mL in controls."
+
+    assert extract_dose(sentence) is None
+
+
+def test_returns_none_for_urine_output_stated_in_ml() -> None:
+    sentence = "Urine output over 24 hours was 1800 mL in the treatment group."
+
+    assert extract_dose(sentence) is None
+
+
+def test_matches_an_ml_dose_when_administration_context_follows() -> None:
+    sentence = "Patients received 5 mL of the oral solution once-weekly."
+
+    assert extract_dose(sentence) == sentence
+
+
 def test_rules_version_is_a_non_empty_string() -> None:
     assert DOSE_EXTRACTION_RULES_VERSION
     assert isinstance(DOSE_EXTRACTION_RULES_VERSION, str)

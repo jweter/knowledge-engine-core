@@ -32,19 +32,39 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   was confirmed a genuine dose statement (e.g. "once-weekly semaglutide 2.4
   mg", "INBRX-105 dose: 0.3 mg/kg", "the dose was increased to 20 mg"), so
   -- unlike `duration`'s bare number+unit, which needed a context-word
-  requirement even after unit selection -- no additional context-word filter
-  was needed here to stay precise. `DraftEvidenceItem` (`evidence_items.py`)
-  gains `dose`/`dose_extraction_rules_version` ("m76-dose-v1"), derived
-  claim-level from each candidate's own `sentence_text` (a dose-escalation
-  study can state several different doses of the same intervention within
-  one paper), and deliberately kept out of `REQUIRED_EVIDENCE_FIELDS`
-  (purely additive; an evidence record promoted before M76 and missing the
-  key remains valid). New `tests/test_dose.py` (positive matches across
-  mg/mg-per-kg/mg-per-m2/IU/mL, case/hyphen tolerance, and explicit negative
-  cases for each false-positive shape above) plus claim-level/backward-compat
-  cases added to `tests/test_extraction_evidence_items.py`.
-  `measurement_method` and `effect_size` remain unaddressed follow-up slices
-  of #449's structured-field list.
+  requirement even after unit selection -- mg/mcg/IU needed no additional
+  context-word filter to stay precise. `DraftEvidenceItem`
+  (`evidence_items.py`) gains `dose`/`dose_extraction_rules_version`,
+  derived claim-level from each candidate's own `sentence_text` (a
+  dose-escalation study can state several different doses of the same
+  intervention within one paper), and deliberately kept out of
+  `REQUIRED_EVIDENCE_FIELDS` (purely additive; an evidence record promoted
+  before M76 and missing the key remains valid). New `tests/test_dose.py`
+  (positive matches across mg/mg-per-kg/mg-per-m2/IU/mL, case/hyphen
+  tolerance, and explicit negative cases for each false-positive shape
+  above) plus claim-level/backward-compat cases added to
+  `tests/test_extraction_evidence_items.py`. `measurement_method` and
+  `effect_size` remain unaddressed follow-up slices of #449's
+  structured-field list.
+
+  `v2` (post-review, same PR): a `chatgpt-codex-connector[bot]` review left
+  one P2 finding, verified real and fixed. Unlike mg/mcg/IU, mL is commonly
+  used in scientific/clinical writing for quantities that are not an
+  intervention dose at all -- surgical blood loss, urine output, and
+  specimen/sample volume ("Mean blood loss was 500 mL compared with 300 mL
+  in controls") -- none of which happened to appear in the three checked-in
+  corpora this module was tuned against, but all of which are common enough
+  in the broader medical literature to need handling. `v2`
+  ("m76-dose-v2") keeps mg/mcg/IU context-free but requires a nearby
+  dosing/administration-context word (dose/administer/inject/infuse/
+  receive/oral/suspension/solution/syrup/drops, or a dosing-frequency word
+  like daily/once-weekly/BID/QD/TID/QID) within 40 characters before or
+  after an mL occurrence specifically. Re-ran extraction against all three
+  corpora: the same 11 matches as `v1`, confirming no real corpus dose
+  statement relied on an unguarded mL match. Two new regression tests
+  (blood loss and urine output stated in mL, both correctly unmatched) plus
+  one confirming a genuine mL dose with nearby administration context still
+  matches.
 
 - **Structured `duration` field on draft evidence items (M75, issue #449)**:
   second slice of #449's structured-field list, following M74's
