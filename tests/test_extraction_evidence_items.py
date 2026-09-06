@@ -434,8 +434,7 @@ def test_measurement_method_is_extracted_from_the_candidate_sentence_itself() ->
     """Measurement method is claim-level and must come from this exact sentence."""
 
     sentence = (
-        "Blood pressure was measured using 24-hour ambulatory blood pressure monitoring "
-        "(ABPM)."
+        "Blood pressure was measured using 24-hour ambulatory blood pressure monitoring (ABPM)."
     )
     item = build_draft_evidence_item(_paper(), _framing(_candidate(sentence)))
 
