@@ -428,3 +428,58 @@ def test_draft_item_mechanically_derived_fields_pass_their_own_validator_checks(
     assert not any("extraction_method is required" in error for error in errors)
     assert not any("extraction_status is required" in error for error in errors)
     assert not any("source_span" in error for error in errors)
+
+
+def test_measurement_method_is_extracted_from_the_candidate_sentence_itself() -> None:
+    """Measurement method is claim-level and must come from this exact sentence."""
+
+    sentence = (
+        "Blood pressure was measured using 24-hour ambulatory blood pressure monitoring "
+        "(ABPM)."
+    )
+    item = build_draft_evidence_item(_paper(), _framing(_candidate(sentence)))
+
+    assert item.measurement_method == sentence
+    assert item.measurement_method_extraction_rules_version
+
+
+def test_measurement_method_is_none_without_an_explicit_measurement_cue() -> None:
+    """A method name alone must not be promoted into structured evidence."""
+
+    sentence = "Participants wore an ABPM monitor during the study."
+    item = build_draft_evidence_item(_paper(), _framing(_candidate(sentence)))
+
+    assert item.measurement_method is None
+    assert item.measurement_method_extraction_rules_version is not None
+
+
+def test_measurement_method_is_not_broadcast_across_other_candidates() -> None:
+    paper = _paper()
+    with_method = "Blood pressure was assessed via automated oscillometric measurement."
+    without_method = "Participants tolerated the regimen well."
+    framings = [
+        _framing(_candidate(with_method)),
+        _framing(_candidate(without_method)),
+    ]
+
+    items = build_draft_evidence_items(paper, framings)
+
+    assert items[0].measurement_method == with_method
+    assert items[1].measurement_method is None
+
+
+def test_measurement_method_is_additive_not_required() -> None:
+    """Pre-M78 promoted records remain valid without the additive field."""
+
+    assert "measurement_method" not in REQUIRED_EVIDENCE_FIELDS
+
+    item = build_draft_evidence_item(_paper(), _framing())
+    record = _to_record_dict(item, provenance={"created_by": "test"})
+    assert "measurement_method" not in record
+
+    errors: list[str] = []
+    _validate_evidence_record(
+        record, line_number=1, seen_ids=set(), errors=errors, require_review_fields=False
+    )
+
+    assert not any("measurement_method" in error for error in errors)
