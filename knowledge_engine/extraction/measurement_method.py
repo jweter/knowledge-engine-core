@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 
-MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION = "m78-measurement-method-v1"
+MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION = "m78-measurement-method-v2"
 
 _MEASUREMENT_CUE = re.compile(
     r"\b(?:measured|assessed|evaluated|determined|quantified|analyzed|analysed)"
@@ -31,7 +31,12 @@ _METHOD = re.compile(
     r"computed tomography|CT|"
     r"HbA1c|hemoglobin A1c|"
     r"HAM-D|Hamilton Depression Rating Scale|"
-    r"RECIST"
+    r"RECIST|"
+    r"sphygmomanometer|"
+    r"automated oscillometric(?: device| monitor)?|"
+    r"oscillometric(?: device| monitor| measurement)?|"
+    r"ambulatory blood pressure monitoring|ABPM|"
+    r"home blood pressure monitoring|HBPM"
     r")\b",
     re.IGNORECASE,
 )
