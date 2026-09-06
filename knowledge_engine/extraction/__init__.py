@@ -32,16 +32,16 @@ from knowledge_engine.extraction.evidence_classification import (
     classify_evidence_direction,
     generate_research_question,
 )
-from knowledge_engine.extraction.measurement_method import (
-    MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION,
-    extract_measurement_method,
-)
 from knowledge_engine.extraction.evidence_items import (
     DRAFT_EVIDENCE_ITEM_RULES_VERSION,
     DraftEvidenceItem,
     PaperMetadata,
     build_draft_evidence_item,
     build_draft_evidence_items,
+)
+from knowledge_engine.extraction.measurement_method import (
+    MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION,
+    extract_measurement_method,
 )
 from knowledge_engine.extraction.grounding import (
     GROUNDING_RULES_VERSION,
