@@ -47,6 +47,10 @@ from knowledge_engine.extraction.effect_size import (
     EFFECT_SIZE_EXTRACTION_RULES_VERSION,
     extract_effect_size,
 )
+from knowledge_engine.extraction.measurement_method import (
+    MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION,
+    extract_measurement_method,
+)
 
 DRAFT_EVIDENCE_ITEM_RULES_VERSION = "m19-draft-evidence-item-v1"
 
@@ -116,6 +120,8 @@ class DraftEvidenceItem:
     dose_extraction_rules_version: str | None = None
     effect_size: str | None = None
     effect_size_extraction_rules_version: str | None = None
+    measurement_method: str | None = None
+    measurement_method_extraction_rules_version: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-ready dict for a review-queue file.
@@ -172,6 +178,10 @@ class DraftEvidenceItem:
             "dose_extraction_rules_version": self.dose_extraction_rules_version,
             "effect_size": self.effect_size,
             "effect_size_extraction_rules_version": (self.effect_size_extraction_rules_version),
+            "measurement_method": self.measurement_method,
+            "measurement_method_extraction_rules_version": (
+                self.measurement_method_extraction_rules_version
+            ),
             "extraction_context": {
                 "matched_signal": candidate.matched_signal,
                 "section_type": candidate.section_type,
@@ -210,9 +220,9 @@ def build_draft_evidence_item(
     `framing_rules_version`, so a later ruleset revision doesn't leave a
     draft item's provenance unrecorded.
 
-    `confidence_interval`/`duration`/`dose`/`effect_size` are different:
-    unlike the paper-level fields above, a CI, a duration, a dose, or an
-    effect size is a claim-level fact (two results in the same paper can
+    `confidence_interval`/`duration`/`dose`/`effect_size`/`measurement_method`
+    are different: unlike the paper-level fields above, a CI, duration, dose,
+    effect size, or measurement method is a claim-level fact (two results in the same paper can
     carry two different intervals, a paper can separately state a study
     duration, an intervention duration, and a follow-up duration, a
     dose-escalation study can state several different doses of the same
@@ -256,6 +266,10 @@ def build_draft_evidence_item(
         dose_extraction_rules_version=DOSE_EXTRACTION_RULES_VERSION,
         effect_size=extract_effect_size(candidate.sentence_text),
         effect_size_extraction_rules_version=EFFECT_SIZE_EXTRACTION_RULES_VERSION,
+        measurement_method=extract_measurement_method(candidate.sentence_text),
+        measurement_method_extraction_rules_version=(
+            MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION
+        ),
     )
 
 
