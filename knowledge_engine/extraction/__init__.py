@@ -51,6 +51,10 @@ from knowledge_engine.extraction.llm_grounded_pico import (
     LlmGroundedPico,
     extract_pico_for_candidate,
 )
+from knowledge_engine.extraction.measurement_method import (
+    MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION,
+    extract_measurement_method,
+)
 from knowledge_engine.extraction.pico import (
     PICO_EXTRACTION_RULES_VERSION,
     PicoFields,
@@ -92,6 +96,7 @@ __all__ = [
     "SECTION_TYPES",
     "STUDY_DESIGN_RULES_VERSION",
     "TABLE_FILTER_RULES_VERSION",
+    "MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION",
     "ClaimCandidate",
     "ClaimFraming",
     "DraftEvidenceItem",
@@ -114,6 +119,7 @@ __all__ = [
     "extract_duration",
     "extract_effect_size",
     "extract_limitations",
+    "extract_measurement_method",
     "extract_pico",
     "extract_pico_for_candidate",
     "generate_research_question",
