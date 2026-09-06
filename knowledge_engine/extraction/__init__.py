@@ -39,10 +39,6 @@ from knowledge_engine.extraction.evidence_items import (
     build_draft_evidence_item,
     build_draft_evidence_items,
 )
-from knowledge_engine.extraction.measurement_method import (
-    MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION,
-    extract_measurement_method,
-)
 from knowledge_engine.extraction.grounding import (
     GROUNDING_RULES_VERSION,
     GroundingResult,
@@ -54,6 +50,10 @@ from knowledge_engine.extraction.llm_grounded_pico import (
     GroundedField,
     LlmGroundedPico,
     extract_pico_for_candidate,
+)
+from knowledge_engine.extraction.measurement_method import (
+    MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION,
+    extract_measurement_method,
 )
 from knowledge_engine.extraction.pico import (
     PICO_EXTRACTION_RULES_VERSION,
