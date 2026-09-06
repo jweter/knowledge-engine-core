@@ -179,7 +179,9 @@ class DraftEvidenceItem:
             "effect_size": self.effect_size,
             "effect_size_extraction_rules_version": (self.effect_size_extraction_rules_version),
             "measurement_method": self.measurement_method,
-            "measurement_method_extraction_rules_version": self.measurement_method_extraction_rules_version,
+            "measurement_method_extraction_rules_version": (
+                self.measurement_method_extraction_rules_version
+            ),
             "extraction_context": {
                 "matched_signal": candidate.matched_signal,
                 "section_type": candidate.section_type,
