@@ -318,6 +318,7 @@ most likely to actually call:
   1`) instead of prose, for a consumer that needs to parse results
   programmatically (e.g. `knowledge-engine-ai`) rather than scrape text,
   the same reasoning `ke evidence-report --format json` was added for.
+  Research Report JSON preserves additive grounded record fields such as `study_type`, `measurement_method`, `dose`, `duration`, `effect_size`, `confidence_interval`, `source_span`, and `provenance`; unavailable values remain explicit `null` rather than inferred.
   `evidence_quality` includes both the backward-compatible
   `manually_reviewed` boolean and the canonical three-way
   `extraction_tier` (`manual`, `llm_grounded`, or `automated`).
