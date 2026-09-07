@@ -814,9 +814,32 @@ def test_evidence_report_json_printed_to_console_is_valid_json(
 
     database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
     sources_csv = write_sources_csv(tmp_path)
+def test_evidence_report_json_printed_to_console_is_valid_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression test: printing JSON via Rich's Console word-wraps long
+
+    lines, inserting literal newlines inside string values and corrupting
+    the JSON for any machine consumer -- this only reproduces without
+    `--output`, since the file-writing path never goes through Rich.
+    """
+
+    database = build_cli_database(tmp_path, doi="10.1038/s41591-022-02026-4")
+    sources_csv = write_sources_csv(tmp_path)
     records_path = write_evidence_records(
         tmp_path,
-        [{"source_doi": "10.1038/s41591-022-02026-4"}],
+        [{
+            "source_doi": "10.1038/s41591-022-02026-4",
+            "source_title": "Grounded Trial",
+            "source_type": "paper",
+            "study_type": "randomized_controlled_trial",
+            "measurement_method": "ambulatory blood pressure",
+            "dose": "300 mg/day",
+            "duration": "1 year",
+            "effect_size": "+2.1 mmHg",
+            "confidence_interval": "95% CI 0.4 to 3.8 mmHg",
+            "provenance": {"paper_id": 1, "method": "source_audit"},
+        }],
     )
     monkeypatch.setattr(cli, "_database", lambda: database)
 
@@ -837,6 +860,15 @@ def test_evidence_report_json_printed_to_console_is_valid_json(
     assert result.exit_code == 0
     payload = json.loads(result.output)
     assert payload["question"] == "Do GLP-1 receptor agonists reduce body weight?"
+    evidence = payload["papers"][0]["evidence_records"][0]
+    assert evidence["source_title"] == "Grounded Trial"
+    assert evidence["study_type"] == "randomized_controlled_trial"
+    assert evidence["measurement_method"] == "ambulatory blood pressure"
+    assert evidence["dose"] == "300 mg/day"
+    assert evidence["duration"] == "1 year"
+    assert evidence["effect_size"] == "+2.1 mmHg"
+    assert evidence["confidence_interval"] == "95% CI 0.4 to 3.8 mmHg"
+    assert evidence["provenance"] == {"paper_id": 1, "method": "source_audit"}
     assert (
         payload["disclaimer"] == "This report is retrieval plus recorded evidence only. Extraction "
         "method is shown per evidence record. No scientific synthesis has "
