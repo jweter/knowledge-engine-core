@@ -2312,6 +2312,10 @@ def _evidence_record_json(record: dict[str, Any]) -> dict[str, Any]:
         "evidence_record_id": record.get("evidence_record_id"),
         "extraction_method": record.get("extraction_method"),
         "extraction_status": record.get("extraction_status"),
+        "source_doi": record.get("source_doi"),
+        "source_title": record.get("source_title"),
+        "source_type": record.get("source_type"),
+        "study_type": record.get("study_type"),
         "review_status": _review_status(record),
         "review_checklist": record.get("review_checklist"),
         "review_notes": _review_notes(record),
@@ -2323,10 +2327,16 @@ def _evidence_record_json(record: dict[str, Any]) -> dict[str, Any]:
         "comparator": record.get("comparator"),
         "outcome": record.get("outcome"),
         "result_summary": record.get("result_summary"),
+        "measurement_method": record.get("measurement_method"),
+        "dose": record.get("dose"),
+        "duration": record.get("duration"),
+        "effect_size": record.get("effect_size"),
+        "confidence_interval": record.get("confidence_interval"),
         "limitations": record.get("limitations"),
         "uncertainty_notes": record.get("uncertainty_notes"),
         "confidence_note": record.get("confidence_note"),
         "source_span": record.get("source_span"),
+        "provenance": record.get("provenance"),
     }
 
 
