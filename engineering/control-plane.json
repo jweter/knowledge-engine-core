@@ -338,5 +338,14 @@
     "min_system_reinvestment_fraction": 0.05,
     "max_system_reinvestment_fraction": 0.2,
     "rule": "use measured evidence to recommend bounded system reinvestment; recommendations are advisory and never override P0/P1, existing work, preflight, CI, architecture, security, privacy/provenance, or Product Reality gates"
+  },
+  "orchestration": {
+    "promotion_workflow": ".github/workflows/promote-preflight-green.yml",
+    "promotion_branch_prefixes": [
+      "orchestrator/",
+      "agent/"
+    ],
+    "exact_head_preflight_evidence_required": true,
+    "rule": "promotion requires FULL GREEN preflight evidence whose repository and head_sha exactly match the completed workflow run and the branch must still point at that SHA; fresh PR CI remains independently required"
   }
 }
