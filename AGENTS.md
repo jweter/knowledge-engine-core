@@ -1,7 +1,9 @@
 # Knowledge Engine Agent Entry Point
 
 All coding and scheduled agents working in this repository must read and follow
-`docs/agent-development-policy.md` before making changes.
+`docs/agent-development-policy.md` and `docs/UNATTENDED_VERIFICATION.md` before
+making changes. Routine objective verification is machine-owned; Jeremy is
+optional milestone acceptance rather than a recurring test executor.
 
 For product direction, also read the current roadmap/vision documents relevant
 to the work:
