@@ -59,9 +59,7 @@ def test_sanitize_text_removes_paths_and_secret_values(
     assert "<REDACTED>" in sanitized
 
 
-def test_acquire_lock_reclaims_stale_pid(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_acquire_lock_reclaims_stale_pid(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     lock = tmp_path / worker.LOCK_NAME
     lock.write_text("99999999", encoding="ascii")
     monkeypatch.setattr(worker, "pid_is_alive", lambda pid: False)
