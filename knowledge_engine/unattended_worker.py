@@ -171,18 +171,14 @@ def validate_checkout(repo_root: Path, request: VerificationRequest) -> None:
         raise RuntimeError(f"Unexpected origin remote: {origin}")
     head = git_output(repo_root, "rev-parse", "HEAD").lower()
     if head != request.commit_sha:
-        raise RuntimeError(
-            f"Checkout identity mismatch: expected {request.commit_sha}, got {head}"
-        )
+        raise RuntimeError(f"Checkout identity mismatch: expected {request.commit_sha}, got {head}")
 
 
 def pid_is_alive(pid: int) -> bool:
     if pid <= 0:
         return False
     if os.name == "nt":
-        proc = run_capture(
-            ["tasklist.exe", "/FI", f"PID eq {pid}", "/NH"], timeout_seconds=10.0
-        )
+        proc = run_capture(["tasklist.exe", "/FI", f"PID eq {pid}", "/NH"], timeout_seconds=10.0)
         return proc.returncode == 0 and re.search(rf"\b{pid}\b", proc.stdout) is not None
     try:
         os.kill(pid, 0)
@@ -401,9 +397,7 @@ def execute_request(
         )
 
     if request.probe == "preflight":
-        status, verification, reason = run_preflight(
-            repo_root, state_dir, request.timeout_seconds
-        )
+        status, verification, reason = run_preflight(repo_root, state_dir, request.timeout_seconds)
     elif request.probe == "ollama_health":
         status, verification, reason = run_ollama_health(request.timeout_seconds)
     else:
