@@ -78,7 +78,7 @@ def test_worker_result_is_fail_closed_to_declared_statuses() -> None:
             repository="jweter/knowledge-engine-core",
             exact_sha=SHA,
             environment_id="windows-worker-1",
-            status="UNKNOWN",  # type: ignore[arg-type]
+            status="UNKNOWN",
             completed_at_utc="2026-09-13T12:03:00Z",
             summary="Unclassified result.",
         )
