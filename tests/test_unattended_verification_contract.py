@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from knowledge_engine.unattended_verification_contract import WorkerRequest, WorkerResult
 
