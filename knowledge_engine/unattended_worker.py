@@ -238,10 +238,18 @@ def run_ollama_health(timeout_seconds: int) -> tuple[WorkerResultStatus, str, st
             "ENVIRONMENT_FAILURE",
         )
     if code != 200 or not isinstance(payload, dict):
-        return "ENVIRONMENT_FAILURE", "Ollama health probe returned an unexpected response.", "ENVIRONMENT_FAILURE"
+        return (
+            "ENVIRONMENT_FAILURE",
+            "Ollama health probe returned an unexpected response.",
+            "ENVIRONMENT_FAILURE",
+        )
     models = payload.get("models")
     model_count = len(models) if isinstance(models, list) else 0
-    return "PASS", f"Ollama responded successfully with {model_count} locally listed model(s).", None
+    return (
+        "PASS",
+        f"Ollama responded successfully with {model_count} locally listed model(s).",
+        None,
+    )
 
 
 def _aggregate_status(statuses: list[WorkerResultStatus]) -> WorkerResultStatus:
@@ -320,7 +328,9 @@ def build_parser() -> argparse.ArgumentParser:
         description="Run one bounded unattended Knowledge Engine verification request."
     )
     parser.add_argument("--request", type=Path, required=True, help="WorkerRequest JSON document.")
-    parser.add_argument("--environment-id", required=True, help="Exact configured worker environment ID.")
+    parser.add_argument(
+        "--environment-id", required=True, help="Exact configured worker environment ID."
+    )
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--state-dir", type=Path, default=default_state_dir())
     parser.add_argument("--result", type=Path, default=None)
