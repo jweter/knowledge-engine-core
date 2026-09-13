@@ -5,7 +5,6 @@ from pydantic import ValidationError
 
 from knowledge_engine.unattended_verification_contract import WorkerRequest, WorkerResult
 
-
 SHA = "a" * 40
 
 
