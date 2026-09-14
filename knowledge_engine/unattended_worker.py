@@ -23,6 +23,7 @@ DEFAULT_TIMEOUT_SECONDS = 3600
 MAX_TIMEOUT_SECONDS = 7200
 OLLAMA_TAGS_URL = "http://127.0.0.1:11434/api/tags"
 AUTHORIZED_CHECKS = frozenset({"preflight", "ollama_health"})
+WINDOWS_CREATE_NEW_PROCESS_GROUP = 0x00000200
 
 
 def utc_now() -> str:
@@ -192,19 +193,24 @@ def run_logged(
     started = time.monotonic()
     timed_out = False
     with log_path.open("w", encoding="utf-8", errors="replace") as handle:
-        popen_kwargs: dict[str, object] = {}
         if os.name == "nt":
-            popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+            proc = subprocess.Popen(
+                args,
+                cwd=str(cwd),
+                stdout=handle,
+                stderr=subprocess.STDOUT,
+                text=True,
+                creationflags=WINDOWS_CREATE_NEW_PROCESS_GROUP,
+            )
         else:
-            popen_kwargs["start_new_session"] = True
-        proc = subprocess.Popen(
-            args,
-            cwd=str(cwd),
-            stdout=handle,
-            stderr=subprocess.STDOUT,
-            text=True,
-            **popen_kwargs,
-        )
+            proc = subprocess.Popen(
+                args,
+                cwd=str(cwd),
+                stdout=handle,
+                stderr=subprocess.STDOUT,
+                text=True,
+                start_new_session=True,
+            )
         try:
             code = int(proc.wait(timeout=timeout_seconds))
         except subprocess.TimeoutExpired:
