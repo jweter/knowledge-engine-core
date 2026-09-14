@@ -193,6 +193,17 @@ class SlowProvider:
         return self.result
 
 
+def _assert_measured_latency_matches_observed_elapsed(
+    latency_ms: int | None, observed_elapsed_ms: int
+) -> None:
+    assert latency_ms is not None
+    assert latency_ms > 0
+    # The broker's timer starts inside broker.search(), after this test's
+    # outer timer. Validate the duration it actually observed rather than
+    # assuming the OS scheduler honors time.sleep(0.02) as an exact 20 ms.
+    assert latency_ms <= observed_elapsed_ms + 1
+
+
 def test_broker_measures_latency_for_a_successful_provider_attempt() -> None:
     query = DiscoveryQuery(text="measured latency")
     candidate = _candidate("openalex", "W9", "Measured latency")
@@ -206,11 +217,13 @@ def test_broker_measures_latency_for_a_successful_provider_attempt() -> None:
         )
     )
 
+    started = time.monotonic()
     result = broker.search(query)
+    observed_elapsed_ms = round((time.monotonic() - started) * 1000)
 
-    latency_ms = result.provider_statuses[0].latency_ms
-    assert latency_ms is not None
-    assert latency_ms >= 20
+    _assert_measured_latency_matches_observed_elapsed(
+        result.provider_statuses[0].latency_ms, observed_elapsed_ms
+    )
 
 
 def test_broker_measures_latency_for_a_failed_provider_attempt() -> None:
@@ -219,11 +232,13 @@ def test_broker_measures_latency_for_a_failed_provider_attempt() -> None:
         (SlowProvider("openalex", error=TimeoutError(), delay_seconds=0.02),)
     )
 
+    started = time.monotonic()
     result = broker.search(query)
+    observed_elapsed_ms = round((time.monotonic() - started) * 1000)
 
-    latency_ms = result.provider_statuses[0].latency_ms
-    assert latency_ms is not None
-    assert latency_ms >= 20
+    _assert_measured_latency_matches_observed_elapsed(
+        result.provider_statuses[0].latency_ms, observed_elapsed_ms
+    )
 
 
 def test_broker_does_not_fabricate_latency_for_a_skipped_provider() -> None:
