@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -46,7 +47,7 @@ def test_normalize_origin_accepts_https_and_ssh() -> None:
 def test_sanitize_text_removes_paths_and_secret_values(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(worker.Path, "home", classmethod(lambda cls: Path("/home/example")))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: Path("/home/example")))
     text = f"{tmp_path}/file token=secret password:abc /home/example/data"
     sanitized = worker.sanitize_text(text, repo_root=tmp_path)
     assert str(tmp_path) not in sanitized
@@ -124,7 +125,7 @@ def test_ollama_health_unavailable_is_environment_failure(
     def fail(*args: object, **kwargs: object) -> object:
         raise OSError("offline")
 
-    monkeypatch.setattr(worker.urllib.request, "urlopen", fail)
+    monkeypatch.setattr(urllib.request, "urlopen", fail)
     status, summary, failure_class = worker.run_ollama_health(1)
     assert status == "ENVIRONMENT_FAILURE"
     assert failure_class == "ENVIRONMENT_FAILURE"
