@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import urllib.request
 from pathlib import Path
 
@@ -72,6 +73,19 @@ def test_acquire_lock_reclaims_stale_pid(tmp_path: Path, monkeypatch: pytest.Mon
     assert not lock.exists()
 
 
+def test_acquire_lock_reclaims_malformed_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    lock = tmp_path / worker.LOCK_NAME
+    lock.write_text("", encoding="ascii")
+    monkeypatch.setattr(worker.time, "sleep", lambda _: None)
+    fd, acquired = worker.acquire_lock(tmp_path)
+    assert acquired is True
+    assert fd is not None
+    try:
+        assert int(lock.read_text(encoding="ascii")) == os.getpid()
+    finally:
+        worker.release_lock(tmp_path, fd)
+
+
 def test_acquire_lock_defers_when_owner_alive(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -116,11 +130,69 @@ def test_validate_checkout_fails_closed_on_wrong_branch(
         worker.validate_checkout(tmp_path, request(), environment_id="jeremy-laptop")
 
 
+def test_validate_checkout_fails_closed_on_dirty_tracked_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / ".git").mkdir()
+    values = iter(
+        [
+            "https://github.com/jweter/knowledge-engine-core.git",
+            "main",
+            "a" * 40,
+            " M engineering/preflight.py",
+        ]
+    )
+    monkeypatch.setattr(worker, "git_output", lambda *args, **kwargs: next(values))
+
+    with pytest.raises(RuntimeError, match="modified tracked files"):
+        worker.validate_checkout(tmp_path, request(), environment_id="jeremy-laptop")
+
+
 def test_validate_checkout_fails_closed_on_wrong_environment(
     tmp_path: Path,
 ) -> None:
     with pytest.raises(RuntimeError, match="worker environment mismatch"):
         worker.validate_checkout(tmp_path, request(), environment_id="different-laptop")
+
+
+def test_run_logged_terminates_process_tree_on_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class FakeProcess:
+        pid = 1234
+        returncode: int | None = None
+
+        def wait(self, timeout: float | None = None) -> int:
+            if self.returncode is None:
+                raise subprocess.TimeoutExpired(cmd="preflight", timeout=timeout or 0)
+            return self.returncode
+
+        def poll(self) -> int | None:
+            return self.returncode
+
+        def kill(self) -> None:
+            self.returncode = -9
+
+    fake = FakeProcess()
+    terminated: list[int] = []
+    monkeypatch.setattr(subprocess, "Popen", lambda *args, **kwargs: fake)
+
+    def terminate(proc: object) -> None:
+        terminated.append(getattr(proc, "pid"))
+        fake.returncode = 124
+
+    monkeypatch.setattr(worker, "_terminate_process_tree", terminate)
+
+    code, _duration, timed_out = worker.run_logged(
+        ["python", "engineering/preflight.py"],
+        cwd=tmp_path,
+        log_path=tmp_path / "preflight.log",
+        timeout_seconds=0.01,
+    )
+
+    assert timed_out is True
+    assert code == 124
+    assert terminated == [1234]
 
 
 def test_unsupported_check_returns_review_required_without_execution(
@@ -152,6 +224,55 @@ def test_ollama_health_unavailable_is_environment_failure(
     assert status == "ENVIRONMENT_FAILURE"
     assert failure_class == "ENVIRONMENT_FAILURE"
     assert "unavailable" in summary
+
+
+def test_ollama_health_malformed_utf8_is_environment_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Response:
+        status = 200
+
+        def __enter__(self) -> "Response":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return b"\xff"
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *args, **kwargs: Response())
+    status, summary, failure_class = worker.run_ollama_health(1)
+    assert status == "ENVIRONMENT_FAILURE"
+    assert failure_class == "ENVIRONMENT_FAILURE"
+    assert "UnicodeDecodeError" in summary
+
+
+def test_failure_class_matches_aggregate_status(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(worker, "validate_checkout", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        worker,
+        "run_ollama_health",
+        lambda timeout: ("ENVIRONMENT_FAILURE", "offline", "ENVIRONMENT_FAILURE"),
+    )
+    monkeypatch.setattr(
+        worker,
+        "run_preflight",
+        lambda repo_root, state_dir, timeout: ("FAIL", "tests failed", "TEST_FAILURE"),
+    )
+
+    result = worker.execute_request(
+        request(requested_checks=("ollama_health", "preflight")),
+        repo_root=tmp_path,
+        state_dir=tmp_path / "state",
+        environment_id="jeremy-laptop",
+        timeout_seconds=30,
+    )
+
+    assert result.status == "FAIL"
+    assert result.failure_class == "TEST_FAILURE"
 
 
 def test_write_result_uses_authoritative_result_schema(tmp_path: Path) -> None:
