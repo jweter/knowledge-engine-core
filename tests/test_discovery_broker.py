@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass
 from typing import cast
 
+import pytest
+
+import knowledge_engine.discovery_broker as discovery_broker
 from knowledge_engine.discovery_broker import DiscoveryProvider, FederatedDiscoveryBroker
 from knowledge_engine.federated_discovery import (
     DiscoveryQuery,
@@ -178,72 +180,76 @@ def test_broker_rejects_duplicate_provider_names() -> None:
         raise AssertionError("duplicate provider names should fail")
 
 
+@dataclass
+class FakeMonotonicClock:
+    now: float = 100.0
+
+    def monotonic(self) -> float:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += seconds
+
+
 @dataclass(frozen=True)
-class SlowProvider:
+class ClockAdvancingProvider:
     name: str
+    clock: FakeMonotonicClock
     result: FederatedSearchResult | None = None
     error: Exception | None = None
-    delay_seconds: float = 0.0
+    elapsed_seconds: float = 0.0
 
     def search(self, query: DiscoveryQuery) -> FederatedSearchResult:
-        time.sleep(self.delay_seconds)
+        self.clock.advance(self.elapsed_seconds)
         if self.error is not None:
             raise self.error
         assert self.result is not None
         return self.result
 
 
-def _assert_measured_latency_matches_observed_elapsed(
-    latency_ms: int | None, observed_elapsed_ms: int, expected_delay_ms: int
+def test_broker_measures_latency_for_a_successful_provider_attempt(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert latency_ms is not None
-    assert latency_ms > 0
-    # Windows timer/scheduler granularity can make a requested 20 ms sleep
-    # round slightly below 20 ms. Keep a small portability tolerance while
-    # still proving the broker measured the provider attempt rather than
-    # merely returning an arbitrary positive value.
-    assert latency_ms >= expected_delay_ms - 5
-    # The broker's timer starts inside broker.search(), after this test's
-    # outer timer, so its measurement cannot materially exceed the observed
-    # end-to-end duration.
-    assert latency_ms <= observed_elapsed_ms + 1
-
-
-def test_broker_measures_latency_for_a_successful_provider_attempt() -> None:
     query = DiscoveryQuery(text="measured latency")
     candidate = _candidate("openalex", "W9", "Measured latency")
+    clock = FakeMonotonicClock()
+    monkeypatch.setattr(discovery_broker.time, "monotonic", clock.monotonic)
     broker = FederatedDiscoveryBroker(
         (
-            SlowProvider(
+            ClockAdvancingProvider(
                 "openalex",
+                clock,
                 _result(query, "openalex", ProviderOutcome.SUCCESS, (candidate,)),
-                delay_seconds=0.02,
+                elapsed_seconds=0.02,
             ),
         )
     )
 
-    started = time.monotonic()
     result = broker.search(query)
-    observed_elapsed_ms = round((time.monotonic() - started) * 1000)
 
-    _assert_measured_latency_matches_observed_elapsed(
-        result.provider_statuses[0].latency_ms, observed_elapsed_ms, expected_delay_ms=20
-    )
+    assert result.provider_statuses[0].latency_ms == 20
 
 
-def test_broker_measures_latency_for_a_failed_provider_attempt() -> None:
+def test_broker_measures_latency_for_a_failed_provider_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     query = DiscoveryQuery(text="measured failure latency")
+    clock = FakeMonotonicClock()
+    monkeypatch.setattr(discovery_broker.time, "monotonic", clock.monotonic)
     broker = FederatedDiscoveryBroker(
-        (SlowProvider("openalex", error=TimeoutError(), delay_seconds=0.02),)
+        (
+            ClockAdvancingProvider(
+                "openalex",
+                clock,
+                error=TimeoutError(),
+                elapsed_seconds=0.02,
+            ),
+        )
     )
 
-    started = time.monotonic()
     result = broker.search(query)
-    observed_elapsed_ms = round((time.monotonic() - started) * 1000)
 
-    _assert_measured_latency_matches_observed_elapsed(
-        result.provider_statuses[0].latency_ms, observed_elapsed_ms, expected_delay_ms=20
-    )
+    assert result.provider_statuses[0].latency_ms == 20
 
 
 def test_broker_does_not_fabricate_latency_for_a_skipped_provider() -> None:
