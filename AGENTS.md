@@ -20,11 +20,20 @@ to the work:
   and auditability.
 - `docs/INDUSTRY_REALITY_CHECK.md` — current Core-specific gap analysis versus
   production scientific/research infrastructure expectations.
+- `docs/EMERGING_COMPUTE_READINESS.md` — conditional governance for quantum,
+  quantum-inspired, simulator, QPU, photonic, neuromorphic, or other emerging-
+  compute research and experiments. Read it before selecting or changing such work.
 
 The progressive-answer and Research Report v1 requirements are not optional UX
 polish. Any work touching Ask, Research Sessions, Web/AI/Core orchestration,
 evidence extraction, answer streaming/versioning, release gates, scheduling,
 caching, or latency must preserve those directions.
+
+Emerging-compute work is not ordinary roadmap pressure. It requires a real
+problem, a verified classical baseline, one measurement contract across
+substrates, scientific/problem-fit evidence, bounded cost and reproducibility,
+and independent verification. Do not add provider SDKs merely for readiness or
+call a bounded benchmark result general quantum advantage.
 
 Until Research Report v1 passes its Monster Energy / one-year blood-pressure
 golden acceptance case end to end, prefer work that directly enables the
