@@ -78,7 +78,7 @@ def test_acquire_lock_reclaims_malformed_lock(
 ) -> None:
     lock = tmp_path / worker.LOCK_NAME
     lock.write_text("", encoding="ascii")
-    monkeypatch.setattr(worker.time, "sleep", lambda _: None)
+    monkeypatch.setattr("knowledge_engine.unattended_worker.time.sleep", lambda _: None)
     fd, acquired = worker.acquire_lock(tmp_path)
     assert acquired is True
     assert fd is not None
