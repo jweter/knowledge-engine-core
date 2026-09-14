@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from click import unstyle
 from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
@@ -144,9 +145,12 @@ def test_corpus_run_report_surfaces_reconciliation_failure(
     result = CliRunner().invoke(entrypoint.app, ["corpus-run-report", "run-1"])
 
     assert result.exit_code != 0
-    assert "Import run report reconciliation failed" in result.output
-    assert "Declared source rows" in result.output
-    assert "persisted import items" in result.output
+    flattened_output = " ".join(
+        unstyle(result.output).translate({ord(c): " " for c in "│╭╮╰╯─"}).split()
+    )
+    assert "Import run report reconciliation failed" in flattened_output
+    assert "Declared source rows" in flattened_output
+    assert "persisted import items" in flattened_output
 
 
 def _run() -> ImportRun:

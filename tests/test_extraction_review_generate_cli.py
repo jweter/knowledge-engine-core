@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+from click import unstyle
 from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
@@ -97,8 +98,11 @@ def test_extraction_review_generate_populates_study_type_and_limitations(
     )
 
     assert result.exit_code == 0, result.output
-    assert "study_type: randomized_controlled_trial" in result.output
-    assert "limitations: detected" in result.output
+    flattened_output = " ".join(
+        unstyle(result.output).translate({ord(c): " " for c in "│╭╮╰╯─"}).split()
+    )
+    assert "study_type: randomized_controlled_trial" in flattened_output
+    assert "limitations: detected" in flattened_output
 
     lines = output.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == 1
