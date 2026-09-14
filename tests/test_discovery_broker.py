@@ -194,13 +194,18 @@ class SlowProvider:
 
 
 def _assert_measured_latency_matches_observed_elapsed(
-    latency_ms: int | None, observed_elapsed_ms: int
+    latency_ms: int | None, observed_elapsed_ms: int, expected_delay_ms: int
 ) -> None:
     assert latency_ms is not None
     assert latency_ms > 0
+    # Windows timer/scheduler granularity can make a requested 20 ms sleep
+    # round slightly below 20 ms. Keep a small portability tolerance while
+    # still proving the broker measured the provider attempt rather than
+    # merely returning an arbitrary positive value.
+    assert latency_ms >= expected_delay_ms - 5
     # The broker's timer starts inside broker.search(), after this test's
-    # outer timer. Validate the duration it actually observed rather than
-    # assuming the OS scheduler honors time.sleep(0.02) as an exact 20 ms.
+    # outer timer, so its measurement cannot materially exceed the observed
+    # end-to-end duration.
     assert latency_ms <= observed_elapsed_ms + 1
 
 
@@ -222,7 +227,7 @@ def test_broker_measures_latency_for_a_successful_provider_attempt() -> None:
     observed_elapsed_ms = round((time.monotonic() - started) * 1000)
 
     _assert_measured_latency_matches_observed_elapsed(
-        result.provider_statuses[0].latency_ms, observed_elapsed_ms
+        result.provider_statuses[0].latency_ms, observed_elapsed_ms, expected_delay_ms=20
     )
 
 
@@ -237,7 +242,7 @@ def test_broker_measures_latency_for_a_failed_provider_attempt() -> None:
     observed_elapsed_ms = round((time.monotonic() - started) * 1000)
 
     _assert_measured_latency_matches_observed_elapsed(
-        result.provider_statuses[0].latency_ms, observed_elapsed_ms
+        result.provider_statuses[0].latency_ms, observed_elapsed_ms, expected_delay_ms=20
     )
 
 
