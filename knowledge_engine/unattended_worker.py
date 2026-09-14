@@ -246,9 +246,14 @@ def run_ollama_health(timeout_seconds: int) -> tuple[WorkerResultStatus, str, st
 
 
 def _aggregate_status(statuses: list[WorkerResultStatus]) -> WorkerResultStatus:
-    for candidate in ("FAIL", "ENVIRONMENT_FAILURE", "PRODUCT_REALITY_REQUIRED", "REVIEW_REQUIRED"):
-        if candidate in statuses:
-            return candidate  # type: ignore[return-value]
+    if "FAIL" in statuses:
+        return "FAIL"
+    if "ENVIRONMENT_FAILURE" in statuses:
+        return "ENVIRONMENT_FAILURE"
+    if "PRODUCT_REALITY_REQUIRED" in statuses:
+        return "PRODUCT_REALITY_REQUIRED"
+    if "REVIEW_REQUIRED" in statuses:
+        return "REVIEW_REQUIRED"
     return "PASS"
 
 
