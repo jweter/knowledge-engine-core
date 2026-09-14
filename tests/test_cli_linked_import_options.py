@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+from click import unstyle
 from sqlalchemy.orm import Session
 from typer.testing import CliRunner
 
@@ -30,7 +31,10 @@ def test_corpus_import_rejects_conflicting_parent_options(tmp_path: Path) -> Non
     )
 
     assert result.exit_code == 2
-    assert "mutually exclusive" in result.output
+    flattened_output = " ".join(
+        unstyle(result.output).translate({ord(c): " " for c in "│╭╮╰╯─"}).split()
+    )
+    assert "mutually exclusive" in flattened_output
     assert not (tmp_path / "data" / "knowledge_engine.sqlite3").exists()
 
 
