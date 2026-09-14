@@ -4,15 +4,13 @@ import argparse
 import json
 import os
 import re
-import socket
 import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 from .unattended_verification_contract import WorkerRequest, WorkerResult, WorkerResultStatus
 
@@ -26,7 +24,7 @@ AUTHORIZED_CHECKS = frozenset({"preflight", "ollama_health"})
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def default_state_dir() -> Path:
@@ -225,16 +223,11 @@ def run_ollama_health(timeout_seconds: int) -> tuple[WorkerResultStatus, str, st
         with urllib.request.urlopen(request, timeout=timeout) as response:
             payload = json.loads(response.read().decode("utf-8"))
             code = int(response.status)
-    except (
-        OSError,
-        urllib.error.URLError,
-        TimeoutError,
-        socket.timeout,
-        json.JSONDecodeError,
-    ) as exc:
+    except (OSError, urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        elapsed = time.monotonic() - started
         return (
             "ENVIRONMENT_FAILURE",
-            f"Ollama health probe unavailable after {time.monotonic() - started:.3f}s: {type(exc).__name__}.",
+            f"Ollama health probe unavailable after {elapsed:.3f}s: {type(exc).__name__}.",
             "ENVIRONMENT_FAILURE",
         )
     if code != 200 or not isinstance(payload, dict):
