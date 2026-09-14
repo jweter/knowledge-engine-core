@@ -180,7 +180,7 @@ def test_run_logged_terminates_process_tree_on_timeout(
     monkeypatch.setattr(subprocess, "Popen", lambda *args, **kwargs: fake)
 
     def terminate(proc: object) -> None:
-        terminated.append(getattr(proc, "pid"))
+        terminated.append(proc.pid)  # type: ignore[attr-defined]
         fake.returncode = 124
 
     monkeypatch.setattr(worker, "_terminate_process_tree", terminate)
@@ -234,7 +234,7 @@ def test_ollama_health_malformed_utf8_is_environment_failure(
     class Response:
         status = 200
 
-        def __enter__(self) -> "Response":
+        def __enter__(self) -> Response:
             return self
 
         def __exit__(self, *args: object) -> None:
