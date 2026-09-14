@@ -73,7 +73,9 @@ def test_acquire_lock_reclaims_stale_pid(tmp_path: Path, monkeypatch: pytest.Mon
     assert not lock.exists()
 
 
-def test_acquire_lock_reclaims_malformed_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_acquire_lock_reclaims_malformed_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     lock = tmp_path / worker.LOCK_NAME
     lock.write_text("", encoding="ascii")
     monkeypatch.setattr(worker.time, "sleep", lambda _: None)
