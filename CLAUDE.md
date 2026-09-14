@@ -18,6 +18,7 @@ Before selecting or implementing substantial work, read:
 2. `docs/agent-development-policy.md` — autonomous workflow, source-of-truth order, merge policy, and cross-repository coordination rules.
 3. `docs/project-status.yaml` plus the active roadmap/design documents it identifies.
 4. `docs/INDUSTRY_REALITY_CHECK.md` — the current repo-specific gap analysis versus production scientific/research infrastructure expectations.
+5. `docs/EMERGING_COMPUTE_READINESS.md` when work involves quantum, quantum-inspired, simulator, QPU, photonic, neuromorphic, or other non-standard compute substrates.
 
 Treat `docs/INDUSTRY_REALITY_CHECK.md` as a durable quality-gap baseline, not as a replacement for verified repository state or the active roadmap. Prefer roadmap-compatible work that closes a documented quality gap when priorities are otherwise comparable. Do not declare a gap closed merely because code exists or CI passes when the report calls for integration, observability, performance, coverage, production, or Product Reality evidence. Update the assessment when major verified capability materially changes its conclusions.
 
@@ -49,6 +50,8 @@ Before changing shared APIs, schemas, models, serialized structures, retrieval c
 3. Coordinate dependent changes when necessary.
 4. Test compatibility.
 5. Avoid leaving the Knowledge Engine system in a knowingly broken state.
+
+For emerging-compute work, a new substrate is an experiment, not an assumed upgrade. Require a verified classical baseline, identical measurement contract, scientific/problem-fit evidence, reproducibility and backend identity where material, bounded cost, and independent verification before adoption. Prefer free/local simulation before physical QPU use when simulation is applicable. Do not add provider SDKs to Core merely for future readiness, and do not describe a bounded benchmark win as general quantum advantage.
 
 ## Verification
 
