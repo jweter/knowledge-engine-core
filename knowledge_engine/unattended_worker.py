@@ -86,7 +86,9 @@ def validate_checkout(repo_root: Path, request: WorkerRequest, *, environment_id
         raise RuntimeError(f"Unexpected origin remote: {origin}")
     branch = git_output(repo_root, "branch", "--show-current")
     if branch != request.branch:
-        raise RuntimeError(f"Checkout branch mismatch: expected {request.branch}, got {branch or '<detached>'}")
+        raise RuntimeError(
+            f"Checkout branch mismatch: expected {request.branch}, got {branch or '<detached>'}"
+        )
     head = git_output(repo_root, "rev-parse", "HEAD").lower()
     if head != request.exact_sha:
         raise RuntimeError(f"Checkout identity mismatch: expected {request.exact_sha}, got {head}")

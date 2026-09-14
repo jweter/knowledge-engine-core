@@ -87,11 +87,13 @@ def test_validate_checkout_fails_closed_on_wrong_head(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     (tmp_path / ".git").mkdir()
-    values = iter([
-        "https://github.com/jweter/knowledge-engine-core.git",
-        "main",
-        "b" * 40,
-    ])
+    values = iter(
+        [
+            "https://github.com/jweter/knowledge-engine-core.git",
+            "main",
+            "b" * 40,
+        ]
+    )
     monkeypatch.setattr(worker, "git_output", lambda *args, **kwargs: next(values))
 
     with pytest.raises(RuntimeError, match="Checkout identity mismatch"):
@@ -102,10 +104,12 @@ def test_validate_checkout_fails_closed_on_wrong_branch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     (tmp_path / ".git").mkdir()
-    values = iter([
-        "https://github.com/jweter/knowledge-engine-core.git",
-        "feature/other",
-    ])
+    values = iter(
+        [
+            "https://github.com/jweter/knowledge-engine-core.git",
+            "feature/other",
+        ]
+    )
     monkeypatch.setattr(worker, "git_output", lambda *args, **kwargs: next(values))
 
     with pytest.raises(RuntimeError, match="Checkout branch mismatch"):
