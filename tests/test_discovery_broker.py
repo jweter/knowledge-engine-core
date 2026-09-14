@@ -5,7 +5,6 @@ from typing import cast
 
 import pytest
 
-import knowledge_engine.discovery_broker as discovery_broker
 from knowledge_engine.discovery_broker import DiscoveryProvider, FederatedDiscoveryBroker
 from knowledge_engine.federated_discovery import (
     DiscoveryQuery,
@@ -213,7 +212,7 @@ def test_broker_measures_latency_for_a_successful_provider_attempt(
     query = DiscoveryQuery(text="measured latency")
     candidate = _candidate("openalex", "W9", "Measured latency")
     clock = FakeMonotonicClock()
-    monkeypatch.setattr(discovery_broker.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr("knowledge_engine.discovery_broker.time.monotonic", clock.monotonic)
     broker = FederatedDiscoveryBroker(
         (
             ClockAdvancingProvider(
@@ -235,7 +234,7 @@ def test_broker_measures_latency_for_a_failed_provider_attempt(
 ) -> None:
     query = DiscoveryQuery(text="measured failure latency")
     clock = FakeMonotonicClock()
-    monkeypatch.setattr(discovery_broker.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr("knowledge_engine.discovery_broker.time.monotonic", clock.monotonic)
     broker = FederatedDiscoveryBroker(
         (
             ClockAdvancingProvider(
