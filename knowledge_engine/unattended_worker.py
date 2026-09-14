@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -175,10 +176,8 @@ def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
             timeout=30.0,
         )
     else:
-        try:
+        with contextlib.suppress(ProcessLookupError):
             os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
     try:
         proc.wait(timeout=30.0)
     except subprocess.TimeoutExpired:
