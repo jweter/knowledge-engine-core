@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -92,6 +93,9 @@ def validate_checkout(repo_root: Path, request: WorkerRequest, *, environment_id
     head = git_output(repo_root, "rev-parse", "HEAD").lower()
     if head != request.exact_sha:
         raise RuntimeError(f"Checkout identity mismatch: expected {request.exact_sha}, got {head}")
+    dirty = git_output(repo_root, "status", "--porcelain", "--untracked-files=no")
+    if dirty:
+        raise RuntimeError("Checkout has modified tracked files; refusing to attest exact SHA")
 
 
 def pid_is_alive(pid: int) -> bool:
@@ -110,7 +114,7 @@ def pid_is_alive(pid: int) -> bool:
 def acquire_lock(state_dir: Path) -> tuple[int | None, bool]:
     state_dir.mkdir(parents=True, exist_ok=True)
     path = state_dir / LOCK_NAME
-    for attempt in range(2):
+    for attempt in range(3):
         try:
             fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             os.write(fd, str(os.getpid()).encode("ascii"))
@@ -159,6 +163,29 @@ def write_result(path: Path, result: WorkerResult) -> None:
     os.replace(temporary, path)
 
 
+def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
+    if proc.poll() is not None:
+        return
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill.exe", "/PID", str(proc.pid), "/T", "/F"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30.0,
+        )
+    else:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    try:
+        proc.wait(timeout=30.0)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(timeout=30.0)
+
+
 def run_logged(
     args: list[str], *, cwd: Path, log_path: Path, timeout_seconds: float
 ) -> tuple[int, float, bool]:
@@ -166,19 +193,25 @@ def run_logged(
     started = time.monotonic()
     timed_out = False
     with log_path.open("w", encoding="utf-8", errors="replace") as handle:
+        popen_kwargs: dict[str, object] = {}
+        if os.name == "nt":
+            popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        else:
+            popen_kwargs["start_new_session"] = True
+        proc = subprocess.Popen(
+            args,
+            cwd=str(cwd),
+            stdout=handle,
+            stderr=subprocess.STDOUT,
+            text=True,
+            **popen_kwargs,
+        )
         try:
-            proc = subprocess.run(
-                args,
-                cwd=str(cwd),
-                check=False,
-                stdout=handle,
-                stderr=subprocess.STDOUT,
-                text=True,
-                timeout=timeout_seconds,
-            )
-            code = int(proc.returncode)
+            code = int(proc.wait(timeout=timeout_seconds))
         except subprocess.TimeoutExpired:
             handle.write(f"\nTIMEOUT after {timeout_seconds:.0f} seconds\n")
+            handle.flush()
+            _terminate_process_tree(proc)
             code = 124
             timed_out = True
     return code, time.monotonic() - started, timed_out
@@ -228,7 +261,13 @@ def run_ollama_health(timeout_seconds: int) -> tuple[WorkerResultStatus, str, st
         with urllib.request.urlopen(request, timeout=timeout) as response:
             payload = json.loads(response.read().decode("utf-8"))
             code = int(response.status)
-    except (OSError, urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+    except (
+        OSError,
+        urllib.error.URLError,
+        TimeoutError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+    ) as exc:
         elapsed = time.monotonic() - started
         return (
             "ENVIRONMENT_FAILURE",
@@ -301,7 +340,7 @@ def execute_request(
 
     statuses: list[WorkerResultStatus] = []
     summaries: list[str] = []
-    failure_classes: list[str] = []
+    failure_classes: list[str | None] = []
     for check in request.requested_checks:
         if check == "preflight":
             status, summary, failure_class = run_preflight(repo_root, state_dir, timeout_seconds)
@@ -309,10 +348,17 @@ def execute_request(
             status, summary, failure_class = run_ollama_health(timeout_seconds)
         statuses.append(status)
         summaries.append(f"{check}: {summary}")
-        if failure_class:
-            failure_classes.append(failure_class)
+        failure_classes.append(failure_class)
 
     status = _aggregate_status(statuses)
+    failure_class = next(
+        (
+            current_failure
+            for current_status, current_failure in zip(statuses, failure_classes, strict=True)
+            if current_status == status and current_failure is not None
+        ),
+        None,
+    )
     summary = " ".join(summaries)[:2000]
     return WorkerResult(
         request_id=request.request_id,
@@ -322,7 +368,7 @@ def execute_request(
         status=status,
         completed_at_utc=utc_now(),
         summary=summary,
-        failure_class=(failure_classes[0] if failure_classes else None),
+        failure_class=failure_class,
     )
 
 
