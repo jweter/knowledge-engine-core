@@ -33,7 +33,7 @@ def test_publication_is_noop_off_windows(tmp_path: Path) -> None:
 def test_publication_exposes_failure_summary_without_machine_identity(tmp_path: Path) -> None:
     calls: list[list[str]] = []
 
-    def runner(command: list[str], **_kwargs) -> subprocess.CompletedProcess[str]:
+    def runner(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
         calls.append(command)
         return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
 
@@ -58,7 +58,7 @@ def test_publication_exposes_failure_summary_without_machine_identity(tmp_path: 
 def test_publication_deduplicates_exact_same_result(tmp_path: Path) -> None:
     calls: list[list[str]] = []
 
-    def runner(command: list[str], **_kwargs) -> subprocess.CompletedProcess[str]:
+    def runner(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
         calls.append(command)
         return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
 
@@ -86,7 +86,7 @@ def test_publication_deduplicates_exact_same_result(tmp_path: Path) -> None:
 def test_publication_failure_does_not_change_worker_result(tmp_path: Path) -> None:
     result = _result()
 
-    def runner(command: list[str], **_kwargs) -> subprocess.CompletedProcess[str]:
+    def runner(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
         if command[1:3] == ["auth", "status"]:
             return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
         return subprocess.CompletedProcess(command, 1, stdout="", stderr="offline")
