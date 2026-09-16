@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 from knowledge_engine.unattended_verification_contract import WorkerResult
 from knowledge_engine.unattended_worker_publication import publish_sanitized_result
