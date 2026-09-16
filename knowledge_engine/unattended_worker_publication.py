@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
-from typing import Callable
+from collections.abc import Callable
+from pathlib import Path
 
 from .unattended_verification_contract import WorkerResult
 
