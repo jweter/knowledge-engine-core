@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .unattended_verification_contract import WorkerRequest, WorkerResult, WorkerResultStatus
+from .unattended_worker_publication import publish_sanitized_result
 
 REPOSITORY = "jweter/knowledge-engine-core"
 EXPECTED_ORIGIN = "https://github.com/jweter/knowledge-engine-core.git"
@@ -415,6 +416,8 @@ def main(argv: list[str] | None = None) -> int:
             failure_class="WORKER_BUSY",
         )
         write_result(result_path, result)
+        with contextlib.suppress(OSError, subprocess.SubprocessError):
+            publish_sanitized_result(result, state_dir)
         return 3
 
     try:
@@ -428,6 +431,11 @@ def main(argv: list[str] | None = None) -> int:
         write_result(result_path, result)
     finally:
         release_lock(state_dir, lock_fd)
+
+    # Remote reporting is deliberately best-effort and non-authoritative. The local
+    # WorkerResult has already been finalized and persisted before this call.
+    with contextlib.suppress(OSError, subprocess.SubprocessError):
+        publish_sanitized_result(result, state_dir)
 
     if result.status == "PASS":
         return 0
