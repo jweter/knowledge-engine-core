@@ -24,7 +24,9 @@ def _result() -> WorkerResult:
 
 
 def test_publication_is_noop_off_windows(tmp_path: Path) -> None:
-    assert publish_sanitized_result(_result(), tmp_path, os_name="posix") == "LOCAL_ONLY_NON_WINDOWS"
+    assert (
+        publish_sanitized_result(_result(), tmp_path, os_name="posix") == "LOCAL_ONLY_NON_WINDOWS"
+    )
     assert not (tmp_path / "github-publication.json").exists()
 
 
