@@ -166,6 +166,17 @@ def write_result(path: Path, result: WorkerResult) -> None:
     os.replace(temporary, path)
 
 
+def _terminate_posix_process_group(pid: int) -> bool:
+    """Kill a POSIX process group without importing platform-specific stub members."""
+    killpg = getattr(os, "killpg", None)
+    sigkill = getattr(signal, "SIGKILL", None)
+    if not callable(killpg) or sigkill is None:
+        return False
+    with contextlib.suppress(ProcessLookupError):
+        killpg(pid, sigkill)
+    return True
+
+
 def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
     if proc.poll() is not None:
         return
@@ -177,9 +188,8 @@ def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
             text=True,
             timeout=30.0,
         )
-    else:
-        with contextlib.suppress(ProcessLookupError):
-            os.killpg(proc.pid, signal.SIGKILL)
+    elif not _terminate_posix_process_group(proc.pid):
+        proc.kill()
     try:
         proc.wait(timeout=30.0)
     except subprocess.TimeoutExpired:
