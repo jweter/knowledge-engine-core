@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import subprocess
 import urllib.request
 from pathlib import Path
@@ -150,9 +151,7 @@ def test_validate_checkout_fails_closed_on_dirty_tracked_files(
         worker.validate_checkout(tmp_path, request(), environment_id="jeremy-laptop")
 
 
-def test_validate_checkout_fails_closed_on_wrong_environment(
-    tmp_path: Path,
-) -> None:
+def test_validate_checkout_fails_closed_on_wrong_environment(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError, match="worker environment mismatch"):
         worker.validate_checkout(tmp_path, request(), environment_id="different-laptop")
 
@@ -162,12 +161,12 @@ def test_posix_group_termination_resolves_capabilities_at_runtime(
 ) -> None:
     calls: list[tuple[int, object]] = []
     monkeypatch.setattr(
-        worker.os,
+        os,
         "killpg",
         lambda pid, sig: calls.append((pid, sig)),
         raising=False,
     )
-    monkeypatch.setattr(worker.signal, "SIGKILL", 9, raising=False)
+    monkeypatch.setattr(signal, "SIGKILL", 9, raising=False)
 
     worker._terminate_posix_process_group(1234)
 
@@ -177,8 +176,8 @@ def test_posix_group_termination_resolves_capabilities_at_runtime(
 def test_posix_group_termination_fails_closed_when_capability_is_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delattr(worker.os, "killpg", raising=False)
-    monkeypatch.delattr(worker.signal, "SIGKILL", raising=False)
+    monkeypatch.delattr(os, "killpg", raising=False)
+    monkeypatch.delattr(signal, "SIGKILL", raising=False)
 
     with pytest.raises(RuntimeError, match="process-group termination is unavailable"):
         worker._terminate_posix_process_group(1234)
