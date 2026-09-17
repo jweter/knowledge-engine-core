@@ -55,17 +55,8 @@ def load_request(path: Path) -> WorkerRequest:
     return WorkerRequest.model_validate_json(path.read_text(encoding="utf-8"))
 
 
-def run_capture(
-    args: list[str], *, cwd: Path | None = None, timeout_seconds: float = 30.0
-) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        args,
-        cwd=str(cwd) if cwd else None,
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=timeout_seconds,
-    )
+def run_capture(args: list[str], *, cwd: Path | None = None, timeout_seconds: float = 30.0) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(args, cwd=str(cwd) if cwd else None, check=False, capture_output=True, text=True, timeout=timeout_seconds)
 
 
 def git_output(repo_root: Path, *args: str) -> str:
@@ -80,9 +71,7 @@ def validate_checkout(repo_root: Path, request: WorkerRequest, *, environment_id
     if request.repository != REPOSITORY:
         raise RuntimeError(f"request repository must be {REPOSITORY}")
     if request.environment_id != environment_id:
-        raise RuntimeError(
-            f"worker environment mismatch: expected {request.environment_id}, got {environment_id}"
-        )
+        raise RuntimeError(f"worker environment mismatch: expected {request.environment_id}, got {environment_id}")
     if not (repo_root / ".git").exists():
         raise RuntimeError(f"Not a Git checkout: {repo_root}")
     origin = git_output(repo_root, "remote", "get-url", "origin")
@@ -90,9 +79,7 @@ def validate_checkout(repo_root: Path, request: WorkerRequest, *, environment_id
         raise RuntimeError(f"Unexpected origin remote: {origin}")
     branch = git_output(repo_root, "branch", "--show-current")
     if branch != request.branch:
-        raise RuntimeError(
-            f"Checkout branch mismatch: expected {request.branch}, got {branch or '<detached>'}"
-        )
+        raise RuntimeError(f"Checkout branch mismatch: expected {request.branch}, got {branch or '<detached>'}")
     head = git_output(repo_root, "rev-parse", "HEAD").lower()
     if head != request.exact_sha:
         raise RuntimeError(f"Checkout identity mismatch: expected {request.exact_sha}, got {head}")
@@ -145,18 +132,11 @@ def release_lock(state_dir: Path, fd: int) -> None:
 
 def sanitize_text(text: str, *, repo_root: Path) -> str:
     result = text
-    for raw, replacement in (
-        (str(repo_root), "<REPO_ROOT>"),
-        (str(Path.home()), "%USERPROFILE%"),
-    ):
+    for raw, replacement in ((str(repo_root), "<REPO_ROOT>"), (str(Path.home()), "%USERPROFILE%")):
         if raw:
             result = result.replace(raw, replacement)
             result = result.replace(raw.replace("\\", "/"), replacement)
-    return re.sub(
-        r"(?i)\b(authorization|api[_-]?key|token|password)\b\s*[:=]\s*\S+",
-        r"\1=<REDACTED>",
-        result,
-    )
+    return re.sub(r"(?i)\b(authorization|api[_-]?key|token|password)\b\s*[:=]\s*\S+", r"\1=<REDACTED>", result)
 
 
 def write_result(path: Path, result: WorkerResult) -> None:
@@ -166,20 +146,23 @@ def write_result(path: Path, result: WorkerResult) -> None:
     os.replace(temporary, path)
 
 
+def _terminate_posix_process_group(pid: int) -> None:
+    """Terminate a POSIX process group without exposing POSIX-only APIs to Windows typing."""
+    killpg = getattr(os, "killpg", None)
+    sigkill = getattr(signal, "SIGKILL", None)
+    if killpg is None or sigkill is None:
+        raise RuntimeError("POSIX process-group termination is unavailable")
+    killpg(pid, sigkill)
+
+
 def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
     if proc.poll() is not None:
         return
     if os.name == "nt":
-        subprocess.run(
-            ["taskkill.exe", "/PID", str(proc.pid), "/T", "/F"],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=30.0,
-        )
+        subprocess.run(["taskkill.exe", "/PID", str(proc.pid), "/T", "/F"], check=False, capture_output=True, text=True, timeout=30.0)
     else:
         with contextlib.suppress(ProcessLookupError):
-            os.killpg(proc.pid, signal.SIGKILL)
+            _terminate_posix_process_group(proc.pid)
     try:
         proc.wait(timeout=30.0)
     except subprocess.TimeoutExpired:
@@ -187,31 +170,15 @@ def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
         proc.wait(timeout=30.0)
 
 
-def run_logged(
-    args: list[str], *, cwd: Path, log_path: Path, timeout_seconds: float
-) -> tuple[int, float, bool]:
+def run_logged(args: list[str], *, cwd: Path, log_path: Path, timeout_seconds: float) -> tuple[int, float, bool]:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
     timed_out = False
     with log_path.open("w", encoding="utf-8", errors="replace") as handle:
         if os.name == "nt":
-            proc = subprocess.Popen(
-                args,
-                cwd=str(cwd),
-                stdout=handle,
-                stderr=subprocess.STDOUT,
-                text=True,
-                creationflags=WINDOWS_CREATE_NEW_PROCESS_GROUP,
-            )
+            proc = subprocess.Popen(args, cwd=str(cwd), stdout=handle, stderr=subprocess.STDOUT, text=True, creationflags=WINDOWS_CREATE_NEW_PROCESS_GROUP)
         else:
-            proc = subprocess.Popen(
-                args,
-                cwd=str(cwd),
-                stdout=handle,
-                stderr=subprocess.STDOUT,
-                text=True,
-                start_new_session=True,
-            )
+            proc = subprocess.Popen(args, cwd=str(cwd), stdout=handle, stderr=subprocess.STDOUT, text=True, start_new_session=True)
         try:
             code = int(proc.wait(timeout=timeout_seconds))
         except subprocess.TimeoutExpired:
@@ -231,20 +198,13 @@ def log_tail(path: Path, *, repo_root: Path, lines: int = 40) -> str:
     return sanitize_text("\n".join(content[-lines:]), repo_root=repo_root)
 
 
-def run_preflight(
-    repo_root: Path, state_dir: Path, timeout_seconds: int
-) -> tuple[WorkerResultStatus, str, str | None]:
+def run_preflight(repo_root: Path, state_dir: Path, timeout_seconds: int) -> tuple[WorkerResultStatus, str, str | None]:
     script = repo_root / "engineering" / "preflight.py"
     if not script.is_file():
         return "REVIEW_REQUIRED", "engineering/preflight.py is missing", "POLICY_FAILURE"
     log_path = state_dir / "logs" / "preflight.log"
     evidence_path = state_dir / "preflight-evidence.json"
-    code, duration, timed_out = run_logged(
-        [sys.executable, str(script), "--evidence", str(evidence_path)],
-        cwd=repo_root,
-        log_path=log_path,
-        timeout_seconds=float(timeout_seconds),
-    )
+    code, duration, timed_out = run_logged([sys.executable, str(script), "--evidence", str(evidence_path)], cwd=repo_root, log_path=log_path, timeout_seconds=float(timeout_seconds))
     if timed_out:
         return "ENVIRONMENT_FAILURE", "Canonical preflight timed out.", "ENVIRONMENT_FAILURE"
     if code != 0:
@@ -258,41 +218,20 @@ def run_preflight(
 
 def run_ollama_health(timeout_seconds: int) -> tuple[WorkerResultStatus, str, str | None]:
     timeout = min(float(timeout_seconds), 20.0)
-    request = urllib.request.Request(
-        OLLAMA_TAGS_URL,
-        headers={"User-Agent": "KnowledgeEngine-Unattended-Verification/2"},
-    )
+    request = urllib.request.Request(OLLAMA_TAGS_URL, headers={"User-Agent": "KnowledgeEngine-Unattended-Verification/2"})
     started = time.monotonic()
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             payload = json.loads(response.read().decode("utf-8"))
             code = int(response.status)
-    except (
-        OSError,
-        urllib.error.URLError,
-        TimeoutError,
-        UnicodeDecodeError,
-        json.JSONDecodeError,
-    ) as exc:
+    except (OSError, urllib.error.URLError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         elapsed = time.monotonic() - started
-        return (
-            "ENVIRONMENT_FAILURE",
-            f"Ollama health probe unavailable after {elapsed:.3f}s: {type(exc).__name__}.",
-            "ENVIRONMENT_FAILURE",
-        )
+        return "ENVIRONMENT_FAILURE", f"Ollama health probe unavailable after {elapsed:.3f}s: {type(exc).__name__}.", "ENVIRONMENT_FAILURE"
     if code != 200 or not isinstance(payload, dict):
-        return (
-            "ENVIRONMENT_FAILURE",
-            "Ollama health probe returned an unexpected response.",
-            "ENVIRONMENT_FAILURE",
-        )
+        return "ENVIRONMENT_FAILURE", "Ollama health probe returned an unexpected response.", "ENVIRONMENT_FAILURE"
     models = payload.get("models")
     model_count = len(models) if isinstance(models, list) else 0
-    return (
-        "PASS",
-        f"Ollama responded successfully with {model_count} locally listed model(s).",
-        None,
-    )
+    return "PASS", f"Ollama responded successfully with {model_count} locally listed model(s).", None
 
 
 def _aggregate_status(statuses: list[WorkerResultStatus]) -> WorkerResultStatus:
@@ -307,43 +246,16 @@ def _aggregate_status(statuses: list[WorkerResultStatus]) -> WorkerResultStatus:
     return "PASS"
 
 
-def execute_request(
-    request: WorkerRequest,
-    *,
-    repo_root: Path,
-    state_dir: Path,
-    environment_id: str,
-    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
-) -> WorkerResult:
+def execute_request(request: WorkerRequest, *, repo_root: Path, state_dir: Path, environment_id: str, timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS) -> WorkerResult:
     if timeout_seconds < 1 or timeout_seconds > MAX_TIMEOUT_SECONDS:
         raise ValueError(f"timeout_seconds must be between 1 and {MAX_TIMEOUT_SECONDS}")
     try:
         validate_checkout(repo_root, request, environment_id=environment_id)
     except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
-        return WorkerResult(
-            request_id=request.request_id,
-            repository=request.repository,
-            exact_sha=request.exact_sha,
-            environment_id=request.environment_id,
-            status="ENVIRONMENT_FAILURE",
-            completed_at_utc=utc_now(),
-            summary=sanitize_text(str(exc), repo_root=repo_root)[:2000],
-            failure_class="ENVIRONMENT_FAILURE",
-        )
-
+        return WorkerResult(request_id=request.request_id, repository=request.repository, exact_sha=request.exact_sha, environment_id=request.environment_id, status="ENVIRONMENT_FAILURE", completed_at_utc=utc_now(), summary=sanitize_text(str(exc), repo_root=repo_root)[:2000], failure_class="ENVIRONMENT_FAILURE")
     unsupported = sorted(set(request.requested_checks) - AUTHORIZED_CHECKS)
     if unsupported:
-        return WorkerResult(
-            request_id=request.request_id,
-            repository=request.repository,
-            exact_sha=request.exact_sha,
-            environment_id=request.environment_id,
-            status="REVIEW_REQUIRED",
-            completed_at_utc=utc_now(),
-            summary=f"Unsupported requested check(s): {', '.join(unsupported)}.",
-            failure_class="POLICY_FAILURE",
-        )
-
+        return WorkerResult(request_id=request.request_id, repository=request.repository, exact_sha=request.exact_sha, environment_id=request.environment_id, status="REVIEW_REQUIRED", completed_at_utc=utc_now(), summary=f"Unsupported requested check(s): {', '.join(unsupported)}.", failure_class="POLICY_FAILURE")
     statuses: list[WorkerResultStatus] = []
     summaries: list[str] = []
     failure_classes: list[str | None] = []
@@ -355,37 +267,15 @@ def execute_request(
         statuses.append(status)
         summaries.append(f"{check}: {summary}")
         failure_classes.append(failure_class)
-
     status = _aggregate_status(statuses)
-    failure_class = next(
-        (
-            current_failure
-            for current_status, current_failure in zip(statuses, failure_classes, strict=True)
-            if current_status == status and current_failure is not None
-        ),
-        None,
-    )
-    summary = " ".join(summaries)[:2000]
-    return WorkerResult(
-        request_id=request.request_id,
-        repository=request.repository,
-        exact_sha=request.exact_sha,
-        environment_id=request.environment_id,
-        status=status,
-        completed_at_utc=utc_now(),
-        summary=summary,
-        failure_class=failure_class,
-    )
+    failure_class = next((current_failure for current_status, current_failure in zip(statuses, failure_classes, strict=True) if current_status == status and current_failure is not None), None)
+    return WorkerResult(request_id=request.request_id, repository=request.repository, exact_sha=request.exact_sha, environment_id=request.environment_id, status=status, completed_at_utc=utc_now(), summary=" ".join(summaries)[:2000], failure_class=failure_class)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Run one bounded unattended Knowledge Engine verification request."
-    )
+    parser = argparse.ArgumentParser(description="Run one bounded unattended Knowledge Engine verification request.")
     parser.add_argument("--request", type=Path, required=True, help="WorkerRequest JSON document.")
-    parser.add_argument(
-        "--environment-id", required=True, help="Exact configured worker environment ID."
-    )
+    parser.add_argument("--environment-id", required=True, help="Exact configured worker environment ID.")
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--state-dir", type=Path, default=default_state_dir())
     parser.add_argument("--result", type=Path, default=None)
@@ -402,45 +292,24 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"REVIEW_REQUIRED: invalid WorkerRequest: {exc}", file=sys.stderr)
         return 2
-
     lock_fd, acquired = acquire_lock(state_dir)
     if not acquired or lock_fd is None:
-        result = WorkerResult(
-            request_id=request.request_id,
-            repository=request.repository,
-            exact_sha=request.exact_sha,
-            environment_id=request.environment_id,
-            status="REVIEW_REQUIRED",
-            completed_at_utc=utc_now(),
-            summary="Another unattended worker owns the local execution lease.",
-            failure_class="WORKER_BUSY",
-        )
+        result = WorkerResult(request_id=request.request_id, repository=request.repository, exact_sha=request.exact_sha, environment_id=request.environment_id, status="REVIEW_REQUIRED", completed_at_utc=utc_now(), summary="Another unattended worker owns the local execution lease.", failure_class="WORKER_BUSY")
         write_result(result_path, result)
         with contextlib.suppress(OSError, subprocess.SubprocessError):
             publish_sanitized_result(result, state_dir)
         return 3
-
     try:
-        result = execute_request(
-            request,
-            repo_root=args.repo_root.expanduser().resolve(),
-            state_dir=state_dir,
-            environment_id=args.environment_id,
-            timeout_seconds=args.timeout_seconds,
-        )
+        result = execute_request(request, repo_root=args.repo_root.expanduser().resolve(), state_dir=state_dir, environment_id=args.environment_id, timeout_seconds=args.timeout_seconds)
         write_result(result_path, result)
     finally:
         release_lock(state_dir, lock_fd)
-
-    # Remote reporting is deliberately best-effort and non-authoritative. The local
-    # WorkerResult has already been finalized and persisted before this call.
     with contextlib.suppress(OSError, subprocess.SubprocessError):
         publish_sanitized_result(result, state_dir)
-
     if result.status == "PASS":
         return 0
     if result.status in {"REVIEW_REQUIRED", "PRODUCT_REALITY_REQUIRED"}:
-        return 2
+        return 3
     return 1
 
 
