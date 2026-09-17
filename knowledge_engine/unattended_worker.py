@@ -166,6 +166,20 @@ def write_result(path: Path, result: WorkerResult) -> None:
     os.replace(temporary, path)
 
 
+def _terminate_posix_process_group(pid: int) -> None:
+    """Terminate a POSIX process group without referencing POSIX-only attrs statically.
+
+    Windows type environments do not expose ``os.killpg`` or ``signal.SIGKILL``.
+    Resolve them dynamically only on the POSIX execution path so strict typing on
+    Windows remains valid while preserving the existing POSIX process-group kill.
+    """
+    killpg = getattr(os, "killpg", None)
+    sigkill = getattr(signal, "SIGKILL", None)
+    if not callable(killpg) or sigkill is None:
+        raise RuntimeError("POSIX process-group termination is unavailable")
+    killpg(pid, sigkill)
+
+
 def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
     if proc.poll() is not None:
         return
@@ -179,7 +193,7 @@ def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
         )
     else:
         with contextlib.suppress(ProcessLookupError):
-            os.killpg(proc.pid, signal.SIGKILL)
+            _terminate_posix_process_group(proc.pid)
     try:
         proc.wait(timeout=30.0)
     except subprocess.TimeoutExpired:
