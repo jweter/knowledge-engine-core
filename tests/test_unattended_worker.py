@@ -157,6 +157,30 @@ def test_validate_checkout_fails_closed_on_wrong_environment(
         worker.validate_checkout(tmp_path, request(), environment_id="different-laptop")
 
 
+def test_posix_group_termination_uses_runtime_capabilities(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[int, int]] = []
+    monkeypatch.setattr(
+        worker.os,
+        "killpg",
+        lambda pid, sig: calls.append((pid, sig)),
+        raising=False,
+    )
+    monkeypatch.setattr(worker.signal, "SIGKILL", 9, raising=False)
+
+    assert worker._terminate_posix_process_group(1234) is True
+    assert calls == [(1234, 9)]
+
+
+def test_posix_group_termination_falls_back_when_runtime_capability_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delattr(worker.os, "killpg", raising=False)
+
+    assert worker._terminate_posix_process_group(1234) is False
+
+
 def test_run_logged_terminates_process_tree_on_timeout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
