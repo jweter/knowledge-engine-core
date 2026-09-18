@@ -99,6 +99,9 @@ def validate_checkout(repo_root: Path, request: WorkerRequest, *, environment_id
     dirty = git_output(repo_root, "status", "--porcelain", "--untracked-files=no")
     if dirty:
         raise RuntimeError("Checkout has modified tracked files; refusing to attest exact SHA")
+    untracked = git_output(repo_root, "ls-files", "--others", "--exclude-standard")
+    if untracked:
+        raise RuntimeError("Checkout has untracked files; refusing to attest exact SHA")
 
 
 def pid_is_alive(pid: int) -> bool:

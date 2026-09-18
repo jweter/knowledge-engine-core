@@ -151,6 +151,25 @@ def test_validate_checkout_fails_closed_on_dirty_tracked_files(
         worker.validate_checkout(tmp_path, request(), environment_id="jeremy-laptop")
 
 
+def test_validate_checkout_fails_closed_on_untracked_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / ".git").mkdir()
+    values = iter(
+        [
+            "https://github.com/jweter/knowledge-engine-core.git",
+            "main",
+            "a" * 40,
+            "",
+            "unexpected.py",
+        ]
+    )
+    monkeypatch.setattr(worker, "git_output", lambda *args, **kwargs: next(values))
+
+    with pytest.raises(RuntimeError, match="untracked files"):
+        worker.validate_checkout(tmp_path, request(), environment_id="jeremy-laptop")
+
+
 def test_validate_checkout_fails_closed_on_wrong_environment(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError, match="worker environment mismatch"):
         worker.validate_checkout(tmp_path, request(), environment_id="different-laptop")
