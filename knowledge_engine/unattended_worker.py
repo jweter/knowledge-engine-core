@@ -26,6 +26,19 @@ OLLAMA_TAGS_URL = "http://127.0.0.1:11434/api/tags"
 AUTHORIZED_CHECKS = frozenset({"preflight", "ollama_health"})
 WINDOWS_CREATE_NEW_PROCESS_GROUP = 0x00000200
 
+# Matches a secret-flavored key (optionally prefixed with other identifier
+# segments, e.g. "GITHUB_TOKEN" or "DATABASE_PASSWORD") followed by its value,
+# whether the key/value pair is written bare ("token=abc"), as a JSON member
+# ('"token": "abc"'), or as a Python dict repr ("'token': 'abc'"). The value
+# alternation prefers a quoted span (which may contain internal whitespace,
+# e.g. "Bearer <token>") and falls back to a single unquoted token.
+_SECRET_KEY_VALUE = re.compile(
+    r"(?i)([\"']?)((?:[A-Za-z0-9]+[_-])*(?:authorization|api[_-]?key|token|password))(?(1)\1)"
+    r"\s*[:=]\s*(?:([\"'])(.*?)\3|(\S+))"
+)
+# Strips credentials embedded in a URL's userinfo component (scheme://user:pass@host).
+_URL_CREDENTIALS = re.compile(r"(?i)(://)[^\s/@]+:[^\s/@]+@")
+
 
 def utc_now() -> str:
     return datetime.now(UTC).isoformat()
@@ -155,11 +168,8 @@ def sanitize_text(text: str, *, repo_root: Path) -> str:
         if raw:
             result = result.replace(raw, replacement)
             result = result.replace(raw.replace("\\", "/"), replacement)
-    return re.sub(
-        r"(?i)\b(authorization|api[_-]?key|token|password)\b\s*[:=]\s*\S+",
-        r"\1=<REDACTED>",
-        result,
-    )
+    result = _URL_CREDENTIALS.sub(r"\1<REDACTED>@", result)
+    return _SECRET_KEY_VALUE.sub(lambda m: f"{m.group(2)}=<REDACTED>", result)
 
 
 def write_result(path: Path, result: WorkerResult) -> None:

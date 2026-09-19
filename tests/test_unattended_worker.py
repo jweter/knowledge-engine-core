@@ -60,6 +60,39 @@ def test_sanitize_text_removes_paths_and_secret_values(
     assert "<REDACTED>" in sanitized
 
 
+def test_sanitize_text_removes_json_and_dict_style_secrets(tmp_path: Path) -> None:
+    text = (
+        '{"api_key": "example-not-a-real-secret-000111"}'
+        " headers={'Authorization': 'Bearer example-not-a-real-secret-000111'}"
+    )
+    sanitized = worker.sanitize_text(text, repo_root=tmp_path)
+    assert "example-not-a-real-secret-000111" not in sanitized
+    assert "Bearer" not in sanitized
+    assert "<REDACTED>" in sanitized
+
+
+def test_sanitize_text_removes_underscore_prefixed_secret_env_vars(tmp_path: Path) -> None:
+    text = "GITHUB_TOKEN=example-not-a-real-token-000111222"
+    sanitized = worker.sanitize_text(text, repo_root=tmp_path)
+    assert "example-not-a-real-token-000111222" not in sanitized
+    assert "<REDACTED>" in sanitized
+
+
+def test_sanitize_text_removes_url_embedded_credentials(tmp_path: Path) -> None:
+    # A non-standard scheme keeps this fixture from resembling a real HTTPS
+    # credential URL while still exercising the generic "://user:pass@" match.
+    text = "example-remote://user:example-not-a-real-token-000111222@example.invalid/org/repo.git"
+    sanitized = worker.sanitize_text(text, repo_root=tmp_path)
+    assert "example-not-a-real-token-000111222" not in sanitized
+    assert "<REDACTED>" in sanitized
+
+
+def test_sanitize_text_leaves_unrelated_key_value_text_alone(tmp_path: Path) -> None:
+    text = "primary_key: 42 tokenizer_output=fine"
+    sanitized = worker.sanitize_text(text, repo_root=tmp_path)
+    assert sanitized == text
+
+
 def test_acquire_lock_reclaims_stale_pid(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     lock = tmp_path / worker.LOCK_NAME
     lock.write_text("99999999", encoding="ascii")
