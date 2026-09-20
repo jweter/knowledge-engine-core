@@ -375,10 +375,25 @@ def execute_request(
     summaries: list[str] = []
     failure_classes: list[str | None] = []
     for check in request.requested_checks:
-        if check == "preflight":
-            status, summary, failure_class = run_preflight(repo_root, state_dir, timeout_seconds)
-        else:
-            status, summary, failure_class = run_ollama_health(timeout_seconds)
+        try:
+            if check == "preflight":
+                status, summary, failure_class = run_preflight(
+                    repo_root, state_dir, timeout_seconds
+                )
+            else:
+                status, summary, failure_class = run_ollama_health(timeout_seconds)
+        except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+            # A check must never crash the worker process: an unhandled exception here
+            # (e.g. a permission error or a race on the preflight script) would exit
+            # before any WorkerResult is written or published, silently discarding the
+            # "always emit machine-readable evidence" fail-closed contract issue #493
+            # requires. Convert it into the same structured, sanitized result shape
+            # every other failure path already produces.
+            status = "ENVIRONMENT_FAILURE"
+            summary = f"Unhandled {type(exc).__name__} running {check}: " + sanitize_text(
+                str(exc), repo_root=repo_root
+            )
+            failure_class = "WORKER_EXCEPTION"
         statuses.append(status)
         summaries.append(f"{check}: {summary}")
         failure_classes.append(failure_class)
