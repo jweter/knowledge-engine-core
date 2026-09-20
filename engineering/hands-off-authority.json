@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "authority": {
+    "vision_completion": [
+      "README.md",
+      "docs/founding_vision.md"
+    ],
+    "roadmap": [
+      "docs/roadmap.md"
+    ],
+    "architecture": [
+      "docs/architecture.md",
+      "docs/architecture/system_overview.md"
+    ]
+  }
+}
