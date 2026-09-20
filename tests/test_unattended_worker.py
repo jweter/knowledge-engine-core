@@ -355,6 +355,30 @@ def test_failure_class_matches_aggregate_status(
     assert result.failure_class == "TEST_FAILURE"
 
 
+def test_check_exception_fails_closed_instead_of_crashing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(worker, "validate_checkout", lambda *args, **kwargs: None)
+
+    def explode(*args: object, **kwargs: object) -> object:
+        raise OSError(f"cannot launch preflight under {tmp_path}")
+
+    monkeypatch.setattr(worker, "run_preflight", explode)
+
+    result = worker.execute_request(
+        request(requested_checks=("preflight",)),
+        repo_root=tmp_path,
+        state_dir=tmp_path / "state",
+        environment_id="jeremy-laptop",
+        timeout_seconds=30,
+    )
+
+    assert result.status == "ENVIRONMENT_FAILURE"
+    assert result.failure_class == "WORKER_EXCEPTION"
+    assert "preflight" in result.summary
+    assert str(tmp_path) not in result.summary
+
+
 def test_write_result_uses_authoritative_result_schema(tmp_path: Path) -> None:
     result = worker.execute_request
     evidence = {
