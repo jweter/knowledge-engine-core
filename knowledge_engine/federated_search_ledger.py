@@ -60,6 +60,8 @@ class ProviderCoverageRecord:
     reason: str | None
     retry_attempt_count: int = 0
     rate_limited_observed: bool = False
+    cache_hit: bool = False
+    reuse_hit: bool = False
 
     def __post_init__(self) -> None:
         # Mirrors `federated_discovery.ProviderStatus.__post_init__`: a
@@ -311,6 +313,8 @@ class FederatedSearchLedger:
                 reason=status.reason,
                 retry_attempt_count=status.retry_attempt_count,
                 rate_limited_observed=status.rate_limited_observed,
+                cache_hit=status.cache_hit,
+                reuse_hit=status.reuse_hit,
             )
             for status in result.provider_statuses
         )
@@ -531,6 +535,10 @@ def _provider_from_payload(payload: object) -> ProviderCoverageRecord:
     rate_limited_observed = payload.get("rate_limited_observed", False)
     if not isinstance(rate_limited_observed, bool):
         raise ValueError("Federated search-run field rate_limited_observed is invalid.")
+    cache_hit = payload.get("cache_hit", False)
+    reuse_hit = payload.get("reuse_hit", False)
+    if not isinstance(cache_hit, bool) or not isinstance(reuse_hit, bool):
+        raise ValueError("Federated search-run cache/reuse fields must be boolean.")
 
     return ProviderCoverageRecord(
         provider=_required_string(payload, "provider"),
@@ -541,6 +549,8 @@ def _provider_from_payload(payload: object) -> ProviderCoverageRecord:
         reason=_payload_optional_string(payload, "reason"),
         retry_attempt_count=retry_attempt_count,
         rate_limited_observed=rate_limited_observed,
+        cache_hit=cache_hit,
+        reuse_hit=reuse_hit,
     )
 
 
