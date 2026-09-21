@@ -124,6 +124,8 @@ def test_record_persists_reproducible_run_and_provider_facts(tmp_path: Path) -> 
         # it (issue #433 item 2, Codex review finding 1) -- OpenAlex does not
         # go through Semantic Scholar's retry loop's own bookkeeping.
         "rate_limited_observed": True,
+        "cache_hit": False,
+        "reuse_hit": False,
     }
     assert "api_key" not in persisted
     assert "headers" not in persisted
