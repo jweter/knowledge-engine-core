@@ -211,6 +211,8 @@ class ProviderStatus:
     reason: str | None = None
     retry_attempt_count: int = 0
     rate_limited_observed: bool = False
+    cache_hit: bool = False
+    reuse_hit: bool = False
 
     def __post_init__(self) -> None:
         if not self.provider.strip():
@@ -232,9 +234,15 @@ class ProviderStatus:
             raise ValueError("An empty provider result must have result_count == 0.")
         if self.retry_attempt_count < 0:
             raise ValueError("Provider retry_attempt_count must not be negative.")
-        if not self.attempted and (self.retry_attempt_count != 0 or self.rate_limited_observed):
+        if not self.attempted and (
+            self.retry_attempt_count != 0
+            or self.rate_limited_observed
+            or self.cache_hit
+            or self.reuse_hit
+        ):
             raise ValueError(
-                "Unattempted providers must not report retries or rate-limit observations."
+                "Unattempted providers must not report retries or rate-limit observations, "
+                "cache hits, or reuse hits."
             )
         # A RATE_LIMITED outcome is itself proof a rate limit was observed, even
         # for adapters that do not implement the Semantic Scholar retry loop's
