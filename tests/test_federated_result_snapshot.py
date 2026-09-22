@@ -131,6 +131,8 @@ def test_public_snapshot_includes_safe_coverage_and_result_contract() -> None:
         "providers_completed": ["pubmed"],
         "providers_failed": [],
         "providers_rate_limited": [],
+        "providers_cache_hit": [],
+        "providers_reuse_hit": [],
     }
     assert payload["provider_disagreements"] == {
         "candidates": (),
