@@ -331,3 +331,33 @@ def test_json_exposes_completeness_and_failure_without_erasing_candidates() -> N
     assert payload["completeness"] == "partial"
     assert payload["failed_providers"] == ["openalex"]
     assert payload["candidates"][0]["observations"][0]["provider_id"] == "123"
+
+
+def test_provider_status_serializes_cache_and_reuse_hits() -> None:
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="cache reuse"),
+        provider_statuses=(
+            ProviderStatus(
+                provider="openalex",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+                cache_hit=True,
+                reuse_hit=True,
+            ),
+        ),
+    )
+    payload = json.loads(result.to_json())
+    status = payload["provider_statuses"][0]
+    assert status["cache_hit"] is True
+    assert status["reuse_hit"] is True
+
+
+def test_unattempted_provider_rejects_cache_or_reuse_hits() -> None:
+    with pytest.raises(ValueError, match="cache hits, or reuse hits"):
+        ProviderStatus(
+            provider="arxiv",
+            outcome=ProviderOutcome.SKIPPED,
+            attempted=False,
+            cache_hit=True,
+        )
