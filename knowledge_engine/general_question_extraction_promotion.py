@@ -38,6 +38,7 @@ this stage exactly as it did to GQR-4's acquisition stage.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
 import tempfile
@@ -95,16 +96,15 @@ class GeneralQuestionExtractionPromotionSummary:
     and is ``0`` when no candidate records reached promotion. They are
     additive JSON fields; existing callers that ignore them are unaffected.
 
-    ``evidence_store_record_count`` answers issue #433's "re-retrieval
-    readiness" ask: the total number of valid records in
-    ``evidence_output_path`` after this call, whether or not this call itself
-    promoted anything. Promotion only ever appends, so this count is
-    monotonically non-decreasing across repeated calls against the same
-    evidence file -- a caller (e.g. the AI orchestration loop, currently
-    polling per acquisition receipt) can treat it as a cheap revision
-    identifier: if the value has not changed since a prior call, no new
-    Evidence Record became available and there is no reason to re-retrieve
-    yet, instead of always waiting for an entire maximal acquisition batch.
+    ``new_evidence_available`` and ``evidence_store_revision`` answer issue
+    #433's "re-retrieval readiness" ask explicitly. The boolean is true only
+    when this call actually promoted at least one new Evidence Record. The
+    revision is a deterministic SHA-256 digest of the schema-valid, unique
+    Evidence Records currently available in ``evidence_output_path``. A caller
+    can re-query immediately when ``new_evidence_available`` is true and use
+    ``evidence_store_revision`` as a result-cache invalidation key. Malformed
+    or duplicate lines never affect the revision. ``evidence_store_record_count``
+    remains the additive human-readable total for backward compatibility.
     """
 
     schema_version: str
@@ -120,6 +120,8 @@ class GeneralQuestionExtractionPromotionSummary:
     extraction_duration_ms: int
     promotion_duration_ms: int
     evidence_store_record_count: int
+    new_evidence_available: bool
+    evidence_store_revision: str
 
     def to_dict(self) -> dict[str, Any]:
         """Machine-readable form, including the ``*_duration_ms`` timings.
@@ -147,6 +149,8 @@ class GeneralQuestionExtractionPromotionSummary:
             "extraction_duration_ms": self.extraction_duration_ms,
             "promotion_duration_ms": self.promotion_duration_ms,
             "evidence_store_record_count": self.evidence_store_record_count,
+            "new_evidence_available": self.new_evidence_available,
+            "evidence_store_revision": self.evidence_store_revision,
         }
 
 
@@ -210,27 +214,13 @@ def _write_rejection_records(
     return path
 
 
-def _count_evidence_records(evidence_output_path: Path) -> int:
-    """Count only schema-valid Evidence Records in `evidence_output_path`.
-
-    A "ready to re-retrieve" count must not include a record downstream
-    validation would reject -- Core prefers missing data over invented
-    metadata, so an unusable record must never inflate this signal. Reuses
-    `cli._validate_evidence_record` -- the exact per-record gate
-    `_promote_evidence_records` itself already applies with
-    `require_review_fields=True` -- against each line, tracking
-    `seen_ids` across the whole file so a duplicate/malformed
-    `evidence_record_id` is not double-counted either. A blank line,
-    invalid JSON, or non-object line is skipped, not raised, since this is
-    a read-only count, not the correctness gate itself -- `ke
-    evidence-validate` remains that. Returns 0 when the file does not
-    exist yet (no record has ever been promoted to it).
-    """
+def _valid_evidence_records(evidence_output_path: Path) -> tuple[dict[str, Any], ...]:
+    """Return schema-valid, unique Evidence Records in durable file order."""
 
     if not evidence_output_path.exists():
-        return 0
+        return ()
     seen_ids: set[str] = set()
-    count = 0
+    records: list[dict[str, Any]] = []
     for line in evidence_output_path.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         if not stripped:
@@ -246,8 +236,31 @@ def _count_evidence_records(evidence_output_path: Path) -> int:
             record, 0, seen_ids, record_errors, require_review_fields=True
         )
         if not record_errors:
-            count += 1
-    return count
+            records.append(record)
+    return tuple(records)
+
+
+def _count_evidence_records(evidence_output_path: Path) -> int:
+    """Count only schema-valid, unique Evidence Records."""
+
+    return len(_valid_evidence_records(evidence_output_path))
+
+
+def _evidence_store_revision(evidence_output_path: Path) -> str:
+    """Return a deterministic cache revision from usable Evidence Record content.
+
+    Invalid or duplicate lines are excluded exactly as they are from the
+    readiness count. Canonical JSON avoids formatting-only revision changes.
+    """
+
+    digest = hashlib.sha256()
+    for record in _valid_evidence_records(evidence_output_path):
+        canonical = json.dumps(
+            record, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+        ).encode("utf-8")
+        digest.update(len(canonical).to_bytes(8, "big"))
+        digest.update(canonical)
+    return digest.hexdigest()
 
 
 def _receipt_paper_ids(receipt: dict[str, Any]) -> list[int]:
@@ -399,6 +412,8 @@ def run_general_question_extraction_and_promotion(
     )
 
     evidence_store_record_count = _count_evidence_records(evidence_output_path)
+    evidence_store_revision = _evidence_store_revision(evidence_output_path)
+    new_evidence_available = promoted_count > 0
 
     return GeneralQuestionExtractionPromotionSummary(
         schema_version=GENERAL_QUESTION_EXTRACTION_PROMOTION_RULES_VERSION,
@@ -414,6 +429,8 @@ def run_general_question_extraction_and_promotion(
         extraction_duration_ms=extraction_duration_ms,
         promotion_duration_ms=promotion_duration_ms,
         evidence_store_record_count=evidence_store_record_count,
+        new_evidence_available=new_evidence_available,
+        evidence_store_revision=evidence_store_revision,
     )
 
 

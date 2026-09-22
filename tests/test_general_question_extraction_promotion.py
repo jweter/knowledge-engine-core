@@ -8,6 +8,7 @@ from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.general_question_extraction_promotion import (
     GENERAL_QUESTION_EXTRACTION_PROMOTION_RULES_VERSION,
     _count_evidence_records,
+    _evidence_store_revision,
     extraction_rejection_record_path,
     run_general_question_extraction_and_promotion,
 )
@@ -123,6 +124,8 @@ def test_promotes_a_grounded_candidate_and_writes_no_rejection_file(tmp_path: Pa
     assert summary.extraction_duration_ms >= 0
     assert summary.promotion_duration_ms >= 0
     assert summary.evidence_store_record_count == summary.promoted_count
+    assert summary.new_evidence_available is True
+    assert len(summary.evidence_store_revision) == 64
 
     payload = summary.to_dict()
     assert payload["paper_count"] == summary.paper_count
@@ -133,6 +136,8 @@ def test_promotes_a_grounded_candidate_and_writes_no_rejection_file(tmp_path: Pa
     assert payload["extraction_duration_ms"] == summary.extraction_duration_ms
     assert payload["promotion_duration_ms"] == summary.promotion_duration_ms
     assert payload["evidence_store_record_count"] == summary.evidence_store_record_count
+    assert payload["new_evidence_available"] is True
+    assert payload["evidence_store_revision"] == summary.evidence_store_revision
     json.dumps(payload)  # to_dict() must be directly JSON-serializable.
 
     lines = evidence_path.read_text(encoding="utf-8").strip().splitlines()
@@ -175,6 +180,9 @@ def test_rerunning_the_same_receipt_is_idempotent(tmp_path: Path) -> None:
     # Evidence Records became available on the second call.
     assert first.evidence_store_record_count == first.promoted_count
     assert second.evidence_store_record_count == first.evidence_store_record_count
+    assert first.new_evidence_available is True
+    assert second.new_evidence_available is False
+    assert second.evidence_store_revision == first.evidence_store_revision
 
 
 def test_paper_with_no_claim_candidates_is_rejected_with_a_durable_reason(
@@ -203,6 +211,8 @@ def test_paper_with_no_claim_candidates_is_rejected_with_a_durable_reason(
     # Nothing was ever promoted to this evidence file, so the revision
     # count is 0 rather than raising on a missing file.
     assert summary.evidence_store_record_count == 0
+    assert summary.new_evidence_available is False
+    assert summary.evidence_store_revision == _evidence_store_revision(evidence_path)
     # No candidate ever reached the promotion call, so that substage never ran.
     assert summary.promotion_duration_ms == 0
     # to_dict() must serialize rejection_record_path as a string, not a Path.
@@ -348,6 +358,8 @@ def test_evidence_store_record_count_accumulates_across_receipts(tmp_path: Path)
     assert second.evidence_store_record_count == first.evidence_store_record_count + (
         second.promoted_count
     )
+    assert second.new_evidence_available is True
+    assert second.evidence_store_revision != first.evidence_store_revision
 
 
 def test_evidence_store_record_count_excludes_malformed_and_duplicate_lines(
@@ -374,6 +386,7 @@ def test_evidence_store_record_count_excludes_malformed_and_duplicate_lines(
         )
     genuinely_valid_count = summary.promoted_count
     assert genuinely_valid_count >= 1
+    valid_revision = summary.evidence_store_revision
     valid_record = json.loads(evidence_path.read_text(encoding="utf-8").splitlines()[0])
 
     missing_required_field_record = {
@@ -390,6 +403,7 @@ def test_evidence_store_record_count_excludes_malformed_and_duplicate_lines(
         handle.write(json.dumps(duplicate_id_record) + "\n")
 
     assert _count_evidence_records(evidence_path) == genuinely_valid_count
+    assert _evidence_store_revision(evidence_path) == valid_revision
 
 
 def test_ignores_receipt_items_that_are_not_persisted_or_reused(tmp_path: Path) -> None:
