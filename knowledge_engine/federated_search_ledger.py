@@ -245,6 +245,8 @@ class SearchCoverageReport:
     providers_completed: tuple[str, ...]
     providers_failed: tuple[str, ...]
     providers_rate_limited: tuple[str, ...]
+    providers_cache_hit: tuple[str, ...] = ()
+    providers_reuse_hit: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         """Return the public coverage contract as JSON-ready primitives.
@@ -271,6 +273,8 @@ class SearchCoverageReport:
             "providers_completed": list(self.providers_completed),
             "providers_failed": list(self.providers_failed),
             "providers_rate_limited": list(self.providers_rate_limited),
+            "providers_cache_hit": list(self.providers_cache_hit),
+            "providers_reuse_hit": list(self.providers_reuse_hit),
         }
 
 
@@ -460,6 +464,16 @@ def build_search_coverage_report(record: SearchRunRecord) -> SearchCoverageRepor
             provider.provider
             for provider in record.providers
             if provider.attempted and provider.rate_limited_observed
+        ),
+        providers_cache_hit=tuple(
+            provider.provider
+            for provider in record.providers
+            if provider.attempted and provider.cache_hit
+        ),
+        providers_reuse_hit=tuple(
+            provider.provider
+            for provider in record.providers
+            if provider.attempted and provider.reuse_hit
         ),
     )
 
