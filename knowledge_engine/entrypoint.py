@@ -6418,6 +6418,8 @@ def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: 
     providers_completed = set(coverage.providers_completed)
     providers_failed = set(coverage.providers_failed)
     providers_rate_limited = set(coverage.providers_rate_limited)
+    providers_cache_reuse_checked = set(coverage.providers_cache_reuse_checked)
+    providers_cache_reused = set(coverage.providers_cache_reused)
 
     completeness_color = {
         "complete": "green",
@@ -6443,6 +6445,7 @@ def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: 
     table.add_column("Provider")
     table.add_column("Status")
     table.add_column("Rate limited")
+    table.add_column("Cache/reuse")
     for provider in coverage.providers_requested:
         if provider in providers_completed:
             status = "[green]completed[/green]"
@@ -6451,7 +6454,13 @@ def _print_federated_coverage(coverage: SearchCoverageReport, *, search_run_id: 
         else:
             status = "[yellow]not attempted[/yellow]"
         rate_limited = "[yellow]yes[/yellow]" if provider in providers_rate_limited else "no"
-        table.add_row(provider, status, rate_limited)
+        if provider not in providers_cache_reuse_checked:
+            cache_reuse = "not reported"
+        elif provider in providers_cache_reused:
+            cache_reuse = "[green]hit[/green]"
+        else:
+            cache_reuse = "miss"
+        table.add_row(provider, status, rate_limited, cache_reuse)
     console.print(table)
 
 

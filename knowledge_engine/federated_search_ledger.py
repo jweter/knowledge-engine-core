@@ -60,8 +60,11 @@ class ProviderCoverageRecord:
     reason: str | None
     retry_attempt_count: int = 0
     rate_limited_observed: bool = False
+    cache_reuse_hit: bool | None = None
 
     def __post_init__(self) -> None:
+        if not self.attempted and self.cache_reuse_hit is not None:
+            raise ValueError("Unattempted providers must not report cache/reuse status.")
         # Mirrors `federated_discovery.ProviderStatus.__post_init__`: a
         # `rate_limited` outcome is itself proof a rate limit was observed,
         # regardless of whether the caller (a live adapter result, or a
@@ -243,6 +246,8 @@ class SearchCoverageReport:
     providers_completed: tuple[str, ...]
     providers_failed: tuple[str, ...]
     providers_rate_limited: tuple[str, ...]
+    providers_cache_reuse_checked: tuple[str, ...] = ()
+    providers_cache_reused: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         """Return the public coverage contract as JSON-ready primitives.
@@ -269,6 +274,8 @@ class SearchCoverageReport:
             "providers_completed": list(self.providers_completed),
             "providers_failed": list(self.providers_failed),
             "providers_rate_limited": list(self.providers_rate_limited),
+            "providers_cache_reuse_checked": list(self.providers_cache_reuse_checked),
+            "providers_cache_reused": list(self.providers_cache_reused),
         }
 
 
@@ -311,6 +318,7 @@ class FederatedSearchLedger:
                 reason=status.reason,
                 retry_attempt_count=status.retry_attempt_count,
                 rate_limited_observed=status.rate_limited_observed,
+                cache_reuse_hit=status.cache_reuse_hit,
             )
             for status in result.provider_statuses
         )
@@ -457,6 +465,16 @@ def build_search_coverage_report(record: SearchRunRecord) -> SearchCoverageRepor
             for provider in record.providers
             if provider.attempted and provider.rate_limited_observed
         ),
+        providers_cache_reuse_checked=tuple(
+            provider.provider
+            for provider in record.providers
+            if provider.attempted and provider.cache_reuse_hit is not None
+        ),
+        providers_cache_reused=tuple(
+            provider.provider
+            for provider in record.providers
+            if provider.attempted and provider.cache_reuse_hit is True
+        ),
     )
 
 
@@ -531,6 +549,9 @@ def _provider_from_payload(payload: object) -> ProviderCoverageRecord:
     rate_limited_observed = payload.get("rate_limited_observed", False)
     if not isinstance(rate_limited_observed, bool):
         raise ValueError("Federated search-run field rate_limited_observed is invalid.")
+    cache_reuse_hit = payload.get("cache_reuse_hit")
+    if cache_reuse_hit is not None and not isinstance(cache_reuse_hit, bool):
+        raise ValueError("Federated search-run field cache_reuse_hit is invalid.")
 
     return ProviderCoverageRecord(
         provider=_required_string(payload, "provider"),
@@ -541,6 +562,7 @@ def _provider_from_payload(payload: object) -> ProviderCoverageRecord:
         reason=_payload_optional_string(payload, "reason"),
         retry_attempt_count=retry_attempt_count,
         rate_limited_observed=rate_limited_observed,
+        cache_reuse_hit=cache_reuse_hit,
     )
 
 

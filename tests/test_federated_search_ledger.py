@@ -113,6 +113,7 @@ def test_record_persists_reproducible_run_and_provider_facts(tmp_path: Path) -> 
     assert persisted["query_text"] == "protein folding"
     assert persisted["providers"][1] == {
         "attempted": True,
+        "cache_reuse_hit": None,
         "latency_ms": 80,
         "outcome": "rate_limited",
         "provider": "openalex",
@@ -285,6 +286,58 @@ def test_total_retry_attempts_and_rate_limited_providers_are_derived_from_facts(
     assert report.providers_rate_limited == ("semantic_scholar",)
     assert report.to_dict()["total_retry_attempts"] == 2
     assert report.to_dict()["providers_rate_limited"] == ["semantic_scholar"]
+
+
+def test_cache_reuse_status_round_trips_without_inventing_unreported_facts(
+    tmp_path: Path,
+) -> None:
+    """Issue #433: true, false, and unreported cache/reuse states stay distinct."""
+
+    ledger = _ledger(tmp_path)
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="protein folding"),
+        provider_statuses=(
+            ProviderStatus(
+                provider="semantic_scholar",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                cache_reuse_hit=True,
+            ),
+            ProviderStatus(
+                provider="PubMed",
+                outcome=ProviderOutcome.EMPTY,
+                attempted=True,
+                cache_reuse_hit=False,
+            ),
+            ProviderStatus(
+                provider="Crossref",
+                outcome=ProviderOutcome.EMPTY,
+                attempted=True,
+            ),
+        ),
+    )
+
+    record = ledger.record(result)
+    loaded = ledger.load(record.search_run_id)
+    report = build_search_coverage_report(loaded)
+
+    assert [provider.cache_reuse_hit for provider in loaded.providers] == [True, False, None]
+    assert report.providers_cache_reuse_checked == ("semantic_scholar", "pubmed")
+    assert report.providers_cache_reused == ("semantic_scholar",)
+
+
+def test_load_defaults_cache_reuse_status_to_unreported(tmp_path: Path) -> None:
+    ledger = _ledger(tmp_path)
+    record = ledger.record(_result())
+    path = tmp_path / f"{record.search_run_id}.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    for provider in payload["providers"]:
+        provider.pop("cache_reuse_hit")
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = ledger.load(record.search_run_id)
+
+    assert all(provider.cache_reuse_hit is None for provider in loaded.providers)
 
 
 def test_unattempted_provider_never_reports_a_fabricated_retry_count(tmp_path: Path) -> None:

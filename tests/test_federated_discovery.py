@@ -164,6 +164,17 @@ def test_provider_status_rejects_rate_limit_flag_on_unattempted_provider() -> No
         )
 
 
+def test_provider_status_rejects_cache_reuse_status_on_unattempted_provider() -> None:
+    with pytest.raises(ValueError, match="must not report cache/reuse status"):
+        ProviderStatus(
+            provider="Crossref",
+            outcome=ProviderOutcome.SKIPPED,
+            attempted=False,
+            reason="unsupported_query",
+            cache_reuse_hit=False,
+        )
+
+
 def test_provider_status_rejects_negative_retry_attempt_count() -> None:
     with pytest.raises(ValueError, match="retry_attempt_count must not be negative"):
         ProviderStatus(

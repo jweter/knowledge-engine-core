@@ -48,6 +48,20 @@ def build_public_federated_result_payload(
     )
     if coverage.total_retry_attempts != expected_total_retry_attempts:
         mismatches.append("total_retry_attempts")
+    expected_cache_reuse_checked = tuple(
+        status.provider.strip().lower().replace(" ", "_")
+        for status in result.provider_statuses
+        if status.attempted and status.cache_reuse_hit is not None
+    )
+    if coverage.providers_cache_reuse_checked != expected_cache_reuse_checked:
+        mismatches.append("providers_cache_reuse_checked")
+    expected_cache_reused = tuple(
+        status.provider.strip().lower().replace(" ", "_")
+        for status in result.provider_statuses
+        if status.attempted and status.cache_reuse_hit is True
+    )
+    if coverage.providers_cache_reused != expected_cache_reused:
+        mismatches.append("providers_cache_reused")
     if coverage.candidate_count != len(result.candidates):
         mismatches.append("candidate_count")
 

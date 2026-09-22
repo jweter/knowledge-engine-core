@@ -115,6 +115,8 @@ def test_coverage_report_serializes_only_public_provenance(tmp_path: Path) -> No
         "providers_completed": ["pubmed"],
         "providers_failed": ["crossref"],
         "providers_rate_limited": [],
+        "providers_cache_reuse_checked": [],
+        "providers_cache_reused": [],
     }
     assert "initiated_by" not in payload
     assert "project_id" not in payload

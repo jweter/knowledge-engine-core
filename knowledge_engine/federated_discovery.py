@@ -200,7 +200,9 @@ class ProviderStatus:
     implement retries (most of them, as of this field's introduction) reports
     them correctly without change. An unattempted (``SKIPPED``/``DISABLED``)
     provider can never report a retry or a rate-limit observation -- there was
-    no attempt to retry.
+    no attempt to retry. ``cache_reuse_hit`` is deliberately tri-state:
+    ``True`` is a reported hit, ``False`` is a reported checked miss, and
+    ``None`` means the provider did not report cache/reuse behavior.
     """
 
     provider: str
@@ -211,6 +213,7 @@ class ProviderStatus:
     reason: str | None = None
     retry_attempt_count: int = 0
     rate_limited_observed: bool = False
+    cache_reuse_hit: bool | None = None
 
     def __post_init__(self) -> None:
         if not self.provider.strip():
@@ -236,6 +239,8 @@ class ProviderStatus:
             raise ValueError(
                 "Unattempted providers must not report retries or rate-limit observations."
             )
+        if not self.attempted and self.cache_reuse_hit is not None:
+            raise ValueError("Unattempted providers must not report cache/reuse status.")
         # A RATE_LIMITED outcome is itself proof a rate limit was observed, even
         # for adapters that do not implement the Semantic Scholar retry loop's
         # own bookkeeping. Derive the flag here so every current and future

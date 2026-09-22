@@ -9,6 +9,16 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Federated provider cache/reuse status (issue #433 item 2)**:
+  `ProviderStatus` and the durable search-run ledger now preserve a tri-state
+  `cache_reuse_hit` fact per attempted provider: `true` for a reuse hit,
+  `false` for a checked miss, and `null` when the provider did not report the
+  fact. `SearchCoverageReport` exposes both providers checked for reuse and
+  providers that actually hit, while `federated-coverage-report` renders
+  `hit`/`miss`/`not reported` without inventing cache behavior. Existing
+  records load as unreported, and unattempted providers cannot claim a cache
+  result.
+
 - **Structured `effect_size` field on draft evidence items (issue #449)**:
   fourth slice of #449's structured-field list, following M74/M75/M76's
   exact "quote, never parse" contract. New

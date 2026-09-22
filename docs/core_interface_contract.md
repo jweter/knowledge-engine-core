@@ -502,6 +502,16 @@ itself, but may need to trigger for a specific paper):**
   anymore; every federated adapter now reports real
   `retry_attempt_count`/`rate_limited_observed` facts.
   #457-#459).
+- `ProviderStatus.cache_reuse_hit` (issue #433 item 2) is a nullable
+  per-provider fact: `true` means the provider reused cached work, `false`
+  means reuse was checked and missed, and `null` means the provider did not
+  report cache/reuse behavior. The search-run ledger preserves the same
+  tri-state field, defaulting older records to `null`; unattempted providers
+  cannot report it. `SearchCoverageReport` exposes
+  `providers_cache_reuse_checked` and `providers_cache_reused`, and the
+  coverage console renders `hit`, `miss`, or `not reported`. This slice
+  establishes the durable/public contract without claiming that existing
+  network-only adapters have caches they do not implement.
 - `ke general-question-acquire-pmc <request.json> --ledger-root <dir>
   --papers-dir <dir> --receipt <path.json>` (CORE-GQR-4): executes only
   `eligible_full_text` items routed to `pmc_oa`. It rebuilds the plan with
