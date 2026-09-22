@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from typing import Protocol
 
@@ -46,11 +47,23 @@ class FederatedDiscoveryBroker:
         statuses: list[ProviderStatus] = []
         candidates: list[FederatedCandidate] = []
 
-        for provider in self._providers:
-            name = _normalize_provider_name(provider.name)
-            status, provider_candidates = _search_provider(provider, name=name, query=query)
-            statuses.append(status)
-            candidates.extend(provider_candidates)
+        # Providers are independent network boundaries. Execute them concurrently so
+        # one slow provider does not serialize the whole federated search, then consume
+        # results in configured provider order to keep output deterministic.
+        with ThreadPoolExecutor(max_workers=max(1, len(self._providers))) as executor:
+            futures = [
+                executor.submit(
+                    _search_provider,
+                    provider,
+                    name=_normalize_provider_name(provider.name),
+                    query=query,
+                )
+                for provider in self._providers
+            ]
+            for future in futures:
+                status, provider_candidates = future.result()
+                statuses.append(status)
+                candidates.extend(provider_candidates)
 
         return FederatedSearchResult(
             query=query,

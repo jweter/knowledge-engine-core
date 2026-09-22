@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from threading import Barrier
 from typing import cast
 
 import pytest
@@ -311,3 +312,36 @@ def test_broker_records_contract_mismatch_without_accepting_candidates() -> None
     assert result.completeness is SearchCompleteness.FAILED
     assert result.candidates == ()
     assert result.provider_statuses[0].reason == "query_contract_mismatch"
+
+
+@dataclass(frozen=True)
+class BarrierProvider:
+    name: str
+    barrier: Barrier
+    result: FederatedSearchResult
+
+    def search(self, query: DiscoveryQuery) -> FederatedSearchResult:
+        self.barrier.wait(timeout=2.0)
+        return self.result
+
+
+def test_broker_runs_independent_providers_concurrently_and_preserves_order() -> None:
+    query = DiscoveryQuery(text="parallel provider fanout")
+    first = _candidate("openalex", "W-concurrent", "First provider")
+    second = _candidate("crossref", "10.concurrent/example", "Second provider")
+    barrier = Barrier(2)
+    broker = FederatedDiscoveryBroker(
+        (
+            BarrierProvider(
+                "openalex", barrier, _result(query, "openalex", ProviderOutcome.SUCCESS, (first,))
+            ),
+            BarrierProvider(
+                "crossref", barrier, _result(query, "crossref", ProviderOutcome.SUCCESS, (second,))
+            ),
+        )
+    )
+
+    result = broker.search(query)
+
+    assert tuple(status.provider for status in result.provider_statuses) == ("openalex", "crossref")
+    assert result.candidates == (first, second)
