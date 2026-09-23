@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 from pathlib import Path
@@ -69,6 +70,7 @@ class GeneralQuestionCoreReceipt:
     acquisition_route: str
     acquired_count: int
     items: tuple[GeneralQuestionCoreReceiptItem, ...]
+    duration_ms: int = 0
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), indent=2, sort_keys=True) + "\n"
@@ -123,6 +125,7 @@ def execute_core_acquisition_plan(
     identity/full-text location is independently refreshed before acquisition.
     """
 
+    started = time.monotonic()
     selected = tuple(
         item
         for item in plan.items
@@ -252,6 +255,7 @@ def execute_core_acquisition_plan(
             research_question_id=plan.research_question_id,
             acquisition_route=AcquisitionRoute.CORE.value,
             acquired_count=len(receipt_items),
+            duration_ms=round((time.monotonic() - started) * 1000),
             items=receipt_items,
         ),
         acquisition_receipt=acquired,
