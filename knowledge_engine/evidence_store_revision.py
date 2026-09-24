@@ -40,9 +40,7 @@ def _validated_evidence_records(path: Path) -> tuple[dict[str, Any], ...]:
         if not isinstance(record, dict):
             continue
         errors: list[str] = []
-        cli._validate_evidence_record(
-            record, 0, seen_ids, errors, require_review_fields=True
-        )
+        cli._validate_evidence_record(record, 0, seen_ids, errors, require_review_fields=True)
         if not errors:
             records.append(record)
     return tuple(records)
