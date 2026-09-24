@@ -395,7 +395,7 @@ def run_general_question_extraction_and_promotion(
     )
 
     evidence_store_record_count = _count_evidence_records(evidence_output_path)
-    evidence_store_revision = evidence_store_revision_for_path(evidence_output_path)
+    evidence_store_revision = evidence_store_revision_for_path(\n        evidence_output_path, valid_records=_valid_evidence_records\n    )
     new_evidence_available = promoted_count > 0
 
     return GeneralQuestionExtractionPromotionSummary(
