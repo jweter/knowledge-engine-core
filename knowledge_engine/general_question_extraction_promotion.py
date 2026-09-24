@@ -38,7 +38,6 @@ this stage exactly as it did to GQR-4's acquisition stage.
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import json
 import os
 import tempfile
@@ -55,6 +54,7 @@ from knowledge_engine.extraction import build_automated_evidence_record
 from knowledge_engine.extraction.evidence_items import PaperMetadata
 from knowledge_engine.extraction_review_batch import run_batch_extraction_review
 from knowledge_engine.import_runs._helpers import utc_now
+from knowledge_engine.evidence_store_revision import evidence_store_revision as evidence_store_revision_for_path
 from knowledge_engine.parser import ParsedPage
 
 GENERAL_QUESTION_EXTRACTION_PROMOTION_RULES_VERSION = "core-gqr-5-extraction-promotion-v1"
@@ -246,23 +246,6 @@ def _count_evidence_records(evidence_output_path: Path) -> int:
     return len(_valid_evidence_records(evidence_output_path))
 
 
-def _evidence_store_revision(evidence_output_path: Path) -> str:
-    """Return a deterministic cache revision from usable Evidence Record content.
-
-    Invalid or duplicate lines are excluded exactly as they are from the
-    readiness count. Canonical JSON avoids formatting-only revision changes.
-    """
-
-    digest = hashlib.sha256()
-    for record in _valid_evidence_records(evidence_output_path):
-        canonical = json.dumps(
-            record, ensure_ascii=False, separators=(",", ":"), sort_keys=True
-        ).encode("utf-8")
-        digest.update(len(canonical).to_bytes(8, "big"))
-        digest.update(canonical)
-    return digest.hexdigest()
-
-
 def _receipt_paper_ids(receipt: dict[str, Any]) -> list[int]:
     items = receipt.get("items")
     if not isinstance(items, list):
@@ -412,7 +395,7 @@ def run_general_question_extraction_and_promotion(
     )
 
     evidence_store_record_count = _count_evidence_records(evidence_output_path)
-    evidence_store_revision = _evidence_store_revision(evidence_output_path)
+    evidence_store_revision = evidence_store_revision_for_path(evidence_output_path)
     new_evidence_available = promoted_count > 0
 
     return GeneralQuestionExtractionPromotionSummary(
