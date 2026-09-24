@@ -5,10 +5,10 @@ from pathlib import Path
 
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
+from knowledge_engine.evidence_store_revision import evidence_store_revision
 from knowledge_engine.general_question_extraction_promotion import (
     GENERAL_QUESTION_EXTRACTION_PROMOTION_RULES_VERSION,
     _count_evidence_records,
-    _evidence_store_revision,
     extraction_rejection_record_path,
     run_general_question_extraction_and_promotion,
 )
@@ -138,7 +138,7 @@ def test_promotes_a_grounded_candidate_and_writes_no_rejection_file(tmp_path: Pa
     assert payload["evidence_store_record_count"] == summary.evidence_store_record_count
     assert payload["new_evidence_available"] is True
     assert payload["evidence_store_revision"] == summary.evidence_store_revision
-    json.dumps(payload)  # to_dict() must be directly JSON-serializable.
+    json.dumps(payload)
 
     lines = evidence_path.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == summary.promoted_count
@@ -175,9 +175,6 @@ def test_rerunning_the_same_receipt_is_idempotent(tmp_path: Path) -> None:
     assert second.duplicate_count == first.promoted_count
     lines = evidence_path.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == first.promoted_count
-    # A duplicate re-run must not inflate the revision count: it stays the
-    # same total, so a caller polling this field correctly sees no new
-    # Evidence Records became available on the second call.
     assert first.evidence_store_record_count == first.promoted_count
     assert second.evidence_store_record_count == first.evidence_store_record_count
     assert first.new_evidence_available is True
@@ -208,14 +205,10 @@ def test_paper_with_no_claim_candidates_is_rejected_with_a_durable_reason(
     assert summary.rejected[0].paper_id == paper_id
     assert summary.rejected[0].stage == "no_claim_candidates"
     assert not evidence_path.exists()
-    # Nothing was ever promoted to this evidence file, so the revision
-    # count is 0 rather than raising on a missing file.
     assert summary.evidence_store_record_count == 0
     assert summary.new_evidence_available is False
-    assert summary.evidence_store_revision == _evidence_store_revision(evidence_path)
-    # No candidate ever reached the promotion call, so that substage never ran.
+    assert summary.evidence_store_revision == evidence_store_revision(evidence_path)
     assert summary.promotion_duration_ms == 0
-    # to_dict() must serialize rejection_record_path as a string, not a Path.
     assert summary.to_dict()["rejection_record_path"] == str(summary.rejection_record_path)
     assert summary.to_dict()["rejected"] == [
         {"paper_id": paper_id, "stage": "no_claim_candidates", "reason": summary.rejected[0].reason}
@@ -295,7 +288,6 @@ def test_a_later_success_clears_a_stale_rejection_record(tmp_path: Path) -> None
         )
     assert extraction_rejection_record_path(receipt_path).exists()
 
-    # Overwrite the receipt at the same path to name a rich, promotable paper instead.
     with database.session() as session:
         rich = PaperRepository(session).add_parsed_paper(
             _parsed_paper(tmp_path, "e" * 64, title="Rich Paper", text=_RICH_TEXT)
@@ -314,11 +306,6 @@ def test_a_later_success_clears_a_stale_rejection_record(tmp_path: Path) -> None
 
 
 def test_evidence_store_record_count_accumulates_across_receipts(tmp_path: Path) -> None:
-    """issue #433 re-retrieval readiness: the count rises only when a later
-    receipt against the same evidence file actually promotes something new,
-    giving a caller a cheap signal for when it is worth re-retrieving.
-    """
-
     database = _database(tmp_path)
     with database.session() as session:
         first_paper = PaperRepository(session).add_parsed_paper(
@@ -365,12 +352,6 @@ def test_evidence_store_record_count_accumulates_across_receipts(tmp_path: Path)
 def test_evidence_store_record_count_excludes_malformed_and_duplicate_lines(
     tmp_path: Path,
 ) -> None:
-    """A record `ke evidence-validate` would reject must never inflate the
-    readiness signal -- Core prefers missing data over invented metadata, so
-    a transported/hand-edited/malformed line must not look like new,
-    usable evidence became available.
-    """
-
     database = _database(tmp_path)
     with database.session() as session:
         paper = PaperRepository(session).add_parsed_paper(
@@ -395,15 +376,14 @@ def test_evidence_store_record_count_excludes_malformed_and_duplicate_lines(
         "review_status": "draft",
         "review_checklist": {},
         "review_notes": "",
-        # Missing source_doi/source_title/claim_text/research_question/etc.
     }
-    duplicate_id_record = dict(valid_record)  # Same evidence_record_id as valid_record.
+    duplicate_id_record = dict(valid_record)
     with evidence_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(missing_required_field_record) + "\n")
         handle.write(json.dumps(duplicate_id_record) + "\n")
 
     assert _count_evidence_records(evidence_path) == genuinely_valid_count
-    assert _evidence_store_revision(evidence_path) == valid_revision
+    assert evidence_store_revision(evidence_path) == valid_revision
 
 
 def test_ignores_receipt_items_that_are_not_persisted_or_reused(tmp_path: Path) -> None:
