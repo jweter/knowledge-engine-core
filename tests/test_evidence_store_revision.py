@@ -58,6 +58,5 @@ def test_invalid_and_duplicate_lines_do_not_affect_revision(tmp_path: Path) -> N
 
 def test_empty_records_have_a_deterministic_revision() -> None:
     assert evidence_records_revision(()) == (
-        "e3b0c44298fc1c149afbf4c8996fb924"
-        "27ae41e4649b934ca495991b7852b855"
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     )
