@@ -50,13 +50,13 @@ from sqlalchemy.orm import Session
 
 import knowledge_engine.cli as cli
 from knowledge_engine.database import PaperRepository
+from knowledge_engine.evidence_store_revision import (
+    evidence_store_revision as evidence_store_revision_for_path,
+)
 from knowledge_engine.extraction import build_automated_evidence_record
 from knowledge_engine.extraction.evidence_items import PaperMetadata
 from knowledge_engine.extraction_review_batch import run_batch_extraction_review
 from knowledge_engine.import_runs._helpers import utc_now
-from knowledge_engine.evidence_store_revision import (
-    evidence_store_revision as evidence_store_revision_for_path,
-)
 from knowledge_engine.parser import ParsedPage
 
 GENERAL_QUESTION_EXTRACTION_PROMOTION_RULES_VERSION = "core-gqr-5-extraction-promotion-v1"
@@ -417,13 +417,3 @@ def run_general_question_extraction_and_promotion(
         new_evidence_available=new_evidence_available,
         evidence_store_revision=evidence_store_revision,
     )
-
-
-__all__ = [
-    "EXTRACTION_REJECTION_RECORD_SCHEMA_VERSION",
-    "GENERAL_QUESTION_EXTRACTION_PROMOTION_RULES_VERSION",
-    "GeneralQuestionExtractionPromotionSummary",
-    "GeneralQuestionExtractionRejection",
-    "extraction_rejection_record_path",
-    "run_general_question_extraction_and_promotion",
-]
