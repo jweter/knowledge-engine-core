@@ -8,12 +8,16 @@ from typing import Any
 
 
 def evidence_records_revision(records: Iterable[dict[str, Any]]) -> str:
-    """Return the canonical revision used for usable Evidence Records."""
-    digest = hashlib.sha256()
-    for record in records:
-        canonical = json.dumps(
+    """Return an order-insensitive canonical revision for usable Evidence Records."""
+    canonical_records = sorted(
+        json.dumps(
             record, ensure_ascii=False, separators=(",", ":"), sort_keys=True
         ).encode("utf-8")
+        for record in records
+    )
+
+    digest = hashlib.sha256()
+    for canonical in canonical_records:
         digest.update(len(canonical).to_bytes(8, "big"))
         digest.update(canonical)
     return digest.hexdigest()
@@ -56,7 +60,8 @@ def evidence_store_revision(
 
     Callers may supply their authoritative validator/duplicate filter. When
     omitted, Core's Evidence Record validator is used directly, so malformed
-    or duplicate JSONL never becomes cache-visible.
+    or duplicate JSONL never becomes cache-visible. Record ordering is not
+    revision-significant: the revision represents the usable evidence set.
     """
     validator = valid_records or _validated_evidence_records
     return evidence_records_revision(validator(path))
