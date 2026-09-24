@@ -1,18 +1,31 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
+from typing import Any, Callable, Iterable
 
 
-def evidence_store_revision(path: Path) -> str:
-    """Return a deterministic content revision for an evidence JSONL store.
-
-    Issue #433 requires a corpus/evidence-store revision suitable for cache
-    invalidation. The identifier is content-derived rather than timestamp-
-    derived so unchanged evidence remains reusable across copies/restarts.
-    """
+def evidence_records_revision(records: Iterable[dict[str, Any]]) -> str:
+    """Return the canonical revision used for usable Evidence Records."""
     digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return f"sha256:{digest.hexdigest()}"
+    for record in records:
+        canonical = json.dumps(
+            record, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+        ).encode("utf-8")
+        digest.update(len(canonical).to_bytes(8, "big"))
+        digest.update(canonical)
+    return digest.hexdigest()
+
+
+def evidence_store_revision(
+    path: Path,
+    *,
+    valid_records: Callable[[Path], Iterable[dict[str, Any]]],
+) -> str:
+    """Return a deterministic revision for the store's usable evidence.
+
+    The caller supplies its authoritative validator/duplicate filter so this
+    helper cannot accidentally make malformed or duplicate JSONL cache-visible.
+    """
+    return evidence_records_revision(valid_records(path))
