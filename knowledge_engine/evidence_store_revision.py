@@ -10,9 +10,9 @@ from typing import Any
 def evidence_records_revision(records: Iterable[dict[str, Any]]) -> str:
     """Return an order-insensitive canonical revision for usable Evidence Records."""
     canonical_records = sorted(
-        json.dumps(
-            record, ensure_ascii=False, separators=(",", ":"), sort_keys=True
-        ).encode("utf-8")
+        json.dumps(record, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode(
+            "utf-8"
+        )
         for record in records
     )
 
