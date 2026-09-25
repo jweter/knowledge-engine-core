@@ -36,7 +36,6 @@ def test_revision_is_stable_for_formatting_only_changes(tmp_path: Path) -> None:
     )
 
 
-
 def test_revision_is_stable_when_usable_record_order_changes() -> None:
     first = [
         {"evidence_record_id": "a", "value": 1},
