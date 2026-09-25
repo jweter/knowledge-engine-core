@@ -36,6 +36,16 @@ def test_revision_is_stable_for_formatting_only_changes(tmp_path: Path) -> None:
     )
 
 
+def test_revision_is_stable_when_usable_record_order_changes() -> None:
+    first = [
+        {"evidence_record_id": "a", "value": 1},
+        {"evidence_record_id": "b", "value": 2},
+    ]
+    second = list(reversed(first))
+
+    assert evidence_records_revision(first) == evidence_records_revision(second)
+
+
 def test_revision_changes_when_usable_evidence_changes(tmp_path: Path) -> None:
     evidence = tmp_path / "evidence.jsonl"
     evidence.write_text('{"evidence_record_id":"a"}\n', encoding="utf-8")
