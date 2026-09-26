@@ -799,6 +799,21 @@ that they are present and well-formed -- it accepts a record from `ke
 extraction-review-autoclassify` (M52's automated path) exactly as
 readily as one a human reviewer typed by hand.
 
+Every `ke extraction-review-promote` run reports two additional facts,
+console-printed and available structured via the optional
+`--summary-output <path.json>`: whether the run made new Evidence Records
+available (`new_evidence_available`) and the resulting evidence store's
+deterministic revision (`evidence_store_revision`, order-insensitive over
+the store's schema-valid records -- see `knowledge_engine/
+evidence_store_revision.py`). This is issue #433 item 6's re-retrieval
+readiness signal, and it is not limited to `ke
+general-question-extract-and-promote`'s GQR receipt-bridging path: since
+`extraction-review-promote` is the promotion command the daily extraction/
+auto-classification backlog and weekly corpus-growth routines actually
+call, a consumer polling the evidence store for changes needs the signal
+here too, not only on the separate GQR path. Do not parse the Rich console
+output to get these values; use `--summary-output` instead.
+
 ### Relationship Record
 
 Typed links between two Evidence Records. Required fields
