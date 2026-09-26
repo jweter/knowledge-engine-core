@@ -40,6 +40,7 @@ from knowledge_engine.evidence_map_report import (
     build_comparison_rows,
     render_evidence_map_report,
 )
+from knowledge_engine.evidence_store_revision import evidence_store_revision
 from knowledge_engine.golden_map_grounding import (
     GOLDEN_MAP_GROUNDING_RULES_VERSION,
     check_record_numeric_grounding,
@@ -242,6 +243,17 @@ PromotionInputOption = Annotated[
 PromotionOutputOption = Annotated[
     Path,
     typer.Option("--output", help="Evidence records JSONL file to append promoted records to."),
+]
+PromotionSummaryOutputOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--summary-output",
+        help=(
+            "Optional path to also save this run's evidence-store revision and "
+            "re-retrieval readiness signal (issue #433 item 6) as JSON, for a "
+            "programmatic caller that should not parse Rich console output."
+        ),
+    ),
 ]
 ALLOWED_REVIEW_STATUSES = {"draft", "reviewed", "needs_revision", "rejected"}
 ALLOWED_EXTRACTION_STATUSES = {"draft_review_required", "draft_manual_prototype"}
@@ -659,6 +671,7 @@ def evidence_report(
 def extraction_review_promote(
     input_path: PromotionInputOption,
     output: PromotionOutputOption,
+    summary_output: PromotionSummaryOutputOption = None,
 ) -> None:
     """Promote reviewer-completed draft extraction items into evidence records.
 
@@ -666,6 +679,15 @@ def extraction_review_promote(
     has already been supplied (by `ke extraction-review-autoclassify`, an
     AI agent, or a human -- no human completion is required), using the
     same validator as `ke evidence-validate`.
+
+    Every promotion run -- not only `ke general-question-extract-and-promote`'s
+    GQR path -- reports whether it made new Evidence Records available and
+    the evidence store's resulting revision (issue #433 item 6's re-retrieval
+    readiness signal): a caller can re-query immediately when new evidence is
+    available and use the revision as a result-cache invalidation key. This
+    is the primary promotion path the daily extraction/auto-classification
+    backlog and weekly corpus-growth routines actually use, so the signal
+    must not be limited to the separate GQR receipt-bridging path.
     """
 
     if not input_path.exists():
@@ -682,12 +704,35 @@ def extraction_review_promote(
 
     result = _promote_evidence_records(input_path, output)
 
+    new_evidence_available = bool(result.promoted)
+    revision = evidence_store_revision(output)
+
+    if summary_output is not None:
+        summary_output.parent.mkdir(parents=True, exist_ok=True)
+        summary_output.write_text(
+            json.dumps(
+                {
+                    "promoted_count": len(result.promoted),
+                    "duplicate_count": len(result.duplicates),
+                    "rejected_count": len(result.rejected),
+                    "new_evidence_available": new_evidence_available,
+                    "evidence_store_revision": revision,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
     if result.promoted:
         console.print(f"[green]Promoted {len(result.promoted)} record(s):[/green] {output}")
     if result.duplicates:
         console.print(
             f"[yellow]Skipped {len(result.duplicates)} already-promoted record(s).[/yellow]"
         )
+    console.print(f"New evidence available: {'yes' if new_evidence_available else 'no'}")
+    console.print(f"Evidence store revision: {revision}")
     if result.rejected:
         console.print(f"[red]Rejected {len(result.rejected)} incomplete record(s):[/red]")
         for _line_number, errors in result.rejected:

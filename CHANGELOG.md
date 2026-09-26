@@ -7,6 +7,25 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`ke extraction-review-promote` reports re-retrieval readiness (issue
+  #433 item 6)**: every promotion run now reports whether it made new
+  Evidence Records available (`new_evidence_available`) and the evidence
+  store's resulting deterministic revision (`evidence_store_revision`),
+  console-printed and available structured via a new optional
+  `--summary-output <path.json>`. This signal previously existed only on
+  `ke general-question-extract-and-promote`'s GQR receipt-bridging path
+  (`knowledge_engine/general_question_extraction_promotion.py`), but
+  `extraction-review-promote` is the promotion command the daily
+  extraction/auto-classification backlog and weekly corpus-growth
+  routines actually call, so a consumer polling the evidence store for
+  changes had no way to get this signal outside the GQR path. Reuses the
+  existing `knowledge_engine/evidence_store_revision.py` module unchanged;
+  purely additive (a new optional CLI flag and two new console lines; no
+  change to `PromotionResult`, exit codes, or the promoted-records file
+  format).
+
 ### Fixed
 
 - **`measurement_method` extraction no longer bridges past unrelated

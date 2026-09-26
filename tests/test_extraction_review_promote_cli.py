@@ -135,6 +135,105 @@ def test_promote_is_idempotent(tmp_path: Path) -> None:
     assert len(lines) == 1
 
 
+def test_promote_reports_new_evidence_available_and_revision(tmp_path: Path) -> None:
+    input_path = tmp_path / "review.jsonl"
+    output_path = tmp_path / "evidence_records.jsonl"
+    _write_jsonl(input_path, [_completed_draft_item()])
+
+    result = CliRunner().invoke(
+        app,
+        ["extraction-review-promote", "--input", str(input_path), "--output", str(output_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "New evidence available: yes" in result.output
+    assert "Evidence store revision:" in result.output
+
+
+def test_promote_duplicate_only_run_reports_new_evidence_available_false(tmp_path: Path) -> None:
+    input_path = tmp_path / "review.jsonl"
+    output_path = tmp_path / "evidence_records.jsonl"
+    _write_jsonl(input_path, [_completed_draft_item()])
+    runner = CliRunner()
+
+    runner.invoke(
+        app,
+        ["extraction-review-promote", "--input", str(input_path), "--output", str(output_path)],
+    )
+    second = runner.invoke(
+        app,
+        ["extraction-review-promote", "--input", str(input_path), "--output", str(output_path)],
+    )
+
+    assert second.exit_code == 0, second.output
+    assert "New evidence available: no" in second.output
+
+
+def test_promote_summary_output_writes_structured_json(tmp_path: Path) -> None:
+    input_path = tmp_path / "review.jsonl"
+    output_path = tmp_path / "evidence_records.jsonl"
+    summary_path = tmp_path / "summary.json"
+    _write_jsonl(input_path, [_completed_draft_item()])
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "extraction-review-promote",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--summary-output",
+            str(summary_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["promoted_count"] == 1
+    assert summary["duplicate_count"] == 0
+    assert summary["rejected_count"] == 0
+    assert summary["new_evidence_available"] is True
+    assert isinstance(summary["evidence_store_revision"], str)
+    assert summary["evidence_store_revision"]
+
+
+def test_promote_summary_output_survives_rejected_records(tmp_path: Path) -> None:
+    """Promoted records that share a batch with rejected ones still land in
+    the output file (existing behavior); the summary must reflect both
+    outcomes rather than only the failure that raises exit code 1."""
+
+    input_path = tmp_path / "review.jsonl"
+    output_path = tmp_path / "evidence_records.jsonl"
+    summary_path = tmp_path / "summary.json"
+    _write_jsonl(
+        input_path,
+        [
+            _completed_draft_item(claim_text="Valid claim one."),
+            _completed_draft_item(claim_text="Invalid claim.", evidence_direction=None),
+        ],
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "extraction-review-promote",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--summary-output",
+            str(summary_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["promoted_count"] == 1
+    assert summary["rejected_count"] == 1
+    assert summary["new_evidence_available"] is True
+
+
 def test_promote_preserves_reviewer_supplied_review_status(tmp_path: Path) -> None:
     input_path = tmp_path / "review.jsonl"
     output_path = tmp_path / "evidence_records.jsonl"
