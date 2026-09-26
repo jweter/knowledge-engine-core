@@ -46,6 +46,17 @@ def test_matches_hba1c_with_an_intervening_clause() -> None:
     assert extract_measurement_method(sentence) == sentence
 
 
+def test_matches_a_method_after_a_longer_same_clause_qualifier() -> None:
+    """Codex review finding on this PR: three or more plain qualifier words
+    between the cue and a recognized method, all within the same clause
+    (no intervening sentence/clause boundary), must still match -- clause
+    boundaries bound the search window, not a fixed word count."""
+
+    sentence = "Serum IL-6 concentration was measured using a commercially available ELISA kit."
+
+    assert extract_measurement_method(sentence) == sentence
+
+
 def test_matches_a_real_corpus_ihc_sentence_via_its_second_cue() -> None:
     """Real oncology-corpus sentence: the first cue ("evaluated by H-Score")
     has no recognized method immediately after it, but the sentence's own

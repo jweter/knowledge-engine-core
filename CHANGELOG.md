@@ -49,6 +49,24 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   bridging false-positive shapes as explicit regressions, and the
   sentence-boundary skip-word guard.
 
+  Follow-up (same PR): `chatgpt-codex-connector[bot]`'s review left one P2
+  finding, verified real and fixed. `v3`'s fixed two-skippable-word cap
+  correctly excluded every bridging false positive above, but also rejected
+  a genuine same-clause qualifier chain longer than two words (e.g.
+  "measured using a commercially available ELISA kit" -- confirmed to
+  return `None` before the fix). Bumped to
+  `MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION = "m78-measurement-method-v4"`:
+  the search window now stops at the first clause/sentence boundary
+  (`.`/`;`/`:`/`!`/`?`/a parenthesis/a bracket) after the cue, or a generous
+  100-character cap, whichever comes first, and admits any number of plain
+  qualifier words up to that boundary rather than a fixed count of two.
+  Every corpus bridging shape still stays excluded because each one crosses
+  either a sentence boundary or into an unrelated parenthetical before
+  reaching its unrelated method keyword -- never within the same
+  comma-only clause the cue itself is in; re-ran the same corpus grep
+  against `v4` and confirmed the 3 genuine matches are unchanged. One new
+  regression test (the exact ELISA sentence from the finding).
+
 - **Structured `effect_size` field on draft evidence items (issue #449)**:
   fourth slice of #449's structured-field list, following M74/M75/M76's
   exact "quote, never parse" contract. New
