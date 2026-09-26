@@ -198,6 +198,61 @@ def test_promote_summary_output_writes_structured_json(tmp_path: Path) -> None:
     assert summary["evidence_store_revision"]
 
 
+def test_promote_rejects_summary_output_aliasing_output(tmp_path: Path) -> None:
+    """A `--summary-output` equal to `--output` would truncate the just-written
+    evidence JSONL with pretty-printed summary JSON after promotion succeeds,
+    silently destroying promoted records while still reporting exit code 0.
+    Caught before promotion runs at all, so nothing is written or lost."""
+
+    input_path = tmp_path / "review.jsonl"
+    output_path = tmp_path / "evidence_records.jsonl"
+    _write_jsonl(input_path, [_completed_draft_item()])
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "extraction-review-promote",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--summary-output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "--summary-output must not be the same file as --input or --output" in result.output
+    assert not output_path.exists()
+
+
+def test_promote_rejects_summary_output_aliasing_input(tmp_path: Path) -> None:
+    """A `--summary-output` equal to `--input` would overwrite the review
+    backlog with summary JSON, destroying it before any reviewer can look
+    at the still-unpromoted draft rows."""
+
+    input_path = tmp_path / "review.jsonl"
+    output_path = tmp_path / "evidence_records.jsonl"
+    _write_jsonl(input_path, [_completed_draft_item()])
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "extraction-review-promote",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--summary-output",
+            str(input_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "--summary-output must not be the same file as --input or --output" in result.output
+    assert not output_path.exists()
+
+
 def test_promote_summary_output_survives_rejected_records(tmp_path: Path) -> None:
     """Promoted records that share a batch with rejected ones still land in
     the output file (existing behavior); the summary must reflect both

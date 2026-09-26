@@ -702,6 +702,16 @@ def extraction_review_promote(
         )
         raise typer.Exit(1)
 
+    if summary_output is not None and summary_output.resolve() in {
+        input_path.resolve(),
+        output.resolve(),
+    }:
+        console.print(
+            "[red]--summary-output must not be the same file as --input or --output:[/red] "
+            "writing the summary JSON there would overwrite that file's own content."
+        )
+        raise typer.Exit(1)
+
     result = _promote_evidence_records(input_path, output)
 
     new_evidence_available = bool(result.promoted)
