@@ -7,7 +7,65 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
+### Fixed
+
+- **`measurement_method` extraction no longer bridges past unrelated
+  clauses to a false-positive method match (M78-v3, issue #449)**: the
+  field itself was already wired into `DraftEvidenceItem` (added directly by
+  Jeremy on 2026-09-05: `measurement_method.py`, `evidence_items.py` wiring,
+  and integration-level tests in `tests/test_extraction_evidence_items.py`),
+  but had no dedicated regression-test file of its own, unlike its four
+  sibling fields (`confidence_interval`/`duration`/`dose`/`effect_size`).
+  Grepping the three checked-in corpora's `evidence_records.jsonl` files
+  (~3,600 claim/result sentences) for the v2 pattern's own "measurement
+  cue directly by/using/with/via" + "recognized method keyword anywhere
+  later via unbounded `re.search`" contract found it dominated by the exact
+  bridging false-positive shape `duration.py`/`dose.py` already guard
+  against: a cue attached to a statistical-test name ("p values were
+  measured by one-way ANOVA with Tukey's multiple comparison test") reached
+  past that test name, and often an entire unrelated following sentence, to
+  a genuine method keyword mentioned much later for a completely different
+  purpose ("... underwent Positron Emission [Tomography]/Computed
+  Tomography", "... platforms (... RT-qPCR)"). Of 7 distinct real-corpus
+  sentences the v2 pattern matched, 5 were this bridging shape; only 2
+  (an IHC assessment, an HPLC analysis) had the method keyword genuinely
+  adjacent to its cue. `measurement_method.py`
+  (`MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION` bumped to
+  `m78-measurement-method-v3`) now requires the method keyword to be one of
+  the next two words after the cue (skippable words must be immediately
+  followed by whitespace, never a period, so a skip can never cross a
+  sentence boundary), checked within a bounded character window and across
+  every cue occurrence in the sentence -- not only the first -- so a bare
+  cue-without-method ("evaluated by H-Score") followed later by a genuine
+  cue-with-method ("assessed by IHC") still matches on its own second cue.
+  Re-running the corpus grep against `v3` confirmed exactly the 2 genuine
+  matches remain and all 5 bridging false positives are excluded. New
+  `tests/test_measurement_method.py` covers the BP-specific methods this
+  field exists for (`ambulatory blood pressure monitoring`/ABPM, automated
+  oscillometric measurement, sphygmomanometer, `home blood pressure
+  monitoring`/HBPM -- none of which appear in the three checked-in corpora,
+  which are not about blood pressure at all, per this file's own prior
+  `effect_size` entry), the two real-corpus true positives, the real-corpus
+  bridging false-positive shapes as explicit regressions, and the
+  sentence-boundary skip-word guard.
+
+  Follow-up (same PR): `chatgpt-codex-connector[bot]`'s review left one P2
+  finding, verified real and fixed. `v3`'s fixed two-skippable-word cap
+  correctly excluded every bridging false positive above, but also rejected
+  a genuine same-clause qualifier chain longer than two words (e.g.
+  "measured using a commercially available ELISA kit" -- confirmed to
+  return `None` before the fix). Bumped to
+  `MEASUREMENT_METHOD_EXTRACTION_RULES_VERSION = "m78-measurement-method-v4"`:
+  the search window now stops at the first clause/sentence boundary
+  (`.`/`;`/`:`/`!`/`?`/a parenthesis/a bracket) after the cue, or a generous
+  100-character cap, whichever comes first, and admits any number of plain
+  qualifier words up to that boundary rather than a fixed count of two.
+  Every corpus bridging shape still stays excluded because each one crosses
+  either a sentence boundary or into an unrelated parenthetical before
+  reaching its unrelated method keyword -- never within the same
+  comma-only clause the cue itself is in; re-ran the same corpus grep
+  against `v4` and confirmed the 3 genuine matches are unchanged. One new
+  regression test (the exact ELISA sentence from the finding).
 
 - **Structured `effect_size` field on draft evidence items (issue #449)**:
   fourth slice of #449's structured-field list, following M74/M75/M76's
