@@ -4,6 +4,7 @@ import json
 import os
 import signal
 import subprocess
+import sys
 import urllib.request
 from pathlib import Path
 
@@ -326,6 +327,124 @@ def test_ollama_health_malformed_utf8_is_environment_failure(
     assert status == "ENVIRONMENT_FAILURE"
     assert failure_class == "ENVIRONMENT_FAILURE"
     assert "UnicodeDecodeError" in summary
+
+
+def test_process_startup_timing_passes_with_valid_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fake_run_logged(
+        args: list[str], *, cwd: Path, log_path: Path, timeout_seconds: float
+    ) -> tuple[int, float, bool]:
+        evidence_path = Path(args[-1])
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text(
+            json.dumps({"import_to_command_ms": 12, "database_open_ms": 3}),
+            encoding="utf-8",
+        )
+        return 0, 0.5, False
+
+    monkeypatch.setattr(worker, "run_logged", fake_run_logged)
+
+    status, summary, failure_class = worker.run_process_startup_timing(
+        tmp_path, tmp_path / "state", 30
+    )
+
+    assert status == "PASS"
+    assert failure_class is None
+    assert "import_to_command_ms=12" in summary
+    assert "database_open_ms=3" in summary
+
+
+def test_process_startup_timing_fails_on_nonzero_exit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fake_run_logged(
+        args: list[str], *, cwd: Path, log_path: Path, timeout_seconds: float
+    ) -> tuple[int, float, bool]:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text("boom", encoding="utf-8")
+        return 1, 0.1, False
+
+    monkeypatch.setattr(worker, "run_logged", fake_run_logged)
+
+    status, summary, failure_class = worker.run_process_startup_timing(
+        tmp_path, tmp_path / "state", 30
+    )
+
+    assert status == "FAIL"
+    assert failure_class == "TEST_FAILURE"
+    assert "boom" in summary
+
+
+def test_process_startup_timing_times_out(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(worker, "run_logged", lambda *a, **k: (124, 120.0, True))
+
+    status, summary, failure_class = worker.run_process_startup_timing(
+        tmp_path, tmp_path / "state", 30
+    )
+
+    assert status == "ENVIRONMENT_FAILURE"
+    assert failure_class == "ENVIRONMENT_FAILURE"
+    assert "timed out" in summary
+
+
+def test_process_startup_timing_fails_closed_on_malformed_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(worker, "run_logged", lambda *a, **k: (0, 0.2, False))
+
+    status, summary, failure_class = worker.run_process_startup_timing(
+        tmp_path, tmp_path / "state", 30
+    )
+
+    assert status == "ENVIRONMENT_FAILURE"
+    assert failure_class == "ENVIRONMENT_FAILURE"
+    assert "unreadable evidence" in summary
+
+
+def test_ke_executable_resolves_sibling_script(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_python_dir = tmp_path / "bin"
+    fake_python_dir.mkdir()
+    fake_ke = fake_python_dir / "ke"
+    fake_ke.write_text("#!/bin/sh\n", encoding="utf-8")
+    monkeypatch.setattr(sys, "executable", str(fake_python_dir / "python"))
+
+    assert worker._ke_executable() == str(fake_ke)
+
+
+def test_ke_executable_falls_back_to_path_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sys, "executable", "/nonexistent/python")
+
+    assert worker._ke_executable() == "ke"
+
+
+def test_process_startup_timing_check_participates_in_aggregate_status(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(worker, "validate_checkout", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        worker,
+        "run_process_startup_timing",
+        lambda repo_root, state_dir, timeout: (
+            "ENVIRONMENT_FAILURE",
+            "ke executable unavailable",
+            "ENVIRONMENT_FAILURE",
+        ),
+    )
+
+    result = worker.execute_request(
+        request(requested_checks=("process_startup_timing",)),
+        repo_root=tmp_path,
+        state_dir=tmp_path / "state",
+        environment_id="jeremy-laptop",
+        timeout_seconds=30,
+    )
+
+    assert result.status == "ENVIRONMENT_FAILURE"
+    assert result.failure_class == "ENVIRONMENT_FAILURE"
+    assert "process_startup_timing" in result.summary
 
 
 def test_failure_class_matches_aggregate_status(
