@@ -802,6 +802,20 @@ extraction-review-promote`'s other callers carries whatever `provenance`
 evidence_classification.py`) default fills in, or none of these keys if
 built by hand.
 
+Because `evidence_record_id` is deterministic (source identity + claim
+text), a *different* search run rediscovering the exact same evidence
+(e.g. an already-indexed paper a second, independent research question
+also acquires) is skipped by `_promote_evidence_records`'s own
+idempotency contract -- the promoted record keeps only the *first* run's
+`provenance`. That second run's own rediscovery is not silently lost: it
+is recorded in a separate durable sidecar file,
+`duplicate_reacquisition_record_path` (`<receipt-path>.duplicate_reacquisitions.json`,
+mirroring `extraction_rejection_record_path`'s own atomic-write/
+clear-when-empty convention), naming which `evidence_record_id`s this
+run's own candidates rediscovered under its own `search_run_id`/
+`research_question_id`. This never mutates the append-only evidence
+store or its dedup contract.
+
 A record only becomes real evidence via `ke extraction-review-promote`,
 which validates with `_validate_evidence_record` (the same validator `ke
 evidence-validate` runs) and refuses any record missing

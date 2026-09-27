@@ -9,6 +9,7 @@ from knowledge_engine.evidence_store_revision import evidence_store_revision
 from knowledge_engine.general_question_extraction_promotion import (
     GENERAL_QUESTION_EXTRACTION_PROMOTION_RULES_VERSION,
     _count_evidence_records,
+    duplicate_reacquisition_record_path,
     extraction_rejection_record_path,
     run_general_question_extraction_and_promotion,
 )
@@ -120,6 +121,9 @@ def test_promotes_a_grounded_candidate_and_writes_no_rejection_file(tmp_path: Pa
     assert summary.rejected == ()
     assert summary.rejection_record_path is None
     assert not extraction_rejection_record_path(receipt_path).exists()
+    assert summary.duplicate_evidence_record_ids == ()
+    assert summary.duplicate_reacquisition_record_path is None
+    assert not duplicate_reacquisition_record_path(receipt_path).exists()
     assert summary.duration_ms >= 0
     assert summary.extraction_duration_ms >= 0
     assert summary.promotion_duration_ms >= 0
@@ -132,6 +136,8 @@ def test_promotes_a_grounded_candidate_and_writes_no_rejection_file(tmp_path: Pa
     assert payload["promoted_count"] == summary.promoted_count
     assert payload["rejected"] == []
     assert payload["rejection_record_path"] is None
+    assert payload["duplicate_evidence_record_ids"] == []
+    assert payload["duplicate_reacquisition_record_path"] is None
     assert payload["duration_ms"] == summary.duration_ms
     assert payload["extraction_duration_ms"] == summary.extraction_duration_ms
     assert payload["promotion_duration_ms"] == summary.promotion_duration_ms
@@ -184,6 +190,85 @@ def test_rerunning_the_same_receipt_is_idempotent(tmp_path: Path) -> None:
     assert first.new_evidence_available is True
     assert second.new_evidence_available is False
     assert second.evidence_store_revision == first.evidence_store_revision
+
+    assert first.duplicate_evidence_record_ids == ()
+    assert first.duplicate_reacquisition_record_path is None
+    assert len(second.duplicate_evidence_record_ids) == second.duplicate_count
+    assert second.duplicate_reacquisition_record_path == duplicate_reacquisition_record_path(
+        receipt_path
+    )
+    reacquisition_payload = json.loads(
+        second.duplicate_reacquisition_record_path.read_text(encoding="utf-8")
+    )
+    assert reacquisition_payload["search_run_id"] == "run-1"
+    assert reacquisition_payload["research_question_id"] == "rq-1"
+    assert sorted(reacquisition_payload["duplicate_evidence_record_ids"]) == sorted(
+        second.duplicate_evidence_record_ids
+    )
+
+
+def test_a_different_search_run_rediscovering_evidence_is_recorded_as_a_duplicate_reacquisition(
+    tmp_path: Path,
+) -> None:
+    database = _database(tmp_path)
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(
+            _parsed_paper(tmp_path, "a" * 64, title="Rich Paper", text=_RICH_TEXT)
+        )
+        paper_id = paper.id
+
+    evidence_path = tmp_path / "evidence.jsonl"
+    first_receipt = _receipt(
+        tmp_path,
+        name="receipt-1.json",
+        paper_ids=[(paper_id, "persisted")],
+        search_run_id="run-1",
+        research_question_id="rq-1",
+    )
+    with database.session() as session:
+        first = run_general_question_extraction_and_promotion(
+            session, receipt_path=first_receipt, evidence_output_path=evidence_path
+        )
+    assert first.promoted_count >= 1
+    first_ids = {
+        json.loads(line)["evidence_record_id"] for line in evidence_path.read_text().splitlines()
+    }
+
+    # A second, independent search run (different search_run_id/research_question_id)
+    # rediscovers the exact same already-indexed paper (persistence_status="reused")
+    # and its extraction produces the same deterministic claim/evidence_record_id.
+    second_receipt = _receipt(
+        tmp_path,
+        name="receipt-2.json",
+        paper_ids=[(paper_id, "reused")],
+        search_run_id="run-2",
+        research_question_id="rq-2",
+    )
+    with database.session() as session:
+        second = run_general_question_extraction_and_promotion(
+            session, receipt_path=second_receipt, evidence_output_path=evidence_path
+        )
+
+    assert second.promoted_count == 0
+    assert second.duplicate_count >= 1
+    assert set(second.duplicate_evidence_record_ids) <= first_ids
+
+    reacquisition_path = duplicate_reacquisition_record_path(second_receipt)
+    assert second.duplicate_reacquisition_record_path == reacquisition_path
+    payload = json.loads(reacquisition_path.read_text(encoding="utf-8"))
+    assert payload["search_run_id"] == "run-2"
+    assert payload["research_question_id"] == "rq-2"
+    assert payload["acquisition_route"] == "pmc_oa"
+    assert set(payload["duplicate_evidence_record_ids"]) == set(
+        second.duplicate_evidence_record_ids
+    )
+
+    # The already-promoted record itself still only carries the first run's
+    # own acquisition lineage -- the append-only evidence store is never
+    # mutated for a duplicate -- but the second run's own rediscovery is not
+    # silently lost: it is durably recorded next to its own receipt.
+    promoted_record = json.loads(evidence_path.read_text(encoding="utf-8").splitlines()[0])
+    assert promoted_record["provenance"]["search_run_id"] == "run-1"
 
 
 def test_paper_with_no_claim_candidates_is_rejected_with_a_durable_reason(

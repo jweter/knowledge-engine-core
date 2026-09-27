@@ -32,6 +32,32 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   separate rejection file. No schema change: `provenance` was already
   validated only as "a non-empty object" with no fixed key set.
 
+  Follow-up (same PR, second commit): `chatgpt-codex-connector[bot]`'s
+  review left one P1 finding, verified real and fixed. A duplicate
+  Evidence Record (same deterministic `evidence_record_id`) rediscovered
+  by a *different* search run -- e.g. an already-indexed paper a second,
+  independent research question also acquires -- was silently skipped by
+  `_promote_evidence_records`'s existing idempotency contract with no
+  durable trace of the second run's own rediscovery at all: the
+  already-promoted record only ever carries the *first* run's
+  `acquisition_provenance`. Fixed by recording the fact of rediscovery,
+  not by mutating the append-only evidence store or its dedup contract
+  (which stays intentionally idempotent, as covered by
+  `test_rerunning_the_same_receipt_is_idempotent`):
+  `run_general_question_extraction_and_promotion` now writes a new
+  durable sidecar file next to the receipt --
+  `duplicate_reacquisition_record_path` / `<receipt-path>.duplicate_reacquisitions.json`
+  (mirroring the existing `extraction_rejection_record_path` pattern,
+  same atomic-write/clear-when-empty contract) -- naming which
+  already-promoted `evidence_record_id`s this run's own candidates
+  rediscovered. `GeneralQuestionExtractionPromotionSummary` gains
+  `duplicate_evidence_record_ids`/`duplicate_reacquisition_record_path`
+  (additive; both `ke general-question-extract-and-promote` and the
+  `ke-research` slim surface now also print the new record's path when
+  present). New tests cover a same-search-run idempotent re-run (no
+  reacquisition record) and a different-search-run rediscovery (a
+  reacquisition record naming the *second* run's own identity).
+
 - **`ke extraction-review-promote` reports re-retrieval readiness (issue
   #433 item 6)**: every promotion run now reports whether it made new
   Evidence Records available (`new_evidence_available`) and the evidence

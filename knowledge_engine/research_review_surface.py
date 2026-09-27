@@ -362,6 +362,11 @@ def general_question_extract_and_promote(
         typer.echo(f"summary={output}")
     if summary.rejection_record_path is not None:
         typer.echo(f"rejection_record={summary.rejection_record_path}", err=True)
+    if summary.duplicate_reacquisition_record_path is not None:
+        typer.echo(
+            f"duplicate_reacquisition_record={summary.duplicate_reacquisition_record_path}",
+            err=True,
+        )
 
 
 def _is_already_reviewed(record: dict[str, Any]) -> bool:
