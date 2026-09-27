@@ -148,6 +148,10 @@ def test_promotes_a_grounded_candidate_and_writes_no_rejection_file(tmp_path: Pa
         assert record["review_status"] == "draft"
         assert record["claim_text"] in _RICH_TEXT
         assert record["result_summary"] in _RICH_TEXT
+        assert record["provenance"]["search_run_id"] == "run-1"
+        assert record["provenance"]["research_question_id"] == "rq-1"
+        assert record["provenance"]["acquisition_route"] == "pmc_oa"
+        assert record["provenance"]["acquisition_receipt_path"] == str(receipt_path)
 
 
 def test_rerunning_the_same_receipt_is_idempotent(tmp_path: Path) -> None:

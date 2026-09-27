@@ -9,6 +9,29 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Newly acquired Evidence Records carry their own acquisition/search-run
+  provenance (issue #449 acceptance criterion)**: auditing #449's
+  remaining acceptance criteria found that `search_run_id`/
+  `research_question_id`/`acquisition_route` were persisted on a GQR
+  receipt's own rejection record (failures only) and returned in
+  `run_general_question_extraction_and_promotion`'s ephemeral summary
+  object, but never on the promoted Evidence Record itself -- a report
+  consumer reading `evidence_records.jsonl` had no way to trace a
+  GQR-acquired record back to the search run that found it.
+  `build_automated_evidence_record`
+  (`knowledge_engine/extraction/evidence_classification.py`) gains an
+  optional `acquisition_provenance` keyword argument that merges
+  non-empty values into the record's `provenance` object (additive; a
+  caller that omits it is unaffected).
+  `run_general_question_extraction_and_promotion`
+  (`knowledge_engine/general_question_extraction_promotion.py`) now passes
+  `search_run_id`/`research_question_id`/`acquisition_route`/
+  `acquisition_receipt_path` this way for every candidate record it
+  builds, so every Evidence Record promoted through the GQR path now
+  carries its own acquisition lineage in `provenance`, not only in a
+  separate rejection file. No schema change: `provenance` was already
+  validated only as "a non-empty object" with no fixed key set.
+
 - **`ke extraction-review-promote` reports re-retrieval readiness (issue
   #433 item 6)**: every promotion run now reports whether it made new
   Evidence Records available (`new_evidence_available`) and the evidence

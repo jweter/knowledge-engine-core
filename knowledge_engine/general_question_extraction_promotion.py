@@ -324,6 +324,13 @@ def run_general_question_extraction_and_promotion(
     extraction_started = time.monotonic()
     batch_summary = run_batch_extraction_review(paper_pages)
 
+    acquisition_provenance = {
+        "search_run_id": search_run_id,
+        "research_question_id": research_question_id,
+        "acquisition_route": acquisition_route,
+        "acquisition_receipt_path": str(receipt_path),
+    }
+
     candidate_records: list[dict[str, Any]] = []
     candidate_paper_ids: list[int] = []
     for result in batch_summary.results:
@@ -340,7 +347,9 @@ def run_general_question_extraction_and_promotion(
             continue
         built_any = False
         for draft_item in result.draft_items:
-            record = build_automated_evidence_record(draft_item.to_dict())
+            record = build_automated_evidence_record(
+                draft_item.to_dict(), acquisition_provenance=acquisition_provenance
+            )
             if record is None:
                 continue
             built_any = True

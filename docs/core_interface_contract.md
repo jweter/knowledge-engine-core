@@ -789,6 +789,19 @@ sets it, but a hand-authored or externally-supplied Evidence Record can
 pass validation without it. Do not assume `source_span.paper_id` is
 present; check for it.
 
+A record built via `ke general-question-extract-and-promote` (the GQR
+receipt-bridging path, `knowledge_engine/general_question_extraction_promotion.py`)
+carries its own acquisition/search-run lineage inside `provenance`:
+`search_run_id`, `research_question_id`, `acquisition_route`, and
+`acquisition_receipt_path` (issue #449's acquisition/search-run
+provenance acceptance criterion). This is additive -- `provenance` has no
+fixed key set beyond being a non-empty object -- and only populated for
+records built through that GQR path; a record promoted through `ke
+extraction-review-promote`'s other callers carries whatever `provenance`
+`build_automated_evidence_record`'s (`knowledge_engine/extraction/
+evidence_classification.py`) default fills in, or none of these keys if
+built by hand.
+
 A record only becomes real evidence via `ke extraction-review-promote`,
 which validates with `_validate_evidence_record` (the same validator `ke
 evidence-validate` runs) and refuses any record missing
