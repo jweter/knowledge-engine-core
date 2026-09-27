@@ -23,7 +23,7 @@ LOCK_NAME = "worker.lock"
 DEFAULT_TIMEOUT_SECONDS = 3600
 MAX_TIMEOUT_SECONDS = 7200
 OLLAMA_TAGS_URL = "http://127.0.0.1:11434/api/tags"
-AUTHORIZED_CHECKS = frozenset({"preflight", "ollama_health"})
+AUTHORIZED_CHECKS = frozenset({"preflight", "ollama_health", "process_startup_timing"})
 WINDOWS_CREATE_NEW_PROCESS_GROUP = 0x00000200
 
 # Matches a secret-flavored key (optionally prefixed with other identifier
@@ -322,6 +322,71 @@ def run_ollama_health(timeout_seconds: int) -> tuple[WorkerResultStatus, str, st
     )
 
 
+def _ke_executable() -> str:
+    """Resolve the `ke` console script installed alongside this interpreter.
+
+    `ke` is a Poetry console-script entry point, not a standalone file this
+    worker ships, so it cannot be launched with `sys.executable <script>`
+    the way `run_preflight` launches `engineering/preflight.py`. Resolving it
+    relative to `sys.executable`'s own directory (the venv/interpreter this
+    worker itself is running under) finds the sibling script reliably on
+    both Windows (`Scripts/ke.exe`) and POSIX (`bin/ke`) without depending on
+    the caller's PATH, which an unattended/scheduled process cannot assume.
+    """
+    candidate = Path(sys.executable).parent / ("ke.exe" if os.name == "nt" else "ke")
+    return str(candidate) if candidate.is_file() else "ke"
+
+
+def run_process_startup_timing(
+    repo_root: Path, state_dir: Path, timeout_seconds: int
+) -> tuple[WorkerResultStatus, str, str | None]:
+    """Run issue #433 item 1's `ke process-startup-timing` as a worker check.
+
+    This measures `ke`'s own fixed per-invocation overhead plus the local
+    persistent store's open cost (`database_open_ms`) -- the cold-start half
+    of issue #493's "persistent-store cold/warm research benchmarks"
+    requirement. Warm-cache and acquisition/retrieval/re-retrieval
+    benchmarks remain separate, not-yet-scoped follow-up checks.
+    """
+    log_path = state_dir / "logs" / "process-startup-timing.log"
+    evidence_path = state_dir / "process-startup-timing.json"
+    bounded_timeout = float(min(timeout_seconds, 120))
+    code, duration, timed_out = run_logged(
+        [_ke_executable(), "process-startup-timing", "--output", str(evidence_path)],
+        cwd=repo_root,
+        log_path=log_path,
+        timeout_seconds=bounded_timeout,
+    )
+    if timed_out:
+        return (
+            "ENVIRONMENT_FAILURE",
+            "Process-startup-timing benchmark timed out.",
+            "ENVIRONMENT_FAILURE",
+        )
+    if code != 0:
+        tail = log_tail(log_path, repo_root=repo_root)
+        summary = f"Process-startup-timing benchmark failed after {duration:.3f}s."
+        if tail:
+            summary += f" Last output: {tail[:1200]}"
+        return "FAIL", summary, "TEST_FAILURE"
+    try:
+        payload = json.loads(evidence_path.read_text(encoding="utf-8"))
+        import_ms = int(payload["import_to_command_ms"])
+        database_ms = int(payload["database_open_ms"])
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return (
+            "ENVIRONMENT_FAILURE",
+            f"Process-startup-timing benchmark produced unreadable evidence: {type(exc).__name__}.",
+            "ENVIRONMENT_FAILURE",
+        )
+    return (
+        "PASS",
+        f"Process-startup-timing benchmark passed in {duration:.3f}s "
+        f"(import_to_command_ms={import_ms}, database_open_ms={database_ms}).",
+        None,
+    )
+
+
 def _aggregate_status(statuses: list[WorkerResultStatus]) -> WorkerResultStatus:
     if "FAIL" in statuses:
         return "FAIL"
@@ -378,6 +443,10 @@ def execute_request(
         try:
             if check == "preflight":
                 status, summary, failure_class = run_preflight(
+                    repo_root, state_dir, timeout_seconds
+                )
+            elif check == "process_startup_timing":
+                status, summary, failure_class = run_process_startup_timing(
                     repo_root, state_dir, timeout_seconds
                 )
             else:
