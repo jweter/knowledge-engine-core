@@ -495,6 +495,9 @@ def _copy_paper_fields(paper: Paper, *, journal: Journal | None) -> Paper:
     new_paper = Paper(
         title=paper.title,
         doi=paper.doi,
+        pmid=paper.pmid,
+        arxiv_id=paper.arxiv_id,
+        pmcid=paper.pmcid,
         abstract=paper.abstract,
         source_path=paper.source_path,
         content_hash=paper.content_hash,

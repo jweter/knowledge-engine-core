@@ -194,6 +194,53 @@ def test_import_corpus_library_clears_embedding_identity(tmp_path: Path) -> None
         assert imported.embedding_id is None
 
 
+def test_export_and_import_corpus_library_preserve_pmid_arxiv_id_pmcid(
+    tmp_path: Path,
+) -> None:
+    """A paper's stable PMID/arXiv-ID/PMCID identity must survive both an
+    export snapshot and a re-import -- silently dropping it (as
+    `_copy_paper_fields` did before this test) would make the target
+    workspace's own already-indexed/reuse detection
+    (`general_question_acquisition._find_existing_paper`) miss a paper it
+    actually already has, and re-acquire it. Found by a Codex review on
+    PR #532.
+    """
+
+    source = _database(tmp_path, "source")
+    with source.session() as session:
+        PaperRepository(session).add_parsed_paper(
+            _parsed_paper(source_path=tmp_path / "a.pdf", content_hash="a" * 64),
+            manifest_pmid="12345",
+            manifest_arxiv_id="2301.12345",
+            manifest_pmcid="PMC1234567",
+        )
+    snapshot_path = tmp_path / "snapshot.sqlite3"
+    export_corpus_library(source.engine, snapshot_path)
+
+    snapshot = Database(
+        Settings(
+            project_root=tmp_path,
+            data_dir=tmp_path / "readback",
+            database_url=f"sqlite:///{snapshot_path}",
+        )
+    )
+    with snapshot.session() as session:
+        exported = session.scalars(select(Paper)).one()
+        assert exported.pmid == "12345"
+        assert exported.arxiv_id == "2301.12345"
+        assert exported.pmcid == "PMC1234567"
+
+    target = _database(tmp_path, "target")
+    with target.session() as session:
+        import_corpus_library(session, snapshot_path)
+
+    with target.session() as session:
+        imported = session.scalars(select(Paper)).one()
+        assert imported.pmid == "12345"
+        assert imported.arxiv_id == "2301.12345"
+        assert imported.pmcid == "PMC1234567"
+
+
 def test_import_corpus_library_indexes_imported_papers_for_search(tmp_path: Path) -> None:
     source = _database(tmp_path, "source")
     with source.session() as session:

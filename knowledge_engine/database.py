@@ -616,6 +616,11 @@ def _verify_schema_complete(connection: Connection) -> None:
         for column_name in columns:
             if column_name not in existing_columns:
                 missing_columns.append(f"{table_name}.{column_name}")
+    for table_name, columns in _SCHEMA_V15_COLUMNS.items():
+        existing_columns = _table_columns(connection, table_name)
+        for column_name in columns:
+            if column_name not in existing_columns:
+                missing_columns.append(f"{table_name}.{column_name}")
     if missing_columns:
         missing = ", ".join(sorted(missing_columns))
         msg = (
@@ -629,7 +634,9 @@ def _verify_schema_complete(connection: Connection) -> None:
             text("SELECT name FROM sqlite_master WHERE type='index' AND name IS NOT NULL")
         ).scalars()
     )
-    missing_indexes = sorted(set(_SCHEMA_V2_INDEXES) - existing_indexes)
+    missing_indexes = sorted(
+        (set(_SCHEMA_V2_INDEXES) | set(_SCHEMA_V15_INDEXES)) - existing_indexes
+    )
     if missing_indexes:
         missing = ", ".join(missing_indexes)
         msg = (

@@ -151,6 +151,48 @@ def test_current_version_missing_index_is_not_silently_repaired(tmp_path: Path) 
     assert index_name not in _index_names(database)
 
 
+def test_current_version_missing_papers_pmcid_column_is_not_silently_repaired(
+    tmp_path: Path,
+) -> None:
+    """`_verify_schema_complete` must also cover schema-15 artifacts, not
+    only the original v2/v3/v6/v7 columns -- otherwise a database whose
+    `papers.pmcid` column went missing would pass initialization and every
+    later `Paper` ORM query touching it would fail with `no such column`
+    instead. Found by a Codex review on PR #532."""
+
+    database = _database(tmp_path)
+    database.initialize()
+
+    with database.engine.begin() as connection:
+        connection.execute(text("DROP INDEX ix_papers_pmcid"))
+        connection.execute(text('ALTER TABLE papers DROP COLUMN "pmcid"'))
+
+    with pytest.raises(RuntimeError, match="missing columns"):
+        database.initialize()
+
+    assert "pmcid" not in _column_names(database, "papers")
+
+
+def test_current_version_missing_papers_pmcid_index_is_not_silently_repaired(
+    tmp_path: Path,
+) -> None:
+    """Mirrors the column case above for `ix_papers_pmcid` specifically: a
+    missing unique index would silently remove PMCID uniqueness enforcement
+    without failing initialization. Found by a Codex review on PR #532."""
+
+    database = _database(tmp_path)
+    database.initialize()
+    index_name = "ix_papers_pmcid"
+
+    with database.engine.begin() as connection:
+        connection.execute(text(f'DROP INDEX "{index_name}"'))
+
+    with pytest.raises(RuntimeError, match="missing indexes"):
+        database.initialize()
+
+    assert index_name not in _index_names(database)
+
+
 def test_upgrading_older_database_adds_new_table_without_error(tmp_path: Path) -> None:
     """A table introduced at a newer schema version is expected to be absent on an
     older database; create_all must add it silently rather than raise."""
