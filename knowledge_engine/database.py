@@ -34,7 +34,7 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 14
+CURRENT_SCHEMA_VERSION = 15
 _SQLITE_BUSY_TIMEOUT_MS = 30_000
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
@@ -103,6 +103,16 @@ _SCHEMA_V14_COLUMNS: dict[str, dict[str, str]] = {
 _SCHEMA_V14_INDEXES: dict[str, tuple[str, str]] = {
     "ix_import_items_normalized_pmid": ("import_items", "normalized_pmid"),
     "ix_import_items_normalized_arxiv_id": ("import_items", "normalized_arxiv_id"),
+}
+
+_SCHEMA_V15_COLUMNS: dict[str, dict[str, str]] = {
+    "papers": {
+        "pmcid": "VARCHAR(32)",
+    },
+}
+
+_SCHEMA_V15_INDEXES: dict[str, tuple[str, str]] = {
+    "ix_papers_pmcid": ("papers", "pmcid"),
 }
 
 _TABLES_INTRODUCED_AT_VERSION: dict[int, frozenset[str]] = {
@@ -263,6 +273,8 @@ def migrate_schema(engine: Engine) -> None:
             _migrate_schema_v13(connection)
         if existing_version < 14:
             _migrate_schema_v14(connection)
+        if existing_version < 15:
+            _migrate_schema_v15(connection)
 
         _verify_schema_complete(connection)
 
@@ -516,6 +528,38 @@ def _migrate_schema_v14(connection: Connection) -> None:
         )
 
 
+def _migrate_schema_v15(connection: Connection) -> None:
+    """Add `papers.pmcid` so PMCID-based reuse detection can key on it.
+
+    Additive and nullable, same shape as the v13 `papers.pmid`/`arxiv_id`
+    migration. Closes the gap `general_question_acquisition._find_existing_paper`
+    and the PMC/Europe PMC/CORE/Unpaywall GQR acquisition services' own
+    existing-paper checks had documented as future work: without this
+    column, a paper already indexed but reachable only by PMCID (no DOI,
+    PMID, or arXiv ID match) had no reuse signal, so a repeat question could
+    re-download and duplicate-persist a paper Core already had. Existing
+    rows simply have `pmcid = NULL` until reprocessed; this migration does
+    not attempt to backfill historical rows, matching the v13 precedent.
+    """
+
+    for table_name, columns in _SCHEMA_V15_COLUMNS.items():
+        existing_columns = _table_columns(connection, table_name)
+        for column_name, definition in columns.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(
+                text(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {definition}')
+            )
+
+    for index_name, (table_name, column_name) in _SCHEMA_V15_INDEXES.items():
+        connection.execute(
+            text(
+                f'CREATE UNIQUE INDEX IF NOT EXISTS "{index_name}" '
+                f'ON "{table_name}" ("{column_name}")'
+            )
+        )
+
+
 def _current_schema_version(connection: Connection) -> int:
     table_exists = connection.execute(
         text(
@@ -642,6 +686,7 @@ class PaperRepository:
         manifest_doi: str | None = None,
         manifest_pmid: str | None = None,
         manifest_arxiv_id: str | None = None,
+        manifest_pmcid: str | None = None,
     ) -> Paper:
         """Construct and stage an unflushed `Paper` with text, pages, authors, and keywords.
 
@@ -663,17 +708,18 @@ class PaperRepository:
         genuinely new paper to `needs_review` instead of importing it -- found
         via a live Codex review flagging exactly this on three records.
 
-        `manifest_pmid`/`manifest_arxiv_id` are set directly (no `parsed.*`
-        fallback exists -- `PyMuPDFParser` extracts a DOI from PDF text but
-        does not attempt PMID/arXiv-ID extraction). They close the gap noted
-        in CORE-GQR-2 (schema version 13): `papers.pmid`/`papers.arxiv_id`
-        existed as queryable, uniquely indexed columns but nothing populated
-        them for newly imported papers, so PMID/arXiv-based reuse detection
-        in `general_question_acquisition._find_existing_paper` had no real
-        data to match against outside tests. Both are expected already
-        normalized (via `normalize_pmid`/`normalize_arxiv_id`) by the time
-        they reach here, mirroring how `manifest_doi` arrives pre-normalized
-        from `CorpusSourceRow.normalized_doi`.
+        `manifest_pmid`/`manifest_arxiv_id`/`manifest_pmcid` are set directly
+        (no `parsed.*` fallback exists -- `PyMuPDFParser` extracts a DOI from
+        PDF text but does not attempt PMID/arXiv-ID/PMCID extraction). They
+        close the gap noted in CORE-GQR-2 (schema versions 13/15):
+        `papers.pmid`/`papers.arxiv_id`/`papers.pmcid` existed as queryable,
+        uniquely indexed columns but nothing populated them for newly
+        imported papers, so PMID/arXiv/PMCID-based reuse detection in
+        `general_question_acquisition._find_existing_paper` had no real data
+        to match against outside tests. All three are expected already
+        normalized (via `normalize_pmid`/`normalize_arxiv_id`/`normalize_pmcid`)
+        by the time they reach here, mirroring how `manifest_doi` arrives
+        pre-normalized from `CorpusSourceRow.normalized_doi`.
         """
 
         paper = Paper(
@@ -681,6 +727,7 @@ class PaperRepository:
             doi=manifest_doi or parsed.doi,
             pmid=manifest_pmid,
             arxiv_id=manifest_arxiv_id,
+            pmcid=manifest_pmcid,
             abstract=parsed.abstract,
             source_path=str(parsed.source_path),
             content_hash=parsed.content_hash,
@@ -728,6 +775,7 @@ class PaperRepository:
         manifest_doi: str | None = None,
         manifest_pmid: str | None = None,
         manifest_arxiv_id: str | None = None,
+        manifest_pmcid: str | None = None,
     ) -> Paper:
         """Store a parsed paper and update the full-text index."""
 
@@ -738,6 +786,7 @@ class PaperRepository:
             manifest_doi=manifest_doi,
             manifest_pmid=manifest_pmid,
             manifest_arxiv_id=manifest_arxiv_id,
+            manifest_pmcid=manifest_pmcid,
         )
 
         try:

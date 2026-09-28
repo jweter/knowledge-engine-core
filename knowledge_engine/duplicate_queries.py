@@ -9,7 +9,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from knowledge_engine.models import ImportItem, Paper
-from knowledge_engine.utils import normalize_arxiv_id, normalize_doi, normalize_pmid
+from knowledge_engine.utils import (
+    normalize_arxiv_id,
+    normalize_doi,
+    normalize_pmcid,
+    normalize_pmid,
+)
 
 
 class DuplicateQueryRepository:
@@ -68,6 +73,22 @@ class DuplicateQueryRepository:
                 paper
                 for paper in self.session.scalars(statement)
                 if normalize_arxiv_id(paper.arxiv_id or "") == target
+            ),
+            None,
+        )
+
+    def paper_by_pmcid(self, pmcid: str | None) -> Paper | None:
+        """Return the first paper whose PMCID normalizes to the requested value."""
+
+        if not pmcid:
+            return None
+        target = normalize_pmcid(pmcid)
+        statement = select(Paper).where(Paper.pmcid.is_not(None)).order_by(Paper.id)
+        return next(
+            (
+                paper
+                for paper in self.session.scalars(statement)
+                if normalize_pmcid(paper.pmcid or "") == target
             ),
             None,
         )

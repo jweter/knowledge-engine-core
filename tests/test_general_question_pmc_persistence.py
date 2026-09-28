@@ -169,6 +169,7 @@ def test_persists_verified_acquisition_with_plan_identity(
         assert paper.title == "Creatine trial"
         assert paper.doi == "10.1000/creatine"
         assert paper.pmid == "12345"
+        assert paper.pmcid == "PMC12345"
         assert paper.source_path.endswith("PMC12345.pdf")
         import_run = session.scalar(select(ImportRun))
         assert import_run is not None
@@ -258,5 +259,51 @@ def test_reuses_existing_paper_by_stable_identity(tmp_path: Path) -> None:
         item = session.scalar(select(ImportItem))
         assert item is not None
         assert item.item_status == "skipped"
+        assert item.duplicate_outcome == "reused_existing_paper"
+        assert item.matched_paper_id == result.items[0].paper_id
+
+
+def test_reuses_existing_paper_by_pmcid_when_no_doi_pmid_or_arxiv_id_matches(
+    tmp_path: Path,
+) -> None:
+    """A candidate known to the plan only by PMCID (its DOI/PMID differ or are
+    absent from what is persisted) must still be reused rather than
+    re-persisted as a duplicate Paper -- the gap `_find_existing_paper`'s
+    docstring named as future work until `papers.pmcid` (schema version 15)
+    existed."""
+
+    database = _database(tmp_path)
+    papers_dir = tmp_path / "papers"
+    execution = _execution(papers_dir)
+    with database.session() as session:
+        session.add(
+            Paper(
+                title="Existing creatine trial, indexed without a DOI or PMID",
+                doi=None,
+                pmid=None,
+                pmcid="PMC12345",
+                source_path="existing.pdf",
+                content_hash="f" * 64,
+                page_count=1,
+                word_count=10,
+            )
+        )
+
+    with database.session() as session:
+        result = persist_pmc_acquisition_execution(
+            session,
+            _plan(),
+            execution,
+            output_directory=papers_dir,
+            parser=FakeParser(),
+        )
+
+    assert result.persisted_count == 0
+    assert result.reused_count == 1
+    assert result.items[0].persistence_status == "reused"
+    with database.session() as session:
+        assert len(list(session.scalars(select(Paper)))) == 1
+        item = session.scalar(select(ImportItem))
+        assert item is not None
         assert item.duplicate_outcome == "reused_existing_paper"
         assert item.matched_paper_id == result.items[0].paper_id

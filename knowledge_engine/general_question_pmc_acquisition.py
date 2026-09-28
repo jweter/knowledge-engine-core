@@ -356,6 +356,7 @@ def persist_pmc_acquisition_execution(
                 or repository.paper_by_normalized_doi(identity.doi)
                 or repository.paper_by_pmid(identity.pmid)
                 or repository.paper_by_arxiv_id(identity.arxiv_id)
+                or repository.paper_by_pmcid(identity.pmcid)
             )
             if existing is not None:
                 paper = existing
@@ -368,6 +369,7 @@ def persist_pmc_acquisition_execution(
                     manifest_doi=identity.doi,
                     manifest_pmid=identity.pmid,
                     manifest_arxiv_id=identity.arxiv_id,
+                    manifest_pmcid=identity.pmcid,
                 )
                 status = "persisted"
                 persisted_count += 1

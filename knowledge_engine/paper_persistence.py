@@ -28,6 +28,7 @@ class ClassifiedPaperRepository(PaperRepository):
         manifest_doi: str | None = None,
         manifest_pmid: str | None = None,
         manifest_arxiv_id: str | None = None,
+        manifest_pmcid: str | None = None,
     ) -> Paper:
         """Store one paper and classify expected relational and FTS failures."""
 
@@ -38,6 +39,7 @@ class ClassifiedPaperRepository(PaperRepository):
             manifest_doi=manifest_doi,
             manifest_pmid=manifest_pmid,
             manifest_arxiv_id=manifest_arxiv_id,
+            manifest_pmcid=manifest_pmcid,
         )
 
         try:

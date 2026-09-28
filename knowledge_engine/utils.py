@@ -60,3 +60,15 @@ def normalize_arxiv_id(arxiv_id: str) -> str:
         normalized = normalized[len("arxiv:") :]
     normalized = re.sub(r"v\d+$", "", normalized)
     return normalized.strip().lower()
+
+
+def normalize_pmcid(pmcid: str) -> str:
+    """Normalize a PubMed Central ID for deterministic comparison.
+
+    Providers report PMCIDs as ``PMC<digits>`` with inconsistent casing
+    (``PMC1234567`` vs ``pmc1234567``); lowercasing the whole value, like
+    ``normalize_doi``/``normalize_arxiv_id`` already do, is sufficient since
+    the digits themselves carry no case.
+    """
+
+    return pmcid.strip().lower()

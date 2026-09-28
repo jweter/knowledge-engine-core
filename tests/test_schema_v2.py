@@ -52,7 +52,7 @@ def test_fresh_database_initializes_at_current_schema_version(tmp_path: Path) ->
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
         foreign_keys_enabled = connection.execute(text("PRAGMA foreign_keys")).scalar_one()
 
-    assert version == CURRENT_SCHEMA_VERSION == 14
+    assert version == CURRENT_SCHEMA_VERSION == 15
     assert "review_status" in _column_names(database, "import_runs")
     assert foreign_keys_enabled == 1
     assert "run_mode" in _column_names(database, "import_runs")
@@ -169,7 +169,7 @@ def test_upgrading_older_database_adds_new_table_without_error(tmp_path: Path) -
     assert "paper_pages" in _table_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 14
+    assert version == CURRENT_SCHEMA_VERSION == 15
 
 
 def test_dropping_paper_pages_at_current_version_is_not_silently_repaired(
@@ -211,7 +211,7 @@ def test_upgrading_older_database_adds_extraction_runs_table_without_error(
     assert "extraction_runs" in _table_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 14
+    assert version == CURRENT_SCHEMA_VERSION == 15
 
 
 def test_dropping_extraction_runs_at_current_version_is_not_silently_repaired(
@@ -256,7 +256,7 @@ def test_upgrading_older_database_adds_study_design_rules_version_column(
     assert "study_design_rules_version" in _column_names(database, "extraction_runs")
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 14
+    assert version == CURRENT_SCHEMA_VERSION == 15
 
 
 def test_upgrading_older_database_adds_pico_extraction_rules_version_column(
@@ -282,7 +282,7 @@ def test_upgrading_older_database_adds_pico_extraction_rules_version_column(
     assert "pico_extraction_rules_version" in _column_names(database, "extraction_runs")
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 14
+    assert version == CURRENT_SCHEMA_VERSION == 15
 
 
 def test_upgrading_older_database_adds_paper_pages_table_text_column(
@@ -311,7 +311,7 @@ def test_upgrading_older_database_adds_paper_pages_table_text_column(
     assert "table_text" in _column_names(database, "paper_pages")
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 14
+    assert version == CURRENT_SCHEMA_VERSION == 15
 
 
 def test_upgrading_older_database_adds_graph_citations_table_without_error(
@@ -335,7 +335,7 @@ def test_upgrading_older_database_adds_graph_citations_table_without_error(
     assert "graph_citations" in _table_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 14
+    assert version == CURRENT_SCHEMA_VERSION == 15
 
 
 def test_upgrading_older_database_widens_relationship_type_constraint(
@@ -431,7 +431,7 @@ def test_upgrading_older_database_widens_relationship_type_constraint(
     } <= _index_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 14
+    assert version == CURRENT_SCHEMA_VERSION == 15
 
 
 def test_upgrading_older_database_adds_papers_pmid_arxiv_id_columns(
@@ -467,7 +467,39 @@ def test_upgrading_older_database_adds_papers_pmid_arxiv_id_columns(
     assert {"ix_papers_pmid", "ix_papers_arxiv_id"} <= _index_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 14
+    assert version == CURRENT_SCHEMA_VERSION == 15
+
+
+def test_upgrading_older_database_adds_papers_pmcid_column(
+    tmp_path: Path,
+) -> None:
+    """Adds `papers.pmcid` (version 15) to a table that already existed at
+    version 14, mirroring the v13 `papers.pmid`/`papers.arxiv_id` migration
+    above: the new column is nullable with no DEFAULT, and its unique index
+    is (re)created on upgrade, not only on a fresh database, so
+    `DuplicateQueryRepository.paper_by_pmcid` has something to query. Closes
+    the CORE-GQR-2 gap the v13 migration's own docstring named as still
+    open."""
+
+    database = _database(tmp_path)
+    database.initialize()
+
+    with database.engine.begin() as connection:
+        connection.execute(text("DROP INDEX ix_papers_pmcid"))
+        connection.execute(text('ALTER TABLE papers DROP COLUMN "pmcid"'))
+        connection.execute(
+            text(
+                f"UPDATE schema_versions SET version = 14 WHERE version = {CURRENT_SCHEMA_VERSION}"
+            )
+        )
+
+    database.initialize()
+
+    assert "pmcid" in _column_names(database, "papers")
+    assert "ix_papers_pmcid" in _index_names(database)
+    with database.engine.connect() as connection:
+        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+    assert version == CURRENT_SCHEMA_VERSION == 15
 
 
 def test_upgrading_older_database_adds_import_items_normalized_pmid_arxiv_id_columns(
@@ -510,4 +542,4 @@ def test_upgrading_older_database_adds_import_items_normalized_pmid_arxiv_id_col
     } <= _index_names(database)
     with database.engine.connect() as connection:
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-    assert version == CURRENT_SCHEMA_VERSION == 14
+    assert version == CURRENT_SCHEMA_VERSION == 15
