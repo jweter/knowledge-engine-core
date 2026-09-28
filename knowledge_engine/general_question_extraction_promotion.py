@@ -116,8 +116,10 @@ class GeneralQuestionExtractionPromotionSummary:
     paper_count: int
     promoted_count: int
     duplicate_count: int
+    duplicate_evidence_record_ids: tuple[str, ...]
     rejected: tuple[GeneralQuestionExtractionRejection, ...]
     rejection_record_path: Path | None
+    duplicate_reacquisition_record_path: Path | None
     duration_ms: int
     extraction_duration_ms: int
     promotion_duration_ms: int
@@ -143,9 +145,15 @@ class GeneralQuestionExtractionPromotionSummary:
             "paper_count": self.paper_count,
             "promoted_count": self.promoted_count,
             "duplicate_count": self.duplicate_count,
+            "duplicate_evidence_record_ids": list(self.duplicate_evidence_record_ids),
             "rejected": [asdict(rejection) for rejection in self.rejected],
             "rejection_record_path": (
                 str(self.rejection_record_path) if self.rejection_record_path is not None else None
+            ),
+            "duplicate_reacquisition_record_path": (
+                str(self.duplicate_reacquisition_record_path)
+                if self.duplicate_reacquisition_record_path is not None
+                else None
             ),
             "duration_ms": self.duration_ms,
             "extraction_duration_ms": self.extraction_duration_ms,
@@ -165,6 +173,25 @@ def extraction_rejection_record_path(receipt_path: Path) -> Path:
     """
 
     return receipt_path.with_name(receipt_path.name + ".extraction_rejections.json")
+
+
+def duplicate_reacquisition_record_path(receipt_path: Path) -> Path:
+    """Return the durable duplicate-reacquisition record path for a receipt.
+
+    A candidate record whose deterministic `evidence_record_id` already
+    exists in the evidence store is never a promotion failure -- promotion
+    stays idempotent by design (see `_generate_evidence_record_id`) -- but a
+    later, independent search run rediscovering the same evidence is itself
+    a real acquisition/search-run fact this search run's own lineage would
+    otherwise lose entirely: `_promote_evidence_records` silently skips it,
+    and the Evidence Record it already promoted only ever carries the
+    *first* run's `acquisition_provenance`. This sidecar file, written next
+    to the receipt path exactly like `extraction_rejection_record_path`'s,
+    keeps that fact durably inspectable without mutating the append-only
+    evidence store or its dedup contract.
+    """
+
+    return receipt_path.with_name(receipt_path.name + ".duplicate_reacquisitions.json")
 
 
 def _write_rejection_records(
@@ -197,6 +224,54 @@ def _write_rejection_records(
         "acquisition_route": acquisition_route,
         "occurred_at": utc_now(),
         "rejections": [asdict(rejection) for rejection in rejections],
+    }
+    with contextlib.suppress(OSError):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temp_name = tempfile.mkstemp(
+            dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
+        )
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temp_name, path)
+        except OSError:
+            with contextlib.suppress(OSError):
+                os.unlink(temp_name)
+            raise
+    return path
+
+
+def _write_duplicate_reacquisition_record(
+    receipt_path: Path,
+    *,
+    search_run_id: str,
+    research_question_id: str,
+    acquisition_route: str,
+    duplicate_evidence_record_ids: list[str],
+) -> Path | None:
+    """Persist which already-promoted Evidence Records this run rediscovered.
+
+    Same atomic-write/clear-when-empty durability contract as
+    `_write_rejection_records`. `duplicate_evidence_record_ids` is
+    deduplicated and sorted for a stable diff, since one receipt can name
+    the same candidate more than once across its own items.
+    """
+
+    path = duplicate_reacquisition_record_path(receipt_path)
+    if not duplicate_evidence_record_ids:
+        with contextlib.suppress(OSError):
+            path.unlink(missing_ok=True)
+        return None
+
+    payload = {
+        "schema_version": EXTRACTION_REJECTION_RECORD_SCHEMA_VERSION,
+        "search_run_id": search_run_id,
+        "research_question_id": research_question_id,
+        "acquisition_route": acquisition_route,
+        "occurred_at": utc_now(),
+        "duplicate_evidence_record_ids": sorted(set(duplicate_evidence_record_ids)),
     }
     with contextlib.suppress(OSError):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -324,6 +399,13 @@ def run_general_question_extraction_and_promotion(
     extraction_started = time.monotonic()
     batch_summary = run_batch_extraction_review(paper_pages)
 
+    acquisition_provenance = {
+        "search_run_id": search_run_id,
+        "research_question_id": research_question_id,
+        "acquisition_route": acquisition_route,
+        "acquisition_receipt_path": str(receipt_path),
+    }
+
     candidate_records: list[dict[str, Any]] = []
     candidate_paper_ids: list[int] = []
     for result in batch_summary.results:
@@ -340,7 +422,9 @@ def run_general_question_extraction_and_promotion(
             continue
         built_any = False
         for draft_item in result.draft_items:
-            record = build_automated_evidence_record(draft_item.to_dict())
+            record = build_automated_evidence_record(
+                draft_item.to_dict(), acquisition_provenance=acquisition_provenance
+            )
             if record is None:
                 continue
             built_any = True
@@ -361,6 +445,7 @@ def run_general_question_extraction_and_promotion(
 
     promoted_count = 0
     duplicate_count = 0
+    duplicate_evidence_record_ids: list[str] = []
     promotion_duration_ms = 0
     if candidate_records:
         descriptor, temp_name = tempfile.mkstemp(prefix="ke-gqr5-drafts-", suffix=".jsonl")
@@ -379,6 +464,7 @@ def run_general_question_extraction_and_promotion(
 
         promoted_count = len(promotion_result.promoted)
         duplicate_count = len(promotion_result.duplicates)
+        duplicate_evidence_record_ids = list(promotion_result.duplicates)
         for line_number, errors in promotion_result.rejected:
             rejections.append(
                 GeneralQuestionExtractionRejection(
@@ -395,6 +481,13 @@ def run_general_question_extraction_and_promotion(
         acquisition_route=acquisition_route,
         rejections=rejections,
     )
+    duplicate_reacquisition_path = _write_duplicate_reacquisition_record(
+        receipt_path,
+        search_run_id=search_run_id,
+        research_question_id=research_question_id,
+        acquisition_route=acquisition_route,
+        duplicate_evidence_record_ids=duplicate_evidence_record_ids,
+    )
 
     evidence_store_record_count = _count_evidence_records(evidence_output_path)
     evidence_store_revision = evidence_store_revision_for_path(evidence_output_path)
@@ -408,8 +501,10 @@ def run_general_question_extraction_and_promotion(
         paper_count=len(paper_ids),
         promoted_count=promoted_count,
         duplicate_count=duplicate_count,
+        duplicate_evidence_record_ids=tuple(duplicate_evidence_record_ids),
         rejected=tuple(rejections),
         rejection_record_path=rejection_record_path,
+        duplicate_reacquisition_record_path=duplicate_reacquisition_path,
         duration_ms=round((time.monotonic() - run_started) * 1000),
         extraction_duration_ms=extraction_duration_ms,
         promotion_duration_ms=promotion_duration_ms,

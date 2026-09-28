@@ -41,6 +41,7 @@ states plainly that no human read or confirmed it.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from typing import Any
 
 EVIDENCE_CLASSIFICATION_RULES_VERSION = "m52-evidence-classification-v1"
@@ -154,7 +155,10 @@ def classify_evidence_direction(claim_text: str) -> tuple[str, str | None]:
 
 
 def build_automated_evidence_record(
-    draft_item: dict[str, Any], *, created_for_milestone: str = "M52"
+    draft_item: dict[str, Any],
+    *,
+    created_for_milestone: str = "M52",
+    acquisition_provenance: Mapping[str, str] | None = None,
 ) -> dict[str, Any] | None:
     """Build a promotable Evidence Record dict from one draft item, or `None`.
 
@@ -165,6 +169,14 @@ def build_automated_evidence_record(
     actual schema validation -- this function does not duplicate that
     check, only fills the fields that otherwise stay empty (no human
     completion required).
+
+    `acquisition_provenance` (issue #449's acquisition/search-run lineage
+    requirement) merges its non-empty values into the record's own
+    `provenance` object -- e.g. a GQR receipt's `search_run_id`/
+    `research_question_id`/`acquisition_route` -- so a report consumer can
+    trace a newly acquired Evidence Record back to the search run that
+    found it, not only a paper/import-run identity. It is merged whether
+    `provenance` was auto-filled above or already supplied by the caller.
     """
 
     claim_text = draft_item.get("claim_text")
@@ -217,4 +229,10 @@ def build_automated_evidence_record(
             "created_by": f"Automated: {EVIDENCE_CLASSIFICATION_RULES_VERSION}",
             "review_notes": record["review_notes"],
         }
+    if acquisition_provenance:
+        merged_provenance = dict(record["provenance"])
+        for key, value in acquisition_provenance.items():
+            if value:
+                merged_provenance[key] = value
+        record["provenance"] = merged_provenance
     return record

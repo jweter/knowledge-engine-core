@@ -4797,6 +4797,11 @@ def general_question_extract_and_promote(
         console.print(f"[green]Wrote summary:[/green] {output}")
     if summary.rejection_record_path is not None:
         console.print(f"[yellow]Rejection record:[/yellow] {summary.rejection_record_path}")
+    if summary.duplicate_reacquisition_record_path is not None:
+        console.print(
+            "[yellow]Duplicate reacquisition record:[/yellow] "
+            f"{summary.duplicate_reacquisition_record_path}"
+        )
 
 
 @app.command("evidence-review-automate")

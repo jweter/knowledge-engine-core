@@ -155,3 +155,53 @@ def test_build_automated_evidence_record_returns_none_missing_a_pico_field() -> 
 
 def test_build_automated_evidence_record_returns_none_for_overlong_pico_field() -> None:
     assert build_automated_evidence_record(_draft_item(intervention="x" * 400)) is None
+
+
+def test_build_automated_evidence_record_merges_acquisition_provenance() -> None:
+    record = build_automated_evidence_record(
+        _draft_item(),
+        acquisition_provenance={
+            "search_run_id": "run-1",
+            "research_question_id": "rq-1",
+            "acquisition_route": "pmc_oa",
+            "acquisition_receipt_path": "/tmp/receipt.json",
+        },
+    )
+
+    assert record is not None
+    assert record["provenance"]["search_run_id"] == "run-1"
+    assert record["provenance"]["research_question_id"] == "rq-1"
+    assert record["provenance"]["acquisition_route"] == "pmc_oa"
+    assert record["provenance"]["acquisition_receipt_path"] == "/tmp/receipt.json"
+    expected_created_by = f"Automated: {EVIDENCE_CLASSIFICATION_RULES_VERSION}"
+    assert record["provenance"]["created_by"] == expected_created_by
+
+
+def test_build_automated_evidence_record_merges_provenance_into_existing() -> None:
+    record = build_automated_evidence_record(
+        _draft_item(provenance={"created_by": "existing"}),
+        acquisition_provenance={"search_run_id": "run-1"},
+    )
+
+    assert record is not None
+    assert record["provenance"]["created_by"] == "existing"
+    assert record["provenance"]["search_run_id"] == "run-1"
+
+
+def test_build_automated_evidence_record_ignores_empty_acquisition_provenance_values() -> None:
+    record = build_automated_evidence_record(
+        _draft_item(), acquisition_provenance={"search_run_id": ""}
+    )
+
+    assert record is not None
+    assert "search_run_id" not in record["provenance"]
+
+
+def test_build_automated_evidence_record_without_acquisition_provenance_is_unchanged() -> None:
+    record = build_automated_evidence_record(_draft_item())
+
+    assert record is not None
+    assert record["provenance"] == {
+        "created_by": f"Automated: {EVIDENCE_CLASSIFICATION_RULES_VERSION}",
+        "review_notes": record["review_notes"],
+    }

@@ -9,6 +9,55 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Newly acquired Evidence Records carry their own acquisition/search-run
+  provenance (issue #449 acceptance criterion)**: auditing #449's
+  remaining acceptance criteria found that `search_run_id`/
+  `research_question_id`/`acquisition_route` were persisted on a GQR
+  receipt's own rejection record (failures only) and returned in
+  `run_general_question_extraction_and_promotion`'s ephemeral summary
+  object, but never on the promoted Evidence Record itself -- a report
+  consumer reading `evidence_records.jsonl` had no way to trace a
+  GQR-acquired record back to the search run that found it.
+  `build_automated_evidence_record`
+  (`knowledge_engine/extraction/evidence_classification.py`) gains an
+  optional `acquisition_provenance` keyword argument that merges
+  non-empty values into the record's `provenance` object (additive; a
+  caller that omits it is unaffected).
+  `run_general_question_extraction_and_promotion`
+  (`knowledge_engine/general_question_extraction_promotion.py`) now passes
+  `search_run_id`/`research_question_id`/`acquisition_route`/
+  `acquisition_receipt_path` this way for every candidate record it
+  builds, so every Evidence Record promoted through the GQR path now
+  carries its own acquisition lineage in `provenance`, not only in a
+  separate rejection file. No schema change: `provenance` was already
+  validated only as "a non-empty object" with no fixed key set.
+
+  Follow-up (same PR, second commit): `chatgpt-codex-connector[bot]`'s
+  review left one P1 finding, verified real and fixed. A duplicate
+  Evidence Record (same deterministic `evidence_record_id`) rediscovered
+  by a *different* search run -- e.g. an already-indexed paper a second,
+  independent research question also acquires -- was silently skipped by
+  `_promote_evidence_records`'s existing idempotency contract with no
+  durable trace of the second run's own rediscovery at all: the
+  already-promoted record only ever carries the *first* run's
+  `acquisition_provenance`. Fixed by recording the fact of rediscovery,
+  not by mutating the append-only evidence store or its dedup contract
+  (which stays intentionally idempotent, as covered by
+  `test_rerunning_the_same_receipt_is_idempotent`):
+  `run_general_question_extraction_and_promotion` now writes a new
+  durable sidecar file next to the receipt --
+  `duplicate_reacquisition_record_path` / `<receipt-path>.duplicate_reacquisitions.json`
+  (mirroring the existing `extraction_rejection_record_path` pattern,
+  same atomic-write/clear-when-empty contract) -- naming which
+  already-promoted `evidence_record_id`s this run's own candidates
+  rediscovered. `GeneralQuestionExtractionPromotionSummary` gains
+  `duplicate_evidence_record_ids`/`duplicate_reacquisition_record_path`
+  (additive; both `ke general-question-extract-and-promote` and the
+  `ke-research` slim surface now also print the new record's path when
+  present). New tests cover a same-search-run idempotent re-run (no
+  reacquisition record) and a different-search-run rediscovery (a
+  reacquisition record naming the *second* run's own identity).
+
 - **`ke extraction-review-promote` reports re-retrieval readiness (issue
   #433 item 6)**: every promotion run now reports whether it made new
   Evidence Records available (`new_evidence_available`) and the evidence
