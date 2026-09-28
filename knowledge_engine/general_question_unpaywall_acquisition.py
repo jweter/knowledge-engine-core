@@ -359,6 +359,7 @@ def persist_unpaywall_acquisition_execution(
                     manifest_doi=identity.doi,
                     manifest_pmid=identity.pmid,
                     manifest_arxiv_id=identity.arxiv_id,
+                    manifest_pmcid=identity.pmcid,
                 )
                 persistence_status = "persisted"
                 persisted_count += 1
@@ -432,6 +433,7 @@ def _reconciled_existing_paper(
             repository.paper_by_normalized_doi(identity.doi) if identity.doi else None,
             repository.paper_by_pmid(identity.pmid) if identity.pmid else None,
             repository.paper_by_arxiv_id(identity.arxiv_id) if identity.arxiv_id else None,
+            repository.paper_by_pmcid(identity.pmcid) if identity.pmcid else None,
         )
         if paper is not None
     )

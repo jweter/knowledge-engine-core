@@ -124,21 +124,27 @@ though that layer consumes Core strictly through this CLI's JSON boundary.
 - return `already_indexed` instead of reacquiring;
 - idempotency tests.
 
-**Status:** identity resolution now covers DOI, PMID, and arXiv ID.
+**Status:** identity resolution now covers DOI, PMID, arXiv ID, and PMCID.
 `build_acquisition_plan` accepts an optional SQLAlchemy `session`; when
-supplied, each candidate's DOI, then PMID, then arXiv ID (whichever is known
-for the candidate) is checked against the persisted corpus
-(`DuplicateQueryRepository.paper_by_normalized_doi` /
-`.paper_by_pmid` / `.paper_by_arxiv_id`) before any budget/eligibility logic
-runs, and the first match is reported as `already_indexed` with the existing
-`Paper.id` attached and a reason naming which identity matched — it never
-competes with genuinely new candidates for the full-text acquisition budget,
-and omitting `session` preserves the prior snapshot-only behavior exactly.
-Schema version 13 (`knowledge_engine/database.py`) added `papers.pmid` and
-`papers.arxiv_id` as nullable, uniquely indexed columns so those lookups have
-something to query; the migration is purely additive (existing rows have
-`NULL` for both until backfilled). PMCID-based reuse detection remains future
-work: `Paper` still has no persisted PMCID column.
+supplied, each candidate's DOI, then PMID, then arXiv ID, then PMCID
+(whichever are known for the candidate) is checked against the persisted
+corpus (`DuplicateQueryRepository.paper_by_normalized_doi` / `.paper_by_pmid`
+/ `.paper_by_arxiv_id` / `.paper_by_pmcid`) before any budget/eligibility
+logic runs, and the first match is reported as `already_indexed` with the
+existing `Paper.id` attached and a reason naming which identity matched — it
+never competes with genuinely new candidates for the full-text acquisition
+budget, and omitting `session` preserves the prior snapshot-only behavior
+exactly. Schema version 13 (`knowledge_engine/database.py`) added
+`papers.pmid` and `papers.arxiv_id` as nullable, uniquely indexed columns;
+schema version 15 added `papers.pmcid` the same way. All three migrations are
+purely additive (existing rows have `NULL` until backfilled). The four GQR
+acquisition services (PMC, Europe PMC, CORE, Unpaywall) that actually persist
+newly downloaded full text run the identical DOI/PMID/arXiv-ID/PMCID check
+against `DuplicateQueryRepository` immediately before calling
+`add_parsed_paper`, so a paper already indexed but known only by PMCID (no
+DOI/PMID/arXiv match) is reused instead of re-downloaded and duplicate-
+persisted — previously a real gap, since PMC/Europe PMC candidates routinely
+carry a PMCID with no other identity attached.
 
 The real ingestion-time caller gap is now closed: `sources.csv` already
 documents `pmid`/`arxiv_id` columns (see `docs/core_interface_contract.md`),
@@ -155,7 +161,13 @@ value behaves exactly as before (`NULL`, same as a row with no `doi`).
 Backfilling `papers.pmid`/`papers.arxiv_id` for *already*-persisted papers
 (imported before this change) is separate follow-up work, not attempted
 here -- same as `papers.doi` was never backfilled for pre-existing rows
-either. A real database session is now wired into the CLI caller (`ke
+either. `papers.pmcid` (schema version 15) is populated by the four GQR
+acquisition services above, which always know a PMC/Europe PMC candidate's
+PMCID directly; the `sources.csv`/`ke corpus-import` manifest path has no
+`pmcid` column and does not populate it -- adding one, mirroring
+`pmid`/`arxiv_id`'s own schema-14 `ImportItem` carrier-column precedent, is
+separate follow-up work, not attempted here. A real database session is now
+wired into the CLI caller (`ke
 general-question-acquisition-plan`, on by default, `--no-database` to
 opt out); wiring a session into `build_acquisition_plan()` for a real
 acquisition-bridge caller (as opposed to the CLI's already-existing wiring)

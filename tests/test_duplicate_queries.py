@@ -153,6 +153,27 @@ def test_paper_arxiv_id_lookup_normalizes_prefix_case_and_version() -> None:
         assert repository.paper_by_arxiv_id(None) is None
 
 
+def test_paper_pmcid_lookup_normalizes_case_and_requires_a_value() -> None:
+    with _session() as session:
+        paper = Paper(
+            title="A Paper",
+            doi=None,
+            pmcid="PMC1234567",
+            source_path="paper.pdf",
+            content_hash="a" * 64,
+            publication_year=2024,
+            page_count=1,
+            word_count=10,
+        )
+        session.add(paper)
+        session.flush()
+        repository = DuplicateQueryRepository(session)
+
+        assert repository.paper_by_pmcid("  pmc1234567  ") is paper
+        assert repository.paper_by_pmcid("PMC9999999") is None
+        assert repository.paper_by_pmcid(None) is None
+
+
 def test_title_year_lookup_is_unicode_case_whitespace_normalized_and_ordered() -> None:
     with _session() as session:
         session.add_all(

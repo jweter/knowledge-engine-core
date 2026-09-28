@@ -639,6 +639,68 @@ def test_already_indexed_candidate_matches_by_arxiv_id_when_no_doi_or_pmid(
         assert plan.already_indexed_count == 1
 
 
+def test_already_indexed_candidate_matches_by_pmcid_when_no_doi_pmid_or_arxiv_id(
+    tmp_path: Path,
+) -> None:
+    candidate = FederatedCandidate(
+        canonical_id="pmc:PMC1234567",
+        title="A paper known only by PMCID",
+        doi=None,
+        observations=(
+            ProviderObservation(
+                provider="europe_pmc",
+                provider_id="PMC1234567",
+                title="A paper known only by PMCID",
+                pmcid="PMC1234567",
+                full_text_url="https://europepmc.org/articles/PMC1234567",
+                open_access=True,
+            ),
+        ),
+    )
+    result = FederatedSearchResult(
+        query=DiscoveryQuery(text="creatine", limit_per_provider=10),
+        candidates=(candidate,),
+        provider_statuses=(
+            ProviderStatus(
+                provider="europe_pmc",
+                outcome=ProviderOutcome.SUCCESS,
+                attempted=True,
+                result_count=1,
+                latency_ms=1,
+                reason=None,
+            ),
+        ),
+    )
+    ledger = FederatedSearchLedger(tmp_path)
+    run_id = ledger.record(result, research_question_id="rq").search_run_id
+    request = GeneralQuestionAcquisitionRequest(
+        schema_version=1,
+        search_run_id=run_id,
+        research_question_id="rq",
+        candidate_ids=("pmc:PMC1234567",),
+    )
+
+    with _in_memory_session() as session:
+        existing = Paper(
+            title="A paper known only by PMCID",
+            doi=None,
+            pmcid="PMC1234567",
+            source_path="pmcid-only.pdf",
+            content_hash="d" * 64,
+            page_count=1,
+            word_count=10,
+        )
+        session.add(existing)
+        session.flush()
+
+        plan = build_acquisition_plan(request, ledger_root=tmp_path, session=session)
+
+        assert plan.items[0].disposition == AcquisitionDisposition.ALREADY_INDEXED.value
+        assert plan.items[0].existing_paper_id == existing.id
+        assert plan.items[0].reason == "candidate_pmcid_matches_existing_indexed_paper"
+        assert plan.already_indexed_count == 1
+
+
 def test_no_session_preserves_prior_snapshot_only_behavior(tmp_path: Path) -> None:
     run_id = _record_run(tmp_path)
     request = GeneralQuestionAcquisitionRequest(

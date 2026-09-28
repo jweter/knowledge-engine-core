@@ -495,11 +495,9 @@ def _find_existing_paper(
 ) -> tuple[Paper, str] | None:
     """Resolve stable identity against Core's already-persisted corpus.
 
-    Checked in order -- DOI, then PMID, then arXiv ID -- against whichever
-    of those columns ``Paper`` persists and indexes today; the first match
-    wins and its reason string names which identity matched. PMCID-based
-    reuse detection remains future work once an equivalent persisted
-    column exists (see CORE-GQR-2 in docs/general_question_research_loop_v1.md).
+    Checked in order -- DOI, then PMID, then arXiv ID, then PMCID -- against
+    whichever of those columns ``Paper`` persists and indexes today; the
+    first match wins and its reason string names which identity matched.
     """
     repository = DuplicateQueryRepository(session)
     if identity.doi:
@@ -514,6 +512,10 @@ def _find_existing_paper(
         paper = repository.paper_by_arxiv_id(identity.arxiv_id)
         if paper is not None:
             return paper, "candidate_arxiv_id_matches_existing_indexed_paper"
+    if identity.pmcid:
+        paper = repository.paper_by_pmcid(identity.pmcid)
+        if paper is not None:
+            return paper, "candidate_pmcid_matches_existing_indexed_paper"
     return None
 
 

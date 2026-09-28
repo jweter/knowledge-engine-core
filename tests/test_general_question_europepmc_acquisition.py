@@ -117,7 +117,9 @@ def _candidate(*, license_name: str | None = "cc by") -> EuropePmcCandidate:
 
 
 def _plan(
-    *, route: str | None = AcquisitionRoute.EUROPE_PMC_OA.value
+    *,
+    route: str | None = AcquisitionRoute.EUROPE_PMC_OA.value,
+    pmcid: str | None = None,
 ) -> GeneralQuestionAcquisitionPlan:
     item = AcquisitionPlanItem(
         candidate_id="doi:10.1000/creatine",
@@ -127,7 +129,7 @@ def _plan(
             canonical_id="doi:10.1000/creatine",
             doi="10.1000/creatine",
             pmid=None,
-            pmcid=None,
+            pmcid=pmcid,
             arxiv_id=None,
             openalex_id=None,
             semantic_scholar_id=None,
@@ -283,6 +285,50 @@ def test_persists_verified_acquisition_with_import_lineage(tmp_path: Path) -> No
         assert item.matched_paper_id == paper.id
         evidence = json.loads(item.duplicate_evidence_json or "{}")
         assert evidence["europepmc_id"] == "PPR123"
+
+
+def test_reuses_existing_paper_by_pmcid_when_doi_does_not_match(tmp_path: Path) -> None:
+    """A candidate's own DOI resolves the Europe PMC route, but reuse detection
+    must still fall through to PMCID when no persisted paper shares that DOI --
+    the gap `papers.pmcid` (schema version 15) closed for the acquisition-plan
+    stage's `_find_existing_paper` also applies to this persistence step's own
+    identity check."""
+
+    database = _database(tmp_path)
+    papers_dir = tmp_path / "papers"
+    plan = _plan(pmcid="PMC55555")
+    execution = execute_europepmc_acquisition_plan(
+        plan,
+        resolver=FakeResolver(_candidate()),
+        acquisition_service=FakeAcquisitionService(),
+        output_directory=papers_dir,
+    )
+    with database.session() as session:
+        session.add(
+            Paper(
+                title="Existing creatine preprint, indexed without a DOI",
+                doi=None,
+                pmcid="PMC55555",
+                source_path="existing.pdf",
+                content_hash="f" * 64,
+                page_count=1,
+                word_count=10,
+            )
+        )
+
+    with database.session() as session:
+        result = persist_europepmc_acquisition_execution(
+            session,
+            plan,
+            execution,
+            output_directory=papers_dir,
+            parser=FakeParser(),
+        )
+
+    assert result.persisted_count == 0
+    assert result.reused_count == 1
+    with database.session() as session:
+        assert len(list(session.scalars(select(Paper)))) == 1
 
 
 def test_rejects_tampered_file_before_persistence(tmp_path: Path) -> None:
