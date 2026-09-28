@@ -9,6 +9,27 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **PMCID-based already-indexed/reuse detection (issue #433/CORE-GQR-2)**:
+  schema version 15 adds `papers.pmcid` (nullable, uniquely indexed,
+  additive -- same shape as schema version 13's `papers.pmid`/`arxiv_id`).
+  `DuplicateQueryRepository.paper_by_pmcid` mirrors `paper_by_pmid`/
+  `paper_by_arxiv_id`; `general_question_acquisition._find_existing_paper`
+  now checks PMCID after DOI/PMID/arXiv ID; and all four GQR acquisition
+  services (`general_question_pmc_acquisition.py`,
+  `general_question_europepmc_acquisition.py`,
+  `general_question_core_acquisition.py`,
+  `general_question_unpaywall_acquisition.py`) now check/populate PMCID
+  in their own existing-paper reuse logic before persisting newly
+  downloaded full text. Previously a candidate known only by PMCID --
+  the common case for PMC/Europe PMC full-text candidates with no DOI or
+  PMID recorded -- had no persisted signal to match against, so a repeat
+  question could re-download and duplicate-persist a paper Core already
+  had. The `sources.csv`/`ke corpus-import` manifest ingestion path still
+  does not populate `papers.pmcid` for newly imported papers; that is
+  separate follow-up work, mirroring how `pmid`/`arxiv_id` themselves
+  needed a further schema-14 `ImportItem`-carrier-column slice for that
+  path.
+
 - **Newly acquired Evidence Records carry their own acquisition/search-run
   provenance (issue #449 acceptance criterion)**: auditing #449's
   remaining acceptance criteria found that `search_run_id`/
