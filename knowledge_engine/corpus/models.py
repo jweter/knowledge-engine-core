@@ -67,6 +67,7 @@ class CorpusSourceRow:
     normalized_pmid: str
     arxiv_id: str
     normalized_arxiv_id: str
+    normalized_pmcid: str
     inclusion_status: str
     usage_status: str
     local_path: str

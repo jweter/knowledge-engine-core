@@ -123,6 +123,7 @@ class ImportItem(Base):
     normalized_doi: Mapped[str | None] = mapped_column(String(512), nullable=True, index=True)
     normalized_pmid: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     normalized_arxiv_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    normalized_pmcid: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     inclusion_status: Mapped[str | None] = mapped_column(String(64), nullable=True)
     usage_status: Mapped[str | None] = mapped_column(String(64), nullable=True)
     local_path: Mapped[str | None] = mapped_column(Text, nullable=True)

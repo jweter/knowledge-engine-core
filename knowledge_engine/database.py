@@ -34,7 +34,7 @@ from knowledge_engine.models import (
 )
 from knowledge_engine.parser import ParsedPaper
 
-CURRENT_SCHEMA_VERSION = 15
+CURRENT_SCHEMA_VERSION = 16
 _SQLITE_BUSY_TIMEOUT_MS = 30_000
 
 _SCHEMA_V2_COLUMNS: dict[str, dict[str, str]] = {
@@ -113,6 +113,16 @@ _SCHEMA_V15_COLUMNS: dict[str, dict[str, str]] = {
 
 _SCHEMA_V15_INDEXES: dict[str, tuple[str, str]] = {
     "ix_papers_pmcid": ("papers", "pmcid"),
+}
+
+_SCHEMA_V16_COLUMNS: dict[str, dict[str, str]] = {
+    "import_items": {
+        "normalized_pmcid": "VARCHAR(32)",
+    },
+}
+
+_SCHEMA_V16_INDEXES: dict[str, tuple[str, str]] = {
+    "ix_import_items_normalized_pmcid": ("import_items", "normalized_pmcid"),
 }
 
 _TABLES_INTRODUCED_AT_VERSION: dict[int, frozenset[str]] = {
@@ -275,6 +285,8 @@ def migrate_schema(engine: Engine) -> None:
             _migrate_schema_v14(connection)
         if existing_version < 15:
             _migrate_schema_v15(connection)
+        if existing_version < 16:
+            _migrate_schema_v16(connection)
 
         _verify_schema_complete(connection)
 
@@ -528,6 +540,34 @@ def _migrate_schema_v14(connection: Connection) -> None:
         )
 
 
+def _migrate_schema_v16(connection: Connection) -> None:
+    """Add `import_items.normalized_pmcid`.
+
+    Additive and nullable, same shape as the v14 PMID/arXiv ID migration.
+    Carries a manifest row's PMCID (supplied via `other_identifier`, the
+    column `ke` manifest curation already writes PMCIDs to) onto the
+    persisted `ImportItem` so corpus ingestion can pass it to
+    `PaperRepository._build_paper` as `manifest_pmcid`, closing the gap the
+    v15 `papers.pmcid` migration left open for the `ke corpus-import` path.
+    Non-unique index, matching v14. Existing import items keep `NULL` until
+    their run is reprocessed; historical rows are not backfilled.
+    """
+
+    for table_name, columns in _SCHEMA_V16_COLUMNS.items():
+        existing_columns = _table_columns(connection, table_name)
+        for column_name, definition in columns.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(
+                text(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {definition}')
+            )
+
+    for index_name, (table_name, column_name) in _SCHEMA_V16_INDEXES.items():
+        connection.execute(
+            text(f'CREATE INDEX IF NOT EXISTS "{index_name}" ON "{table_name}" ("{column_name}")')
+        )
+
+
 def _migrate_schema_v15(connection: Connection) -> None:
     """Add `papers.pmcid` so PMCID-based reuse detection can key on it.
 
@@ -621,6 +661,11 @@ def _verify_schema_complete(connection: Connection) -> None:
         for column_name in columns:
             if column_name not in existing_columns:
                 missing_columns.append(f"{table_name}.{column_name}")
+    for table_name, columns in _SCHEMA_V16_COLUMNS.items():
+        existing_columns = _table_columns(connection, table_name)
+        for column_name in columns:
+            if column_name not in existing_columns:
+                missing_columns.append(f"{table_name}.{column_name}")
     if missing_columns:
         missing = ", ".join(sorted(missing_columns))
         msg = (
@@ -635,7 +680,8 @@ def _verify_schema_complete(connection: Connection) -> None:
         ).scalars()
     )
     missing_indexes = sorted(
-        (set(_SCHEMA_V2_INDEXES) | set(_SCHEMA_V15_INDEXES)) - existing_indexes
+        (set(_SCHEMA_V2_INDEXES) | set(_SCHEMA_V15_INDEXES) | set(_SCHEMA_V16_INDEXES))
+        - existing_indexes
     )
     if missing_indexes:
         missing = ", ".join(missing_indexes)

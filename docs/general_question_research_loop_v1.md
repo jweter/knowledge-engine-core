@@ -163,9 +163,12 @@ Backfilling `papers.pmid`/`papers.arxiv_id` for *already*-persisted papers
 here -- same as `papers.doi` was never backfilled for pre-existing rows
 either. `papers.pmcid` (schema version 15) is populated by the four GQR
 acquisition services above, which always know a PMC/Europe PMC candidate's
-PMCID directly; the `sources.csv`/`ke corpus-import` manifest path has no
-`pmcid` column and does not populate it -- adding one, mirroring
-`pmid`/`arxiv_id`'s own schema-14 `ImportItem` carrier-column precedent, is
+PMCID directly. The `sources.csv`/`ke corpus-import` manifest path has no dedicated
+`pmcid` column (no manifest-contract change), but schema version 16 adds
+`import_items.normalized_pmcid` (mirroring `pmid`/`arxiv_id`'s schema-14 carrier
+column), populated from `other_identifier` when that value is a `PMC<digits>`
+PMCID (where manifest curation already writes PMCIDs); ingestion passes it as
+`manifest_pmcid` into `papers.pmcid`. Backfilling previously imported papers is
 separate follow-up work, not attempted here. A real database session is now
 wired into the CLI caller (`ke
 general-question-acquisition-plan`, on by default, `--no-database` to

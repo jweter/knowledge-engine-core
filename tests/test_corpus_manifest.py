@@ -480,6 +480,19 @@ def test_pmid_and_arxiv_id_are_normalized_onto_source_rows(tmp_path: Path) -> No
     assert row.normalized_arxiv_id == "2101.00001"
 
 
+def test_source_row_other_identifier_pmcid_is_normalized(tmp_path: Path) -> None:
+    header = [*valid_row().keys(), "other_identifier"]
+    rows = [
+        valid_row(source_id="source-1", other_identifier="PMC1234567"),
+        valid_row(source_id="source-2", doi="10.1234/DEF", other_identifier="not-a-pmcid"),
+    ]
+    corpus_path = write_manifest(tmp_path, header=header, rows=rows)
+
+    result = validate_corpus_manifest(corpus_path, project_root=tmp_path)
+
+    assert [row.normalized_pmcid for row in result.source_rows] == ["pmc1234567", ""]
+
+
 def test_source_row_without_pmid_or_arxiv_columns_normalizes_empty(tmp_path: Path) -> None:
     corpus_path = write_manifest(tmp_path, rows=[valid_row()])
 
