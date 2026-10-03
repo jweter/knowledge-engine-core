@@ -24,7 +24,12 @@ from knowledge_engine.corpus.path_safety import (
     resolve_under,
 )
 from knowledge_engine.license_rules import evaluate_license
-from knowledge_engine.utils import normalize_arxiv_id, normalize_doi, normalize_pmid
+from knowledge_engine.utils import (
+    normalize_arxiv_id,
+    normalize_doi,
+    normalize_pmcid,
+    normalize_pmid,
+)
 
 MANIFEST_VERSION = 1
 IDENTIFIER_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
@@ -57,6 +62,8 @@ REQUIRED_CORPUS_FIELDS = {
 }
 REQUIRED_CSV_HEADERS = {"source_id", "title", "usage_status", "inclusion_status"}
 PDF_SUFFIX = ".pdf"
+
+_PMCID_PATTERN = re.compile(r"PMC\d+", re.IGNORECASE)
 
 
 def validate_corpus_manifest(
@@ -430,6 +437,10 @@ def _validate_rows(
             dois_by_normalized[normalized_doi].append((source_id or "unknown", line_number))
         pmid = _row_text(row, "pmid")
         arxiv_id = _row_text(row, "arxiv_id")
+        other_identifier = _row_text(row, "other_identifier")
+        normalized_pmcid = (
+            normalize_pmcid(other_identifier) if _PMCID_PATTERN.fullmatch(other_identifier) else ""
+        )
         result.source_rows.append(
             CorpusSourceRow(
                 line_number=line_number,
@@ -441,6 +452,7 @@ def _validate_rows(
                 normalized_pmid=normalize_pmid(pmid) if pmid else "",
                 arxiv_id=arxiv_id,
                 normalized_arxiv_id=normalize_arxiv_id(arxiv_id) if arxiv_id else "",
+                normalized_pmcid=normalized_pmcid,
                 inclusion_status=inclusion_status,
                 usage_status=usage_status,
                 local_path=_row_text(row, "local_path"),

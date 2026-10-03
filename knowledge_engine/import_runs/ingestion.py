@@ -246,6 +246,7 @@ class CorpusIngestionService:
                         manifest_doi=item.normalized_doi,
                         manifest_pmid=item.normalized_pmid,
                         manifest_arxiv_id=item.normalized_arxiv_id,
+                        manifest_pmcid=item.normalized_pmcid,
                     )
             except PaperPersistenceError as exc:
                 failed_count += 1

@@ -318,6 +318,51 @@ def test_ingestion_populates_pmid_and_arxiv_id_from_manifest(tmp_path: Path) -> 
         assert paper.arxiv_id == "2101.00001"
 
 
+def test_ingestion_populates_pmcid_from_manifest_other_identifier(tmp_path: Path) -> None:
+    """A PMCID in `other_identifier` (where manifest curation writes it) flows
+
+    through `ImportItem.normalized_pmcid` into `papers.pmcid`; a non-PMCID
+    `other_identifier` must not.
+    """
+    database = make_database(tmp_path)
+    corpus_path = make_corpus(
+        tmp_path,
+        rows=[source_row(other_identifier="PMC1234567")],
+        header=[
+            "source_id",
+            "title",
+            "publication_year",
+            "doi",
+            "other_identifier",
+            "usage_status",
+            "inclusion_status",
+            "source_url",
+            "access_date",
+            "inclusion_reason",
+            "license_type",
+            "license_url",
+            "local_path",
+        ],
+    )
+    pdf_path = declare_pdf(tmp_path, "paper.pdf")
+    parser = StubParser(
+        {
+            "paper.pdf": parsed_paper(
+                pdf_path, title="Imported", doi="10.1234/source-1", content_hash="b" * 64
+            )
+        }
+    )
+
+    with database.session() as session:
+        CorpusIngestionService(session, project_root=tmp_path, parser=parser).import_corpus(
+            corpus_path
+        )
+
+    with database.session() as session:
+        paper = session.query(Paper).filter_by(content_hash="b" * 64).one()
+        assert paper.pmcid == "pmc1234567"
+
+
 def test_ingestion_leaves_pmid_and_arxiv_id_null_without_manifest_values(
     tmp_path: Path,
 ) -> None:
