@@ -333,8 +333,16 @@ def _ke_executable() -> str:
     both Windows (`Scripts/ke.exe`) and POSIX (`bin/ke`) without depending on
     the caller's PATH, which an unattended/scheduled process cannot assume.
     """
-    candidate = Path(sys.executable).parent / ("ke.exe" if os.name == "nt" else "ke")
-    return str(candidate) if candidate.is_file() else "ke"
+    sibling_dir = Path(sys.executable).parent
+    candidates = (
+        [sibling_dir / "ke.exe", sibling_dir / "ke"]
+        if os.name == "nt"
+        else [sibling_dir / "ke", sibling_dir / "ke.exe"]
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+    return "ke"
 
 
 def run_process_startup_timing(
