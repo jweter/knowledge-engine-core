@@ -754,7 +754,7 @@ def test_expected_search_index_failure_rolls_back_item_and_continues(
         paper_count = connection.execute(text("SELECT count(*) FROM papers")).scalar()
         text_count = connection.execute(text("SELECT count(*) FROM paper_texts")).scalar()
         fts_count = connection.execute(text("SELECT count(*) FROM paper_search")).scalar()
-        source_paths = list(connection.execute(text("SELECT source_path FROM papers")).scalars())
+        source_paths: list[str] = list(connection.execute(text("SELECT source_path FROM papers")).scalars())
 
     assert result.run_status == "partially_succeeded"
     assert result.failed_count == 1

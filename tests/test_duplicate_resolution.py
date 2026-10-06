@@ -107,7 +107,7 @@ def _parsed(path: Path, *, content_hash: str, doi: str | None) -> ParsedPaper:
 
 def _counts(session: Session) -> tuple[int, int]:
     paper_count = session.scalar(select(func.count()).select_from(Paper)) or 0
-    fts_count = session.execute(text("SELECT count(*) FROM paper_search")).scalar_one()
+    fts_count: int = session.execute(text("SELECT count(*) FROM paper_search")).scalar_one()
     return int(paper_count), int(fts_count)
 
 
