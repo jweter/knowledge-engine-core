@@ -38,8 +38,7 @@ def normalize(lines: list[str]) -> list[str]:
             output.append(normalized)
         elif previous != normalized:
             raise ValueError(
-                f"conflicting active requirements for {name}: "
-                f"{previous!r} versus {normalized!r}"
+                f"conflicting active requirements for {name}: {previous!r} versus {normalized!r}"
             )
 
     return output
