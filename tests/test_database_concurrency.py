@@ -25,7 +25,7 @@ def _database(tmp_path: Path) -> tuple[Database, Path]:
 def test_sqlite_connections_use_bounded_busy_timeout(tmp_path: Path) -> None:
     database, _ = _database(tmp_path)
     with database.engine.connect() as connection:
-        busy_timeout = connection.exec_driver_sql("PRAGMA busy_timeout").scalar_one()
+        busy_timeout: int = connection.exec_driver_sql("PRAGMA busy_timeout").scalar_one()
 
     assert busy_timeout == 30_000
 

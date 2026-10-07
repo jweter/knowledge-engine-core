@@ -394,7 +394,7 @@ def _migrate_schema_v10(connection: Connection) -> None:
         text(f'ALTER TABLE "graph_claim_relationships" RENAME TO "{old_table_name}"')
     )
 
-    old_indexes = list(
+    old_indexes: list[str] = list(
         connection.execute(
             text(
                 "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name=:table_name "
@@ -622,7 +622,7 @@ def _verify_expected_tables(
     connection: Connection, *, ignore_missing: frozenset[str] = frozenset()
 ) -> None:
     expected_tables = set(Base.metadata.tables) - ignore_missing
-    existing_tables = set(
+    existing_tables: set[str] = set(
         connection.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).scalars()
     )
     missing_tables = sorted(expected_tables - existing_tables)
@@ -674,7 +674,7 @@ def _verify_schema_complete(connection: Connection) -> None:
         )
         raise RuntimeError(msg)
 
-    existing_indexes = set(
+    existing_indexes: set[str] = set(
         connection.execute(
             text("SELECT name FROM sqlite_master WHERE type='index' AND name IS NOT NULL")
         ).scalars()

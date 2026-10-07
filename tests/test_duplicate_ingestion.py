@@ -15,9 +15,9 @@ from tests.test_corpus_import import StubParser, declare_pdf, make_corpus, parse
 
 def _counts(database: Database) -> tuple[int, int, int]:
     with database.session() as session:
-        papers = session.execute(text("SELECT count(*) FROM papers")).scalar_one()
-        paper_texts = session.execute(text("SELECT count(*) FROM paper_texts")).scalar_one()
-        search_rows = session.execute(text("SELECT count(*) FROM paper_search")).scalar_one()
+        papers: int = session.execute(text("SELECT count(*) FROM papers")).scalar_one()
+        paper_texts: int = session.execute(text("SELECT count(*) FROM paper_texts")).scalar_one()
+        search_rows: int = session.execute(text("SELECT count(*) FROM paper_search")).scalar_one()
     return int(papers), int(paper_texts), int(search_rows)
 
 

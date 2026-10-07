@@ -121,7 +121,7 @@ def test_fresh_database_creates_m8_schema(tmp_path: Path) -> None:
     database = make_database(tmp_path)
 
     with database.engine.connect() as connection:
-        tables = set(
+        tables: set[str] = set(
             connection.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).scalars()
         )
         version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar()

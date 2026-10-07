@@ -118,10 +118,12 @@ class SearchService:
 
         if not tokens:
             return {}
-        total_papers = self.session.execute(text("SELECT count(*) FROM paper_search")).scalar_one()
+        total_papers: int = self.session.execute(
+            text("SELECT count(*) FROM paper_search")
+        ).scalar_one()
         weights: dict[str, float] = {}
         for token in tokens:
-            document_frequency = self.session.execute(
+            document_frequency: int = self.session.execute(
                 text("SELECT count(*) FROM paper_search WHERE paper_search MATCH :token"),
                 {"token": token},
             ).scalar_one()

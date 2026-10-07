@@ -49,8 +49,10 @@ def test_fresh_database_initializes_at_current_schema_version(tmp_path: Path) ->
     database.initialize()
 
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
-        foreign_keys_enabled = connection.execute(text("PRAGMA foreign_keys")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
+        foreign_keys_enabled: int = connection.execute(text("PRAGMA foreign_keys")).scalar_one()
 
     assert version == CURRENT_SCHEMA_VERSION == 16
     assert "review_status" in _column_names(database, "import_runs")
@@ -87,7 +89,7 @@ def test_schema_version_4_migration_is_retry_safe(tmp_path: Path) -> None:
     database.initialize()
 
     with database.engine.connect() as connection:
-        versions = list(
+        versions: list[int] = list(
             connection.execute(
                 text("SELECT version FROM schema_versions ORDER BY version")
             ).scalars()
@@ -110,7 +112,9 @@ def test_current_version_missing_table_is_not_silently_repaired(tmp_path: Path) 
 
     assert "import_items" not in _table_names(database)
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
     assert version == CURRENT_SCHEMA_VERSION
 
 
@@ -129,7 +133,7 @@ def test_older_version_missing_table_is_not_silently_repaired(tmp_path: Path) ->
 
     assert "import_items" not in _table_names(database)
     with database.engine.connect() as connection:
-        versions = list(
+        versions: list[int] = list(
             connection.execute(
                 text("SELECT version FROM schema_versions ORDER BY version")
             ).scalars()
@@ -210,7 +214,9 @@ def test_upgrading_older_database_adds_new_table_without_error(tmp_path: Path) -
 
     assert "paper_pages" in _table_names(database)
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
     assert version == CURRENT_SCHEMA_VERSION == 16
 
 
@@ -252,7 +258,9 @@ def test_upgrading_older_database_adds_extraction_runs_table_without_error(
 
     assert "extraction_runs" in _table_names(database)
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
     assert version == CURRENT_SCHEMA_VERSION == 16
 
 
@@ -297,7 +305,9 @@ def test_upgrading_older_database_adds_study_design_rules_version_column(
 
     assert "study_design_rules_version" in _column_names(database, "extraction_runs")
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
     assert version == CURRENT_SCHEMA_VERSION == 16
 
 
@@ -323,7 +333,9 @@ def test_upgrading_older_database_adds_pico_extraction_rules_version_column(
 
     assert "pico_extraction_rules_version" in _column_names(database, "extraction_runs")
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
     assert version == CURRENT_SCHEMA_VERSION == 16
 
 
@@ -352,7 +364,9 @@ def test_upgrading_older_database_adds_paper_pages_table_text_column(
 
     assert "table_text" in _column_names(database, "paper_pages")
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
     assert version == CURRENT_SCHEMA_VERSION == 16
 
 
@@ -376,7 +390,9 @@ def test_upgrading_older_database_adds_graph_citations_table_without_error(
 
     assert "graph_citations" in _table_names(database)
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
     assert version == CURRENT_SCHEMA_VERSION == 16
 
 
@@ -472,7 +488,9 @@ def test_upgrading_older_database_widens_relationship_type_constraint(
         "ix_graph_claim_relationships_target_claim_id",
     } <= _index_names(database)
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
     assert version == CURRENT_SCHEMA_VERSION == 16
 
 
@@ -508,7 +526,9 @@ def test_upgrading_older_database_adds_papers_pmid_arxiv_id_columns(
     assert {"pmid", "arxiv_id"} <= _column_names(database, "papers")
     assert {"ix_papers_pmid", "ix_papers_arxiv_id"} <= _index_names(database)
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
     assert version == CURRENT_SCHEMA_VERSION == 16
 
 
@@ -540,7 +560,9 @@ def test_upgrading_older_database_adds_papers_pmcid_column(
     assert "pmcid" in _column_names(database, "papers")
     assert "ix_papers_pmcid" in _index_names(database)
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
     assert version == CURRENT_SCHEMA_VERSION == 16
 
 
@@ -583,7 +605,9 @@ def test_upgrading_older_database_adds_import_items_normalized_pmid_arxiv_id_col
         "ix_import_items_normalized_arxiv_id",
     } <= _index_names(database)
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
     assert version == CURRENT_SCHEMA_VERSION == 16
 
 
@@ -609,5 +633,7 @@ def test_upgrading_older_database_adds_import_items_normalized_pmcid_column(
     assert "normalized_pmcid" in _column_names(database, "import_items")
     assert "ix_import_items_normalized_pmcid" in _index_names(database)
     with database.engine.connect() as connection:
-        version = connection.execute(text("SELECT max(version) FROM schema_versions")).scalar_one()
+        version: int = connection.execute(
+            text("SELECT max(version) FROM schema_versions")
+        ).scalar_one()
     assert version == CURRENT_SCHEMA_VERSION == 16
