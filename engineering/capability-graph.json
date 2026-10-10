@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "repository": "jweter/knowledge-engine-core",
+  "capabilities": [
+    {
+      "id": "research-report-v1-core-support",
+      "capability": "Advance the explicitly tracked Research Report v1 Core support and local Monster #79 acceptance path without weakening evidence, provenance, or Product Reality gates.",
+      "state": "IN_PROGRESS",
+      "completion_evidence": [
+        "docs/project-status.yaml active_work and current_milestone",
+        "docs/roadmap/research_report_v1.md",
+        "GitHub issues #449 and #402"
+      ],
+      "depends_on": [],
+      "slices": [
+        {
+          "id": "research-report-core-next-evidence-backed-slice",
+          "state": "PLANNED",
+          "objective": "Take the next bounded Core-side Research Report v1 or Monster #79 support defect demonstrated by exact-head repository, issue, CI, or local acceptance evidence. Prefer finishing existing work and do not invent new product direction.",
+          "acceptance": [
+            "The change closes or materially advances an explicitly documented Core Research Report v1 or local-acceptance gap.",
+            "Evidence traceability, provenance, privacy, deterministic non-fabricated state, and Core/AI/Web boundaries remain intact.",
+            "Repository-native regression coverage demonstrates the corrected behavior.",
+            "Exact-head preflight and required CI remain authoritative."
+          ],
+          "allowed_paths": [
+            "knowledge_engine/**",
+            "tests/**",
+            "engineering/**",
+            "docs/**"
+          ],
+          "forbidden_paths": [
+            ".env",
+            "**/*.pem",
+            "**/*.key"
+          ],
+          "runner_requirements": [
+            "code",
+            "local",
+            "windows"
+          ],
+          "runtime_requirements": []
+        }
+      ]
+    }
+  ],
+  "roadmap": [
+    "research-report-v1-core-support"
+  ]
+}
