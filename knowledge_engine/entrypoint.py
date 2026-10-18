@@ -155,6 +155,7 @@ from knowledge_engine.general_question_pmc_acquisition import (
     execute_pmc_acquisition_plan,
     persist_pmc_acquisition_execution,
 )
+from knowledge_engine.hybrid_search import merge_lexical_and_vector_results
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.llm import LocalLLMError, OllamaLLM
@@ -5393,8 +5394,10 @@ def vector_search(
     embedding_model, once known, is checked against the index's recorded
     embedding_model -- vectors from different models are not comparable even at
     the same dimension. Lexical search remains available via `ke search`; this
-    command is an additional, separate retrieval signal, not a replacement, and
-    combining the two into one ranked list is not yet implemented.
+    command is an additional, separate retrieval signal, not a replacement.
+    Combining the two into one ranked list is available via `ke fused-search`
+    (Reciprocal Rank Fusion over rank position) or `ke hybrid-search`
+    (independently normalized raw scores, summed).
     """
 
     index_metadata = load_index_metadata(index_path)
@@ -5602,6 +5605,115 @@ def fused_search(
         console.print(f"[bold]{rank}. {title}[/bold]")
         console.print(f"Paper ID: {result.paper_id}")
         console.print(f"Fused score: {result.fused_score:.4f} (matched: {', '.join(matched_via)})")
+        if paper:
+            console.print(f"DOI: {escape(paper.doi or 'Unknown')}")
+
+    console.print()
+    console.print(
+        "[bold]This is combined lexical and semantic retrieval only, not scientific "
+        "synthesis.[/bold]"
+    )
+
+
+@app.command("hybrid-search")
+def hybrid_search(
+    query_text: FusedSearchQueryTextArgument,
+    index_path: ExistingEmbeddingIndexPathOption,
+    generator: FusedSearchGeneratorOption,
+    model: VectorSearchModelOption = None,
+    limit: VectorSearchLimitOption = 10,
+    candidate_limit: FusedSearchCandidateLimitOption = 25,
+) -> None:
+    """Combine lexical and semantic retrieval by normalized raw score, not rank.
+
+    An alternative to `ke fused-search`'s Reciprocal Rank Fusion: each
+    signal's own raw score (FTS5's bm25 for lexical; FAISS similarity --
+    the negative of its squared L2 distance, so higher means more similar
+    like bm25 -- for semantic) is independently min-max normalized to
+    [0, 1] before combining (see `knowledge_engine.hybrid_search`), so a
+    strong match in one signal is not diluted by rank position the way
+    RRF's `1/(k+rank)` can be. A paper present in both signals is scored
+    by the SUM of its two normalized scores, so a dual-signal match can
+    clearly outrank a single-signal one. `--candidate-limit` controls how
+    many results are pulled from each individual signal before merging;
+    the effective candidate pool is never narrower than `--limit` itself.
+    """
+
+    index_metadata = load_index_metadata(index_path)
+    if index_metadata is None:
+        console.print(
+            f"[red]Index at {index_path} has no recorded embedding_model "
+            "metadata.[/red] Refusing to search an index whose embedding model cannot "
+            "be verified."
+        )
+        raise typer.Exit(1)
+
+    embedding_generator = _build_embedding_generator(generator, model)
+    try:
+        vector: list[float] = list(embedding_generator.generate(query_text))
+    except (LocalEmbeddingError, OpenAiEmbeddingError) as exc:
+        console.print(f"[red]Failed to embed query text:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from None
+
+    if embedding_generator.model_id != index_metadata.embedding_model:
+        console.print(
+            f"[red]Query was embedded with '{escape(embedding_generator.model_id)}'; "
+            f"this index was built with '{escape(index_metadata.embedding_model)}'.[/red] "
+            "Refusing to compare vectors from different embedding models."
+        )
+        raise typer.Exit(1)
+
+    try:
+        index = FaissVectorIndex.load(index_path, dimension=len(vector))
+    except VectorSearchError as exc:
+        console.print(f"[red]{escape(str(exc))}[/red]")
+        raise typer.Exit(1) from None
+
+    effective_candidate_limit = max(candidate_limit, limit)
+    # FAISS reports squared L2 distance (lower = more similar); negate so
+    # higher means more similar, matching bm25's own convention, before
+    # handing it to merge_lexical_and_vector_results's per-signal min-max
+    # normalization.
+    vector_scores = {
+        match.vector_id: -match.score for match in index.search(vector, k=effective_candidate_limit)
+    }
+
+    database = _local_database()
+    database.initialize()
+    with database.session() as session:
+        lexical_results = SearchService(session).answer_retrieval(
+            query_text, limit=effective_candidate_limit
+        )
+        lexical_ids = {result.paper_id for result in lexical_results}
+        merged = merge_lexical_and_vector_results(lexical_results, vector_scores)[:limit]
+        repository = PaperRepository(session)
+        papers_by_id = {
+            paper.id: paper for paper in repository.get_many([result.paper_id for result in merged])
+        }
+
+    if not merged:
+        console.print("[yellow]No matches found in either lexical or semantic search.[/yellow]")
+        return
+
+    console.print(f"[bold]Hybrid search results for:[/bold] {escape(query_text)}")
+    console.print(
+        f"(lexical: SQLite FTS5; semantic: {index_path}, "
+        f"embedding_model: {index_metadata.embedding_model})"
+    )
+    for rank, result in enumerate(merged, start=1):
+        paper = papers_by_id.get(result.paper_id)
+        title = escape(paper.title) if paper else "Unknown paper (not in local database)"
+        matched_via = []
+        if result.paper_id in lexical_ids:
+            matched_via.append(f"lexical={result.lexical_score:.3f}")
+        if result.paper_id in vector_scores:
+            matched_via.append(f"semantic={result.vector_score:.3f}")
+        console.print()
+        console.print(f"[bold]{rank}. {title}[/bold]")
+        console.print(f"Paper ID: {result.paper_id}")
+        console.print(
+            f"Combined score: {result.combined_score:.4f} (matched: {', '.join(matched_via)})"
+        )
         if paper:
             console.print(f"DOI: {escape(paper.doi or 'Unknown')}")
 
