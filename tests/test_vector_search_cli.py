@@ -10,7 +10,7 @@ import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.parser import ParsedPage, ParsedPaper
-from knowledge_engine.vector_search import FaissVectorIndex
+from knowledge_engine.vector_search import FaissVectorIndex, VectorMatch
 
 
 def _unwrapped(output: str) -> str:
@@ -667,3 +667,103 @@ def test_vector_search_reports_embedding_model_and_rejects_query_mismatch(
     unwrapped = _unwrapped(bad_result.output)
     assert "model-a" in unwrapped
     assert "model-b" in unwrapped
+
+
+def test_vector_search_qdrant_without_embedding_model_fails_cleanly(tmp_path: Path) -> None:
+    query_path = tmp_path / "query.json"
+    query_path.write_text(json.dumps([1.0, 0.0]), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "vector-search",
+            "--backend",
+            "qdrant",
+            "--qdrant-collection",
+            "x",
+            "--qdrant-url",
+            "http://fake-host:6333",
+            "--query-vector",
+            str(query_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+
+
+def test_vector_search_faiss_without_index_path_fails_cleanly(tmp_path: Path) -> None:
+    query_path = tmp_path / "query.json"
+    query_path.write_text(json.dumps([1.0, 0.0]), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        # Deliberately no --index-path and no --backend: faiss is the default,
+        # and this must still fail cleanly now that --index-path is no longer
+        # Typer-required/exists-checked at the type level.
+        ["vector-search", "--query-vector", str(query_path)],
+    )
+
+    assert result.exit_code != 0
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+
+
+class _FakeQdrantSearchIndex:
+    """Minimal fake standing in for `QdrantVectorIndex` in `vector-search` tests."""
+
+    def __init__(self, matches: list[VectorMatch]) -> None:
+        self._matches = matches
+
+    def search(self, vector: list[float], k: int) -> list[VectorMatch]:
+        return self._matches[:k]
+
+
+def test_vector_search_wires_qdrant_backend_through_to_resolve_vector_index(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "a" * 64))
+        paper_id = paper.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    calls: list[dict[str, object]] = []
+    fake_index = _FakeQdrantSearchIndex([VectorMatch(vector_id=paper_id, score=0.0)])
+
+    def fake_resolve_vector_index(**kwargs: object) -> _FakeQdrantSearchIndex:
+        calls.append(kwargs)
+        return fake_index
+
+    monkeypatch.setattr(entrypoint, "resolve_vector_index", fake_resolve_vector_index)
+
+    query_path = tmp_path / "query.json"
+    query_path.write_text(json.dumps([1.0, 0.0]), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "vector-search",
+            "--backend",
+            "qdrant",
+            "--qdrant-collection",
+            "test-collection",
+            "--qdrant-url",
+            "http://fake-host:6333",
+            "--qdrant-embedding-model",
+            "external:test-v1",
+            "--query-vector",
+            str(query_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 1
+    assert calls[0]["backend"] == "qdrant"
+    assert calls[0]["qdrant_collection_name"] == "test-collection"
+    assert calls[0]["qdrant_url"] == "http://fake-host:6333"
+    assert calls[0]["embedding_model"] == "external:test-v1"
+    assert calls[0]["dimension"] == 2
+
+    unwrapped = _unwrapped(result.output)
+    assert f"Paper ID: {paper_id}" in unwrapped
+    assert "embedding_model: external:test-v1" in unwrapped

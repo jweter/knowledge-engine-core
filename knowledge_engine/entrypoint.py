@@ -1087,6 +1087,17 @@ QdrantApiKeyOption = Annotated[
     str | None,
     typer.Option("--qdrant-api-key", help="Optional Qdrant API key."),
 ]
+QdrantEmbeddingModelOption = Annotated[
+    str | None,
+    typer.Option(
+        "--qdrant-embedding-model",
+        help=(
+            "Embedding model identifier for the Qdrant collection being searched. "
+            "Required when --backend qdrant (Qdrant has no local metadata sidecar to "
+            "read this from)."
+        ),
+    ),
+]
 ExistingEmbeddingIndexPathOption = Annotated[
     Path,
     typer.Option(
@@ -5414,12 +5425,22 @@ def embedding_index_build(
 
 @app.command("vector-search")
 def vector_search(
-    index_path: ExistingEmbeddingIndexPathOption,
+    index_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--index-path", help="Local FAISS index file to search. Required when --backend faiss."
+        ),
+    ] = None,
     query_vector: QueryVectorOption = None,
     query_text: QueryTextOption = None,
     generator: VectorSearchGeneratorOption = None,
     model: VectorSearchModelOption = None,
     limit: VectorSearchLimitOption = 10,
+    backend: VectorIndexBackendOption = "faiss",
+    qdrant_collection: QdrantCollectionOption = None,
+    qdrant_url: QdrantUrlOption = None,
+    qdrant_api_key: QdrantApiKeyOption = None,
+    qdrant_embedding_model: QdrantEmbeddingModelOption = None,
 ) -> None:
     """Search a local FAISS vector index by a free-text query or an already-embedded vector.
 
@@ -5436,14 +5457,29 @@ def vector_search(
     (independently normalized raw scores, summed).
     """
 
-    index_metadata = load_index_metadata(index_path)
-    if index_metadata is None:
-        console.print(
-            f"[red]Index at {index_path} has no recorded embedding_model "
-            "metadata.[/red] Refusing to search an index whose embedding model cannot "
-            "be verified."
-        )
-        raise typer.Exit(1)
+    resolved_embedding_model: str = ""
+    if backend == "faiss":
+        if index_path is None:
+            console.print("[red]--index-path is required when --backend faiss.[/red]")
+            raise typer.Exit(1)
+        if not index_path.exists():
+            console.print(f"[red]Index file not found: {index_path}[/red]")
+            raise typer.Exit(1)
+
+        index_metadata = load_index_metadata(index_path)
+        if index_metadata is None:
+            console.print(
+                f"[red]Index at {index_path} has no recorded embedding_model "
+                "metadata.[/red] Refusing to search an index whose embedding model cannot "
+                "be verified."
+            )
+            raise typer.Exit(1)
+        resolved_embedding_model = index_metadata.embedding_model
+    elif backend == "qdrant":
+        if qdrant_embedding_model is None:
+            console.print("[red]--qdrant-embedding-model is required when --backend qdrant.[/red]")
+            raise typer.Exit(1)
+        resolved_embedding_model = qdrant_embedding_model
 
     if (query_vector is None) == (query_text is None):
         console.print("[red]Provide exactly one of --query-vector or --query-text.[/red]")
@@ -5491,20 +5527,25 @@ def vector_search(
             payload.get("embedding_model") if isinstance(payload, dict) else None
         )
 
-    if (
-        query_embedding_model is not None
-        and query_embedding_model != index_metadata.embedding_model
-    ):
+    if query_embedding_model is not None and query_embedding_model != resolved_embedding_model:
         console.print(
             f"[red]Query vector was embedded with '{escape(str(query_embedding_model))}'; "
-            f"this index was built with '{escape(index_metadata.embedding_model)}'.[/red] "
+            f"this index was built with '{escape(resolved_embedding_model)}'.[/red] "
             "Refusing to compare vectors from different embedding models."
         )
         raise typer.Exit(1)
 
     try:
-        index = FaissVectorIndex.load(index_path, dimension=len(vector))
-    except VectorSearchError as exc:
+        index = resolve_vector_index(
+            backend=backend,
+            dimension=len(vector),
+            embedding_model=resolved_embedding_model,
+            index_path=index_path,
+            qdrant_collection_name=qdrant_collection,
+            qdrant_url=qdrant_url,
+            qdrant_api_key=qdrant_api_key,
+        )
+    except (VectorSearchError, ValueError) as exc:
         console.print(f"[red]{escape(str(exc))}[/red]")
         raise typer.Exit(1) from None
 
@@ -5523,7 +5564,7 @@ def vector_search(
 
     console.print(
         f"[bold]Vector search results:[/bold] {index_path} "
-        f"(embedding_model: {index_metadata.embedding_model})"
+        f"(embedding_model: {resolved_embedding_model})"
     )
     for rank, match in enumerate(matches, start=1):
         paper = papers_by_id.get(match.vector_id)
