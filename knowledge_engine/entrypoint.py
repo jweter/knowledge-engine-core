@@ -257,6 +257,7 @@ from knowledge_engine.vector_search import (
     load_index_metadata,
     save_index_metadata,
 )
+from knowledge_engine.vector_search.backend_selection import resolve_vector_index
 
 DoiOption = Annotated[str, typer.Option("--doi", help="DOI to query.")]
 ProviderOption = Annotated[
@@ -1062,6 +1063,29 @@ EmbeddingVectorsOption = Annotated[
 EmbeddingIndexPathOption = Annotated[
     Path,
     typer.Option("--index-path", help="Local FAISS index file to create or update."),
+]
+VectorIndexBackendOption = Annotated[
+    str,
+    typer.Option(
+        "--backend",
+        help=(
+            "Vector index backend: 'faiss' (default, local file) or 'qdrant' (operator-run server)."
+        ),
+    ),
+]
+QdrantCollectionOption = Annotated[
+    str | None,
+    typer.Option(
+        "--qdrant-collection", help="Qdrant collection name. Required when --backend qdrant."
+    ),
+]
+QdrantUrlOption = Annotated[
+    str | None,
+    typer.Option("--qdrant-url", help="Qdrant server URL. Required when --backend qdrant."),
+]
+QdrantApiKeyOption = Annotated[
+    str | None,
+    typer.Option("--qdrant-api-key", help="Optional Qdrant API key."),
 ]
 ExistingEmbeddingIndexPathOption = Annotated[
     Path,
@@ -5289,6 +5313,10 @@ def embedding_generate(
 def embedding_index_build(
     vectors: EmbeddingVectorsOption,
     index_path: EmbeddingIndexPathOption,
+    backend: VectorIndexBackendOption = "faiss",
+    qdrant_collection: QdrantCollectionOption = None,
+    qdrant_url: QdrantUrlOption = None,
+    qdrant_api_key: QdrantApiKeyOption = None,
 ) -> None:
     """Build or update a local FAISS vector index from externally-generated embeddings.
 
@@ -5346,12 +5374,16 @@ def embedding_index_build(
             raise typer.Exit(1)
 
         try:
-            index = (
-                FaissVectorIndex.load(index_path, dimension=result.dimension)
-                if index_path.exists()
-                else FaissVectorIndex(result.dimension)
+            index = resolve_vector_index(
+                backend=backend,
+                dimension=result.dimension,
+                embedding_model=result.embedding_model,
+                index_path=index_path,
+                qdrant_collection_name=qdrant_collection,
+                qdrant_url=qdrant_url,
+                qdrant_api_key=qdrant_api_key,
             )
-        except VectorSearchError as exc:
+        except (VectorSearchError, ValueError) as exc:
             console.print(f"[red]{escape(str(exc))}[/red]")
             raise typer.Exit(1) from None
 
@@ -5363,16 +5395,20 @@ def embedding_index_build(
                 embedding_id=str(record.paper_id),
             )
 
-        index.save(index_path)
-        save_index_metadata(
-            index_path,
-            VectorIndexMetadata(embedding_model=result.embedding_model, dimension=result.dimension),
-        )
+        if backend == "faiss":
+            assert isinstance(index, FaissVectorIndex)  # guaranteed by resolve_vector_index
+            index.save(index_path)
+            save_index_metadata(
+                index_path,
+                VectorIndexMetadata(
+                    embedding_model=result.embedding_model, dimension=result.dimension
+                ),
+            )
 
     console.print(
         f"[green]Indexed {len(result.records)} vector(s):[/green] {index_path} "
         f"(embedding_model {result.embedding_model}, dimension {result.dimension}, "
-        f"index size {index.size})."
+        f"index size {cast(Any, index).size})."
     )
 
 
