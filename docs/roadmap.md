@@ -1,5 +1,10 @@
 # Roadmap
 
+## Owner-approved execution direction (2026-10-25)
+
+The standard Research Report journey uses **local computation with online, on-demand source retrieval**, without requiring a pre-ingested local corpus or a large permanent PDF/document store. Preserve the existing `Draft -> Sourced -> Verified -> Deep` progression, Evidence Record provenance, scientific auditability, and cross-repository contracts. Existing local-corpus tooling may remain optional; do not delete user data. Implement this transition in bounded slices with disk limits, temporary-data cleanup, and real end-to-end evidence. See `docs/OWNER_APPROVED_ROADMAP_2026-10-25.md` for the owner decision and next slices.
+
+
 This file is the roadmap index. Phase-specific notes live in `docs/roadmap/`.
 
 One cross-repository product requirement is important enough to be called out
