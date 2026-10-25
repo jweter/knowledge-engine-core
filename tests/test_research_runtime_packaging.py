@@ -41,7 +41,7 @@ def test_research_runtime_projection_translates_current_poetry_constraints() -> 
     requirements = research_runtime_requirements(_pyproject())
 
     assert "pydantic>=2.8.0,<3.0.0" in requirements
-    assert "pymupdf>=1.24.7,<2.0.0" in requirements
+    assert "pymupdf>=1.24.7,<3.0.0" in requirements
     assert "rich>=13.7.1,<16.0.0" in requirements
     assert "click>=8.0,<8.6" in requirements
     assert "cryptography>=50.0.0,<51.0.0" in requirements
