@@ -9,6 +9,11 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Roman-numbered scientific section headings (KEC-6)**: evidence-section
+  detection now recognizes uppercase Roman prefixes such as `II. Methods`,
+  `III. Results`, and `IV. Discussion`, while preserving decimal and
+  unnumbered headings and rejecting combined-heading false positives.
+
 - **PMCID-based already-indexed/reuse detection (issue #433/CORE-GQR-2)**:
   schema version 15 adds `papers.pmcid` (nullable, uniquely indexed,
   additive -- same shape as schema version 13's `papers.pmid`/`arxiv_id`).

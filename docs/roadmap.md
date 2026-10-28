@@ -568,7 +568,10 @@ gap, measuring deterministic-extraction coverage across the full
 diagnosed recall gaps (structured-section heading matching, study-type's
 closed vocabulary), both since authorized and fixed (see M38's roadmap
 entry below and `docs/history/milestones/m38_extraction_scale_assessment.md`'s "Resolved
-follow-up" section for the fixes and the re-measured numbers). **M40**
+follow-up" section for the fixes and the re-measured numbers). A subsequent
+KEC-6 heading-parser follow-up extends the same deterministic extraction
+path to uppercase Roman-numbered headings (`II. Methods`, `III. Results`)
+without changing section labels or the evidence schema. **M40**
 closed most of the other half: `ke extraction-review-batch-generate` ran
 the same deterministic pipeline `ke extraction-review-generate` runs for
 one paper across all 943, producing 13,588 draft evidence items (679
