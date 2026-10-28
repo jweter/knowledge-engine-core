@@ -49,7 +49,7 @@ SECTION_TYPES = (
 # claim-candidate scan). The colon requirement keeps this narrow: "results"
 # appearing mid-sentence, or as part of a combined heading like "Results and
 # Discussion", still does not match either alternative.
-_NUMBERING_PREFIX = r"(?:\d+(?:\.\d+)*\.?\s+)?"
+_NUMBERING_PREFIX = r"(?:(?:\d+(?:\.\d+)*\.?|(?-i:[IVX]+)\.)\s+)?"
 _INLINE_LABEL_SUFFIX = r"\s*(?:$|:\s*(?=\S))"
 _SECTION_HEADING_PATTERNS: dict[str, re.Pattern[str]] = {
     "abstract": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}abstract{_INLINE_LABEL_SUFFIX}"),
