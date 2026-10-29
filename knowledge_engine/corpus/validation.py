@@ -63,7 +63,7 @@ REQUIRED_CORPUS_FIELDS = {
 REQUIRED_CSV_HEADERS = {"source_id", "title", "usage_status", "inclusion_status"}
 PDF_SUFFIX = ".pdf"
 
-_PMCID_PATTERN = re.compile(r"PMC\d+", re.IGNORECASE)
+_PMCID_PATTERN = re.compile(r"PMC[0-9]+", re.IGNORECASE)
 
 
 def validate_corpus_manifest(
