@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,7 @@ import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.parser import ParsedPage, ParsedPaper
+from knowledge_engine.research_runtime_packaging import VECTOR_ONLY_DEPENDENCIES
 from knowledge_engine.vector_search import FaissVectorIndex
 from knowledge_engine.vector_search.index import VectorCapabilityUnavailable
 from knowledge_engine.vector_search.qdrant_index import QdrantVectorIndex
@@ -50,7 +52,7 @@ def test_faiss_index_without_faiss_reports_the_optional_capability(
 ) -> None:
     monkeypatch.setitem(sys.modules, "faiss", None)
 
-    with pytest.raises(VectorCapabilityUnavailable, match="optional vector capability"):
+    with pytest.raises(VectorCapabilityUnavailable, match="poetry install --extras vector"):
         FaissVectorIndex(2)
 
 
@@ -114,3 +116,26 @@ def test_embedding_index_build_without_faiss_fails_cleanly(
     assert result.exit_code == 1, result.output
     assert "optional vector capability is not installed" in " ".join(result.output.split())
     assert result.exception is None or isinstance(result.exception, SystemExit)
+
+
+def test_the_vector_stack_is_exactly_the_optional_vector_extra() -> None:
+    poetry = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["tool"][
+        "poetry"
+    ]
+    dependencies = poetry["dependencies"]
+
+    assert set(poetry["extras"]["vector"]) == VECTOR_ONLY_DEPENDENCIES
+    for name in VECTOR_ONLY_DEPENDENCIES:
+        declaration = dependencies[name]
+        assert isinstance(declaration, dict) and declaration.get("optional") is True, name
+
+
+def test_the_locked_vector_extra_installs_only_cpu_torch() -> None:
+    # A multi-constraint optional torch once locked a second, CUDA-enabled PyPI torch for
+    # Linux/Windows next to the pytorch-cpu build; the lock must hold only the CPU build.
+    packages = tomllib.loads((REPO_ROOT / "poetry.lock").read_text(encoding="utf-8"))["package"]
+    torches = [package for package in packages if package["name"] == "torch"]
+
+    assert torches and all(package["version"].endswith("+cpu") for package in torches)
+    assert all(package.get("optional") is True for package in torches)
+    assert not [p["name"] for p in packages if p["name"].startswith(("nvidia-", "triton"))]

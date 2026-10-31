@@ -21,7 +21,7 @@ jobs:
       - name: Install Poetry
         run: python -m pip install poetry
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --extras vector
       - name: Run full preflight
         run: python engineering/preflight.py --evidence preflight-evidence.json
       - uses: actions/upload-artifact@v7

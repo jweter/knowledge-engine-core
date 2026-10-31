@@ -45,3 +45,15 @@ lexical+vector search). That work is preserved off-machine on
 - `vector-search`/`embedding-index-build`/hybrid commands keep their existing tests green when the extra is installed,
   and fail with a clear "optional vector capability not installed" message when it is not.
 - Canonical preflight GREEN at the exact PR head; required CI checks green.
+
+### Known limitation: the `vector` extra is Windows/Linux only (owner decision 2026-10-31)
+The `vector` extra pins CPU-only PyTorch from the `pytorch-cpu` index, which publishes no macOS wheels, so
+`poetry install --extras vector` does not resolve on macOS. This is accepted for now. The default install, the full
+`ke` CLI and the online Research Report workflow are cross-platform and unaffected: a default install on macOS needs
+no vector package, and the vector commands report "optional vector capability is not installed".
+
+Future compatibility improvement (not scheduled): make the extra installable on macOS without a second,
+incompatible PyTorch and without heavyweight GPU packages. Constraint learned while locking: declaring `torch` with
+several platform-specific constraints made Poetry merge their markers with `sentence-transformers`' own `torch`
+requirement and lock a second, CUDA-enabled PyPI build for Linux/Windows next to the CPU build, which
+`tests/test_optional_vector_capability.py::test_the_locked_vector_extra_installs_only_cpu_torch` now forbids.
