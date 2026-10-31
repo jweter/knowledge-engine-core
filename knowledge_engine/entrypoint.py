@@ -1060,10 +1060,6 @@ EmbeddingVectorsOption = Annotated[
         readable=True,
     ),
 ]
-EmbeddingIndexPathOption = Annotated[
-    Path,
-    typer.Option("--index-path", help="Local FAISS index file to create or update."),
-]
 VectorIndexBackendOption = Annotated[
     str,
     typer.Option(
@@ -5323,7 +5319,13 @@ def embedding_generate(
 @app.command("embedding-index-build")
 def embedding_index_build(
     vectors: EmbeddingVectorsOption,
-    index_path: EmbeddingIndexPathOption,
+    index_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--index-path",
+            help="Local FAISS index file to create or update. Required when --backend faiss.",
+        ),
+    ] = None,
     backend: VectorIndexBackendOption = "faiss",
     qdrant_collection: QdrantCollectionOption = None,
     qdrant_url: QdrantUrlOption = None,
@@ -5354,7 +5356,12 @@ def embedding_index_build(
     assert result.dimension is not None  # non-empty records guarantee a dimension
     assert result.embedding_model is not None  # non-empty records guarantee a model
 
-    if index_path.exists():
+    # The local index file and its metadata belong to the FAISS backend only; a Qdrant build
+    # must not be rejected because of an unrelated local file (PR #555 review).
+    if backend == "faiss" and index_path is None:
+        console.print("[red]--index-path is required when --backend faiss.[/red]")
+        raise typer.Exit(1)
+    if backend == "faiss" and index_path is not None and index_path.exists():
         existing_metadata = load_index_metadata(index_path)
         if existing_metadata is None:
             console.print(
@@ -5408,6 +5415,7 @@ def embedding_index_build(
 
         if backend == "faiss":
             assert isinstance(index, FaissVectorIndex)  # guaranteed by resolve_vector_index
+            assert index_path is not None  # required for faiss above
             index.save(index_path)
             save_index_metadata(
                 index_path,
@@ -5416,8 +5424,9 @@ def embedding_index_build(
                 ),
             )
 
+    target = index_path if backend == "faiss" else f"qdrant collection {qdrant_collection}"
     console.print(
-        f"[green]Indexed {len(result.records)} vector(s):[/green] {index_path} "
+        f"[green]Indexed {len(result.records)} vector(s):[/green] {target} "
         f"(embedding_model {result.embedding_model}, dimension {result.dimension}, "
         f"index size {cast(Any, index).size})."
     )
@@ -5704,9 +5713,10 @@ def hybrid_search(
     """Combine lexical and semantic retrieval by normalized raw score, not rank.
 
     An alternative to `ke fused-search`'s Reciprocal Rank Fusion: each
-    signal's own raw score (FTS5's bm25 for lexical; FAISS similarity --
-    the negative of its squared L2 distance, so higher means more similar
-    like bm25 -- for semantic) is independently min-max normalized to
+    signal's own raw score (FTS5's bm25 for lexical, negated because bm25 is
+    lower-is-better; FAISS similarity -- the negative of its squared L2
+    distance, so higher means more similar -- for semantic) is independently
+    min-max normalized to
     [0, 1] before combining (see `knowledge_engine.hybrid_search`), so a
     strong match in one signal is not diluted by rank position the way
     RRF's `1/(k+rank)` can be. A paper present in both signals is scored

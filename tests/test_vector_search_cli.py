@@ -767,3 +767,69 @@ def test_vector_search_wires_qdrant_backend_through_to_resolve_vector_index(
     unwrapped = _unwrapped(result.output)
     assert f"Paper ID: {paper_id}" in unwrapped
     assert "embedding_model: external:test-v1" in unwrapped
+
+
+def _qdrant_build(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, extra: list[str]):
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        paper_id = PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "c" * 64)).id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    vectors_path = tmp_path / "vectors.jsonl"
+    _write_vectors(
+        vectors_path,
+        [{"paper_id": paper_id, "vector": [1.0, 0.0], "embedding_model": "external:test-v1"}],
+    )
+    calls: list[dict[str, object]] = []
+    fake_index = _FakeQdrantVectorIndex()
+    monkeypatch.setattr(
+        entrypoint, "resolve_vector_index", lambda **kw: (calls.append(kw), fake_index)[1]
+    )
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "embedding-index-build",
+            "--vectors",
+            str(vectors_path),
+            "--backend",
+            "qdrant",
+            "--qdrant-collection",
+            "c",
+            "--qdrant-url",
+            "http://fake-host:6333",
+            *extra,
+        ],
+    )
+    return result, calls
+
+
+def test_embedding_index_build_qdrant_needs_no_local_index_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PR #555 review: a Qdrant build must not require a local FAISS index path."""
+    result, calls = _qdrant_build(tmp_path, monkeypatch, [])
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 1 and calls[0]["backend"] == "qdrant"
+
+
+def test_embedding_index_build_qdrant_ignores_an_unrelated_local_faiss_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A metadata-less file at --index-path is a FAISS concern, never a reason to reject Qdrant."""
+    stray = tmp_path / "old.faiss"
+    stray.write_bytes(b"not an index with metadata")
+    result, calls = _qdrant_build(tmp_path, monkeypatch, ["--index-path", str(stray)])
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 1
+
+
+def test_embedding_index_build_faiss_still_requires_an_index_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path, "source")
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+    vectors_path = tmp_path / "vectors.jsonl"
+    _write_vectors(vectors_path, [{"paper_id": 1, "vector": [1.0], "embedding_model": "test"}])
+    result = CliRunner().invoke(
+        entrypoint.app, ["embedding-index-build", "--vectors", str(vectors_path)]
+    )
+    assert result.exit_code == 1 and "--index-path is required" in result.output

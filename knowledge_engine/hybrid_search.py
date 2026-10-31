@@ -54,11 +54,15 @@ def merge_lexical_and_vector_results(
     Each signal is independently min-max normalized across all papers
     present in that signal before combining, so the two systems'
     incomparable raw score scales (FTS5's bm25 vs FAISS's raw similarity)
-    never need direct comparison. No input paper_id is ever dropped.
+    never need direct comparison. Lexical scores are FTS5 bm25 values, where
+    lower (more negative) is a better match; they are negated before
+    normalizing so the best lexical match scores 1.0. No input paper_id is ever dropped.
     Results are sorted by `combined_score` descending, ties broken by
     ascending `paper_id` for determinism.
     """
-    lexical_raw = {result.paper_id: result.score for result in lexical}
+    # SQLite FTS5 bm25() is lower-is-better (SearchService orders by it ascending), so negate it to
+    # the same higher-is-better orientation as the vector similarity before normalizing.
+    lexical_raw = {result.paper_id: -result.score for result in lexical}
     lexical_normalized = _normalized(lexical_raw)
     vector_normalized = _normalized(vector_scores)
 
