@@ -4,8 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-from click.testing import Result
-from typer.testing import CliRunner
+from typer.testing import CliRunner, Result
 
 import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.config import Settings
