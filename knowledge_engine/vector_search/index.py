@@ -20,16 +20,35 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-import faiss
-import numpy as np
+if TYPE_CHECKING:
+    import faiss
 
 VECTOR_INDEX_RULES_VERSION = "m30-faiss-vector-index-v1"
 
 
 class VectorSearchError(ValueError):
     """A vector-index operation received malformed input."""
+
+
+class VectorCapabilityUnavailable(VectorSearchError):
+    """The optional local vector capability's packages are not installed.
+
+    The default Research Report path never needs them (owner decision 2026-10-30,
+    docs/OWNER_APPROVED_ROADMAP_2026-10-25.md), so the vector packages are imported
+    only when a vector backend is actually constructed.
+    """
+
+
+def missing_vector_capability(package: str) -> str:
+    """The operator-facing message for a missing optional vector package."""
+
+    return (
+        f"The optional vector capability is not installed ({package} is missing). "
+        "Install the vector packages to use vector search; the default research "
+        "path does not need them."
+    )
 
 
 @dataclass(frozen=True)
@@ -74,6 +93,10 @@ class FaissVectorIndex:
     def __init__(self, dimension: int) -> None:
         if dimension <= 0:
             raise VectorSearchError("Vector dimension must be a positive integer.")
+        try:
+            import faiss
+        except ImportError as error:
+            raise VectorCapabilityUnavailable(missing_vector_capability("faiss-cpu")) from error
         self.dimension = dimension
         # Typed as the `faiss.Index` base class (not `IndexIDMap2`) so `load`
         # can assign a freshly `faiss.read_index`-loaded index, whose static
@@ -87,6 +110,8 @@ class FaissVectorIndex:
         return int(self._index.ntotal)
 
     def add(self, vector_id: int, vector: Sequence[float]) -> None:
+        import numpy as np  # present whenever faiss is (constructing the index required it)
+
         self._validate_vector(vector)
         ids = np.array([vector_id], dtype="int64")
         # faiss's real Python API accepts a numpy int64 array here (verified
@@ -96,6 +121,8 @@ class FaissVectorIndex:
         self._index.add_with_ids(np.array([vector], dtype="float32"), ids)
 
     def search(self, query_vector: Sequence[float], k: int) -> list[VectorMatch]:
+        import numpy as np
+
         self._validate_vector(query_vector)
         if k <= 0:
             raise VectorSearchError("k must be a positive integer.")
@@ -109,10 +136,14 @@ class FaissVectorIndex:
         ]
 
     def remove(self, vector_id: int) -> None:
+        import numpy as np
+
         self._index.remove_ids(np.array([vector_id], dtype="int64"))  # type: ignore[arg-type]
 
     def save(self, path: Path) -> None:
         """Persist this index to a local file."""
+
+        import faiss
 
         faiss.write_index(self._index, str(path))
 
@@ -125,7 +156,9 @@ class FaissVectorIndex:
         is verified against the loaded index's own reported dimension.
         """
 
-        instance = cls(dimension)
+        instance = cls(dimension)  # raises VectorCapabilityUnavailable without faiss
+        import faiss
+
         loaded = faiss.read_index(str(path))
         if loaded.d != dimension:
             raise VectorSearchError(

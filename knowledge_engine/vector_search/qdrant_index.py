@@ -30,12 +30,19 @@ conflict with yet, so it may be claimed by any embedding_model.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import CollectionInfo
-from qdrant_client.models import Distance, PointIdsList, PointStruct, VectorParams
+from knowledge_engine.vector_search.index import (
+    VectorCapabilityUnavailable,
+    VectorMatch,
+    VectorSearchError,
+    missing_vector_capability,
+)
 
-from knowledge_engine.vector_search.index import VectorMatch, VectorSearchError
+if TYPE_CHECKING:
+    from qdrant_client import QdrantClient
+    from qdrant_client.http.models import CollectionInfo
+    from qdrant_client.models import Distance
 
 QDRANT_VECTOR_INDEX_RULES_VERSION = "m33-qdrant-vector-index-v1"
 
@@ -65,6 +72,11 @@ class QdrantVectorIndex:
         api_key: str | None = None,
         client: QdrantClient | None = None,
     ) -> None:
+        try:
+            from qdrant_client import QdrantClient
+            from qdrant_client.models import Distance, VectorParams
+        except ImportError as error:
+            raise VectorCapabilityUnavailable(missing_vector_capability("qdrant-client")) from error
         if dimension <= 0:
             raise VectorSearchError("Vector dimension must be a positive integer.")
         if not collection_name or not collection_name.strip():
@@ -109,6 +121,8 @@ class QdrantVectorIndex:
         return self._client.count(self._collection_name).count
 
     def add(self, vector_id: int, vector: Sequence[float]) -> None:
+        from qdrant_client.models import PointStruct
+
         self._validate_vector(vector)
         self._client.upsert(
             collection_name=self._collection_name,
@@ -135,6 +149,8 @@ class QdrantVectorIndex:
         ]
 
     def remove(self, vector_id: int) -> None:
+        from qdrant_client.models import PointIdsList
+
         self._client.delete(
             collection_name=self._collection_name,
             points_selector=PointIdsList(points=[vector_id]),
@@ -148,6 +164,8 @@ class QdrantVectorIndex:
 
 
 def _vector_params(collection_info: CollectionInfo) -> tuple[int, Distance]:
+    from qdrant_client.models import VectorParams
+
     vectors_config = collection_info.config.params.vectors
     if not isinstance(vectors_config, VectorParams) or vectors_config.size is None:
         raise VectorSearchError(
