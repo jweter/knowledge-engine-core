@@ -407,6 +407,13 @@ poetry install
 poetry run ke init
 ```
 
+The local vector index (`vector-search`, `embedding-index-build`, `embedding-generate`,
+hybrid search) is optional and is not installed by default, so a normal install pulls
+no PyTorch. Enable it with `poetry install --extras vector`
+(or `pip install -e ".[vector]"`). The vector extra supports Windows and Linux only for now
+(CPU-only torch has no macOS build; see the roadmap's known-limitation note). The default install and
+the online Research Report workflow work on macOS.
+
 Fallback installation with `venv` and `pip`:
 
 ```bash

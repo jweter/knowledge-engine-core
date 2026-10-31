@@ -46,8 +46,9 @@ def missing_vector_capability(package: str) -> str:
 
     return (
         f"The optional vector capability is not installed ({package} is missing). "
-        "Install the vector packages to use vector search; the default research "
-        "path does not need them."
+        "Install it with `poetry install --extras vector` or "
+        '`pip install "knowledge-engine-core[vector]"`; the default research path '
+        "does not need it."
     )
 
 

@@ -18,15 +18,22 @@ typer = ">=0.12.3,<0.28.0"
 click = ">=8.0,<8.6"
 cryptography = "^50.0.0"
 h2 = "^4.4.1"
-faiss-cpu = "^1.14.3"
-sentence-transformers = ">=5.6.1,<7.0.0"
-# pytorch-cpu publishes no macOS wheels; macOS resolves torch from the
-# default index instead, which already ships CPU/Metal-only wheels there.
-torch = [
-    { version = "^2.13.0", source = "pytorch-cpu", markers = "sys_platform != 'darwin'" },
-    { version = "^2.13.0", markers = "sys_platform == 'darwin'" },
-]
-qdrant-client = "^1.18.0"
+# The local vector index is an optional capability (owner decision 2026-10-30,
+# docs/OWNER_APPROVED_ROADMAP_2026-10-25.md): a default install pulls no torch,
+# model runtime or vector database client. Enable it with
+# `poetry install --extras vector` or `pip install "knowledge-engine-core[vector]"`.
+faiss-cpu = { version = "^1.14.3", optional = true }
+sentence-transformers = { version = ">=5.6.1,<7.0.0", optional = true }
+# CPU-only torch from the pytorch-cpu index. One constraint on purpose: Poetry merges
+# the platform markers of a multi-constraint optional dependency with
+# sentence-transformers' own torch requirement, which locked a second, CUDA-enabled
+# PyPI torch for Linux/Windows. pytorch-cpu publishes no macOS wheels, so the
+# vector extra is not installable on macOS; the default install is unaffected.
+torch = { version = "^2.13.0", source = "pytorch-cpu", optional = true }
+qdrant-client = { version = "^1.18.0", optional = true }
+
+[tool.poetry.extras]
+vector = ["faiss-cpu", "sentence-transformers", "torch", "qdrant-client"]
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^2.1.0"

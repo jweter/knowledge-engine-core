@@ -88,7 +88,7 @@ python -m venv /opt/ke-research
 /opt/ke-research/bin/pip install --no-deps .
 ```
 
-The normal `poetry install` / `ke` installation is unchanged and still receives the complete vector stack.
+The vector stack (`faiss-cpu`, `sentence-transformers`, `torch`, `qdrant-client`) is the optional `vector` extra: a default `poetry install` or `pip install .` does not receive it. Install it with `poetry install --extras vector` or `pip install "knowledge-engine-core[vector]"` to use `vector-search`, `embedding-index-build`, `embedding-generate` and hybrid search; without it those commands exit with a clear "optional vector capability is not installed" message. CPU-only torch comes from the pytorch-cpu index, which publishes no macOS wheels, so the extra is not installable on macOS.
 
 CI now constructs that lean runtime in a fresh virtual environment, asserts that `faiss`, `torch`, `sentence_transformers`, and `qdrant_client` are genuinely absent, runs `ke-research research-runtime-capabilities`, requires `complete == true` and `missing_commands == []`, and then requires every command in the manifest to answer `--help`. This is an installation-level gate, not merely an import-unit-test claim.
 
