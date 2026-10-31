@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
-from typer.testing import CliRunner, Result
+from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.config import Settings
@@ -771,7 +772,7 @@ def test_vector_search_wires_qdrant_backend_through_to_resolve_vector_index(
 
 def _qdrant_build(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, extra: list[str]
-) -> tuple[Result, list[dict[str, object]]]:
+) -> tuple[Any, list[dict[str, object]]]:
     database = _database(tmp_path, "source")
     with database.session() as session:
         paper_id = PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "c" * 64)).id
