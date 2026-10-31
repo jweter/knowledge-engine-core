@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+from click.testing import Result
 from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
@@ -769,7 +770,9 @@ def test_vector_search_wires_qdrant_backend_through_to_resolve_vector_index(
     assert "embedding_model: external:test-v1" in unwrapped
 
 
-def _qdrant_build(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, extra: list[str]):
+def _qdrant_build(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, extra: list[str]
+) -> tuple[Result, list[dict[str, object]]]:
     database = _database(tmp_path, "source")
     with database.session() as session:
         paper_id = PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "c" * 64)).id
@@ -781,9 +784,12 @@ def _qdrant_build(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, extra: list[s
     )
     calls: list[dict[str, object]] = []
     fake_index = _FakeQdrantVectorIndex()
-    monkeypatch.setattr(
-        entrypoint, "resolve_vector_index", lambda **kw: (calls.append(kw), fake_index)[1]
-    )
+
+    def fake_resolve_vector_index(**kwargs: object) -> _FakeQdrantVectorIndex:
+        calls.append(kwargs)
+        return fake_index
+
+    monkeypatch.setattr(entrypoint, "resolve_vector_index", fake_resolve_vector_index)
     result = CliRunner().invoke(
         entrypoint.app,
         [
