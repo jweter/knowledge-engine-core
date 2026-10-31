@@ -27,7 +27,24 @@ jobs:
         run: python -m pip install poetry
 
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --extras vector
+
+      - name: Prove the vector extra installs CPU-only torch
+        run: |
+          poetry run python - <<'PY'
+          import importlib.metadata as metadata
+
+          import torch
+
+          assert torch.__version__.endswith("+cpu"), torch.__version__
+          cuda = sorted(
+              dist.metadata["Name"]
+              for dist in metadata.distributions()
+              if dist.metadata["Name"].lower().startswith(("nvidia-", "triton"))
+          )
+          assert not cuda, f"CUDA packages leaked into the vector extra: {cuda}"
+          print(f"VECTOR_EXTRA_TORCH={torch.__version__}")
+          PY
 
       - name: Check formatting
         id: formatting
@@ -185,3 +202,36 @@ jobs:
               )
           print(f"SLIM_RESEARCH_COMMAND_COUNT={len(payload['required_commands'])}")
           PY
+
+  default-install:
+    name: Default install without the vector extra
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install the package with its default dependencies
+        run: |
+          python -m venv "${RUNNER_TEMP}/ke-default-venv"
+          "${RUNNER_TEMP}/ke-default-venv/bin/python" -m pip install --upgrade pip
+          "${RUNNER_TEMP}/ke-default-venv/bin/python" -m pip install .
+
+      - name: Prove the default install has no vector stack and the CLI starts
+        run: |
+          VENV="${RUNNER_TEMP}/ke-default-venv"
+          "$VENV/bin/python" - <<'PY'
+          import importlib.util
+
+          forbidden = ("faiss", "qdrant_client", "sentence_transformers", "torch")
+          present = [name for name in forbidden if importlib.util.find_spec(name) is not None]
+          assert not present, f"vector packages installed by default: {present}"
+          print("DEFAULT_INSTALL_VECTOR_STACK_ABSENT=1")
+          PY
+          "$VENV/bin/ke" --help > /dev/null
+          "$VENV/bin/ke-research" research-runtime-capabilities > /dev/null

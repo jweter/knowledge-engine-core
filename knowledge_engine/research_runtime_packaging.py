@@ -1,9 +1,9 @@
 """Lean dependency projection for the hosted ``ke-research`` command surface.
 
-The normal Knowledge Engine installation intentionally keeps the complete vector
-stack. Hosted Research Copilot does not need that stack at command-surface import
-or execution time, so deployment tooling can install the project with ``--no-deps``
-and install only the requirements rendered by this module.
+The vector stack is the optional ``vector`` extra, so a default installation no
+longer receives it either. Hosted Research Copilot does not need that stack at
+command-surface import or execution time, and deployment tooling can install the
+project with ``--no-deps`` and install only the requirements rendered by this module.
 
 The requirements are derived from ``pyproject.toml`` rather than copied into a
 second hand-maintained requirements file. Unsupported Poetry dependency shapes
