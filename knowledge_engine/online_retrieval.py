@@ -38,9 +38,9 @@ import os
 import re
 import socket
 import ssl
-import tempfile
 import time
-from collections.abc import Callable, Sequence
+import uuid
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.message import Message
@@ -68,6 +68,7 @@ from knowledge_engine.utils import normalize_whitespace
 
 USER_AGENT = "knowledge-engine-online-research/1 (+https://github.com/jweter/knowledge-engine-core)"
 _CACHE_FILE = re.compile(r"^[0-9a-f]{64}\.txt$")
+_PARTIAL_FILE = re.compile(r"^ke-cache-[0-9a-f]{32}\.partial$")
 _TEXT_TYPES = {"text/plain"}
 _MARKUP_TYPES = {"text/html", "application/xhtml+xml", "application/xml", "text/xml"}
 _STOPWORDS = frozenset(
@@ -270,31 +271,50 @@ class _Response(Protocol):
 
     def getheader(self, name: str, default: str | None = None) -> str | None: ...
 
-    def read(self, amt: int | None = None) -> bytes: ...
+    def read1(self, amt: int) -> bytes: ...
 
 
 class _Connection(Protocol):
-    def request(self, method: str, url: str, headers: dict[str, str]) -> None: ...
+    """The ``http.client`` subset the fetcher uses, with its real positional signature."""
+
+    def request(
+        self,
+        method: str,
+        url: str,
+        body: bytes | None = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> None: ...
 
     def getresponse(self) -> _Response: ...
+
+    def set_timeout(self, seconds: float) -> None: ...
 
     def close(self) -> None: ...
 
 
 ConnectionFactory = Callable[[str, str, float], _Connection]
 
+_READ_CHUNK = 16_384
+
 
 class _PinnedHTTPSConnection(http.client.HTTPSConnection):
     """HTTPS to a pre-validated address, with TLS verified against the original host."""
 
-    def __init__(self, host: str, address: str, timeout: float) -> None:
-        super().__init__(host, port=443, timeout=timeout)
+    def __init__(self, host: str, address: str, timeout: float, port: int = 443) -> None:
+        super().__init__(host, port=port, timeout=timeout)
         self._address = address
         self._tls = ssl.create_default_context()
 
     def connect(self) -> None:
-        sock = socket.create_connection((self._address, 443), self.timeout)
+        sock = socket.create_connection((self._address, self.port), self.timeout)
         self.sock = self._tls.wrap_socket(sock, server_hostname=self.host)
+
+    def set_timeout(self, seconds: float) -> None:
+        """Tighten the per-operation socket timeout to what is left of the deadline."""
+
+        self.timeout = seconds
+        if self.sock is not None:
+            self.sock.settimeout(seconds)
 
 
 def _pinned_connection(host: str, address: str, timeout: float) -> _Connection:
@@ -310,14 +330,26 @@ class SafeHttpsFetcher:
         *,
         resolver: Resolver = system_resolver,
         connection_factory: ConnectionFactory = _pinned_connection,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._limits = limits
         self._resolver = resolver
         self._connect = connection_factory
+        self._clock = clock
+
+    def _remaining(self, deadline: float) -> float:
+        left = deadline - self._clock()
+        if left <= 0:
+            raise RetrievalFailure(RetrievalStatus.FAILED, "Retrieval timed out.")
+        return left
 
     def fetch(self, url: str) -> FetchedPage:
+        """One monotonic deadline covers the address checks, every connection and every read."""
+
+        deadline = self._clock() + self._limits.timeout_seconds
         current = url
         for _hop in range(self._limits.max_redirects + 1):
+            self._remaining(deadline)
             try:
                 host, address = check_public_https_url(current, self._resolver)
             except UnsafeUrlError as error:
@@ -326,24 +358,24 @@ class SafeHttpsFetcher:
                 ) from error
             parts = urlsplit(current)
             target = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
-            connection = self._connect(host, address, self._limits.timeout_seconds)
+            connection = self._connect(host, address, self._remaining(deadline))
             try:
                 connection.request(
                     "GET",
                     target,
-                    {
-                        "Host": host,
+                    headers={
                         "User-Agent": USER_AGENT,
                         "Accept": "text/html, text/plain, application/xml;q=0.9",
                         "Accept-Encoding": "identity",
                     },
                 )
+                connection.set_timeout(self._remaining(deadline))
                 response = connection.getresponse()
                 location = response.getheader("Location")
                 if 300 <= response.status < 400 and location:
                     current = urljoin(current, location)
                     continue
-                return self._finish(current, response)
+                return self._finish(current, response, connection, deadline)
             except TimeoutError as error:
                 raise RetrievalFailure(RetrievalStatus.FAILED, "Retrieval timed out.") from error
             except (OSError, http.client.HTTPException, ssl.SSLError) as error:
@@ -356,15 +388,27 @@ class SafeHttpsFetcher:
             RetrievalStatus.FAILED, f"More than {self._limits.max_redirects} redirects."
         )
 
-    def _finish(self, url: str, response: _Response) -> FetchedPage:
+    def _finish(
+        self, url: str, response: _Response, connection: _Connection, deadline: float
+    ) -> FetchedPage:
         limit = self._limits.max_response_bytes
         declared = response.getheader("Content-Length")
         if declared is not None and declared.isdigit() and int(declared) > limit:
             raise RetrievalFailure(RetrievalStatus.FAILED, f"Response exceeds {limit} bytes.")
-        body = response.read(limit + 1)
-        if len(body) > limit:
-            raise RetrievalFailure(RetrievalStatus.FAILED, f"Response exceeds {limit} bytes.")
-        return FetchedPage(url, response.status, response.getheader("Content-Type") or "", body)
+        chunks: list[bytes] = []
+        received = 0
+        while True:  # read1 returns after one socket read, so the deadline is checked per chunk
+            connection.set_timeout(self._remaining(deadline))
+            chunk = response.read1(min(_READ_CHUNK, limit + 1 - received))
+            if not chunk:
+                break
+            received += len(chunk)
+            if received > limit:
+                raise RetrievalFailure(RetrievalStatus.FAILED, f"Response exceeds {limit} bytes.")
+            chunks.append(chunk)
+        return FetchedPage(
+            url, response.status, response.getheader("Content-Type") or "", b"".join(chunks)
+        )
 
 
 # --- Bounded temporary cache ------------------------------------------------------------
@@ -396,23 +440,39 @@ class BoundedTextCache:
         self.max_bytes = max_bytes
         self.max_age_seconds = max_age_seconds
         self._clock = clock
+        self._held: dict[str, int] = {}
 
-    def put(self, text: str) -> str:
-        """Store ``text`` byte-exactly and return its SHA-256."""
+    def put(self, text: str, *, hold: bool = False) -> str:
+        """Store ``text`` byte-exactly and return its SHA-256.
+
+        ``hold`` pins the text for the current run: pruning never evicts or expires a held
+        text until ``release()``. Holding fails with ``CacheBudgetError`` when the held texts
+        together would not fit the budget, so a run never cites content it cannot keep.
+        """
 
         data = text.encode("utf-8")
         if len(data) > self.max_bytes:
             raise CacheBudgetError(f"Text of {len(data)} bytes exceeds the cache budget.")
         digest = hashlib.sha256(data).hexdigest()
-        handle, temporary = tempfile.mkstemp(dir=self.directory, suffix=".partial")
+        over_budget = sum(self._held.values()) + len(data) > self.max_bytes
+        if hold and digest not in self._held and over_budget:
+            raise CacheBudgetError("The retrieved texts of this run exceed the cache budget.")
+        temporary = self.directory / f"ke-cache-{uuid.uuid4().hex}.partial"
         try:
-            with os.fdopen(handle, "wb") as stream:
+            with temporary.open("xb") as stream:
                 stream.write(data)
             os.replace(temporary, self.directory / f"{digest}.txt")
         finally:
-            Path(temporary).unlink(missing_ok=True)
+            temporary.unlink(missing_ok=True)
+        if hold:
+            self._held[digest] = len(data)
         self.prune(keep={digest})
         return digest
+
+    def release(self) -> None:
+        """End the run: held texts become ordinary, evictable entries again."""
+
+        self._held.clear()
 
     def get(self, digest: str) -> str | None:
         """Return the cached text if present, unexpired and still matching its hash."""
@@ -420,7 +480,8 @@ class BoundedTextCache:
         path = self.directory / f"{digest}.txt"
         if not _CACHE_FILE.match(path.name) or not path.is_file():
             return None
-        if self._clock() - path.stat().st_mtime > self.max_age_seconds:
+        expired = self._clock() - path.stat().st_mtime > self.max_age_seconds
+        if expired and digest not in self._held:
             return None
         data = path.read_bytes()
         if hashlib.sha256(data).hexdigest() != digest:
@@ -433,11 +494,13 @@ class BoundedTextCache:
     def prune(self, keep: set[str] | None = None) -> list[str]:
         """Delete expired files, then the oldest ones until the budget holds."""
 
-        protected = {f"{digest}.txt" for digest in keep or set()}
+        protected = {f"{digest}.txt" for digest in (keep or set()) | set(self._held)}
         removed: list[str] = []
         now = self._clock()
-        for partial in self.directory.glob("*.partial"):  # left behind by an interrupted put
-            if now - partial.stat().st_mtime > self.max_age_seconds:
+        for partial in self.directory.iterdir():  # only this cache's own interrupted puts
+            if _PARTIAL_FILE.match(partial.name) and now - partial.stat().st_mtime > (
+                self.max_age_seconds
+            ):
                 partial.unlink(missing_ok=True)
         live: list[tuple[float, Path, int]] = []
         for path in self.entries():
@@ -591,7 +654,7 @@ def retrieve_source(
         if page.status != 200:
             raise RetrievalFailure(_status_for_http(page.status), f"HTTP {page.status}.")
         text = extract_text(page)
-        cache.put(text)
+        cache.put(text, hold=True)
     except RetrievalFailure as failure:
         return failed(failure.status, failure.reason)
     except CacheBudgetError as error:
@@ -677,11 +740,26 @@ def research_online(
     """
 
     cache.prune()
+    try:
+        return _research(question, broker, fetcher, cache, limits, now)
+    finally:
+        cache.release()
+
+
+def _research(
+    question: str,
+    broker: Searcher,
+    fetcher: Fetcher,
+    cache: BoundedTextCache,
+    limits: RetrievalLimits,
+    now: Callable[[], datetime],
+) -> OnlineResearchResult:
     discovery = broker.search(
         DiscoveryQuery(text=question, limit_per_provider=max(5, limits.max_sources * 2))
     )
     terms = question_terms(question)
     sources: list[OnlineSource] = []
+    origin: dict[str, tuple[ProviderObservation, str]] = {}
     excerpts: list[EvidenceExcerpt] = []
     skipped: list[tuple[str, str]] = []
     seen: set[str] = set()
@@ -699,6 +777,7 @@ def research_online(
             continue
         seen.add(source.source_id)
         sources.append(source)
+        origin[source.source_id] = (observation, url)
         if source.status is RetrievalStatus.RETRIEVED and source.content_sha256:
             text = cache.get(source.content_sha256)
             if text is not None and terms:
@@ -711,6 +790,20 @@ def research_online(
                         max_chars=limits.excerpt_chars,
                     )
                 )
+    # A text another process evicted since retrieval cannot be verified: withhold it.
+    for index, source in enumerate(sources):
+        if source.status is RetrievalStatus.RETRIEVED and (
+            not source.content_sha256 or cache.get(source.content_sha256) is None
+        ):
+            observation, url = origin[source.source_id]
+            sources[index] = OnlineSource.from_observation(
+                observation,
+                url=url,
+                retrieved_at=source.retrieved_at,
+                status=RetrievalStatus.UNAVAILABLE,
+                failure_reason="Retrieved text was evicted from the cache before verification.",
+            )
+            excerpts = [e for e in excerpts if e.source_id != source.source_id]
     bundle = OnlineEvidenceBundle(question, tuple(sources), tuple(excerpts))
     contents = {
         s.source_id: text

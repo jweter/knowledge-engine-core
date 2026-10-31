@@ -1,12 +1,22 @@
 from __future__ import annotations
 
+import http.client
+import inspect
 import json
 import os
 import socket
-from datetime import UTC, datetime
+import ssl
+import threading
+import time
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
 from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
@@ -87,8 +97,9 @@ class FakeResponse:
     def getheader(self, name: str, default: str | None = None) -> str | None:
         return self._headers.get(name) or default
 
-    def read(self, amt: int | None = None) -> bytes:
-        return self._body if amt is None else self._body[:amt]
+    def read1(self, amt: int) -> bytes:
+        chunk, self._body = self._body[:amt], self._body[amt:]
+        return chunk
 
 
 class FakeConnections:
@@ -98,16 +109,27 @@ class FakeConnections:
         self.routes = routes
         self.connects: list[tuple[str, str]] = []
         self.requests: list[tuple[str, dict[str, str]]] = []
+        self.calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+        self.timeouts: list[float] = []
         self.closed = 0
 
-    def __call__(self, host: str, address: str, _timeout: float) -> FakeConnections:
+    def __call__(self, host: str, address: str, timeout: float) -> FakeConnections:
         self.connects.append((host, address))
+        self.timeouts.append(timeout)
         self._host = host
         return self
 
-    def request(self, _method: str, target: str, headers: dict[str, str]) -> None:
+    def request(self, *args: object, **kwargs: object) -> None:
+        self.calls.append((args, kwargs))
+        # Bind to the real signature so the fakes cannot accept a call that http.client misreads.
+        bound = inspect.signature(http.client.HTTPSConnection.request).bind(self, *args, **kwargs)
+        target = str(bound.arguments["url"])
+        headers = dict(bound.arguments.get("headers") or {})
         self.requests.append((target, headers))
         self._key = f"https://{self._host}{target}"
+
+    def set_timeout(self, seconds: float) -> None:
+        self.timeouts.append(seconds)
 
     def getresponse(self) -> FakeResponse:
         outcome = self.routes[self._key]
@@ -190,7 +212,7 @@ def test_the_fetcher_connects_to_the_validated_address_with_the_original_host() 
     assert page == FetchedPage("https://example.org/a?x=1", 200, "text/plain", b"hello")
     assert connections.connects == [("example.org", "93.184.216.34")]
     target, headers = connections.requests[0]
-    assert target == "/a?x=1" and headers["Host"] == "example.org"
+    assert target == "/a?x=1" and "Host" not in headers  # http.client adds the pinned host
     assert headers["Accept-Encoding"] == "identity"
     assert connections.closed == 1
 
@@ -821,3 +843,368 @@ def test_cli_refuses_to_overwrite_an_existing_bundle_without_force(
     )
 
     assert result.exit_code == 2 and output.read_text(encoding="utf-8") == "keep me"
+
+
+# --- Review findings on #559: real connection, run-scoped cache, deadline ----------------
+
+
+class _TlsServer:
+    """One-shot loopback TLS server for example.org, so the *real* connection class is used."""
+
+    def __init__(self, tmp_path: Path, respond: Callable[[ssl.SSLSocket, bytes], None]) -> None:
+        start = datetime(2026, 1, 1, tzinfo=UTC)
+        ca_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        ca_name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Test CA")])
+        ca = (
+            x509.CertificateBuilder()
+            .subject_name(ca_name)
+            .issuer_name(ca_name)
+            .public_key(ca_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(start)
+            .not_valid_after(start + timedelta(days=3650))
+            .add_extension(x509.BasicConstraints(ca=True, path_length=None), True)
+            .add_extension(x509.SubjectKeyIdentifier.from_public_key(ca_key.public_key()), False)
+            .sign(ca_key, hashes.SHA256())
+        )
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        leaf = (
+            x509.CertificateBuilder()
+            .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "example.org")]))
+            .issuer_name(ca_name)
+            .public_key(key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(start)
+            .not_valid_after(start + timedelta(days=3650))
+            .add_extension(x509.SubjectAlternativeName([x509.DNSName("example.org")]), False)
+            .add_extension(x509.BasicConstraints(ca=False, path_length=None), True)
+            .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), False)
+            .add_extension(
+                x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()), False
+            )
+            .sign(ca_key, hashes.SHA256())
+        )
+        self.pem = ca.public_bytes(serialization.Encoding.PEM).decode("ascii")  # the trust anchor
+        cert_file, key_file = tmp_path / "cert.pem", tmp_path / "key.pem"
+        cert_file.write_bytes(leaf.public_bytes(serialization.Encoding.PEM))
+        key_file.write_bytes(
+            key.private_bytes(
+                serialization.Encoding.PEM,
+                serialization.PrivateFormat.PKCS8,
+                serialization.NoEncryption(),
+            )
+        )
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(cert_file, key_file)
+        self._listener = socket.create_server(("127.0.0.1", 0))
+        self.port: int = self._listener.getsockname()[1]
+        self.request = b""
+        self._respond = respond
+        self._context = context
+        self._thread = threading.Thread(target=self._serve, daemon=True)
+        self._thread.start()
+
+    def _serve(self) -> None:
+        try:
+            raw, _ = self._listener.accept()
+            with self._context.wrap_socket(raw, server_side=True) as connection:
+                data = b""
+                while b"\r\n\r\n" not in data:
+                    chunk = connection.recv(4096)
+                    if not chunk:
+                        break
+                    data += chunk
+                self.request = data
+                self._respond(connection, data)
+        except OSError:
+            pass  # the client hung up (expected when its deadline fires)
+        finally:
+            self._listener.close()
+
+    def factory(self) -> retrieval.ConnectionFactory:
+        def connect(host: str, _address: str, timeout: float) -> retrieval._Connection:
+            connection = retrieval._PinnedHTTPSConnection(
+                host, "127.0.0.1", timeout, port=self.port
+            )
+            # These tests exercise the request/stream code of the real class against a loopback
+            # server with a throwaway certificate; certificate validation itself is not under test.
+            connection._tls.check_hostname = False
+            connection._tls.verify_mode = ssl.CERT_NONE
+            return connection
+
+        return connect
+
+    def join(self) -> None:
+        self._thread.join(timeout=10)
+
+
+def test_the_real_pinned_connection_sends_a_header_bearing_get_with_no_body(
+    tmp_path: Path,
+) -> None:
+    def respond(connection: ssl.SSLSocket, _request: bytes) -> None:
+        connection.sendall(
+            b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n"
+            b"Connection: close\r\n\r\nhello"
+        )
+
+    server = _TlsServer(tmp_path, respond)
+    fetcher = SafeHttpsFetcher(limits(), resolver=resolver, connection_factory=server.factory())
+
+    page = fetcher.fetch("https://example.org/a?x=1")
+    server.join()
+
+    assert (page.status, page.body, page.content_type) == (200, b"hello", "text/plain")
+    head, _, body = server.request.partition(b"\r\n\r\n")
+    lines = head.split(b"\r\n")
+    assert lines[0] == b"GET /a?x=1 HTTP/1.1" and body == b""
+    # The original host (plus the test server's non-443 port), although we dialled loopback.
+    assert b"Host: example.org:" + str(server.port).encode() in lines
+    assert b"Accept-Encoding: identity" in lines
+    assert any(line.startswith(b"User-Agent: ") for line in lines)
+    assert not any(line.lower().startswith(b"content-length") for line in lines)
+
+
+def test_the_real_connection_enforces_one_deadline_on_a_slow_continuous_stream(
+    tmp_path: Path,
+) -> None:
+    def respond(connection: ssl.SSLSocket, _request: bytes) -> None:
+        connection.sendall(
+            b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n"
+        )
+        for _ in range(60):  # a byte every 0.1 s: each read succeeds well inside the socket timeout
+            connection.sendall(b"x")
+            time.sleep(0.1)
+
+    server = _TlsServer(tmp_path, respond)
+    fetcher = SafeHttpsFetcher(
+        limits(timeout_seconds=1.0), resolver=resolver, connection_factory=server.factory()
+    )
+
+    started = time.monotonic()
+    with pytest.raises(RetrievalFailure, match="timed out") as caught:
+        fetcher.fetch("https://example.org/slow")
+    elapsed = time.monotonic() - started
+    server.join()
+
+    assert caught.value.status is RetrievalStatus.FAILED
+    assert elapsed < 3.0  # the stream would have run for ~6 s
+
+
+class _Clock:
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+class _TrickleResponse(FakeResponse):
+    """Never-ending body, one byte per read, each read costing one second of the clock."""
+
+    def __init__(self, clock: _Clock) -> None:
+        super().__init__()
+        self.clock = clock
+        self.reads = 0
+
+    def read1(self, amt: int) -> bytes:
+        self.reads += 1
+        self.clock.now += 1.0
+        return b"x"
+
+
+def test_the_deadline_spans_connection_redirects_and_reading() -> None:
+    clock = _Clock()
+    trickle = _TrickleResponse(clock)
+
+    class Slow(FakeConnections):
+        def getresponse(self) -> FakeResponse:
+            clock.now += 2.0  # each hop's response headers take 2 s
+            return super().getresponse()
+
+    connections = Slow(
+        {
+            "https://example.org/a": FakeResponse(302, location="https://cdn.example.org/b"),
+            "https://cdn.example.org/b": trickle,
+        }
+    )
+    fetcher = SafeHttpsFetcher(
+        limits(timeout_seconds=10.0, max_response_bytes=10_000),
+        resolver=resolver,
+        connection_factory=connections,
+        clock=clock,
+    )
+
+    with pytest.raises(RetrievalFailure, match="timed out"):
+        fetcher.fetch("https://example.org/a")
+
+    assert trickle.reads == 6  # 10 s - 2 s (hop 1) - 2 s (hop 2) = 6 s of reading, no more
+    assert connections.closed == 2
+    assert all(0 < seconds <= 10.0 for seconds in connections.timeouts)
+    assert connections.timeouts == sorted(connections.timeouts, reverse=True)  # only ever tightens
+
+
+def test_a_deadline_that_expires_before_a_redirect_hop_stops_the_chain() -> None:
+    clock = _Clock()
+
+    class Slow(FakeConnections):
+        def getresponse(self) -> FakeResponse:
+            clock.now += 6.0
+            return super().getresponse()
+
+    connections = Slow(
+        {
+            "https://example.org/a": FakeResponse(302, location="https://cdn.example.org/b"),
+            "https://cdn.example.org/b": FakeResponse(body=b"never fetched"),
+        }
+    )
+    fetcher = SafeHttpsFetcher(
+        limits(timeout_seconds=5.0), resolver=resolver, connection_factory=connections, clock=clock
+    )
+
+    with pytest.raises(RetrievalFailure, match="timed out"):
+        fetcher.fetch("https://example.org/a")
+
+    assert [host for host, _ in connections.connects] == ["example.org"]
+
+
+def test_the_fetcher_call_binds_to_the_real_http_client_signature() -> None:
+    fetcher, connections = fetcher_for({"https://example.org/a": FakeResponse(body=b"ok")})
+
+    fetcher.fetch("https://example.org/a")
+
+    (args, kwargs), *_ = connections.calls
+    bound = inspect.signature(http.client.HTTPSConnection.request).bind(object(), *args, **kwargs)
+    assert bound.arguments.get("body") is None  # headers must never land in the body slot
+    assert "User-Agent" in bound.arguments["headers"]
+
+
+def test_only_the_caches_own_partial_files_are_cleaned_up(tmp_path: Path) -> None:
+    directory = tmp_path / "c"
+    cache = BoundedTextCache(directory, max_bytes=1000, max_age_seconds=1)
+    foreign = [
+        directory / "download.partial",  # a browser or user download in progress
+        directory / "report.docx.partial",
+        directory / "ke-cache-not-hex.partial",
+        directory / ("ke-cache-" + "A" * 32 + ".partial"),
+        directory / ("ke-cache-" + "0" * 31 + ".partial"),
+        directory / ("0" * 64 + ".txt.partial"),
+    ]
+    own_stale = directory / ("ke-cache-" + "ab" * 16 + ".partial")
+    own_fresh = directory / ("ke-cache-" + "cd" * 16 + ".partial")
+    for path in [*foreign, own_stale, own_fresh]:
+        path.write_bytes(b"data")
+    for path in [*foreign, own_stale]:
+        os.utime(path, (1, 1))  # ancient
+
+    cache.put("hello")
+    cache.prune()
+    cache.clear()
+
+    assert all(path.read_bytes() == b"data" for path in foreign)  # never touched
+    assert not own_stale.exists()  # an interrupted put of this cache, long expired
+    assert own_fresh.exists()  # possibly a put in progress in another process
+
+
+def test_a_put_leaves_no_partial_file_behind(tmp_path: Path) -> None:
+    cache = BoundedTextCache(tmp_path / "c", max_bytes=1000, max_age_seconds=60)
+
+    cache.put("one")
+    cache.put("two")
+
+    assert sorted(p.suffix for p in (tmp_path / "c").iterdir()) == [".txt", ".txt"]
+
+
+def test_held_texts_survive_pruning_until_the_run_releases_them(tmp_path: Path) -> None:
+    clock = _Clock()
+    clock.now = time.time()
+    cache = BoundedTextCache(tmp_path / "c", max_bytes=25, max_age_seconds=10, clock=clock)
+    first = cache.put("a" * 10, hold=True)
+    second = cache.put("b" * 10, hold=True)
+
+    with pytest.raises(CacheBudgetError):  # a third held text would not fit: refuse, don't evict
+        cache.put("c" * 10, hold=True)
+    cache.put("d" * 4)  # an unheld text may come and go
+    clock.now += 100.0  # everything is now past its lifetime
+    cache.prune()
+
+    assert cache.get(first) == "a" * 10 and cache.get(second) == "b" * 10
+    cache.release()
+    cache.prune()
+    assert cache.entries() == []
+
+
+def test_a_run_never_cites_content_the_cache_could_not_keep(tmp_path: Path) -> None:
+    docs = {
+        f"/d{n}": (f"Semaglutide trial {n} reduced body weight. " * 2).encode() for n in (1, 2, 3)
+    }
+    fetcher, _ = fetcher_for(
+        {f"https://example.org{path}": FakeResponse(body=body) for path, body in docs.items()},
+        max_response_bytes=100,
+        cache_max_bytes=150,  # room for one text, not two
+    )
+    broker = FakeBroker(
+        tuple(
+            candidate(f"c{n}", observation("example.org", f"/d{n}", doi=f"10.1/d{n}"))
+            for n in (1, 2, 3)
+        )
+    )
+    cache = BoundedTextCache(tmp_path / "cache", max_bytes=150, max_age_seconds=3600)
+
+    result = research_online(
+        "semaglutide body weight",
+        broker=broker,
+        fetcher=fetcher,
+        cache=cache,
+        limits=limits(max_sources=3, max_response_bytes=100, cache_max_bytes=150),
+        now=lambda: NOW,
+    )
+
+    statuses = {s.source_id: s.status for s in result.bundle.sources}
+    assert statuses["doi:10.1/d1"] is RetrievalStatus.RETRIEVED
+    assert statuses["doi:10.1/d2"] is RetrievalStatus.FAILED
+    assert statuses["doi:10.1/d3"] is RetrievalStatus.FAILED
+    assert {e.source_id for e in result.bundle.excerpts} == {"doi:10.1/d1"}
+    contents = {
+        s.source_id: cache.get(s.content_sha256)
+        for s in result.bundle.sources
+        if s.content_sha256 is not None
+    }
+    assert verify_against_retrieved_content(result.bundle, contents) == []  # type: ignore[arg-type]
+
+
+def test_content_evicted_by_another_process_is_withheld_not_cited(tmp_path: Path) -> None:
+    cache = BoundedTextCache(tmp_path / "cache", max_bytes=100_000, max_age_seconds=3600)
+    inner, _ = fetcher_for(
+        {
+            "https://example.org/a": FakeResponse(body=b"Semaglutide lowered body weight."),
+            "https://cdn.example.org/b": FakeResponse(body=b"Semaglutide also lowered weight."),
+        }
+    )
+
+    class Evicting:
+        def fetch(self, url: str) -> FetchedPage:
+            if url.endswith("/b"):  # a second process clears the cache mid-run
+                for path in cache.directory.glob("*.txt"):
+                    path.unlink()
+            return inner.fetch(url)
+
+    broker = FakeBroker(
+        (
+            candidate("c1", observation("example.org", "/a", doi="10.1/a")),
+            candidate("c2", observation("cdn.example.org", "/b", doi="10.1/b")),
+        )
+    )
+
+    result = research_online(
+        "semaglutide body weight",
+        broker=broker,
+        fetcher=Evicting(),
+        cache=cache,
+        limits=limits(max_sources=2),
+        now=lambda: NOW,
+    )
+
+    first = next(s for s in result.bundle.sources if s.source_id == "doi:10.1/a")
+    assert first.status is RetrievalStatus.UNAVAILABLE and "evicted" in (first.failure_reason or "")
+    assert first.content_sha256 is None
+    assert {e.source_id for e in result.bundle.excerpts} == {"doi:10.1/b"}
