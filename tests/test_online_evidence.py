@@ -308,3 +308,72 @@ def test_cli_rejects_a_bundle_that_breaks_the_contract(tmp_path: Path) -> None:
 
     assert result.exit_code == 1
     assert "Invalid online evidence bundle" in result.output
+
+
+@pytest.mark.parametrize("newline", ["\r\n", "\r", "\n"], ids=["crlf", "cr", "lf"])
+def test_cli_preserves_each_newline_format_for_hashes_and_offsets(
+    tmp_path: Path, newline: str
+) -> None:
+    text = f"Methods.{newline}Adults were randomised.{newline}Results.{newline}Weight fell by 15%."
+    source = OnlineSource.from_observation(
+        _observation(),
+        url="https://europepmc.org/article/PMC/PMC9999999",
+        retrieved_at=RETRIEVED_AT,
+        status=RetrievalStatus.RETRIEVED,
+        content=text,
+    )
+    start = text.index("Results.")
+    quote = text[start:]  # spans a newline, so its offsets depend on exact line endings
+    assert newline in quote
+    excerpt = EvidenceExcerpt.quote(source.source_id, quote, char_start=start)
+    bundle = OnlineEvidenceBundle("Does weight fall?", (source,), (excerpt,))
+    texts = tmp_path / "contents"
+    texts.mkdir()
+    (texts / f"{content_sha256(text)}.txt").write_bytes(text.encode("utf-8"))
+    path = tmp_path / "bundle.json"
+    path.write_text(json.dumps(bundle.to_dict()), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        entrypoint.app, ["online-evidence-validate", str(path), "--contents-dir", str(texts)]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "verified against retrieved content" in " ".join(result.output.split())
+    assert excerpt.char_end == len(text)
+
+
+@pytest.mark.parametrize("newline", ["\r\n", "\r"], ids=["crlf", "cr"])
+def test_cli_still_rejects_modified_or_fabricated_text_with_other_newlines(
+    tmp_path: Path, newline: str
+) -> None:
+    text = f"Results.{newline}Weight fell by 15%."
+    source = OnlineSource.from_observation(
+        _observation(),
+        url="https://europepmc.org/article/PMC/PMC9999999",
+        retrieved_at=RETRIEVED_AT,
+        status=RetrievalStatus.RETRIEVED,
+        content=text,
+    )
+    genuine = EvidenceExcerpt.quote(source.source_id, text, char_start=0)
+    fabricated = EvidenceExcerpt.quote(source.source_id, f"Results.{newline}Weight fell by 50%.")
+    bundle = OnlineEvidenceBundle("q", (source,), (genuine, fabricated))
+    texts = tmp_path / "contents"
+    texts.mkdir()
+    stored = texts / f"{content_sha256(text)}.txt"
+    path = tmp_path / "bundle.json"
+    path.write_text(json.dumps(bundle.to_dict()), encoding="utf-8")
+    args = ["online-evidence-validate", str(path), "--contents-dir", str(texts)]
+
+    # Text normalised to LF no longer matches the recorded hash.
+    stored.write_bytes(text.replace(newline, "\n").encode("utf-8"))
+    modified = CliRunner().invoke(entrypoint.app, args)
+    assert modified.exit_code == 1
+    assert "does not match its SHA-256" in " ".join(modified.output.split())
+
+    # The faithful text passes the hash, but the fabricated quote is still found missing.
+    stored.write_bytes(text.encode("utf-8"))
+    faithful = CliRunner().invoke(entrypoint.app, args)
+    output = " ".join(faithful.output.split())
+    assert faithful.exit_code == 1
+    assert fabricated.excerpt_id in output and "text not found in its source" in output
+    assert genuine.excerpt_id not in output

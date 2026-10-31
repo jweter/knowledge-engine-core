@@ -6956,7 +6956,8 @@ def online_evidence_validate(
             if source.status is RetrievalStatus.RETRIEVED:
                 text_path = contents_dir / f"{source.content_sha256}.txt"
                 if text_path.is_file():
-                    contents[source.source_id] = text_path.read_text(encoding="utf-8")
+                    # Byte-exact: newline translation would change the SHA-256 and the offsets.
+                    contents[source.source_id] = text_path.read_bytes().decode("utf-8")
         problems = verify_against_retrieved_content(bundle, contents)
 
     retrieved = len(bundle.sources) - len(bundle.unavailable_sources)
