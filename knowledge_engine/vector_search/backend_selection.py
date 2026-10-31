@@ -10,11 +10,13 @@ factory a future, separately-scoped CLI change would call once a
 from __future__ import annotations
 
 from pathlib import Path
-
-from qdrant_client import QdrantClient
+from typing import TYPE_CHECKING
 
 from knowledge_engine.vector_search.index import FaissVectorIndex, VectorIndex
 from knowledge_engine.vector_search.qdrant_index import QdrantVectorIndex
+
+if TYPE_CHECKING:
+    from qdrant_client import QdrantClient
 
 
 def resolve_vector_index(
