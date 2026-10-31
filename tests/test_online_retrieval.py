@@ -319,7 +319,7 @@ def test_the_real_connection_dials_the_pinned_address_not_the_host(
     connection = retrieval._pinned_connection("example.org", "93.184.216.34", 5.0)
 
     with pytest.raises(OSError, match="stop after recording"):
-        connection.request("GET", "/", {})
+        connection.request("GET", "/", headers={})
 
     assert dialled == [("93.184.216.34", 443)]
 
@@ -930,7 +930,7 @@ class _TlsServer:
             # server with a throwaway certificate; certificate validation itself is not under test.
             connection._tls.check_hostname = False
             connection._tls.verify_mode = ssl.CERT_NONE
-            return connection
+            return connection  # type: ignore[return-value]
 
         return connect
 
