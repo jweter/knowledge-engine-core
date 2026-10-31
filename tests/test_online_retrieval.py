@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -832,10 +833,8 @@ def test_slow_dribbling_response_hits_the_wall_clock_deadline(
 ) -> None:
     """The socket timeout bounds each read only; the fetch must bound total time."""
 
-    import knowledge_engine.online_retrieval as module
-
     clock = [0.0]
-    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(time, "monotonic", lambda: clock[0])
 
     class Dribble(FakeResponse):
         def read(self, amt: int | None = None) -> bytes:
