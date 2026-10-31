@@ -6980,3 +6980,98 @@ def online_evidence_validate(
         raise typer.Exit(1)
     verified = "verified against retrieved content" if contents_dir else "contract valid"
     console.print(f"[green]Online evidence bundle {verified}.[/green]")
+
+
+@app.command("online-research")
+def online_research(
+    question: Annotated[str, typer.Argument(help="The research question.")],
+    cache_dir: Annotated[
+        Path,
+        typer.Option(
+            "--cache-dir",
+            help="Directory for the expiring, size-capped copies of retrieved text "
+            "(<sha256>.txt). Only files of that name are ever managed there.",
+        ),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option("--output", help="Where to write the online evidence bundle JSON."),
+    ],
+    providers: FederatedProvidersOption = None,
+    max_sources: Annotated[int, typer.Option(min=1, max=10, help="Sources to retrieve.")] = 3,
+    max_response_mb: Annotated[float, typer.Option(min=0.1, max=20.0)] = 2.0,
+    timeout_seconds: Annotated[float, typer.Option(min=1.0, max=120.0)] = 20.0,
+    cache_max_mb: Annotated[float, typer.Option(min=1.0, max=500.0)] = 20.0,
+    cache_max_age_minutes: Annotated[float, typer.Option(min=1.0, max=10080.0)] = 60.0,
+    openalex_api_key: FederatedOpenAlexApiKeyOption = None,
+    semantic_scholar_api_key: FederatedSemanticScholarApiKeyOption = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Answer one question from sources retrieved online, with no local corpus (KEC-3).
+
+    Discovers candidate sources through the configured federated providers, retrieves
+    each selected source's text over HTTPS under strict bounds (public hosts only,
+    checked redirects, size/time limits), keeps an expiring size-capped copy in
+    --cache-dir, selects excerpts that occur verbatim in that text, and writes an online
+    evidence bundle. Sources that cannot be retrieved are recorded with their status and
+    reason, never dropped or invented. Check the result with ``ke online-evidence-validate
+    --contents-dir <cache-dir>``.
+    """
+
+    from knowledge_engine.online_retrieval import (
+        BoundedTextCache,
+        RetrievalLimits,
+        SafeHttpsFetcher,
+        research_online,
+    )
+
+    if output.exists() and not force:
+        raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
+    try:
+        limits = RetrievalLimits(
+            max_sources=max_sources,
+            max_response_bytes=int(max_response_mb * 1_000_000),
+            timeout_seconds=timeout_seconds,
+            cache_max_bytes=int(cache_max_mb * 1_000_000),
+            cache_max_age_seconds=cache_max_age_minutes * 60,
+        )
+        registry = _federated_discovery_registry(
+            openalex_api_key=openalex_api_key,
+            semantic_scholar_api_key=semantic_scholar_api_key,
+        )
+        broker = registry.build_broker(_parse_federated_providers(providers))
+        cache = BoundedTextCache(
+            cache_dir,
+            max_bytes=limits.cache_max_bytes,
+            max_age_seconds=limits.cache_max_age_seconds,
+        )
+    except (KeyError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    console.print(
+        "[yellow]Network access:[/yellow] discovery providers and public HTTPS source hosts."
+    )
+    result = research_online(
+        question, broker=broker, fetcher=SafeHttpsFetcher(limits), cache=cache, limits=limits
+    )
+    _write_output(output, json.dumps(result.bundle.to_dict(), indent=2) + "\n")
+
+    bundle = result.bundle
+    retrieved = len(bundle.sources) - len(bundle.unavailable_sources)
+    console.print(
+        f"Sources: {retrieved} retrieved, {len(bundle.unavailable_sources)} unavailable; "
+        f"excerpts: {len(bundle.excerpts)}. Wrote {output}."
+    )
+    for source in bundle.unavailable_sources:
+        console.print(
+            f"- {escape(source.source_id)} {source.status.value}: "
+            f"{escape(source.failure_reason or '')}"
+        )
+    for candidate_id, reason in result.skipped:
+        console.print(f"- skipped {escape(candidate_id)}: {escape(reason)}")
+    for status in result.discovery.provider_statuses:
+        if status.outcome.value not in {"success", "empty"}:
+            console.print(
+                f"- provider {escape(status.provider)} {status.outcome.value}: "
+                f"{escape(status.reason or '')}"
+            )
