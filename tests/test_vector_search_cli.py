@@ -10,7 +10,7 @@ import knowledge_engine.entrypoint as entrypoint
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.parser import ParsedPage, ParsedPaper
-from knowledge_engine.vector_search import FaissVectorIndex
+from knowledge_engine.vector_search import FaissVectorIndex, VectorMatch
 
 
 def _unwrapped(output: str) -> str:
@@ -93,6 +93,190 @@ def test_embedding_index_build_indexes_and_persists_embedding_fields(
         assert stored1.embedding_id == str(paper1_id)
         assert stored2 is not None
         assert stored2.embedding_id == str(paper2_id)
+
+
+def test_embedding_index_build_defaults_to_faiss_without_backend_flag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No `--backend` flag must still build a local FAISS index, unchanged."""
+
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        repository = PaperRepository(session)
+        paper1 = repository.add_parsed_paper(_parsed_paper(tmp_path, "a" * 64))
+        paper2 = repository.add_parsed_paper(_parsed_paper(tmp_path, "b" * 64))
+        paper1_id, paper2_id = paper1.id, paper2.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    vectors_path = tmp_path / "vectors.jsonl"
+    _write_vectors(
+        vectors_path,
+        [
+            {"paper_id": paper1_id, "vector": [1.0, 0.0], "embedding_model": "external:test-v1"},
+            {"paper_id": paper2_id, "vector": [0.0, 1.0], "embedding_model": "external:test-v1"},
+        ],
+    )
+    index_path = tmp_path / "index.faiss"
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        # Deliberately no --backend flag: faiss must be the default.
+        ["embedding-index-build", "--vectors", str(vectors_path), "--index-path", str(index_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    unwrapped = _unwrapped(result.output)
+    assert "Indexed 2 vector(s)" in unwrapped
+    assert "dimension 2, index size 2" in unwrapped
+    assert index_path.exists()
+    assert (tmp_path / "index.faiss.meta.json").exists()
+
+
+def test_embedding_index_build_qdrant_without_url_fails_cleanly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "a" * 64))
+        paper_id = paper.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    vectors_path = tmp_path / "vectors.jsonl"
+    _write_vectors(
+        vectors_path, [{"paper_id": paper_id, "vector": [1.0, 0.0], "embedding_model": "test"}]
+    )
+    index_path = tmp_path / "index.faiss"
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "embedding-index-build",
+            "--vectors",
+            str(vectors_path),
+            "--index-path",
+            str(index_path),
+            "--backend",
+            "qdrant",
+            "--qdrant-collection",
+            "some-name",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert not index_path.exists()
+
+
+def test_embedding_index_build_qdrant_without_collection_fails_cleanly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "a" * 64))
+        paper_id = paper.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    vectors_path = tmp_path / "vectors.jsonl"
+    _write_vectors(
+        vectors_path, [{"paper_id": paper_id, "vector": [1.0, 0.0], "embedding_model": "test"}]
+    )
+    index_path = tmp_path / "index.faiss"
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "embedding-index-build",
+            "--vectors",
+            str(vectors_path),
+            "--index-path",
+            str(index_path),
+            "--backend",
+            "qdrant",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert not index_path.exists()
+
+
+class _FakeQdrantVectorIndex:
+    """Minimal fake standing in for `QdrantVectorIndex` in CLI tests.
+
+    Deliberately has no `.save` -- the CLI must never call it for
+    backend="qdrant", so an AttributeError here would mean the
+    `if backend == "faiss":` guard around `index.save(...)` regressed.
+    """
+
+    def __init__(self) -> None:
+        self.added: list[tuple[int, list[float]]] = []
+
+    def add(self, paper_id: int, vector: list[float]) -> None:
+        self.added.append((paper_id, list(vector)))
+
+    @property
+    def size(self) -> int:
+        return len(self.added)
+
+
+def test_embedding_index_build_wires_qdrant_backend_through_to_resolve_vector_index(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        repository = PaperRepository(session)
+        paper1 = repository.add_parsed_paper(_parsed_paper(tmp_path, "a" * 64))
+        paper2 = repository.add_parsed_paper(_parsed_paper(tmp_path, "b" * 64))
+        paper1_id, paper2_id = paper1.id, paper2.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    vectors_path = tmp_path / "vectors.jsonl"
+    _write_vectors(
+        vectors_path,
+        [
+            {"paper_id": paper1_id, "vector": [1.0, 0.0], "embedding_model": "external:test-v1"},
+            {"paper_id": paper2_id, "vector": [0.0, 1.0], "embedding_model": "external:test-v1"},
+        ],
+    )
+    index_path = tmp_path / "index.faiss"
+
+    calls: list[dict[str, object]] = []
+    fake_index = _FakeQdrantVectorIndex()
+
+    def fake_resolve_vector_index(**kwargs: object) -> _FakeQdrantVectorIndex:
+        calls.append(kwargs)
+        return fake_index
+
+    monkeypatch.setattr(entrypoint, "resolve_vector_index", fake_resolve_vector_index)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "embedding-index-build",
+            "--vectors",
+            str(vectors_path),
+            "--index-path",
+            str(index_path),
+            "--backend",
+            "qdrant",
+            "--qdrant-collection",
+            "test-collection",
+            "--qdrant-url",
+            "http://fake-host:6333",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 1
+    assert calls[0]["backend"] == "qdrant"
+    assert calls[0]["qdrant_collection_name"] == "test-collection"
+    assert calls[0]["qdrant_url"] == "http://fake-host:6333"
+    assert calls[0]["dimension"] == 2
+    assert calls[0]["embedding_model"] == "external:test-v1"
+    assert fake_index.size == 2
+    # Qdrant has no local file: the FAISS-only save/metadata path must be skipped.
+    assert not index_path.exists()
+    assert not (tmp_path / "index.faiss.meta.json").exists()
 
 
 def test_embedding_index_build_rejects_unknown_paper_id(
@@ -483,3 +667,103 @@ def test_vector_search_reports_embedding_model_and_rejects_query_mismatch(
     unwrapped = _unwrapped(bad_result.output)
     assert "model-a" in unwrapped
     assert "model-b" in unwrapped
+
+
+def test_vector_search_qdrant_without_embedding_model_fails_cleanly(tmp_path: Path) -> None:
+    query_path = tmp_path / "query.json"
+    query_path.write_text(json.dumps([1.0, 0.0]), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "vector-search",
+            "--backend",
+            "qdrant",
+            "--qdrant-collection",
+            "x",
+            "--qdrant-url",
+            "http://fake-host:6333",
+            "--query-vector",
+            str(query_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+
+
+def test_vector_search_faiss_without_index_path_fails_cleanly(tmp_path: Path) -> None:
+    query_path = tmp_path / "query.json"
+    query_path.write_text(json.dumps([1.0, 0.0]), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        # Deliberately no --index-path and no --backend: faiss is the default,
+        # and this must still fail cleanly now that --index-path is no longer
+        # Typer-required/exists-checked at the type level.
+        ["vector-search", "--query-vector", str(query_path)],
+    )
+
+    assert result.exit_code != 0
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+
+
+class _FakeQdrantSearchIndex:
+    """Minimal fake standing in for `QdrantVectorIndex` in `vector-search` tests."""
+
+    def __init__(self, matches: list[VectorMatch]) -> None:
+        self._matches = matches
+
+    def search(self, vector: list[float], k: int) -> list[VectorMatch]:
+        return self._matches[:k]
+
+
+def test_vector_search_wires_qdrant_backend_through_to_resolve_vector_index(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database = _database(tmp_path, "source")
+    with database.session() as session:
+        paper = PaperRepository(session).add_parsed_paper(_parsed_paper(tmp_path, "a" * 64))
+        paper_id = paper.id
+    monkeypatch.setattr(entrypoint, "_local_database", lambda: database)
+
+    calls: list[dict[str, object]] = []
+    fake_index = _FakeQdrantSearchIndex([VectorMatch(vector_id=paper_id, score=0.0)])
+
+    def fake_resolve_vector_index(**kwargs: object) -> _FakeQdrantSearchIndex:
+        calls.append(kwargs)
+        return fake_index
+
+    monkeypatch.setattr(entrypoint, "resolve_vector_index", fake_resolve_vector_index)
+
+    query_path = tmp_path / "query.json"
+    query_path.write_text(json.dumps([1.0, 0.0]), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "vector-search",
+            "--backend",
+            "qdrant",
+            "--qdrant-collection",
+            "test-collection",
+            "--qdrant-url",
+            "http://fake-host:6333",
+            "--qdrant-embedding-model",
+            "external:test-v1",
+            "--query-vector",
+            str(query_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 1
+    assert calls[0]["backend"] == "qdrant"
+    assert calls[0]["qdrant_collection_name"] == "test-collection"
+    assert calls[0]["qdrant_url"] == "http://fake-host:6333"
+    assert calls[0]["embedding_model"] == "external:test-v1"
+    assert calls[0]["dimension"] == 2
+
+    unwrapped = _unwrapped(result.output)
+    assert f"Paper ID: {paper_id}" in unwrapped
+    assert "embedding_model: external:test-v1" in unwrapped
