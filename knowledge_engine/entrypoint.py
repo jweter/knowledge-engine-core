@@ -155,6 +155,7 @@ from knowledge_engine.general_question_pmc_acquisition import (
     execute_pmc_acquisition_plan,
     persist_pmc_acquisition_execution,
 )
+from knowledge_engine.hybrid_search import merge_lexical_and_vector_results
 from knowledge_engine.import_runs import ImportRunService
 from knowledge_engine.import_runs.reporting import render_import_run_report
 from knowledge_engine.llm import LocalLLMError, OllamaLLM
@@ -256,6 +257,7 @@ from knowledge_engine.vector_search import (
     load_index_metadata,
     save_index_metadata,
 )
+from knowledge_engine.vector_search.backend_selection import resolve_vector_index
 
 DoiOption = Annotated[str, typer.Option("--doi", help="DOI to query.")]
 ProviderOption = Annotated[
@@ -1058,9 +1060,39 @@ EmbeddingVectorsOption = Annotated[
         readable=True,
     ),
 ]
-EmbeddingIndexPathOption = Annotated[
-    Path,
-    typer.Option("--index-path", help="Local FAISS index file to create or update."),
+VectorIndexBackendOption = Annotated[
+    str,
+    typer.Option(
+        "--backend",
+        help=(
+            "Vector index backend: 'faiss' (default, local file) or 'qdrant' (operator-run server)."
+        ),
+    ),
+]
+QdrantCollectionOption = Annotated[
+    str | None,
+    typer.Option(
+        "--qdrant-collection", help="Qdrant collection name. Required when --backend qdrant."
+    ),
+]
+QdrantUrlOption = Annotated[
+    str | None,
+    typer.Option("--qdrant-url", help="Qdrant server URL. Required when --backend qdrant."),
+]
+QdrantApiKeyOption = Annotated[
+    str | None,
+    typer.Option("--qdrant-api-key", help="Optional Qdrant API key."),
+]
+QdrantEmbeddingModelOption = Annotated[
+    str | None,
+    typer.Option(
+        "--qdrant-embedding-model",
+        help=(
+            "Embedding model identifier for the Qdrant collection being searched. "
+            "Required when --backend qdrant (Qdrant has no local metadata sidecar to "
+            "read this from)."
+        ),
+    ),
 ]
 ExistingEmbeddingIndexPathOption = Annotated[
     Path,
@@ -5287,7 +5319,17 @@ def embedding_generate(
 @app.command("embedding-index-build")
 def embedding_index_build(
     vectors: EmbeddingVectorsOption,
-    index_path: EmbeddingIndexPathOption,
+    index_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--index-path",
+            help="Local FAISS index file to create or update. Required when --backend faiss.",
+        ),
+    ] = None,
+    backend: VectorIndexBackendOption = "faiss",
+    qdrant_collection: QdrantCollectionOption = None,
+    qdrant_url: QdrantUrlOption = None,
+    qdrant_api_key: QdrantApiKeyOption = None,
 ) -> None:
     """Build or update a local FAISS vector index from externally-generated embeddings.
 
@@ -5314,7 +5356,12 @@ def embedding_index_build(
     assert result.dimension is not None  # non-empty records guarantee a dimension
     assert result.embedding_model is not None  # non-empty records guarantee a model
 
-    if index_path.exists():
+    # The local index file and its metadata belong to the FAISS backend only; a Qdrant build
+    # must not be rejected because of an unrelated local file (PR #555 review).
+    if backend == "faiss" and index_path is None:
+        console.print("[red]--index-path is required when --backend faiss.[/red]")
+        raise typer.Exit(1)
+    if backend == "faiss" and index_path is not None and index_path.exists():
         existing_metadata = load_index_metadata(index_path)
         if existing_metadata is None:
             console.print(
@@ -5345,12 +5392,16 @@ def embedding_index_build(
             raise typer.Exit(1)
 
         try:
-            index = (
-                FaissVectorIndex.load(index_path, dimension=result.dimension)
-                if index_path.exists()
-                else FaissVectorIndex(result.dimension)
+            index = resolve_vector_index(
+                backend=backend,
+                dimension=result.dimension,
+                embedding_model=result.embedding_model,
+                index_path=index_path,
+                qdrant_collection_name=qdrant_collection,
+                qdrant_url=qdrant_url,
+                qdrant_api_key=qdrant_api_key,
             )
-        except VectorSearchError as exc:
+        except (VectorSearchError, ValueError) as exc:
             console.print(f"[red]{escape(str(exc))}[/red]")
             raise typer.Exit(1) from None
 
@@ -5362,27 +5413,43 @@ def embedding_index_build(
                 embedding_id=str(record.paper_id),
             )
 
-        index.save(index_path)
-        save_index_metadata(
-            index_path,
-            VectorIndexMetadata(embedding_model=result.embedding_model, dimension=result.dimension),
-        )
+        if backend == "faiss":
+            assert isinstance(index, FaissVectorIndex)  # guaranteed by resolve_vector_index
+            assert index_path is not None  # required for faiss above
+            index.save(index_path)
+            save_index_metadata(
+                index_path,
+                VectorIndexMetadata(
+                    embedding_model=result.embedding_model, dimension=result.dimension
+                ),
+            )
 
+    target = index_path if backend == "faiss" else f"qdrant collection {qdrant_collection}"
     console.print(
-        f"[green]Indexed {len(result.records)} vector(s):[/green] {index_path} "
+        f"[green]Indexed {len(result.records)} vector(s):[/green] {target} "
         f"(embedding_model {result.embedding_model}, dimension {result.dimension}, "
-        f"index size {index.size})."
+        f"index size {cast(Any, index).size})."
     )
 
 
 @app.command("vector-search")
 def vector_search(
-    index_path: ExistingEmbeddingIndexPathOption,
+    index_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--index-path", help="Local FAISS index file to search. Required when --backend faiss."
+        ),
+    ] = None,
     query_vector: QueryVectorOption = None,
     query_text: QueryTextOption = None,
     generator: VectorSearchGeneratorOption = None,
     model: VectorSearchModelOption = None,
     limit: VectorSearchLimitOption = 10,
+    backend: VectorIndexBackendOption = "faiss",
+    qdrant_collection: QdrantCollectionOption = None,
+    qdrant_url: QdrantUrlOption = None,
+    qdrant_api_key: QdrantApiKeyOption = None,
+    qdrant_embedding_model: QdrantEmbeddingModelOption = None,
 ) -> None:
     """Search a local FAISS vector index by a free-text query or an already-embedded vector.
 
@@ -5393,18 +5460,35 @@ def vector_search(
     embedding_model, once known, is checked against the index's recorded
     embedding_model -- vectors from different models are not comparable even at
     the same dimension. Lexical search remains available via `ke search`; this
-    command is an additional, separate retrieval signal, not a replacement, and
-    combining the two into one ranked list is not yet implemented.
+    command is an additional, separate retrieval signal, not a replacement.
+    Combining the two into one ranked list is available via `ke fused-search`
+    (Reciprocal Rank Fusion over rank position) or `ke hybrid-search`
+    (independently normalized raw scores, summed).
     """
 
-    index_metadata = load_index_metadata(index_path)
-    if index_metadata is None:
-        console.print(
-            f"[red]Index at {index_path} has no recorded embedding_model "
-            "metadata.[/red] Refusing to search an index whose embedding model cannot "
-            "be verified."
-        )
-        raise typer.Exit(1)
+    resolved_embedding_model: str = ""
+    if backend == "faiss":
+        if index_path is None:
+            console.print("[red]--index-path is required when --backend faiss.[/red]")
+            raise typer.Exit(1)
+        if not index_path.exists():
+            console.print(f"[red]Index file not found: {index_path}[/red]")
+            raise typer.Exit(1)
+
+        index_metadata = load_index_metadata(index_path)
+        if index_metadata is None:
+            console.print(
+                f"[red]Index at {index_path} has no recorded embedding_model "
+                "metadata.[/red] Refusing to search an index whose embedding model cannot "
+                "be verified."
+            )
+            raise typer.Exit(1)
+        resolved_embedding_model = index_metadata.embedding_model
+    elif backend == "qdrant":
+        if qdrant_embedding_model is None:
+            console.print("[red]--qdrant-embedding-model is required when --backend qdrant.[/red]")
+            raise typer.Exit(1)
+        resolved_embedding_model = qdrant_embedding_model
 
     if (query_vector is None) == (query_text is None):
         console.print("[red]Provide exactly one of --query-vector or --query-text.[/red]")
@@ -5452,20 +5536,25 @@ def vector_search(
             payload.get("embedding_model") if isinstance(payload, dict) else None
         )
 
-    if (
-        query_embedding_model is not None
-        and query_embedding_model != index_metadata.embedding_model
-    ):
+    if query_embedding_model is not None and query_embedding_model != resolved_embedding_model:
         console.print(
             f"[red]Query vector was embedded with '{escape(str(query_embedding_model))}'; "
-            f"this index was built with '{escape(index_metadata.embedding_model)}'.[/red] "
+            f"this index was built with '{escape(resolved_embedding_model)}'.[/red] "
             "Refusing to compare vectors from different embedding models."
         )
         raise typer.Exit(1)
 
     try:
-        index = FaissVectorIndex.load(index_path, dimension=len(vector))
-    except VectorSearchError as exc:
+        index = resolve_vector_index(
+            backend=backend,
+            dimension=len(vector),
+            embedding_model=resolved_embedding_model,
+            index_path=index_path,
+            qdrant_collection_name=qdrant_collection,
+            qdrant_url=qdrant_url,
+            qdrant_api_key=qdrant_api_key,
+        )
+    except (VectorSearchError, ValueError) as exc:
         console.print(f"[red]{escape(str(exc))}[/red]")
         raise typer.Exit(1) from None
 
@@ -5484,7 +5573,7 @@ def vector_search(
 
     console.print(
         f"[bold]Vector search results:[/bold] {index_path} "
-        f"(embedding_model: {index_metadata.embedding_model})"
+        f"(embedding_model: {resolved_embedding_model})"
     )
     for rank, match in enumerate(matches, start=1):
         paper = papers_by_id.get(match.vector_id)
@@ -5602,6 +5691,116 @@ def fused_search(
         console.print(f"[bold]{rank}. {title}[/bold]")
         console.print(f"Paper ID: {result.paper_id}")
         console.print(f"Fused score: {result.fused_score:.4f} (matched: {', '.join(matched_via)})")
+        if paper:
+            console.print(f"DOI: {escape(paper.doi or 'Unknown')}")
+
+    console.print()
+    console.print(
+        "[bold]This is combined lexical and semantic retrieval only, not scientific "
+        "synthesis.[/bold]"
+    )
+
+
+@app.command("hybrid-search")
+def hybrid_search(
+    query_text: FusedSearchQueryTextArgument,
+    index_path: ExistingEmbeddingIndexPathOption,
+    generator: FusedSearchGeneratorOption,
+    model: VectorSearchModelOption = None,
+    limit: VectorSearchLimitOption = 10,
+    candidate_limit: FusedSearchCandidateLimitOption = 25,
+) -> None:
+    """Combine lexical and semantic retrieval by normalized raw score, not rank.
+
+    An alternative to `ke fused-search`'s Reciprocal Rank Fusion: each
+    signal's own raw score (FTS5's bm25 for lexical, negated because bm25 is
+    lower-is-better; FAISS similarity -- the negative of its squared L2
+    distance, so higher means more similar -- for semantic) is independently
+    min-max normalized to
+    [0, 1] before combining (see `knowledge_engine.hybrid_search`), so a
+    strong match in one signal is not diluted by rank position the way
+    RRF's `1/(k+rank)` can be. A paper present in both signals is scored
+    by the SUM of its two normalized scores, so a dual-signal match can
+    clearly outrank a single-signal one. `--candidate-limit` controls how
+    many results are pulled from each individual signal before merging;
+    the effective candidate pool is never narrower than `--limit` itself.
+    """
+
+    index_metadata = load_index_metadata(index_path)
+    if index_metadata is None:
+        console.print(
+            f"[red]Index at {index_path} has no recorded embedding_model "
+            "metadata.[/red] Refusing to search an index whose embedding model cannot "
+            "be verified."
+        )
+        raise typer.Exit(1)
+
+    embedding_generator = _build_embedding_generator(generator, model)
+    try:
+        vector: list[float] = list(embedding_generator.generate(query_text))
+    except (LocalEmbeddingError, OpenAiEmbeddingError) as exc:
+        console.print(f"[red]Failed to embed query text:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from None
+
+    if embedding_generator.model_id != index_metadata.embedding_model:
+        console.print(
+            f"[red]Query was embedded with '{escape(embedding_generator.model_id)}'; "
+            f"this index was built with '{escape(index_metadata.embedding_model)}'.[/red] "
+            "Refusing to compare vectors from different embedding models."
+        )
+        raise typer.Exit(1)
+
+    try:
+        index = FaissVectorIndex.load(index_path, dimension=len(vector))
+    except VectorSearchError as exc:
+        console.print(f"[red]{escape(str(exc))}[/red]")
+        raise typer.Exit(1) from None
+
+    effective_candidate_limit = max(candidate_limit, limit)
+    # FAISS reports squared L2 distance (lower = more similar); negate so
+    # higher means more similar, matching bm25's own convention, before
+    # handing it to merge_lexical_and_vector_results's per-signal min-max
+    # normalization.
+    vector_scores = {
+        match.vector_id: -match.score for match in index.search(vector, k=effective_candidate_limit)
+    }
+
+    database = _local_database()
+    database.initialize()
+    with database.session() as session:
+        lexical_results = SearchService(session).answer_retrieval(
+            query_text, limit=effective_candidate_limit
+        )
+        lexical_ids = {result.paper_id for result in lexical_results}
+        merged = merge_lexical_and_vector_results(lexical_results, vector_scores)[:limit]
+        repository = PaperRepository(session)
+        papers_by_id = {
+            paper.id: paper for paper in repository.get_many([result.paper_id for result in merged])
+        }
+
+    if not merged:
+        console.print("[yellow]No matches found in either lexical or semantic search.[/yellow]")
+        return
+
+    console.print(f"[bold]Hybrid search results for:[/bold] {escape(query_text)}")
+    console.print(
+        f"(lexical: SQLite FTS5; semantic: {index_path}, "
+        f"embedding_model: {index_metadata.embedding_model})"
+    )
+    for rank, result in enumerate(merged, start=1):
+        paper = papers_by_id.get(result.paper_id)
+        title = escape(paper.title) if paper else "Unknown paper (not in local database)"
+        matched_via = []
+        if result.paper_id in lexical_ids:
+            matched_via.append(f"lexical={result.lexical_score:.3f}")
+        if result.paper_id in vector_scores:
+            matched_via.append(f"semantic={result.vector_score:.3f}")
+        console.print()
+        console.print(f"[bold]{rank}. {title}[/bold]")
+        console.print(f"Paper ID: {result.paper_id}")
+        console.print(
+            f"Combined score: {result.combined_score:.4f} (matched: {', '.join(matched_via)})"
+        )
         if paper:
             console.print(f"DOI: {escape(paper.doi or 'Unknown')}")
 
