@@ -6910,3 +6910,72 @@ def _print_snowball_result(snowball_run_id: str, *, result: CitationSnowballResu
         "Run the same PMC-scoped candidate/acquisition commands for anything meant to "
         "enter the corpus.[/bold]"
     )
+
+
+@app.command("online-evidence-validate")
+def online_evidence_validate(
+    bundle_path: Annotated[
+        Path,
+        typer.Argument(help="Online evidence bundle JSON (schema ke-online-evidence/v1)."),
+    ],
+    contents_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--contents-dir",
+            help="Directory of retrieved source texts named <content_sha256>.txt; every "
+            "excerpt is re-checked against them.",
+        ),
+    ] = None,
+) -> None:
+    """Validate an online evidence bundle and trace each excerpt to its retrieved source (KEC-1).
+
+    Exits 1 when the bundle breaks the contract (for example an excerpt quoting a
+    source that was never retrieved) or, with --contents-dir, when an excerpt is
+    not found verbatim in the retrieved text or a text does not match its hash.
+    Claims that are contested or lack evidence are reported, not hidden.
+    """
+
+    from knowledge_engine.online_evidence import (
+        ClaimStatus,
+        OnlineEvidenceBundle,
+        OnlineEvidenceError,
+        RetrievalStatus,
+        verify_against_retrieved_content,
+    )
+
+    try:
+        bundle = OnlineEvidenceBundle.from_dict(json.loads(bundle_path.read_text(encoding="utf-8")))
+    except (OSError, json.JSONDecodeError, OnlineEvidenceError) as exc:
+        console.print(f"[red]Invalid online evidence bundle:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from None
+
+    problems: list[str] = []
+    if contents_dir is not None:
+        contents = {}
+        for source in bundle.sources:
+            if source.status is RetrievalStatus.RETRIEVED:
+                text_path = contents_dir / f"{source.content_sha256}.txt"
+                if text_path.is_file():
+                    contents[source.source_id] = text_path.read_text(encoding="utf-8")
+        problems = verify_against_retrieved_content(bundle, contents)
+
+    retrieved = len(bundle.sources) - len(bundle.unavailable_sources)
+    console.print(
+        f"Sources: {retrieved} retrieved, {len(bundle.unavailable_sources)} unavailable; "
+        f"excerpts: {len(bundle.excerpts)}; claims: {len(bundle.claims)}"
+    )
+    for source in bundle.unavailable_sources:
+        console.print(
+            f"- unavailable {escape(source.source_id)} ({source.status.value}): "
+            f"{escape(source.failure_reason or '')}"
+        )
+    for status in (ClaimStatus.CONTESTED, ClaimStatus.INSUFFICIENT_EVIDENCE):
+        for claim in bundle.claims_with_status(status):
+            console.print(f"- {status.value} claim {escape(claim.claim_id)}: {escape(claim.text)}")
+    if problems:
+        console.print("[red]Evidence is not traceable to its retrieved sources:[/red]")
+        for problem in problems:
+            console.print(f"- {escape(problem)}")
+        raise typer.Exit(1)
+    verified = "verified against retrieved content" if contents_dir else "contract valid"
+    console.print(f"[green]Online evidence bundle {verified}.[/green]")
