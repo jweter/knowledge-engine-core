@@ -317,6 +317,7 @@ class SafeHttpsFetcher:
 
     def fetch(self, url: str) -> FetchedPage:
         current = url
+        deadline = time.monotonic() + self._limits.timeout_seconds
         for _hop in range(self._limits.max_redirects + 1):
             try:
                 host, address = check_public_https_url(current, self._resolver)
@@ -343,7 +344,7 @@ class SafeHttpsFetcher:
                 if 300 <= response.status < 400 and location:
                     current = urljoin(current, location)
                     continue
-                return self._finish(current, response)
+                return self._finish(current, response, deadline)
             except TimeoutError as error:
                 raise RetrievalFailure(RetrievalStatus.FAILED, "Retrieval timed out.") from error
             except (OSError, http.client.HTTPException, ssl.SSLError) as error:
@@ -356,12 +357,24 @@ class SafeHttpsFetcher:
             RetrievalStatus.FAILED, f"More than {self._limits.max_redirects} redirects."
         )
 
-    def _finish(self, url: str, response: _Response) -> FetchedPage:
+    def _finish(self, url: str, response: _Response, deadline: float) -> FetchedPage:
         limit = self._limits.max_response_bytes
         declared = response.getheader("Content-Length")
         if declared is not None and declared.isdigit() and int(declared) > limit:
             raise RetrievalFailure(RetrievalStatus.FAILED, f"Response exceeds {limit} bytes.")
-        body = response.read(limit + 1)
+        chunks: list[bytes] = []
+        total = 0
+        while total <= limit:
+            # The socket timeout only bounds each recv; enforce the wall-clock budget here
+            # so a server dribbling bytes cannot hold a fetch open indefinitely.
+            if time.monotonic() > deadline:
+                raise RetrievalFailure(RetrievalStatus.FAILED, "Retrieval timed out.")
+            chunk = response.read(min(65536, limit + 1 - total))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+        body = b"".join(chunks)
         if len(body) > limit:
             raise RetrievalFailure(RetrievalStatus.FAILED, f"Response exceeds {limit} bytes.")
         return FetchedPage(url, response.status, response.getheader("Content-Type") or "", body)

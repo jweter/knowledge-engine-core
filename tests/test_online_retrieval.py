@@ -78,6 +78,7 @@ class FakeResponse:
     ) -> None:
         self.status = status
         self._body = body
+        self._pos = 0
         self._headers = {
             "Content-Type": content_type,
             "Location": location,
@@ -88,7 +89,10 @@ class FakeResponse:
         return self._headers.get(name) or default
 
     def read(self, amt: int | None = None) -> bytes:
-        return self._body if amt is None else self._body[:amt]
+        end = len(self._body) if amt is None else self._pos + amt
+        chunk = self._body[self._pos : end]
+        self._pos += len(chunk)
+        return chunk
 
 
 class FakeConnections:
@@ -821,3 +825,24 @@ def test_cli_refuses_to_overwrite_an_existing_bundle_without_force(
     )
 
     assert result.exit_code == 2 and output.read_text(encoding="utf-8") == "keep me"
+
+
+def test_slow_dribbling_response_hits_the_wall_clock_deadline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The socket timeout bounds each read only; the fetch must bound total time."""
+
+    import knowledge_engine.online_retrieval as module
+
+    clock = [0.0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+
+    class Dribble(FakeResponse):
+        def read(self, amt: int | None = None) -> bytes:
+            clock[0] += 6.0  # each read "succeeds" within the socket timeout but is slow
+            return b"x"
+
+    fetcher, _ = fetcher_for({"https://example.org/a": Dribble()}, timeout_seconds=10.0)
+
+    with pytest.raises(RetrievalFailure, match="timed out"):
+        fetcher.fetch("https://example.org/a")
