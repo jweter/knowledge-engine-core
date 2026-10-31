@@ -31,6 +31,7 @@ unavailable.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import http.client
 import ipaddress
@@ -38,6 +39,7 @@ import os
 import re
 import socket
 import ssl
+import threading
 import time
 import uuid
 from collections.abc import Callable, Mapping, Sequence
@@ -54,6 +56,10 @@ from knowledge_engine.federated_discovery import (
     FederatedCandidate,
     FederatedSearchResult,
     ProviderObservation,
+)
+from knowledge_engine.federated_discovery_service import (
+    FederatedDiscoveryService,
+    FederatedSearchExecution,
 )
 from knowledge_engine.online_evidence import (
     MAX_EXCERPT_CHARS,
@@ -261,6 +267,22 @@ class Searcher(Protocol):
         """Run one provider-neutral search."""
 
 
+class RecordedSearcher:
+    """Adapts the recording ``FederatedDiscoveryService`` to the ``Searcher`` protocol.
+
+    Every search is persisted to the federated ledger before it is returned (FRD-6); the
+    last execution is kept so callers can report the run identity.
+    """
+
+    def __init__(self, service: FederatedDiscoveryService) -> None:
+        self._service = service
+        self.execution: FederatedSearchExecution | None = None
+
+    def search(self, query: DiscoveryQuery) -> FederatedSearchResult:
+        self.execution = self._service.search(query)
+        return self.execution.result
+
+
 class Fetcher(Protocol):
     def fetch(self, url: str) -> FetchedPage:
         """Fetch one URL under the retrieval limits, or raise ``RetrievalFailure``."""
@@ -289,6 +311,8 @@ class _Connection(Protocol):
 
     def set_timeout(self, seconds: float) -> None: ...
 
+    def abort(self) -> None: ...
+
     def close(self) -> None: ...
 
 
@@ -304,10 +328,20 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
         super().__init__(host, port=port, timeout=timeout)
         self._address = address
         self._tls = ssl.create_default_context()
+        self._raw: socket.socket | None = None
 
     def connect(self) -> None:
         sock = socket.create_connection((self._address, self.port), self.timeout)
+        self._raw = sock  # reachable by abort() even while the TLS handshake is in progress
         self.sock = self._tls.wrap_socket(sock, server_hostname=self.host)
+
+    def abort(self) -> None:
+        """Deadline watchdog (another thread): unblock whatever read or handshake is waiting."""
+
+        for candidate in (self.sock, self._raw):
+            if candidate is not None:
+                with contextlib.suppress(OSError):
+                    candidate.shutdown(socket.SHUT_RDWR)
 
     def set_timeout(self, seconds: float) -> None:
         """Tighten the per-operation socket timeout to what is left of the deadline."""
@@ -358,8 +392,16 @@ class SafeHttpsFetcher:
                 ) from error
             parts = urlsplit(current)
             target = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
-            connection = self._connect(host, address, self._remaining(deadline))
+            budget = self._remaining(deadline)
+            connection = self._connect(host, address, budget)
+            expired = threading.Event()
+            # Socket timeouts bound each read, not the whole exchange: a server trickling its
+            # status line or headers would outlast them. The watchdog shuts the socket at the
+            # absolute deadline so even a blocked header read ends on time.
+            watchdog = threading.Timer(budget, self._expire, (expired, connection))
+            watchdog.daemon = True
             try:
+                watchdog.start()
                 connection.request(
                     "GET",
                     target,
@@ -371,25 +413,43 @@ class SafeHttpsFetcher:
                 )
                 connection.set_timeout(self._remaining(deadline))
                 response = connection.getresponse()
+                self._raise_if_expired(expired)
                 location = response.getheader("Location")
                 if 300 <= response.status < 400 and location:
                     current = urljoin(current, location)
                     continue
-                return self._finish(current, response, connection, deadline)
+                return self._finish(current, response, connection, deadline, expired)
             except TimeoutError as error:
                 raise RetrievalFailure(RetrievalStatus.FAILED, "Retrieval timed out.") from error
             except (OSError, http.client.HTTPException, ssl.SSLError) as error:
+                self._raise_if_expired(expired)  # an aborted read surfaces as a transport error
                 raise RetrievalFailure(
                     RetrievalStatus.FAILED, f"Transport error: {type(error).__name__}"
                 ) from error
             finally:
+                watchdog.cancel()
                 connection.close()
         raise RetrievalFailure(
             RetrievalStatus.FAILED, f"More than {self._limits.max_redirects} redirects."
         )
 
+    @staticmethod
+    def _expire(expired: threading.Event, connection: _Connection) -> None:
+        expired.set()
+        connection.abort()
+
+    @staticmethod
+    def _raise_if_expired(expired: threading.Event) -> None:
+        if expired.is_set():
+            raise RetrievalFailure(RetrievalStatus.FAILED, "Retrieval timed out.")
+
     def _finish(
-        self, url: str, response: _Response, connection: _Connection, deadline: float
+        self,
+        url: str,
+        response: _Response,
+        connection: _Connection,
+        deadline: float,
+        expired: threading.Event,
     ) -> FetchedPage:
         limit = self._limits.max_response_bytes
         declared = response.getheader("Content-Length")
@@ -401,6 +461,7 @@ class SafeHttpsFetcher:
             connection.set_timeout(self._remaining(deadline))
             chunk = response.read1(min(_READ_CHUNK, limit + 1 - received))
             if not chunk:
+                self._raise_if_expired(expired)  # an aborted socket reads as a clean EOF
                 break
             received += len(chunk)
             if received > limit:
@@ -687,6 +748,35 @@ def question_terms(question: str) -> frozenset[str]:
     return frozenset(word for word in words if word not in _STOPWORDS)
 
 
+def _best_window(
+    text: str, start: int, end: int, terms: frozenset[str], max_chars: int
+) -> tuple[int, int]:
+    """The sentence-aligned window of at most ``max_chars`` with the most question terms.
+
+    Windows start at the paragraph head or at a sentence start and are cut back to the last
+    complete sentence that fits; ties keep the earliest window.
+    """
+
+    starts = [start]
+    for sentence in _SENTENCE_END.finditer(text, start, end):
+        following = sentence.end()
+        while following < end and text[following].isspace():
+            following += 1
+        if following < end:
+            starts.append(following)
+    best = (-1, start, min(end, start + max_chars))
+    for window_start in starts:
+        window_end = min(end, window_start + max_chars)
+        if end - window_start > max_chars:
+            ends = [m.end() for m in _SENTENCE_END.finditer(text, window_start, window_end)]
+            window_end = ends[-1] if ends else window_end
+        window = text[window_start:window_end].lower()
+        found = sum(1 for term in terms if term in window)
+        if found > best[0]:
+            best = (found, window_start, window_end)
+    return best[1], best[2]
+
+
 def select_excerpts(
     source_id: str, text: str, terms: frozenset[str], *, limit: int, max_chars: int
 ) -> list[EvidenceExcerpt]:
@@ -694,16 +784,14 @@ def select_excerpts(
 
     scored: list[tuple[float, int, int, int]] = []
     for index, match in enumerate(_PARAGRAPH.finditer(text)):
-        paragraph = match.group()
-        found = {t for t in terms if t in paragraph.lower()}
+        start, end = match.start(), match.end()
+        if end - start > max_chars:  # a long paragraph: quote the window that matches best
+            start, end = _best_window(text, start, end, terms, max_chars)
+        found = {t for t in terms if t in text[start:end].lower()}
         if found:
-            scored.append((-len(found) / len(terms), index, match.start(), len(paragraph)))
+            scored.append((-len(found) / len(terms), index, start, end))
     excerpts: list[EvidenceExcerpt] = []
-    for _score, index, start, length in sorted(scored)[:limit]:
-        end = start + min(length, max_chars)
-        if length > max_chars:
-            ends = [m.end() for m in _SENTENCE_END.finditer(text, start, end)]
-            end = ends[-1] if ends else end
+    for _score, index, start, end in sorted(scored)[:limit]:
         excerpts.append(
             EvidenceExcerpt.quote(
                 source_id, text[start:end], char_start=start, locator=f"paragraph {index + 1}"
@@ -832,6 +920,7 @@ __all__ = [
     "Fetcher",
     "Searcher",
     "OnlineResearchResult",
+    "RecordedSearcher",
     "RetrievalFailure",
     "RetrievalLimits",
     "SafeHttpsFetcher",

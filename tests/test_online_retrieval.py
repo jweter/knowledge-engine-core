@@ -131,6 +131,9 @@ class FakeConnections:
     def set_timeout(self, seconds: float) -> None:
         self.timeouts.append(seconds)
 
+    def abort(self) -> None:
+        pass
+
     def getresponse(self) -> FakeResponse:
         outcome = self.routes[self._key]
         if isinstance(outcome, Exception):
@@ -805,6 +808,8 @@ def test_cli_writes_a_bundle_that_validates_against_its_cache(
             str(cache_dir),
             "--output",
             str(output),
+            "--ledger-root",
+            str(tmp_path / "ledger"),
             "--max-sources",
             "5",
         ],
@@ -839,6 +844,8 @@ def test_cli_refuses_to_overwrite_an_existing_bundle_without_force(
             str(tmp_path / "c"),
             "--output",
             str(output),
+            "--ledger-root",
+            str(tmp_path / "ledger"),
         ],
     )
 
@@ -1208,3 +1215,164 @@ def test_content_evicted_by_another_process_is_withheld_not_cited(tmp_path: Path
     assert first.status is RetrievalStatus.UNAVAILABLE and "evicted" in (first.failure_reason or "")
     assert first.content_sha256 is None
     assert {e.source_id for e in result.bundle.excerpts} == {"doi:10.1/b"}
+
+
+# --- Review findings on #561: header deadline, ledger, long-paragraph windows ------------
+
+
+def test_a_trickled_status_line_and_headers_cannot_outlast_the_deadline(tmp_path: Path) -> None:
+    def respond(connection: ssl.SSLSocket, _request: bytes) -> None:
+        for byte in b"HTTP/1.1 200 OK\r\nX-Slow: " + b"y" * 400:  # headers never finish
+            connection.sendall(bytes([byte]))
+            time.sleep(0.1)
+
+    server = _TlsServer(tmp_path, respond)
+    fetcher = SafeHttpsFetcher(
+        limits(timeout_seconds=0.3), resolver=resolver, connection_factory=server.factory()
+    )
+
+    started = time.monotonic()
+    with pytest.raises(RetrievalFailure, match="timed out") as caught:
+        fetcher.fetch("https://example.org/slow-headers")
+    elapsed = time.monotonic() - started
+    server.join()
+
+    assert caught.value.status is RetrievalStatus.FAILED
+    assert elapsed < 0.9  # bytes keep arriving inside the read timeout; the old code took ~1.5 s
+
+
+def test_online_research_records_the_discovery_run_and_keeps_its_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    patch_cli_world(monkeypatch, tmp_path)
+    ledger, output = tmp_path / "ledger", tmp_path / "bundle.json"
+    runner = CliRunner()
+
+    result = runner.invoke(
+        entrypoint.app,
+        [
+            "online-research",
+            "Does semaglutide reduce body weight versus placebo?",
+            "--cache-dir",
+            str(tmp_path / "cache"),
+            "--output",
+            str(output),
+            "--ledger-root",
+            str(ledger),
+            "--max-sources",
+            "5",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    sidecar = json.loads((tmp_path / "bundle.json.discovery.json").read_text(encoding="utf-8"))
+    run_id = sidecar["search_run_id"]
+    assert sidecar["bundle"] == "bundle.json" and run_id in " ".join(result.output.split())
+    assert list(ledger.rglob("*.json"))  # the run is persisted, not just reported
+    coverage = runner.invoke(
+        entrypoint.app, ["federated-coverage-report", run_id, "--ledger-root", str(ledger)]
+    )
+    assert coverage.exit_code == 0, coverage.output  # and can be audited later by its id
+
+
+def test_online_research_requires_a_ledger_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    patch_cli_world(monkeypatch, tmp_path)
+
+    result = CliRunner().invoke(
+        entrypoint.app,
+        [
+            "online-research",
+            "semaglutide",
+            "--cache-dir",
+            str(tmp_path / "c"),
+            "--output",
+            str(tmp_path / "bundle.json"),
+        ],
+    )
+
+    assert result.exit_code == 2 and not (tmp_path / "bundle.json").exists()
+
+
+def test_a_long_paragraph_is_quoted_at_the_window_that_matches_the_question() -> None:
+    background = "General background about metabolic disease and its burden worldwide. " * 30
+    result = "Semaglutide reduced body weight by 15.2% versus placebo at week 68. "
+    text = "Intro paragraph.\r\n\r\n" + background + result + "Safety was acceptable." + "\r\n"
+    terms = retrieval.question_terms("Does semaglutide reduce body weight versus placebo?")
+
+    (excerpt,) = select_excerpts("doi:10.1/x", text, terms, limit=1, max_chars=300)
+
+    assert "Semaglutide reduced body weight" in excerpt.text
+    assert len(excerpt.text) <= 300 and excerpt.text.endswith(".")
+    assert excerpt.char_start is not None and excerpt.char_end is not None
+    assert text[excerpt.char_start : excerpt.char_end] == excerpt.text  # exact offsets, CRLF intact
+    assert excerpt.char_start > len(background) - 300  # not the paragraph head
+
+
+def test_a_long_paragraph_without_a_better_window_keeps_its_head() -> None:
+    sentence = "Weight fell by a large and clinically meaningful amount in every group. "
+    text = sentence * 20
+    terms = retrieval.question_terms("weight fell")
+
+    (excerpt,) = select_excerpts("doi:10.1/x", text, terms, limit=1, max_chars=200)
+
+    assert excerpt.char_start == 0 and len(excerpt.text) <= 200
+
+
+def test_the_watchdog_aborts_a_header_read_that_the_socket_timeout_cannot_bound() -> None:
+    class Blocking(FakeConnections):
+        """getresponse() stands in for a header read that trickles forever."""
+
+        def __init__(self) -> None:
+            super().__init__({})
+            self.aborted = threading.Event()
+
+        def getresponse(self) -> FakeResponse:
+            self.aborted.wait(timeout=5.0)  # a real read would still be receiving bytes
+            raise http.client.RemoteDisconnected("socket shut down")  # what an aborted read does
+
+        def abort(self) -> None:
+            self.aborted.set()
+
+    connections = Blocking()
+    fetcher = SafeHttpsFetcher(
+        limits(timeout_seconds=0.2), resolver=resolver, connection_factory=connections
+    )
+
+    started = time.monotonic()
+    with pytest.raises(RetrievalFailure, match="timed out") as caught:
+        fetcher.fetch("https://example.org/a")
+
+    assert caught.value.status is RetrievalStatus.FAILED
+    assert connections.aborted.is_set() and time.monotonic() - started < 2.0
+    assert connections.closed == 1
+
+
+def test_a_clean_eof_after_the_deadline_abort_is_not_mistaken_for_a_complete_body() -> None:
+    clock = _Clock()
+
+    class Truncated(FakeResponse):
+        def read1(self, amt: int) -> bytes:
+            return b""  # an aborted socket reads as EOF
+
+    connections = FakeConnections({"https://example.org/a": Truncated(body=b"partial")})
+    fetcher = SafeHttpsFetcher(
+        limits(timeout_seconds=5.0), resolver=resolver, connection_factory=connections, clock=clock
+    )
+    original = fetcher._finish
+
+    def finish_after_expiry(
+        url: str,
+        response: object,
+        connection: object,
+        deadline: float,
+        expired: threading.Event,
+    ) -> FetchedPage:
+        expired.set()  # the watchdog fired while the body was being read
+        return original(url, response, connection, deadline, expired)  # type: ignore[arg-type]
+
+    fetcher._finish = finish_after_expiry  # type: ignore[method-assign]
+
+    with pytest.raises(RetrievalFailure, match="timed out"):
+        fetcher.fetch("https://example.org/a")

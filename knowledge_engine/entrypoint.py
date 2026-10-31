@@ -6997,6 +6997,7 @@ def online_research(
         Path,
         typer.Option("--output", help="Where to write the online evidence bundle JSON."),
     ],
+    ledger_root: FederatedLedgerRootOption,
     providers: FederatedProvidersOption = None,
     max_sources: Annotated[int, typer.Option(min=1, max=10, help="Sources to retrieve.")] = 3,
     max_response_mb: Annotated[float, typer.Option(min=0.1, max=20.0)] = 2.0,
@@ -7020,13 +7021,18 @@ def online_research(
 
     from knowledge_engine.online_retrieval import (
         BoundedTextCache,
+        RecordedSearcher,
         RetrievalLimits,
         SafeHttpsFetcher,
         research_online,
     )
 
-    if output.exists() and not force:
-        raise typer.BadParameter(f"Output file already exists: {output}. Use --force to overwrite.")
+    discovery_record = output.with_name(output.name + ".discovery.json")
+    for target in (output, discovery_record):
+        if target.exists() and not force:
+            raise typer.BadParameter(
+                f"Output file already exists: {target}. Use --force to overwrite."
+            )
     try:
         limits = RetrievalLimits(
             max_sources=max_sources,
@@ -7039,7 +7045,11 @@ def online_research(
             openalex_api_key=openalex_api_key,
             semantic_scholar_api_key=semantic_scholar_api_key,
         )
-        broker = registry.build_broker(_parse_federated_providers(providers))
+        broker = RecordedSearcher(
+            registry.build_recorded_service(
+                FederatedSearchLedger(ledger_root), _parse_federated_providers(providers)
+            )
+        )
         cache = BoundedTextCache(
             cache_dir,
             max_bytes=limits.cache_max_bytes,
@@ -7055,12 +7065,28 @@ def online_research(
         question, broker=broker, fetcher=SafeHttpsFetcher(limits), cache=cache, limits=limits
     )
     _write_output(output, json.dumps(result.bundle.to_dict(), indent=2) + "\n")
+    if broker.execution is None:  # research_online always searches once
+        raise RuntimeError("Discovery did not run.")
+    run_id = broker.execution.record.search_run_id
+    _write_output(
+        discovery_record,
+        json.dumps(
+            {"search_run_id": run_id, "ledger_root": str(ledger_root), "bundle": output.name},
+            indent=2,
+        )
+        + "\n",
+    )
 
     bundle = result.bundle
     retrieved = len(bundle.sources) - len(bundle.unavailable_sources)
     console.print(
         f"Sources: {retrieved} retrieved, {len(bundle.unavailable_sources)} unavailable; "
         f"excerpts: {len(bundle.excerpts)}. Wrote {output}."
+    )
+    console.print(
+        f"Discovery run {escape(run_id)} recorded in {escape(str(ledger_root))} "
+        f"(see {escape(str(discovery_record))}); "
+        f"inspect it with ke federated-coverage-report."
     )
     for source in bundle.unavailable_sources:
         console.print(
