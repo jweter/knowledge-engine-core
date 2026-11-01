@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 
 import pytest
-from click import unstyle
 from typer.testing import CliRunner
 
 from knowledge_engine.binary_statistical_verification import (
@@ -23,6 +22,7 @@ from knowledge_engine.statistical_verification import (
     validate_statistical_inputs,
     verify_statistical_inputs,
 )
+from tests.cli_output import unwrapped
 
 
 def _evidence(evidence_record_id: str, *, review_status: str = "reviewed") -> dict[str, object]:
@@ -823,7 +823,7 @@ def test_cli_refuses_to_overwrite_existing_output_without_force(tmp_path: Path) 
     )
 
     assert result.exit_code == 2
-    assert "Use --force to overwrite" in unstyle(result.output)
+    assert "Use --force to overwrite" in unwrapped(result.output)
     assert output.read_text(encoding="utf-8") == "keep"
 
 
