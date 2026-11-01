@@ -57,7 +57,8 @@ _SECTION_HEADING_PATTERNS: dict[str, re.Pattern[str]] = {
         rf"(?im)^\s*{_NUMBERING_PREFIX}(?:introduction|background){_INLINE_LABEL_SUFFIX}"
     ),
     "methods": re.compile(
-        rf"(?im)^\s*{_NUMBERING_PREFIX}(?:methods|materials and methods|study design)"
+        rf"(?im)^\s*{_NUMBERING_PREFIX}(?:methods|materials and methods|study design|methodology"
+        rf"|patients and methods|subjects and methods)"
         rf"{_INLINE_LABEL_SUFFIX}"
     ),
     "results": re.compile(rf"(?im)^\s*{_NUMBERING_PREFIX}results{_INLINE_LABEL_SUFFIX}"),
