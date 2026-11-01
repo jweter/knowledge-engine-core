@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import pytest
-from click import unstyle
 from typer.testing import CliRunner
 
 import knowledge_engine.cli as cli
@@ -12,6 +11,7 @@ from knowledge_engine.cli import app
 from knowledge_engine.config import Settings
 from knowledge_engine.database import Database, PaperRepository
 from knowledge_engine.parser import ParsedPage, ParsedPaper
+from tests.cli_output import unwrapped
 
 
 def _database(tmp_path: Path) -> Database:
@@ -296,5 +296,5 @@ def test_grounding_verify_refuses_an_existing_output_without_force(
     )
 
     assert result.exit_code == 2
-    assert "Use --force to overwrite" in unstyle(result.output)
+    assert "Use --force to overwrite" in unwrapped(result.output)
     assert output_path.read_text(encoding="utf-8") == "keep"

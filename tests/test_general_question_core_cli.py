@@ -34,6 +34,7 @@ from knowledge_engine.general_question_core_acquisition import (
     GeneralQuestionCoreReceipt,
     GeneralQuestionCoreReceiptItem,
 )
+from tests.cli_output import unwrapped
 
 
 def _build_database(tmp_path: Path) -> Database:
@@ -280,7 +281,7 @@ def test_cli_rejects_receipt_path_that_acquisition_just_created(
     )
 
     assert result.exit_code != 0
-    assert "must not overwrite an acquired CORE PDF" in result.output
+    assert "must not overwrite an acquired CORE PDF" in unwrapped(result.output)
     assert not receipt_path.exists()
 
 
