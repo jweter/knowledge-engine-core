@@ -85,6 +85,11 @@ class WorkerResult(BaseModel):
             raise ValueError("exact_sha must be a full 40-character hexadecimal commit SHA")
         return normalized
 
+    @field_validator("completed_at_utc")
+    @classmethod
+    def validate_completed_at_utc(cls, value: str) -> str:
+        return require_utc_timestamp(value)
+
     def matches_request(self, request: WorkerRequest) -> bool:
         """Return whether this result can be attributed to the exact request identity."""
 
