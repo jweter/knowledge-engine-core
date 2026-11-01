@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -11,6 +12,17 @@ WorkerResultStatus = Literal[
     "PRODUCT_REALITY_REQUIRED",
     "ENVIRONMENT_FAILURE",
 ]
+
+
+def require_utc_timestamp(value: str) -> str:
+    """Parse value with datetime.fromisoformat, raise ValueError if not timezone-aware UTC."""
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError as e:
+        raise ValueError("timestamp must be an ISO-8601 timestamp") from e
+    if parsed.utcoffset() != timedelta(0):
+        raise ValueError("timestamp must be timezone-aware UTC")
+    return value
 
 
 class WorkerRequest(BaseModel):
@@ -43,6 +55,11 @@ class WorkerRequest(BaseModel):
         if len(set(normalized)) != len(normalized):
             raise ValueError("requested_checks may not contain duplicates")
         return normalized
+
+    @field_validator("created_at_utc")
+    @classmethod
+    def validate_created_at_utc(cls, value: str) -> str:
+        return require_utc_timestamp(value)
 
 
 class WorkerResult(BaseModel):
