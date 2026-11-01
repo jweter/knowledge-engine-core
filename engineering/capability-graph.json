@@ -65,7 +65,8 @@
             "pyproject.toml",
             "poetry.lock",
             "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md"
-          ]
+          ],
+          "capability_level": 3
         }
       ]
     }
