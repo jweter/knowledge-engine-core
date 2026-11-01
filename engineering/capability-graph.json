@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "repository": "jweter/knowledge-engine-core",
+  "authority_note": "Compiled by hand from docs/OWNER_APPROVED_ROADMAP_2026-10-25.md (owner-approved, standing development authorization). The roadmap states what to achieve; slices are bounded, ordered steps toward it.",
+  "capabilities": [
+    {
+      "id": "ke-core-online-evidence-adapter",
+      "state": "VERIFIED_COMPLETE",
+      "capability": "Online retrieval and evidence adapter with a stable provenance contract: bounded on-demand source extraction, expiring content-hashed cache, exact offset-bearing excerpts, validated evidence bundles.",
+      "completion_evidence": [
+        "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md Next slices 1 and 2"
+      ],
+      "depends_on": [],
+      "verification": [
+        "knowledge_engine/online_retrieval.py and knowledge_engine/online_evidence.py on main",
+        "tests/test_online_retrieval.py and tests/test_online_evidence.py",
+        "ke online-research PR #561 merged"
+      ]
+    },
+    {
+      "id": "ke-core-vector-optional",
+      "state": "VERIFIED_COMPLETE",
+      "capability": "The local vector index is an optional, lazily imported capability outside the default research path.",
+      "completion_evidence": [
+        "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md Owner decision 2026-10-30 verification criteria"
+      ],
+      "depends_on": [],
+      "verification": [
+        "tests/test_optional_vector_capability.py",
+        "pyproject.toml [tool.poetry.extras] vector"
+      ]
+    },
+    {
+      "id": "ke-core-corpus-free-research-proof",
+      "state": "PLANNED",
+      "capability": "Prove a Research Report's Core evidence path works end to end from online sources with no pre-ingested corpus, preserving citation provenance, source identity and uncertainty.",
+      "completion_evidence": [
+        "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md Next slice 3",
+        "docs/core_interface_contract.md"
+      ],
+      "depends_on": [
+        "ke-core-online-evidence-adapter"
+      ],
+      "slices": [
+        {
+          "id": "core-corpus-free-provenance-proof",
+          "state": "PLANNED",
+          "objective": "Prove and document the corpus-free provenance contract: a ke-online-evidence/v1 bundle produced by online-research validates with online-evidence-validate using only its bounded cache, and failed, unavailable or not-permitted sources are recorded with a reason and never quoted.",
+          "acceptance": [
+            "a test builds a bundle with retrieved, failed and unavailable sources and validates it from the cache alone",
+            "every excerpt carries source identity, retrieval time, content hash and exact character offsets",
+            "cache cleanup and disk-limit behavior are asserted, and no pre-ingested corpus exists in the test",
+            "docs/core_interface_contract.md states the bundle fields the AI and Web layers may rely on",
+            "Canonical preflight, required CI checks and review must pass at the exact head; no gate may be weakened."
+          ],
+          "allowed_paths": [
+            "knowledge_engine/online_*.py",
+            "tests/test_online_*.py",
+            "docs/core_interface_contract.md",
+            "docs/roadmap/**"
+          ],
+          "forbidden_paths": [
+            "engineering/**",
+            ".github/**",
+            "pyproject.toml",
+            "poetry.lock",
+            "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md"
+          ]
+        }
+      ]
+    }
+  ],
+  "roadmap": [
+    "ke-core-corpus-free-research-proof"
+  ]
+}
