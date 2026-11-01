@@ -379,8 +379,17 @@ def run_process_startup_timing(
         return "FAIL", summary, "TEST_FAILURE"
     try:
         payload = json.loads(evidence_path.read_text(encoding="utf-8"))
-        import_ms = int(payload["import_to_command_ms"])
-        database_ms = int(payload["database_open_ms"])
+        import_ms = payload["import_to_command_ms"]
+        database_ms = payload["database_open_ms"]
+        if not (
+            isinstance(import_ms, int)
+            and isinstance(database_ms, int)
+            and not isinstance(import_ms, bool)
+            and not isinstance(database_ms, bool)
+            and import_ms >= 0
+            and database_ms >= 0
+        ):
+            raise TypeError
     except (OSError, ValueError, KeyError, TypeError) as exc:
         return (
             "ENVIRONMENT_FAILURE",
