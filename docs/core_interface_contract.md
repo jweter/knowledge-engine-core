@@ -939,6 +939,39 @@ ledger of previously-rejected records, so a consumer building its own
 duplicate/exclusion tracking should not assume absence from this file
 means "never considered."
 
+## Online Research Report evidence bundle (corpus-free CLI contract)
+
+The request-driven `ke online-research QUESTION --output BUNDLE --cache-dir CACHE`
+command produces a JSON evidence bundle with `schema: "ke-online-evidence/v1"`. No pre-ingested corpus,
+local vector index, or downloaded model is required. AI and Web must consume
+the supported CLI boundary, not import Core's internal Python modules.
+
+- `question` is the request text. `sources[]` records `source_id`,
+  `url`, `provider`, `retrieved_at` (UTC), `status`, optional
+  bibliographic identifiers (`doi`, `pmcid`, `pmid`, `arxiv_id`),
+  `title`, `license`, `content_sha256`, and `failure_reason`.
+  Retrieved sources require a content hash and no failure reason; failed,
+  unavailable, and not-permitted sources require a reason, have no hash,
+  and must never support a quote or citation.
+- `excerpts[]` records `excerpt_id`, `source_id`, verbatim `text`,
+  `char_start`, `char_end` and optional `locator`. Character offsets
+  refer to the exact extracted Unicode text stored under the source hash
+  in the bounded temporary cache. The same hash and offsets are checked
+  by `ke online-evidence-validate BUNDLE --contents-dir CACHE`.
+- `claims[]` (possibly empty) records `claim_id`, `text`,
+  `status` and `citations[]` (`excerpt_id`, `stance`). Core's
+  online retrieval does not invent analytical claims; the AI/report layer
+  is responsible for claim formation and evidence interpretation.
+
+Cache contents are request-scoped, bounded, and subject to expiry/cleanup.
+The JSON bundle is a provenance record, **not** a permanent copy of the
+retrieved source text. After cleanup, independent content verification
+requires re-retrieval; the validator must fail closed if the hashed text
+is missing or altered. Do not represent a failed validation as verified
+evidence. A bundle can still disclose unavailable sources without quoting
+them. See `tests/test_online_retrieval.py` for the corpus-free end-to-end
+retrieval, validation and cleanup regression.
+
 ## Versioning and stability
 
 Nothing here is published under semantic versioning yet (`core` is
