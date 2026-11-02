@@ -710,6 +710,65 @@ def test_the_bundle_validates_through_the_existing_cli_against_the_cache(tmp_pat
     assert bad.exit_code == 1 and "text not found in its source" in " ".join(bad.output.split())
 
 
+def test_corpus_free_bundle_validates_from_ephemeral_cache_and_fails_closed_after_cleanup(
+    tmp_path: Path,
+) -> None:
+    """A Research Report evidence bundle needs no pre-ingested corpus or vector index."""
+    retrieved = "Semaglutide reduced body weight versus placebo.\nFollow-up was two years."
+    fetcher, _ = fetcher_for(
+        {
+            "https://example.org/trial": FakeResponse(body=retrieved.encode()),
+            "https://cdn.example.org/failed": FakeResponse(503),
+            "https://papers.example.org/gone": FakeResponse(404),
+        }
+    )
+    broker = FakeBroker(
+        (
+            candidate("trial", observation("example.org", "/trial", doi="10.1/trial")),
+            candidate("failed", observation("cdn.example.org", "/failed", doi="10.1/failed")),
+            candidate("gone", observation("papers.example.org", "/gone", doi="10.1/gone")),
+        )
+    )
+    cache = BoundedTextCache(tmp_path / "ephemeral", max_bytes=500, max_age_seconds=60)
+    result = research_online(
+        "Does semaglutide reduce body weight versus placebo?",
+        broker=broker,
+        fetcher=fetcher,
+        cache=cache,
+        limits=limits(max_sources=3, max_response_bytes=500, cache_max_bytes=500),
+        now=lambda: NOW,
+    )
+    bundle = result.bundle
+    by_id = {source.source_id: source for source in bundle.sources}
+    assert {key: source.status for key, source in by_id.items()} == {
+        "doi:10.1/trial": RetrievalStatus.RETRIEVED,
+        "doi:10.1/failed": RetrievalStatus.FAILED,
+        "doi:10.1/gone": RetrievalStatus.UNAVAILABLE,
+    }
+    assert all(by_id[key].failure_reason for key in ("doi:10.1/failed", "doi:10.1/gone"))
+    assert {excerpt.source_id for excerpt in bundle.excerpts} == {"doi:10.1/trial"}
+    assert bundle.excerpts
+    for excerpt in bundle.excerpts:
+        source = by_id[excerpt.source_id]
+        assert source.retrieved_at == NOW.isoformat()
+        assert source.content_sha256 == content_sha256(retrieved)
+        assert excerpt.char_start is not None and excerpt.char_end is not None
+        assert retrieved[excerpt.char_start : excerpt.char_end] == excerpt.text
+
+    path = tmp_path / "report-evidence.json"
+    path.write_text(json.dumps(bundle.to_dict()), encoding="utf-8")
+    args = ["online-evidence-validate", str(path), "--contents-dir", str(cache.directory)]
+    verified = CliRunner().invoke(entrypoint.app, args)
+    assert verified.exit_code == 0, verified.output
+    assert sum(entry.stat().st_size for entry in cache.entries()) <= 500
+
+    cache.clear()
+    assert cache.entries() == []
+    unavailable = CliRunner().invoke(entrypoint.app, args)
+    assert unavailable.exit_code != 0
+    assert "verified against retrieved content" not in " ".join(unavailable.output.split())
+
+
 def test_the_source_limit_bounds_how_many_candidates_are_retrieved(tmp_path: Path) -> None:
     broker, fetcher, cache, _ = build_world(tmp_path)
 
