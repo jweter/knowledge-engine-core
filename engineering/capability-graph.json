@@ -44,7 +44,7 @@
       "slices": [
         {
           "id": "core-corpus-free-provenance-proof",
-          "state": "PLANNED",
+          "state": "VERIFIED_COMPLETE",
           "objective": "Prove and document the corpus-free provenance contract: a ke-online-evidence/v1 bundle produced by online-research validates with online-evidence-validate using only its bounded cache, and failed, unavailable or not-permitted sources are recorded with a reason and never quoted.",
           "acceptance": [
             "a test builds a bundle with retrieved, failed and unavailable sources and validates it from the cache alone",
@@ -66,7 +66,11 @@
             "poetry.lock",
             "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md"
           ],
-          "capability_level": 3
+          "capability_level": 3,
+          "verification": [
+            "PR #575 merged 2026-11-02 as a07fc1d1, 10/10 checks SUCCESS: tests/test_online_retrieval.py::test_corpus_free_bundle_validates_from_ephemeral_cache_and_fails_closed_after_cleanup (retrieved, HTTP-failed and unavailable sources with no pre-ingested corpus; source identity, UTC retrieval time, SHA-256, exact offsets; validates through the CLI against the bounded cache and fails closed after cleanup) and docs/core_interface_contract.md",
+            "Recorded retroactively on 2026-11-04: this slice was delivered by merged work before the engine dispatched it (the capable-builder attempt on the PLANNED slice produced no pull request)."
+          ]
         }
       ]
     }
