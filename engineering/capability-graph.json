@@ -71,6 +71,75 @@
             "PR #575 merged 2026-11-02 as a07fc1d1, 10/10 checks SUCCESS: tests/test_online_retrieval.py::test_corpus_free_bundle_validates_from_ephemeral_cache_and_fails_closed_after_cleanup (retrieved, HTTP-failed and unavailable sources with no pre-ingested corpus; source identity, UTC retrieval time, SHA-256, exact offsets; validates through the CLI against the bounded cache and fails closed after cleanup) and docs/core_interface_contract.md",
             "Recorded retroactively on 2026-11-04: this slice was delivered by merged work before the engine dispatched it (the capable-builder attempt on the PLANNED slice produced no pull request)."
           ]
+        },
+        {
+          "id": "core-online-evidence-golden-contract",
+          "state": "PLANNED",
+          "objective": "Pin the ke-online-evidence/v1 consumer contract with a committed golden bundle fixture and a compatibility guard, so the AI and Web layers can verify their readers against Core without a corpus and any breaking field change in Core fails a test.",
+          "acceptance": [
+            "a deterministic golden bundle fixture (retrieved, HTTP-failed and unavailable sources, with its bounded cache payloads) is committed under tests/fixtures/ and validates through online-evidence-validate with no network and no pre-ingested corpus",
+            "a test pins the required top-level, source and excerpt field names and types (source identity, UTC retrieval time, SHA-256, exact character offsets, failure reason) and fails if a field is removed, renamed or retyped; additive fields are allowed",
+            "the fixture round-trips: regenerating it from the deterministic builder yields byte-identical JSON, and the test asserts failed or unavailable sources are never quoted",
+            "docs/core_interface_contract.md names the fixture path and the additive-only compatibility rule consumers may rely on",
+            "Canonical preflight, required CI checks and review must pass at the exact head; no gate may be weakened."
+          ],
+          "allowed_paths": [
+            "knowledge_engine/online_*.py",
+            "tests/test_online_*.py",
+            "tests/fixtures/online_evidence/**",
+            "docs/core_interface_contract.md",
+            "docs/online_evidence_contract.md"
+          ],
+          "forbidden_paths": [
+            "engineering/**",
+            ".github/**",
+            "pyproject.toml",
+            "poetry.lock",
+            "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md"
+          ],
+          "runner_requirements": [
+            "python 3.11+ with the repository's locked dev dependencies installed",
+            "no network access: loopback/local fixtures only",
+            "free local libraries already used by the repository only"
+          ],
+          "depends_on": [
+            "core-corpus-free-provenance-proof"
+          ],
+          "capability_level": 3
+        },
+        {
+          "id": "core-online-research-cli-end-to-end",
+          "state": "PLANNED",
+          "objective": "Prove the shipped command path end to end from a question to a validated evidence bundle: run the ke-research online-research and online-evidence-validate commands as subprocesses against a loopback HTTP source server, with no pre-ingested corpus and the vector stack unimported, as the Core half of the AI/Web integration proof.",
+          "acceptance": [
+            "a test starts a local loopback HTTP server serving a citable page, a failing endpoint and an oversized page, runs online-research as a subprocess with a temporary bounded cache, and then runs online-evidence-validate on the produced bundle with exit code 0",
+            "the produced bundle contains an excerpt with exact offsets that match the served bytes, a recorded failure reason for the failing source, and a recorded disk-limit refusal for the oversized source",
+            "after cache cleanup the same bundle fails validation closed, and the test asserts no corpus, database or PDF files were created in the working directory",
+            "the subprocess run is asserted not to import faiss, qdrant_client, sentence_transformers or torch",
+            "Canonical preflight, required CI checks and review must pass at the exact head; no gate may be weakened."
+          ],
+          "allowed_paths": [
+            "knowledge_engine/online_*.py",
+            "tests/test_online_*.py",
+            "tests/fixtures/online_evidence/**",
+            "docs/online_evidence_contract.md"
+          ],
+          "forbidden_paths": [
+            "engineering/**",
+            ".github/**",
+            "pyproject.toml",
+            "poetry.lock",
+            "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md"
+          ],
+          "runner_requirements": [
+            "python 3.11+ with the repository's locked dev dependencies installed",
+            "loopback networking only; no external network access",
+            "free local libraries already used by the repository only"
+          ],
+          "depends_on": [
+            "core-online-evidence-golden-contract"
+          ],
+          "capability_level": 3
         }
       ]
     }
