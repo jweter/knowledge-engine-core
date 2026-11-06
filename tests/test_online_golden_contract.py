@@ -101,6 +101,13 @@ def test_additive_fields_do_not_break_a_consumer_reader() -> None:
         _assert_fields(source, SOURCE, "source")
     # Core's own reader tolerates additive top-level fields it does not know.
     assert OnlineEvidenceBundle.from_dict({**payload, "future_field": 1}) is not None
+    # ...and additive fields on nested records (sources, excerpts, claims, citations).
+    nested = json.loads(json.dumps(payload))
+    nested["sources"][0]["future_field"] = "x"
+    nested["excerpts"][0]["future_field"] = "x"
+    nested["claims"][0]["future_field"] = "x"
+    nested["claims"][0]["citations"][0]["future_field"] = "x"
+    assert OnlineEvidenceBundle.from_dict(nested) == OnlineEvidenceBundle.from_dict(payload)
 
 
 def test_the_fixture_is_regenerated_byte_identically(tmp_path: Path) -> None:
