@@ -23,6 +23,7 @@ scores or decides whether a claim is true. Invariants:
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 from collections import Counter
 from collections.abc import Mapping
@@ -287,6 +288,10 @@ class EvidenceClaim:
         return ClaimStatus.INSUFFICIENT_EVIDENCE
 
 
+_SOURCE_FIELDS = frozenset(f.name for f in dataclasses.fields(OnlineSource))
+_EXCERPT_FIELDS = frozenset(f.name for f in dataclasses.fields(EvidenceExcerpt))
+
+
 @dataclass(frozen=True)
 class OnlineEvidenceBundle:
     """Every source, excerpt and claim gathered for one research question."""
@@ -372,10 +377,18 @@ class OnlineEvidenceBundle:
             return cls(
                 question=payload["question"],
                 sources=tuple(
-                    OnlineSource(**{**raw, "status": RetrievalStatus(raw["status"])})
+                    OnlineSource(
+                        **{
+                            **{k: v for k, v in raw.items() if k in _SOURCE_FIELDS},
+                            "status": RetrievalStatus(raw["status"]),
+                        }
+                    )
                     for raw in payload["sources"]
                 ),
-                excerpts=tuple(EvidenceExcerpt(**raw) for raw in payload.get("excerpts", [])),
+                excerpts=tuple(
+                    EvidenceExcerpt(**{k: v for k, v in raw.items() if k in _EXCERPT_FIELDS})
+                    for raw in payload.get("excerpts", [])
+                ),
                 claims=tuple(
                     EvidenceClaim(
                         claim_id=raw["claim_id"],
@@ -388,7 +401,7 @@ class OnlineEvidenceBundle:
                     for raw in payload.get("claims", [])
                 ),
             )
-        except (KeyError, TypeError, ValueError) as error:
+        except (AttributeError, KeyError, TypeError, ValueError) as error:
             if isinstance(error, OnlineEvidenceError):
                 raise
             raise OnlineEvidenceError(f"Malformed online evidence bundle: {error}") from error

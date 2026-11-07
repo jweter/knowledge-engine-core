@@ -256,6 +256,15 @@ def test_malformed_bundles_are_rejected_with_the_contract_error() -> None:
         )
 
 
+@pytest.mark.parametrize("field", ["sources", "excerpts"])
+def test_non_object_nested_records_are_rejected_with_the_contract_error(field: str) -> None:
+    bundle, _contents = _bundle()
+    payload = bundle.to_dict()
+
+    with pytest.raises(OnlineEvidenceError, match="Malformed"):
+        OnlineEvidenceBundle.from_dict({**payload, field: [None]})
+
+
 def _write_bundle(tmp_path: Path, bundle: OnlineEvidenceBundle, contents: dict[str, str]) -> Path:
     texts = tmp_path / "contents"
     texts.mkdir()
