@@ -401,7 +401,7 @@ class OnlineEvidenceBundle:
                     for raw in payload.get("claims", [])
                 ),
             )
-        except (KeyError, TypeError, ValueError) as error:
+        except (AttributeError, KeyError, TypeError, ValueError) as error:
             if isinstance(error, OnlineEvidenceError):
                 raise
             raise OnlineEvidenceError(f"Malformed online evidence bundle: {error}") from error
