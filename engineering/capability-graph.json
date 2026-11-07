@@ -74,7 +74,7 @@
         },
         {
           "id": "core-online-evidence-golden-contract",
-          "state": "PLANNED",
+          "state": "VERIFIED_COMPLETE",
           "objective": "Pin the ke-online-evidence/v1 consumer contract with a committed golden bundle fixture and a compatibility guard, so the AI and Web layers can verify their readers against Core without a corpus and any breaking field change in Core fails a test.",
           "acceptance": [
             "a deterministic golden bundle fixture (retrieved, HTTP-failed and unavailable sources, with its bounded cache payloads) is committed under tests/fixtures/ and validates through online-evidence-validate with no network and no pre-ingested corpus",
@@ -105,7 +105,10 @@
           "depends_on": [
             "core-corpus-free-provenance-proof"
           ],
-          "capability_level": 3
+          "capability_level": 3,
+          "verification": [
+            "https://github.com/jweter/knowledge-engine-core/pull/578 merged (capable-builder pull request)"
+          ]
         },
         {
           "id": "core-online-research-cli-end-to-end",
