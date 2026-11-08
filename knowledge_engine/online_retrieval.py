@@ -854,12 +854,17 @@ def _research(
     for candidate in discovery.candidates:
         if len(sources) >= limits.max_sources:
             break
-        chosen = _first_retrievable(candidate)
-        if chosen is None:
+        attempts = _retrievable_attempts(candidate)
+        if not attempts:
             skipped.append((candidate.canonical_id, "no retrievable URL"))
             continue
-        observation, url = chosen
-        source = retrieve_source(observation, url, fetcher=fetcher, cache=cache, now=now)
+        # Try each distinct URL (full text before landing page) until one yields text,
+        # so a PDF-only full-text link does not hide a readable landing page. The
+        # last failure is recorded when none succeeds.
+        for observation, url in attempts:
+            source = retrieve_source(observation, url, fetcher=fetcher, cache=cache, now=now)
+            if source.status is RetrievalStatus.RETRIEVED:
+                break
         if source.source_id in seen:
             skipped.append((candidate.canonical_id, f"duplicate source {source.source_id}"))
             continue
@@ -905,12 +910,22 @@ def _research(
     return OnlineResearchResult(bundle, discovery, tuple(skipped))
 
 
-def _first_retrievable(candidate: FederatedCandidate) -> tuple[ProviderObservation, str] | None:
+_MAX_URL_ATTEMPTS_PER_CANDIDATE = 3
+
+
+def _retrievable_attempts(
+    candidate: FederatedCandidate,
+) -> list[tuple[ProviderObservation, str]]:
+    """Distinct retrieval attempts for a candidate, in preference order, bounded."""
+
+    attempts: list[tuple[ProviderObservation, str]] = []
+    seen: set[str] = set()
     for observation in candidate.observations:
-        url = candidate_url(observation)
-        if url is not None:
-            return observation, url
-    return None
+        for url in (observation.full_text_url, observation.landing_url):
+            if url and url.strip() and url.strip() not in seen:
+                seen.add(url.strip())
+                attempts.append((observation, url.strip()))
+    return attempts[:_MAX_URL_ATTEMPTS_PER_CANDIDATE]
 
 
 __all__ = [
