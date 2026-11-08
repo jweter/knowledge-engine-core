@@ -1435,3 +1435,86 @@ def test_a_clean_eof_after_the_deadline_abort_is_not_mistaken_for_a_complete_bod
 
     with pytest.raises(RetrievalFailure, match="timed out"):
         fetcher.fetch("https://example.org/a")
+
+
+# --- Fallback from an unreadable full-text link to the landing page --------------------
+
+
+def test_a_pdf_full_text_link_falls_back_to_a_readable_landing_page(tmp_path: Path) -> None:
+    fetcher, _ = fetcher_for(
+        {
+            "https://cdn.example.org/paper.pdf": FakeResponse(
+                body=b"%PDF-1.7", content_type="application/pdf"
+            ),
+            "https://example.org/landing": FakeResponse(
+                body=b"<html><body><p>Semaglutide reduced body weight versus placebo.</p>"
+                b"</body></html>",
+                content_type="text/html",
+            ),
+        }
+    )
+    broker = FakeBroker(
+        (
+            candidate(
+                "c1",
+                observation(
+                    "cdn.example.org",
+                    "/paper.pdf",
+                    doi="10.1/pdf",
+                    landing_url="https://example.org/landing",
+                ),
+            ),
+        )
+    )
+
+    result = research_online(
+        "semaglutide body weight placebo",
+        broker=broker,
+        fetcher=fetcher,
+        cache=cache_for(tmp_path),
+        limits=limits(max_sources=3),
+        now=lambda: NOW,
+    )
+
+    (source,) = result.bundle.sources
+    assert source.status is RetrievalStatus.RETRIEVED
+    assert source.url == "https://example.org/landing"
+    assert result.bundle.excerpts
+
+
+def test_when_every_url_fails_the_last_failure_is_recorded_once(tmp_path: Path) -> None:
+    fetcher, _ = fetcher_for(
+        {
+            "https://cdn.example.org/paper.pdf": FakeResponse(
+                body=b"%PDF-1.7", content_type="application/pdf"
+            ),
+            "https://example.org/landing": FakeResponse(404),
+        }
+    )
+    broker = FakeBroker(
+        (
+            candidate(
+                "c1",
+                observation(
+                    "cdn.example.org",
+                    "/paper.pdf",
+                    doi="10.1/pdf",
+                    landing_url="https://example.org/landing",
+                ),
+            ),
+        )
+    )
+
+    result = research_online(
+        "semaglutide body weight placebo",
+        broker=broker,
+        fetcher=fetcher,
+        cache=cache_for(tmp_path),
+        limits=limits(max_sources=3),
+        now=lambda: NOW,
+    )
+
+    (source,) = result.bundle.sources
+    assert source.status is RetrievalStatus.UNAVAILABLE
+    assert source.url == "https://example.org/landing"
+    assert not result.bundle.excerpts
