@@ -39,6 +39,16 @@ text isn't supplied.
 | `corpus_library*.py`, `drive_boundary.py`, `research_workspace.py` | Persistent corpus library seed, backup and restore | Optional offline capability only; never a prerequisite of a Research Report |
 | Acquisition CLIs (`reviewed_approval_cli.py`, `europepmc_reviewed_approval_cli.py`, `manifest_curation_cli.py`, `candidate_review_cli.py`, `pdf_calibration_cli.py`) | Curate PDFs into the corpus | Unchanged curation tools; the online path retrieves per request instead |
 
+## End-to-end CLI proof
+
+`tests/test_online_cli_end_to_end.py` runs `ke online-research` and `ke online-evidence-validate` as
+subprocesses against a loopback HTTP source, with no corpus and the vector stack unimported (asserted).
+It checks exact excerpt offsets against the cached bytes, recorded `failed` reasons for an HTTP 500 and an
+over-limit response, no corpus/database/PDF artefacts, and fail-closed validation once the cache is cleared.
+The subprocess runs the shipped app; `tests/test_online_cli_harness.py` only swaps in a stub discovery
+provider and a loopback connection beneath the production `SafeHttpsFetcher`, so production keeps no bypass
+of its public-HTTPS policy. This proves the Core half only; it is not live-provider or AI/Web evidence.
+
 ## Next slices
 - **KEC-3:** bounded on-demand extraction that produces `OnlineSource` and `EvidenceExcerpt` records from fetched
   text, using a disk-bounded ephemeral cache keyed by `content_sha256`.
