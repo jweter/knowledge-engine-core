@@ -112,7 +112,7 @@
         },
         {
           "id": "core-online-research-cli-end-to-end",
-          "state": "PLANNED",
+          "state": "VERIFIED_COMPLETE",
           "objective": "Prove the shipped command path end to end from a question to a validated evidence bundle: run the ke-research online-research and online-evidence-validate commands as subprocesses against a loopback HTTP source server, with no pre-ingested corpus and the vector stack unimported, as the Core half of the AI/Web integration proof.",
           "acceptance": [
             "a test starts a local loopback HTTP server serving a citable page, a failing endpoint and an oversized page, runs online-research as a subprocess with a temporary bounded cache, and then runs online-evidence-validate on the produced bundle with exit code 0",
@@ -142,7 +142,15 @@
           "depends_on": [
             "core-online-evidence-golden-contract"
           ],
-          "capability_level": 3
+          "capability_level": 3,
+          "verification": [
+            "https://github.com/jweter/knowledge-engine-core/pull/585 merged as commit 09e8f2e21287158efd5e5ed58d6b4cadd01a766d",
+            "AC1 loopback server (good page, HTTP 500 endpoint, oversized page), online-research then online-evidence-validate as subprocesses with exit 0: tests/test_online_cli_end_to_end.py::test_online_research_cli_end_to_end_on_loopback_without_a_corpus (harness: tests/test_online_cli_harness.py)",
+            "AC2 exact excerpt offsets vs cached served bytes, 'HTTP 500' failure reason, 'exceeds MAX_RESPONSE_BYTES' refusal with no oversized content cached: same test",
+            "AC3 validation exits 1 after cache cleanup; work dir empty and no .db/.sqlite/.pdf/.faiss/.index artefacts: same test",
+            "AC4 subprocess import snapshots assert none of faiss, qdrant_client, sentence_transformers, torch imported (FORBIDDEN_MODULES in tests/test_online_cli_harness.py): same test",
+            "contract documented in docs/online_evidence_contract.md (changed by #585)"
+          ]
         }
       ]
     }
