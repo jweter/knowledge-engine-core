@@ -151,6 +151,89 @@
             "AC4 subprocess import snapshots assert none of faiss, qdrant_client, sentence_transformers, torch imported (FORBIDDEN_MODULES in tests/test_online_cli_harness.py): same test",
             "contract documented in docs/online_evidence_contract.md (changed by #585)"
           ]
+        },
+        {
+          "id": "core-online-evidence-json-schema-v1",
+          "state": "PLANNED",
+          "objective": "Publish a formal, machine-checkable JSON Schema for the ke-online-evidence/v1 bundle that mirrors knowledge_engine/online_evidence.py's own field, type and enum enforcement, exported through a new `ke online-evidence-schema` command, so the independent consumer implementations already built in knowledge-engine-ai (knowledge_engine_ai/copilot/online_evidence_adapter.py) and knowledge-engine-web (knowledge_engine_web/online_evidence_orchestration.py) can validate their own parsers against Core's canonical contract instead of relying on hand-copied field names drifting out of sync with Core.",
+          "acceptance": [
+            "a committed JSON Schema document (docs/schemas/online_evidence_v1.schema.json) declares the required top-level, OnlineSource, EvidenceExcerpt, Citation and EvidenceClaim fields, types and enums (status, stance, claim status) matching online_evidence.py, versioned alongside the ke-online-evidence/v1 schema string",
+            "a test validates the existing committed golden fixture (tests/fixtures/online_evidence/bundle.json) against the schema using a minimal pure-stdlib checker (no new third-party JSON Schema dependency), and fails if a required field is missing, renamed or retyped; additive optional fields are allowed",
+            "a schema-drift test fails when OnlineEvidenceBundle/OnlineSource/EvidenceExcerpt/Citation/EvidenceClaim's own required fields diverge from the schema document's declared required fields, so Core cannot silently break the contract without the schema and the test both catching it",
+            "`ke online-evidence-schema` prints the schema JSON to stdout by default and writes it to a `--output` path when given, exits 0, and a test exercises both modes",
+            "docs/online_evidence_contract.md and docs/core_interface_contract.md name the schema file and the command, and state the additive-only compatibility rule the schema enforces",
+            "Canonical preflight, required CI checks and review must pass at the exact head; no gate may be weakened."
+          ],
+          "allowed_paths": [
+            "knowledge_engine/online_*.py",
+            "knowledge_engine/entrypoint.py",
+            "tests/test_online_*.py",
+            "docs/schemas/online_evidence_v1.schema.json",
+            "docs/core_interface_contract.md",
+            "docs/online_evidence_contract.md"
+          ],
+          "forbidden_paths": [
+            "**/*.key",
+            "**/*.pem",
+            ".env",
+            ".github/**",
+            "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md",
+            "engineering/**",
+            "poetry.lock",
+            "private/**",
+            "pyproject.toml"
+          ],
+          "runner_requirements": [
+            "python 3.11+ with the repository's locked dev dependencies installed",
+            "no network access: loopback/local fixtures only",
+            "free local libraries already used by the repository only"
+          ],
+          "depends_on": [
+            "core-online-research-cli-end-to-end"
+          ],
+          "capability_level": 3,
+          "verification": []
+        },
+        {
+          "id": "core-online-evidence-fixture-export-cli",
+          "state": "PLANNED",
+          "objective": "Add a `ke online-evidence-export-contract <dir>` command (and an importable knowledge_engine.online_evidence helper) that writes the current golden bundle fixture, its paired contents/ retrieval files, and the committed JSON Schema from core-online-evidence-json-schema-v1 into a caller-supplied directory in one deterministic call, so knowledge-engine-ai and knowledge-engine-web can pull Core's exact current contract artifacts into their own test suites instead of the undocumented hand-copy each repo did independently, and detect drift the next time they refresh.",
+          "acceptance": [
+            "the new command/function writes byte-identical copies of tests/fixtures/online_evidence/bundle.json, its contents/ directory, and the committed JSON Schema document to a caller-supplied directory, creating it if absent",
+            "exporting into an existing non-empty directory refuses to overwrite and fails closed with a clear message, unless an explicit --force flag is given",
+            "a test asserts the exported files are byte-identical to the committed fixture and schema, and that the no-overwrite refusal is exercised without --force",
+            "a test asserts the exported bundle still validates with online-evidence-validate and against the JSON Schema from core-online-evidence-json-schema-v1",
+            "docs/online_evidence_contract.md documents the export command as the integration surface knowledge-engine-ai and knowledge-engine-web use to refresh their own contract-test fixtures",
+            "Canonical preflight, required CI checks and review must pass at the exact head; no gate may be weakened."
+          ],
+          "allowed_paths": [
+            "knowledge_engine/online_*.py",
+            "knowledge_engine/entrypoint.py",
+            "tests/test_online_*.py",
+            "docs/core_interface_contract.md",
+            "docs/online_evidence_contract.md"
+          ],
+          "forbidden_paths": [
+            "**/*.key",
+            "**/*.pem",
+            ".env",
+            ".github/**",
+            "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md",
+            "engineering/**",
+            "poetry.lock",
+            "private/**",
+            "pyproject.toml"
+          ],
+          "runner_requirements": [
+            "python 3.11+ with the repository's locked dev dependencies installed",
+            "no network access: loopback/local fixtures only",
+            "free local libraries already used by the repository only"
+          ],
+          "depends_on": [
+            "core-online-evidence-json-schema-v1"
+          ],
+          "capability_level": 3,
+          "verification": []
         }
       ]
     }
