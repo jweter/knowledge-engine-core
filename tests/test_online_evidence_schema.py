@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
 import json
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,13 @@ from typing import Any
 from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
+from knowledge_engine.online_evidence import (
+    Citation,
+    EvidenceClaim,
+    EvidenceExcerpt,
+    OnlineEvidenceBundle,
+    OnlineSource,
+)
 from knowledge_engine.online_evidence_schema import (
     build_schema,
     render_schema,
@@ -86,23 +94,74 @@ def test_additive_optional_fields_are_allowed() -> None:
     assert validate(bundle, schema) == []
 
 
-def test_schema_required_fields_match_cores_own_dataclasses() -> None:
-    """The committed schema's required fields must match Core's live dataclasses.
+def test_schema_required_fields_are_pinned_to_the_v1_baseline() -> None:
+    """The committed schema's `required` lists are the frozen v1 baseline.
 
-    This is the schema-drift guard: it reads the committed JSON Schema file
-    from disk and compares it against `dataclasses.fields` introspection of
-    `OnlineEvidenceBundle`/`OnlineSource`/`EvidenceExcerpt`/`Citation`/
-    `EvidenceClaim` themselves, independent of `build_schema`'s own internal
-    consistency assertions. A field added, removed or renamed on one of those
-    dataclasses without regenerating the committed schema file fails here.
+    This is the schema-drift guard for `required`: it reads the committed JSON
+    Schema file from disk and compares it against `online_evidence_schema.py`'s
+    own pinned `required_fields_for_*` functions (not live `dataclasses.fields`
+    introspection -- see that module's docstring for why: deriving `required`
+    from whatever fields the dataclasses carry today would silently force a
+    future, additive, optional field to become required on the wire the moment
+    it was added). A hand-edit of the committed schema file that drifts from
+    the pinned baseline fails here.
     """
 
     schema = _load_committed_schema()
-    assert set(schema["required"]) == set(required_fields_for_bundle())
-    assert set(schema["$defs"]["OnlineSource"]["required"]) == set(required_fields_for_source())
-    assert set(schema["$defs"]["EvidenceExcerpt"]["required"]) == set(required_fields_for_excerpt())
-    assert set(schema["$defs"]["Citation"]["required"]) == set(required_fields_for_citation())
-    assert set(schema["$defs"]["EvidenceClaim"]["required"]) == set(required_fields_for_claim())
+    assert schema["required"] == required_fields_for_bundle()
+    assert schema["$defs"]["OnlineSource"]["required"] == required_fields_for_source()
+    assert schema["$defs"]["EvidenceExcerpt"]["required"] == required_fields_for_excerpt()
+    assert schema["$defs"]["Citation"]["required"] == required_fields_for_citation()
+    assert schema["$defs"]["EvidenceClaim"]["required"] == required_fields_for_claim()
+
+
+def test_schema_properties_cover_every_current_dataclass_field() -> None:
+    """The committed schema's declared properties cover Core's live dataclasses.
+
+    This is the complementary schema-drift guard for `properties`: a field
+    added, removed or renamed on `OnlineSource`/`EvidenceExcerpt`/`Citation`/
+    `EvidenceClaim`/`OnlineEvidenceBundle` must show up as a declared property
+    (so it can never go silently undocumented), even though -- per the
+    additive-only rule -- a newly added field must never be forced into
+    `required` (covered by the test above, not this one).
+    """
+
+    schema = _load_committed_schema()
+    assert {f.name for f in dataclasses.fields(OnlineSource)} <= set(
+        schema["$defs"]["OnlineSource"]["properties"]
+    )
+    assert {f.name for f in dataclasses.fields(EvidenceExcerpt)} <= set(
+        schema["$defs"]["EvidenceExcerpt"]["properties"]
+    )
+    assert {f.name for f in dataclasses.fields(Citation)} <= set(
+        schema["$defs"]["Citation"]["properties"]
+    )
+    assert {f.name for f in dataclasses.fields(EvidenceClaim)} <= set(
+        schema["$defs"]["EvidenceClaim"]["properties"]
+    )
+    assert {f.name for f in dataclasses.fields(OnlineEvidenceBundle)} <= set(schema["properties"])
+
+
+def test_a_newly_added_optional_field_keeps_an_older_bundle_valid() -> None:
+    """Simulates the additive-only growth path the pinned `required` baseline exists for.
+
+    A new field joins `properties` as optional (the only way `build_schema`'s
+    own helpers ever let a field be added -- `required` is never touched by
+    it), and the committed golden fixture -- which predates this hypothetical
+    field and does not carry it anywhere -- must still validate against the
+    extended schema. Before this module's fix, a `required` list derived live
+    from `dataclasses.fields` would have had no way to add a field without
+    also making it required, which this regression guards against structurally
+    by keeping `required` pinned.
+    """
+
+    schema = copy.deepcopy(_load_committed_schema())
+    schema["$defs"]["OnlineSource"]["properties"]["retracted"] = {"type": ["boolean", "null"]}
+    assert "retracted" not in schema["$defs"]["OnlineSource"]["required"]
+
+    older_bundle = _load_fixture()
+    assert "retracted" not in older_bundle["sources"][0]
+    assert validate(older_bundle, schema) == []
 
 
 def test_build_schema_is_stable() -> None:

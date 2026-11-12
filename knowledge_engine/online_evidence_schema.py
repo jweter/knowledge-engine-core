@@ -10,13 +10,25 @@ with Core. This module exports that contract as a JSON Schema document and a
 minimal pure-stdlib checker, so a consumer can validate its own parser against
 Core's canonical contract instead.
 
-The "required" field lists below are derived from the dataclasses themselves
-(``dataclasses.fields``), not hand-copied, so a field added, removed or
-renamed on ``OnlineSource``, ``EvidenceExcerpt``, ``Citation``,
-``EvidenceClaim`` or ``OnlineEvidenceBundle`` changes this module's output
-without any further edit here. The committed
-``docs/schemas/online_evidence_v1.schema.json`` must still be regenerated to
-match -- see ``tests/test_online_evidence_schema.py``.
+The "required" field lists are a **pinned v1 baseline**, not a live
+reflection of whatever fields the dataclasses happen to carry today.
+Deriving "required" from current ``dataclasses.fields`` would silently
+break the additive-only rule the moment a new, optional, defaulted field
+was added to one of these dataclasses: that new field would instantly
+become *required* on the wire, even though old bundles never had it and
+new ones may omit it. So a field only ever leaves the pinned required
+tuples below when ``ke-online-evidence/v1`` itself is replaced by a new
+major schema version -- never merely because a dataclass grew a field.
+
+What *is* checked live against the dataclasses is coverage: `build_schema`
+asserts every field `OnlineSource`/`EvidenceExcerpt`/`Citation`/
+`EvidenceClaim`/`OnlineEvidenceBundle` currently carries has a declared
+schema property (so a newly added field can never go undocumented), while
+leaving it up to a human to decide whether that new property also belongs
+in the properties dict as optional -- it must never be added to a
+``required`` tuple. The committed
+``docs/schemas/online_evidence_v1.schema.json`` must still be regenerated
+to match a properties change -- see ``tests/test_online_evidence_schema.py``.
 
 Changes within ``ke-online-evidence/v1`` are additive only
 (``docs/core_interface_contract.md``): a field already declared here is never
@@ -51,41 +63,73 @@ _NULLABLE_STRING: dict[str, Any] = {"type": ["string", "null"]}
 _NULLABLE_INTEGER: dict[str, Any] = {"type": ["integer", "null"]}
 
 
-def _dataclass_field_names(cls: type) -> list[str]:
-    return [field.name for field in dataclasses.fields(cls)]
+def _dataclass_field_names(cls: type) -> set[str]:
+    return {field.name for field in dataclasses.fields(cls)}
+
+
+# Pinned ke-online-evidence/v1 required field sets -- see the module docstring
+# for why these are literal tuples rather than live `dataclasses.fields`
+# introspection. Today they equal every field each dataclass carries (plus the
+# "schema"/claim "status" extras that are constants/computed, not dataclass
+# fields); that is a coincidence of v1's current shape, not a rule these
+# tuples must track. A future additive field joins the relevant *properties*
+# dict in `build_schema`, never one of these tuples.
+_BUNDLE_REQUIRED: tuple[str, ...] = ("schema", "question", "sources", "excerpts", "claims")
+_SOURCE_REQUIRED: tuple[str, ...] = (
+    "source_id",
+    "url",
+    "retrieved_at",
+    "status",
+    "provider",
+    "title",
+    "doi",
+    "pmcid",
+    "pmid",
+    "arxiv_id",
+    "content_sha256",
+    "failure_reason",
+    "license",
+)
+_EXCERPT_REQUIRED: tuple[str, ...] = (
+    "excerpt_id",
+    "source_id",
+    "text",
+    "char_start",
+    "char_end",
+    "locator",
+)
+_CITATION_REQUIRED: tuple[str, ...] = ("excerpt_id", "stance")
+_CLAIM_REQUIRED: tuple[str, ...] = ("claim_id", "text", "citations", "status")
 
 
 def required_fields_for_bundle() -> list[str]:
-    """The wire-format fields `OnlineEvidenceBundle.to_dict` always emits.
+    """The pinned ke-online-evidence/v1 required top-level bundle fields."""
 
-    ``schema`` is the module constant `ONLINE_EVIDENCE_SCHEMA`, not a dataclass
-    field, so it is listed explicitly alongside the bundle's own fields.
-    """
-
-    return ["schema", *_dataclass_field_names(OnlineEvidenceBundle)]
+    return list(_BUNDLE_REQUIRED)
 
 
 def required_fields_for_source() -> list[str]:
-    return _dataclass_field_names(OnlineSource)
+    """The pinned ke-online-evidence/v1 required OnlineSource fields."""
+
+    return list(_SOURCE_REQUIRED)
 
 
 def required_fields_for_excerpt() -> list[str]:
-    return _dataclass_field_names(EvidenceExcerpt)
+    """The pinned ke-online-evidence/v1 required EvidenceExcerpt fields."""
+
+    return list(_EXCERPT_REQUIRED)
 
 
 def required_fields_for_citation() -> list[str]:
-    return _dataclass_field_names(Citation)
+    """The pinned ke-online-evidence/v1 required Citation fields."""
+
+    return list(_CITATION_REQUIRED)
 
 
 def required_fields_for_claim() -> list[str]:
-    """The wire-format fields `OnlineEvidenceBundle.to_dict` always emits for a claim.
+    """The pinned ke-online-evidence/v1 required EvidenceClaim fields."""
 
-    ``status`` is computed (`EvidenceClaim.status`), never a stored field, but
-    is always serialized, so it is listed explicitly alongside the claim's own
-    fields.
-    """
-
-    return [*_dataclass_field_names(EvidenceClaim), "status"]
+    return list(_CLAIM_REQUIRED)
 
 
 def _enum_schema(values: Iterable[StrEnum]) -> dict[str, Any]:
@@ -129,22 +173,42 @@ def build_schema() -> dict[str, Any]:
         "citations": {"type": "array", "items": {"$ref": "#/$defs/Citation"}},
     }
 
+    required_bundle = required_fields_for_bundle()
     required_source = required_fields_for_source()
     required_excerpt = required_fields_for_excerpt()
     required_citation = required_fields_for_citation()
     required_claim = required_fields_for_claim()
-    assert set(source_properties) == set(required_source), (
-        "online_evidence_schema.py's OnlineSource properties must match its own dataclass fields"
+
+    # Coverage: every field the dataclasses currently carry must be a declared
+    # property, so a newly added field is never silently undocumented. This is
+    # deliberately a subset check, not equality with `required` -- a new field
+    # belongs in `properties` as optional, and must never be forced into one of
+    # the pinned `required` tuples above (see module docstring).
+    assert _dataclass_field_names(OnlineSource) <= set(source_properties), (
+        "online_evidence_schema.py's OnlineSource properties must cover its own dataclass fields"
     )
-    assert set(excerpt_properties) == set(required_excerpt), (
-        "online_evidence_schema.py's EvidenceExcerpt properties must match its own dataclass fields"
+    assert _dataclass_field_names(EvidenceExcerpt) <= set(excerpt_properties), (
+        "online_evidence_schema.py's EvidenceExcerpt properties must cover its own dataclass fields"
     )
-    assert set(citation_properties) == set(required_citation), (
-        "online_evidence_schema.py's Citation properties must match its own dataclass fields"
+    assert _dataclass_field_names(Citation) <= set(citation_properties), (
+        "online_evidence_schema.py's Citation properties must cover its own dataclass fields"
     )
-    assert set(claim_properties) == set(required_claim), (
-        "online_evidence_schema.py's EvidenceClaim properties must match its own dataclass fields"
+    assert ({"status"} | _dataclass_field_names(EvidenceClaim)) <= set(claim_properties), (
+        "online_evidence_schema.py's EvidenceClaim properties must cover its own dataclass fields"
     )
+    bundle_property_names = {"schema", "question", "sources", "excerpts", "claims"}
+    assert ({"schema"} | _dataclass_field_names(OnlineEvidenceBundle)) <= bundle_property_names, (
+        "online_evidence_schema.py's top-level properties must cover OnlineEvidenceBundle's own "
+        "dataclass fields"
+    )
+
+    # Sanity: the pinned required fields must themselves be real, declared
+    # properties -- a typo in a `_*_REQUIRED` tuple is still caught here.
+    assert set(required_source) <= set(source_properties)
+    assert set(required_excerpt) <= set(excerpt_properties)
+    assert set(required_citation) <= set(citation_properties)
+    assert set(required_claim) <= set(claim_properties)
+    assert set(required_bundle) <= bundle_property_names
 
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -159,7 +223,7 @@ def build_schema() -> dict[str, Any]:
             "always optional -- readers must ignore unknown fields."
         ),
         "type": "object",
-        "required": required_fields_for_bundle(),
+        "required": required_bundle,
         "properties": {
             "schema": {"const": ONLINE_EVIDENCE_SCHEMA},
             "question": _STRING,
