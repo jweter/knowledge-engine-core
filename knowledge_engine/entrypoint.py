@@ -6982,6 +6982,41 @@ def online_evidence_validate(
     console.print(f"[green]Online evidence bundle {verified}.[/green]")
 
 
+@app.command("online-evidence-schema")
+def online_evidence_schema(
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            help="Write the ke-online-evidence/v1 JSON Schema to this path instead of stdout.",
+        ),
+    ] = None,
+    force: ForceOutputOption = False,
+) -> None:
+    """Print the machine-checkable JSON Schema for the ke-online-evidence/v1 bundle (KEC-1).
+
+    Mirrors `knowledge_engine/online_evidence.py`'s own field, type and enum
+    enforcement (see `docs/schemas/online_evidence_v1.schema.json`,
+    `docs/online_evidence_contract.md`). AI and Web consumer implementations
+    can validate their own parsers against this schema instead of hand-copying
+    field names that can drift out of sync with Core.
+    """
+
+    from knowledge_engine.online_evidence_schema import render_schema
+
+    rendered = render_schema()
+    if output is not None:
+        # Never truncate an existing artifact (an evidence bundle, say) or write
+        # through a symbolic link because of a mistyped --output.
+        _validate_output(output, force=force)
+        _write_output(output, rendered)
+        console.print(f"[green]Wrote online evidence schema:[/green] {output}")
+        return
+    # Avoid Rich's word-wrapping corrupting JSON output with inserted
+    # newlines, matching `ke evidence-intelligence --format json`'s same fix.
+    sys.stdout.write(rendered)
+
+
 @app.command("online-research")
 def online_research(
     question: Annotated[str, typer.Argument(help="The research question.")],
