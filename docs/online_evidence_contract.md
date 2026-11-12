@@ -3,6 +3,16 @@
 Status: implemented as `knowledge_engine/online_evidence.py` (schema `ke-online-evidence/v1`) with the
 `ke online-evidence-validate` command. Roadmap: `docs/OWNER_APPROVED_ROADMAP_2026-10-25.md`, next slice 1.
 
+`docs/schemas/online_evidence_v1.schema.json` is this contract's formal, machine-checkable JSON Schema,
+printed by `ke online-evidence-schema` (`--output PATH` to write it to a file instead of stdout). It is
+generated from `knowledge_engine/online_evidence_schema.py`, which derives every record's required fields
+directly from `online_evidence.py`'s own dataclasses, so a consumer repository (AI, Web) can validate its
+own parser against Core's canonical contract instead of hand-copying field names that can drift out of
+sync with Core. `tests/test_online_evidence_schema.py` checks the golden fixture against this schema and
+fails if a required field is missing, renamed or retyped, or if the committed schema file diverges from
+the dataclasses it is generated from. Changes within `ke-online-evidence/v1` are additive only: a field
+already declared is never removed, renamed or retyped, and a newly added field is always optional.
+
 Research Reports retrieve sources online, on demand: user question → online discovery → source retrieval →
 evidence excerpts → claims with citations → report. Nothing in this path requires a preloaded corpus or a PDF
 warehouse on the operator's machine. This contract is the hand-off format between those steps (Core extraction,

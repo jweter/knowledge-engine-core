@@ -1,0 +1,228 @@
+{
+  "$defs": {
+    "Citation": {
+      "additionalProperties": true,
+      "properties": {
+        "excerpt_id": {
+          "type": "string"
+        },
+        "stance": {
+          "enum": [
+            "supports",
+            "contradicts",
+            "inconclusive"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "excerpt_id",
+        "stance"
+      ],
+      "type": "object"
+    },
+    "EvidenceClaim": {
+      "additionalProperties": true,
+      "properties": {
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "type": "array"
+        },
+        "claim_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "supported",
+            "contradicted",
+            "contested",
+            "insufficient_evidence"
+          ],
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim_id",
+        "text",
+        "citations",
+        "status"
+      ],
+      "type": "object"
+    },
+    "EvidenceExcerpt": {
+      "additionalProperties": true,
+      "properties": {
+        "char_end": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "char_start": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "excerpt_id": {
+          "type": "string"
+        },
+        "locator": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "excerpt_id",
+        "source_id",
+        "text",
+        "char_start",
+        "char_end",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "OnlineSource": {
+      "additionalProperties": true,
+      "properties": {
+        "arxiv_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "doi": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "failure_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "license": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pmcid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pmid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provider": {
+          "type": "string"
+        },
+        "retrieved_at": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "retrieved",
+            "unavailable",
+            "not_permitted",
+            "failed"
+          ],
+          "type": "string"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "url",
+        "retrieved_at",
+        "status",
+        "provider",
+        "title",
+        "doi",
+        "pmcid",
+        "pmid",
+        "arxiv_id",
+        "content_sha256",
+        "failure_reason",
+        "license"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://knowledge-engine.internal/schemas/online_evidence_v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "Machine-checkable contract for the ke-online-evidence/v1 bundle produced by `ke online-research` and checked by `ke online-evidence-validate` (docs/online_evidence_contract.md, docs/core_interface_contract.md section 'Online Research Report evidence bundle'). Changes are additive only: a field declared here is never removed, renamed or retyped, and a newly added field is always optional -- readers must ignore unknown fields.",
+  "properties": {
+    "claims": {
+      "items": {
+        "$ref": "#/$defs/EvidenceClaim"
+      },
+      "type": "array"
+    },
+    "excerpts": {
+      "items": {
+        "$ref": "#/$defs/EvidenceExcerpt"
+      },
+      "type": "array"
+    },
+    "question": {
+      "type": "string"
+    },
+    "schema": {
+      "const": "ke-online-evidence/v1"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/OnlineSource"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "question",
+    "sources",
+    "excerpts",
+    "claims"
+  ],
+  "title": "Online evidence bundle (ke-online-evidence/v1)",
+  "type": "object"
+}
