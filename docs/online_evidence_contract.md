@@ -4,7 +4,7 @@ Status: implemented as `knowledge_engine/online_evidence.py` (schema `ke-online-
 `ke online-evidence-validate` command. Roadmap: `docs/OWNER_APPROVED_ROADMAP_2026-10-25.md`, next slice 1.
 
 `docs/schemas/online_evidence_v1.schema.json` is this contract's formal, machine-checkable JSON Schema,
-printed by `ke online-evidence-schema` (`--output PATH` to write it to a file instead of stdout). It is
+printed by `ke online-evidence-schema` (`--output PATH` to write it to a file instead of stdout; an existing file is kept unless `--force` is given, and a symbolic link is always refused). It is
 generated from `knowledge_engine/online_evidence_schema.py`, so a consumer repository (AI, Web) can
 validate its own parser against Core's canonical contract instead of hand-copying field names that can
 drift out of sync with Core. The schema's `required` lists are a **pinned v1 baseline**, written as

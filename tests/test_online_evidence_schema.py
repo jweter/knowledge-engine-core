@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
@@ -192,3 +193,39 @@ def test_cli_writes_the_schema_to_an_output_path(tmp_path: Path) -> None:
     result = CliRunner().invoke(entrypoint.app, ["online-evidence-schema", "--output", str(output)])
     assert result.exit_code == 0, result.output
     assert json.loads(output.read_text("utf-8")) == build_schema()
+
+
+def test_cli_refuses_to_overwrite_an_existing_output_file(tmp_path: Path) -> None:
+    output = tmp_path / "evidence-bundle.json"
+    output.write_text("precious", encoding="utf-8")
+    result = CliRunner().invoke(entrypoint.app, ["online-evidence-schema", "--output", str(output)])
+    assert result.exit_code != 0
+    assert output.read_text("utf-8") == "precious"
+
+
+def test_cli_overwrites_an_existing_output_file_only_with_force(tmp_path: Path) -> None:
+    output = tmp_path / "schema.json"
+    output.write_text("stale", encoding="utf-8")
+    result = CliRunner().invoke(
+        entrypoint.app, ["online-evidence-schema", "--output", str(output), "--force"]
+    )
+    assert result.exit_code == 0, result.output
+    assert json.loads(output.read_text("utf-8")) == build_schema()
+
+
+@pytest.mark.parametrize("extra", [[], ["--force"]])
+def test_cli_refuses_a_symbolic_link_output_even_with_force(
+    tmp_path: Path, extra: list[str]
+) -> None:
+    target = tmp_path / "evidence-bundle.json"
+    target.write_text("precious", encoding="utf-8")
+    link = tmp_path / "link.json"
+    try:
+        link.symlink_to(target)
+    except OSError:
+        pytest.skip("symbolic links are not available to this user on this platform")
+    result = CliRunner().invoke(
+        entrypoint.app, ["online-evidence-schema", "--output", str(link), *extra]
+    )
+    assert result.exit_code != 0
+    assert target.read_text("utf-8") == "precious"

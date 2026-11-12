@@ -6991,6 +6991,7 @@ def online_evidence_schema(
             help="Write the ke-online-evidence/v1 JSON Schema to this path instead of stdout.",
         ),
     ] = None,
+    force: ForceOutputOption = False,
 ) -> None:
     """Print the machine-checkable JSON Schema for the ke-online-evidence/v1 bundle (KEC-1).
 
@@ -7005,6 +7006,9 @@ def online_evidence_schema(
 
     rendered = render_schema()
     if output is not None:
+        # Never truncate an existing artifact (an evidence bundle, say) or write
+        # through a symbolic link because of a mistyped --output.
+        _validate_output(output, force=force)
         _write_output(output, rendered)
         console.print(f"[green]Wrote online evidence schema:[/green] {output}")
         return
