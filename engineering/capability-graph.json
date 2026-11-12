@@ -154,7 +154,7 @@
         },
         {
           "id": "core-online-evidence-json-schema-v1",
-          "state": "PLANNED",
+          "state": "VERIFIED_COMPLETE",
           "objective": "Publish a formal, machine-checkable JSON Schema for the ke-online-evidence/v1 bundle that mirrors knowledge_engine/online_evidence.py's own field, type and enum enforcement, exported through a new `ke online-evidence-schema` command, so the independent consumer implementations already built in knowledge-engine-ai (knowledge_engine_ai/copilot/online_evidence_adapter.py) and knowledge-engine-web (knowledge_engine_web/online_evidence_orchestration.py) can validate their own parsers against Core's canonical contract instead of relying on hand-copied field names drifting out of sync with Core.",
           "acceptance": [
             "a committed JSON Schema document (docs/schemas/online_evidence_v1.schema.json) declares the required top-level, OnlineSource, EvidenceExcerpt, Citation and EvidenceClaim fields, types and enums (status, stance, claim status) matching online_evidence.py, versioned alongside the ke-online-evidence/v1 schema string",
@@ -192,7 +192,9 @@
             "core-online-research-cli-end-to-end"
           ],
           "capability_level": 3,
-          "verification": []
+          "verification": [
+            "https://github.com/jweter/knowledge-engine-core/pull/588 merged (capable-builder pull request)"
+          ]
         },
         {
           "id": "core-online-evidence-fixture-export-cli",
