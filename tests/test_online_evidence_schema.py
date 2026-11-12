@@ -142,26 +142,38 @@ def test_schema_properties_cover_every_current_dataclass_field() -> None:
     assert {f.name for f in dataclasses.fields(OnlineEvidenceBundle)} <= set(schema["properties"])
 
 
-def test_a_newly_added_optional_field_keeps_an_older_bundle_valid() -> None:
+def test_a_newly_added_optional_field_remains_optional_on_the_wire() -> None:
     """Simulates the additive-only growth path the pinned `required` baseline exists for.
 
     A new field joins `properties` as optional (the only way `build_schema`'s
     own helpers ever let a field be added -- `required` is never touched by
-    it), and the committed golden fixture -- which predates this hypothetical
-    field and does not carry it anywhere -- must still validate against the
-    extended schema. Before this module's fix, a `required` list derived live
-    from `dataclasses.fields` would have had no way to add a field without
-    also making it required, which this regression guards against structurally
-    by keeping `required` pinned.
+    it). This proves the field is genuinely optional, not merely an unknown
+    extra tolerated by `additionalProperties` (that case is covered by
+    `test_additive_optional_fields_are_allowed`): a declared, typed property
+    that is absent validates, present with the declared type validates, and
+    present with the wrong type is rejected. Before this module's fix, a
+    `required` list derived live from `dataclasses.fields` would have had no
+    way to add a field without also making it required -- the exact
+    regression this guards against structurally, by keeping `required`
+    pinned.
     """
 
     schema = copy.deepcopy(_load_committed_schema())
     schema["$defs"]["OnlineSource"]["properties"]["retracted"] = {"type": ["boolean", "null"]}
     assert "retracted" not in schema["$defs"]["OnlineSource"]["required"]
 
-    older_bundle = _load_fixture()
-    assert "retracted" not in older_bundle["sources"][0]
-    assert validate(older_bundle, schema) == []
+    absent = _load_fixture()
+    assert "retracted" not in absent["sources"][0]
+    assert validate(absent, schema) == []
+
+    present_and_typed = copy.deepcopy(absent)
+    present_and_typed["sources"][0]["retracted"] = True
+    assert validate(present_and_typed, schema) == []
+
+    present_and_wrongly_typed = copy.deepcopy(absent)
+    present_and_wrongly_typed["sources"][0]["retracted"] = "yes"
+    problems = validate(present_and_wrongly_typed, schema)
+    assert any("retracted" in problem for problem in problems)
 
 
 def test_build_schema_is_stable() -> None:

@@ -5,13 +5,21 @@ Status: implemented as `knowledge_engine/online_evidence.py` (schema `ke-online-
 
 `docs/schemas/online_evidence_v1.schema.json` is this contract's formal, machine-checkable JSON Schema,
 printed by `ke online-evidence-schema` (`--output PATH` to write it to a file instead of stdout). It is
-generated from `knowledge_engine/online_evidence_schema.py`, which derives every record's required fields
-directly from `online_evidence.py`'s own dataclasses, so a consumer repository (AI, Web) can validate its
-own parser against Core's canonical contract instead of hand-copying field names that can drift out of
-sync with Core. `tests/test_online_evidence_schema.py` checks the golden fixture against this schema and
-fails if a required field is missing, renamed or retyped, or if the committed schema file diverges from
-the dataclasses it is generated from. Changes within `ke-online-evidence/v1` are additive only: a field
-already declared is never removed, renamed or retyped, and a newly added field is always optional.
+generated from `knowledge_engine/online_evidence_schema.py`, so a consumer repository (AI, Web) can
+validate its own parser against Core's canonical contract instead of hand-copying field names that can
+drift out of sync with Core. The schema's `required` lists are a **pinned v1 baseline**, written as
+literal tuples in that module rather than derived from `online_evidence.py`'s current `dataclasses.fields`:
+deriving `required` live would silently break the additive-only rule the moment a new, optional,
+defaulted field was added to one of these dataclasses, since that field would instantly become required
+on the wire. A field only leaves the pinned baseline when `ke-online-evidence/v1` is replaced by a new
+major schema version. What *is* checked live against the dataclasses is coverage: every field a dataclass
+currently carries must be a declared schema property (so a new field can never go undocumented), without
+that property ever being forced into `required`. `tests/test_online_evidence_schema.py` checks the golden
+fixture against this schema and fails if a required field is missing, renamed or retyped, if the committed
+schema's `required`/`properties` diverge from the pinned baseline/dataclasses respectively, or if a newly
+added optional field would stop an older bundle from validating. Changes within `ke-online-evidence/v1`
+are additive only: a field already declared is never removed, renamed or retyped, and a newly added field
+is always optional.
 
 Research Reports retrieve sources online, on demand: user question → online discovery → source retrieval →
 evidence excerpts → claims with citations → report. Nothing in this path requires a preloaded corpus or a PDF
