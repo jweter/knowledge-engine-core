@@ -7017,6 +7017,41 @@ def online_evidence_schema(
     sys.stdout.write(rendered)
 
 
+@app.command("online-evidence-export-contract")
+def online_evidence_export_contract(
+    directory: Annotated[
+        Path,
+        typer.Argument(help="Directory to write the online-evidence contract artifacts into."),
+    ],
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Overwrite an existing, non-empty export directory."),
+    ] = False,
+) -> None:
+    """Export the current ke-online-evidence/v1 contract artifacts for consumer repos (KEC-1).
+
+    Writes the committed golden bundle fixture (`bundle.json` and its `contents/` retrieval
+    texts) plus the committed JSON Schema (`online_evidence_v1.schema.json`) into DIRECTORY,
+    byte-identical to Core's own committed copies under `tests/fixtures/online_evidence/` and
+    `docs/schemas/`. knowledge-engine-ai and knowledge-engine-web run this instead of hand-
+    copying those files into their own contract-test suites, so they can detect drift the next
+    time they refresh.
+    """
+
+    from knowledge_engine.online_evidence_export import (
+        OnlineEvidenceExportError,
+        export_online_evidence_contract,
+    )
+
+    try:
+        export_online_evidence_contract(directory, force=force)
+    except OnlineEvidenceExportError as exc:
+        console.print(f"[red]Online evidence export failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    console.print(f"[green]Wrote online evidence contract artifacts:[/green] {directory}")
+
+
 @app.command("online-research")
 def online_research(
     question: Annotated[str, typer.Argument(help="The research question.")],
