@@ -1016,6 +1016,21 @@ validating. The same additive-only rule applies: a field already declared
 in the schema is never removed, renamed or retyped, and a newly added
 field is always optional.
 
+### Export command for consumer contract tests
+
+`ke online-evidence-export-contract DIRECTORY` (`--force` to overwrite a
+non-empty `DIRECTORY`) writes the golden bundle fixture, its `contents/`
+texts and the JSON Schema document into `DIRECTORY` in one deterministic
+call -- byte-identical to Core's own committed
+`tests/fixtures/online_evidence/` and `docs/schemas/online_evidence_v1.schema.json`.
+It is built on `knowledge_engine.online_evidence_export.export_online_evidence_contract`,
+which reuses `online_golden.write_golden_fixture` and
+`online_evidence_schema.render_schema` rather than hand-copying files, so the
+export can never drift from Core's own copies. AI and Web use this command to
+refresh their own contract-test fixtures instead of hand-copying Core's files;
+see `tests/test_online_evidence_export.py` and
+`docs/online_evidence_contract.md`.
+
 ## Versioning and stability
 
 Nothing here is published under semantic versioning yet (`core` is

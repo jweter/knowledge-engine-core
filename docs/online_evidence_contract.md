@@ -57,6 +57,31 @@ text isn't supplied.
 | `corpus_library*.py`, `drive_boundary.py`, `research_workspace.py` | Persistent corpus library seed, backup and restore | Optional offline capability only; never a prerequisite of a Research Report |
 | Acquisition CLIs (`reviewed_approval_cli.py`, `europepmc_reviewed_approval_cli.py`, `manifest_curation_cli.py`, `candidate_review_cli.py`, `pdf_calibration_cli.py`) | Curate PDFs into the corpus | Unchanged curation tools; the online path retrieves per request instead |
 
+## Exporting the contract for consumer repos
+
+`ke online-evidence-export-contract DIRECTORY` writes the committed golden
+bundle fixture (`bundle.json` plus its `contents/` retrieval texts) and the
+committed JSON Schema document into `DIRECTORY` in one deterministic call,
+creating it if it does not exist. It refuses to write into an existing,
+non-empty `DIRECTORY` and fails closed unless `--force` is given, so it never
+silently overwrites or mixes in with something already there. The written
+files are byte-identical to Core's own committed
+`tests/fixtures/online_evidence/` and `docs/schemas/online_evidence_v1.schema.json`,
+because the underlying `knowledge_engine.online_evidence_export.export_online_evidence_contract`
+helper reuses `online_golden.write_golden_fixture` and
+`online_evidence_schema.render_schema` rather than hand-copying files.
+
+This is the integration surface `knowledge-engine-ai` and `knowledge-engine-web`
+use to refresh their own contract-test fixtures from Core's exact current
+contract artifacts, instead of the undocumented hand-copy each repo did
+independently before. Running it again after a Core change and diffing the
+result against what a consumer repo has committed detects drift the moment
+Core's fixture or schema changes, rather than silently falling out of sync.
+See `tests/test_online_evidence_export.py` for the regression coverage: byte
+identity against the committed fixture/schema, the no-overwrite refusal
+without `--force`, and that the exported bundle still validates with both
+`ke online-evidence-validate` and the JSON Schema checker.
+
 ## End-to-end CLI proof
 
 `tests/test_online_cli_end_to_end.py` runs `ke online-research` and `ke online-evidence-validate` as
