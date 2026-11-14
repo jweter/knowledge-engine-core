@@ -33,7 +33,7 @@ def test_export_writes_byte_identical_fixture_and_schema(tmp_path: Path) -> None
 
 
 def test_exported_files_use_lf_line_endings_on_every_platform(tmp_path: Path) -> None:
-    # Windows text mode wrote the schema with CRLF, so the byte-identical check above failed there only.
+    # Windows text mode wrote the schema with CRLF: the byte-identical check failed there only.
     export_online_evidence_contract(tmp_path)
 
     for path in (p for p in tmp_path.rglob("*") if p.is_file()):
