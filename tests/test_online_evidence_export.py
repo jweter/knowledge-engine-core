@@ -32,6 +32,14 @@ def test_export_writes_byte_identical_fixture_and_schema(tmp_path: Path) -> None
     assert (tmp_path / SCHEMA_FILE_NAME).read_bytes() == SCHEMA_PATH.read_bytes()
 
 
+def test_exported_files_use_lf_line_endings_on_every_platform(tmp_path: Path) -> None:
+    # Windows text mode wrote the schema with CRLF, so the byte-identical check above failed there only.
+    export_online_evidence_contract(tmp_path)
+
+    for path in (p for p in tmp_path.rglob("*") if p.is_file()):
+        assert b"\r" not in path.read_bytes(), path.name
+
+
 def test_export_creates_a_missing_directory(tmp_path: Path) -> None:
     destination = tmp_path / "nested" / "export"
     export_online_evidence_contract(destination)
@@ -107,7 +115,8 @@ def test_cli_exports_and_refuses_overwrite_without_force(tmp_path: Path) -> None
 
     refused = runner.invoke(entrypoint.app, ["online-evidence-export-contract", str(destination)])
     assert refused.exit_code != 0
-    assert "already exists and is not empty" in refused.output
+    # the console wraps long lines at its own width, so compare with whitespace collapsed
+    assert "already exists and is not empty" in " ".join(refused.output.split())
 
     forced = runner.invoke(
         entrypoint.app, ["online-evidence-export-contract", str(destination), "--force"]
