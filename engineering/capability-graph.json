@@ -238,6 +238,45 @@
           "verification": [
             "https://github.com/jweter/knowledge-engine-core/pull/590 merged (capable-builder pull request)"
           ]
+        },
+        {
+          "id": "core-online-evidence-fixture-server-cli",
+          "state": "PLANNED",
+          "objective": "Publish Core's loopback integration proof as a stable, documented CLI-level fixture server (not a private test harness and not a Python import) so knowledge-engine-ai and knowledge-engine-web can run the real `ke online-research` to `ke online-evidence-validate` pipeline against it in their own CI, instead of mocking the Core CLI boundary entirely as both repos do today. This is the Core half of actually proving end-to-end integration with AI/Web using online sources and no pre-ingested corpus (docs/OWNER_APPROVED_ROADMAP_2026-10-25.md Next slice 3), going through the supported CLI interface per docs/core_interface_contract.md's existing 'go through the CLI, not a Python import' boundary.",
+          "acceptance": [
+            "a new `ke online-evidence-fixture-server` command starts a loopback-only HTTP server on an ephemeral port serving a fixed, documented set of pages (one retrievable/citable page, one HTTP 500 endpoint, one response over MAX_RESPONSE_BYTES), prints the port and each page's URL as JSON to stdout, then blocks until stdin closes or it receives SIGTERM and shuts down cleanly",
+            "tests/test_online_cli_end_to_end.py and tests/test_online_cli_harness.py are refactored to start this same documented server rather than keep a second, private copy of the page-serving logic, so Core's own e2e test and the public command exercise identical server code",
+            "a new test spawns the command as a subprocess, parses its stdout for the port and page URLs, runs `ke online-research` then `ke online-evidence-validate` as separate subprocesses against it, asserts exit codes, exact excerpt offsets and the recorded HTTP-500/oversized failure reasons, then stops the server and asserts it exits cleanly within a bounded timeout",
+            "docs/online_evidence_contract.md documents the command as the supported integration-test fixture for knowledge-engine-ai and knowledge-engine-web, states the three page shapes are part of the contract and additive-only, and states plainly that this proves the Core half only -- AI and Web still owe their own non-mocked subprocess test against it",
+            "Canonical preflight, required CI checks and review must pass at the exact head; no gate may be weakened."
+          ],
+          "allowed_paths": [
+            "knowledge_engine/online_*.py",
+            "knowledge_engine/entrypoint.py",
+            "tests/test_online_*.py",
+            "docs/core_interface_contract.md",
+            "docs/online_evidence_contract.md"
+          ],
+          "forbidden_paths": [
+            "**/*.key",
+            "**/*.pem",
+            ".env",
+            ".github/**",
+            "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md",
+            "engineering/**",
+            "poetry.lock",
+            "private/**",
+            "pyproject.toml"
+          ],
+          "runner_requirements": [
+            "python 3.11+ with the repository's locked dev dependencies installed",
+            "loopback networking only; no external network access",
+            "free local libraries already used by the repository only"
+          ],
+          "depends_on": [
+            "core-online-evidence-fixture-export-cli"
+          ],
+          "capability_level": 3
         }
       ]
     }
