@@ -198,7 +198,7 @@
         },
         {
           "id": "core-online-evidence-fixture-export-cli",
-          "state": "PLANNED",
+          "state": "VERIFIED_COMPLETE",
           "objective": "Add a `ke online-evidence-export-contract <dir>` command (and an importable knowledge_engine.online_evidence helper) that writes the current golden bundle fixture, its paired contents/ retrieval files, and the committed JSON Schema from core-online-evidence-json-schema-v1 into a caller-supplied directory in one deterministic call, so knowledge-engine-ai and knowledge-engine-web can pull Core's exact current contract artifacts into their own test suites instead of the undocumented hand-copy each repo did independently, and detect drift the next time they refresh.",
           "acceptance": [
             "the new command/function writes byte-identical copies of tests/fixtures/online_evidence/bundle.json, its contents/ directory, and the committed JSON Schema document to a caller-supplied directory, creating it if absent",
@@ -235,7 +235,9 @@
             "core-online-evidence-json-schema-v1"
           ],
           "capability_level": 3,
-          "verification": []
+          "verification": [
+            "https://github.com/jweter/knowledge-engine-core/pull/590 merged (capable-builder pull request)"
+          ]
         }
       ]
     }
