@@ -47,7 +47,9 @@ def export_online_evidence_contract(directory: Path, *, force: bool = False) -> 
         directory.mkdir(parents=True)
 
     write_golden_fixture(directory)
-    (directory / SCHEMA_FILE_NAME).write_text(render_schema(), encoding="utf-8")
+    # Bytes, not write_text: text mode turns "\n" into "\r\n" on Windows, so the exported schema
+    # differed from the committed one there (the golden fixture above is already written as bytes).
+    (directory / SCHEMA_FILE_NAME).write_bytes(render_schema().encode("utf-8"))
 
 
 __all__ = [
