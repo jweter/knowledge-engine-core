@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import tempfile
@@ -7100,6 +7101,15 @@ def online_research(
     openalex_api_key: FederatedOpenAlexApiKeyOption = None,
     semantic_scholar_api_key: FederatedSemanticScholarApiKeyOption = None,
     force: ForceOutputOption = False,
+    fixture_server_port: Annotated[
+        int | None,
+        typer.Option(
+            "--fixture-server-port",
+            min=1,
+            max=65535,
+            help="CI integration fixture only; requires KE_ALLOW_LOOPBACK_FIXTURE=1.",
+        ),
+    ] = None,
 ) -> None:
     """Answer one question from sources retrieved online, with no local corpus (KEC-3).
 
@@ -7120,6 +7130,20 @@ def online_research(
         research_online,
     )
 
+    if fixture_server_port is not None:
+        if os.environ.get("KE_ALLOW_LOOPBACK_FIXTURE") != "1":
+            raise typer.BadParameter(
+                "--fixture-server-port requires KE_ALLOW_LOOPBACK_FIXTURE=1 (CI test only)."
+            )
+        if (
+            providers is not None
+            or openalex_api_key is not None
+            or semantic_scholar_api_key is not None
+        ):
+            raise typer.BadParameter(
+                "Fixture mode cannot combine with live discovery providers or keys."
+            )
+
     discovery_record = output.with_name(output.name + ".discovery.json")
     for target in (output, discovery_record):
         if target.exists() and not force:
@@ -7134,10 +7158,16 @@ def online_research(
             cache_max_bytes=int(cache_max_mb * 1_000_000),
             cache_max_age_seconds=cache_max_age_minutes * 60,
         )
-        registry = _federated_discovery_registry(
-            openalex_api_key=openalex_api_key,
-            semantic_scholar_api_key=semantic_scholar_api_key,
-        )
+        if fixture_server_port is None:
+            registry = _federated_discovery_registry(
+                openalex_api_key=openalex_api_key,
+                semantic_scholar_api_key=semantic_scholar_api_key,
+            )
+            fetcher = SafeHttpsFetcher(limits)
+        else:
+            from knowledge_engine.online_evidence_fixture_client import fixture_components
+
+            registry, fetcher = fixture_components(fixture_server_port, limits)
         broker = RecordedSearcher(
             registry.build_recorded_service(
                 FederatedSearchLedger(ledger_root), _parse_federated_providers(providers)
@@ -7151,12 +7181,13 @@ def online_research(
     except (KeyError, ValueError) as exc:
         raise typer.BadParameter(str(exc)) from exc
 
-    console.print(
-        "[yellow]Network access:[/yellow] discovery providers and public HTTPS source hosts."
-    )
-    result = research_online(
-        question, broker=broker, fetcher=SafeHttpsFetcher(limits), cache=cache, limits=limits
-    )
+    if fixture_server_port is None:
+        console.print(
+            "[yellow]Network access:[/yellow] discovery providers and public HTTPS source hosts."
+        )
+    else:
+        console.print("[yellow]TEST FIXTURE ONLY:[/yellow] local loopback; not live evidence.")
+    result = research_online(question, broker=broker, fetcher=fetcher, cache=cache, limits=limits)
     _write_output(output, json.dumps(result.bundle.to_dict(), indent=2) + "\n")
     if broker.execution is None:  # research_online always searches once
         raise RuntimeError("Discovery did not run.")
@@ -7164,7 +7195,12 @@ def online_research(
     _write_output(
         discovery_record,
         json.dumps(
-            {"search_run_id": run_id, "ledger_root": str(ledger_root), "bundle": output.name},
+            {
+                "search_run_id": run_id,
+                "ledger_root": str(ledger_root),
+                "bundle": output.name,
+                "test_fixture": fixture_server_port is not None,
+            },
             indent=2,
         )
         + "\n",
