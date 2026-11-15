@@ -5,7 +5,10 @@ loopback HTTP source server, with no pre-ingested corpus and the vector stack un
 subprocess runs the shipped Typer app unchanged; ``test_online_cli_harness.py``
 installs the only two seams (a stub discovery provider and a loopback connection factory
 beneath the production ``SafeHttpsFetcher``), so URL policy, size caps and offsets are the
-production code paths.
+production code paths. The loopback source server itself is
+``knowledge_engine.online_evidence_fixture_server``'s ``create_server``/``FixtureRequestHandler``
+-- the same server the public ``ke online-evidence-fixture-server`` command starts -- so this
+test and that command exercise identical page-serving code.
 """
 
 from __future__ import annotations
@@ -16,42 +19,18 @@ import subprocess
 import sys
 import threading
 from collections.abc import Iterator
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
 
+from knowledge_engine.online_evidence_fixture_server import MAX_RESPONSE_BYTES, create_server
+
 HARNESS = Path(__file__).parent / "test_online_cli_harness.py"
-GOOD_TEXT = (
-    "<html><body><h1>Trial</h1>"
-    "<p>Semaglutide reduced body weight by 15.2% versus placebo over 68 weeks.</p>"
-    "<p>Recruitment was national.</p></body></html>"
-)
-MAX_RESPONSE_BYTES = 100_000  # --max-response-mb 0.1
-HUGE_BYTES = 150_000
-
-
-class _Handler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
-        if self.path == "/good":
-            body, status, kind = GOOD_TEXT.encode(), 200, "text/html; charset=utf-8"
-        elif self.path == "/huge":
-            body, status, kind = b"w" * HUGE_BYTES, 200, "text/plain"
-        else:
-            body, status, kind = b"boom", 500, "text/plain"
-        self.send_response(status)
-        self.send_header("Content-Type", kind)
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, *_args: object) -> None:
-        pass
 
 
 @pytest.fixture
 def source_port() -> Iterator[int]:
-    server = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
+    server = create_server()
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:

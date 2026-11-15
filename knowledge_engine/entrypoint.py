@@ -6982,6 +6982,29 @@ def online_evidence_validate(
     console.print(f"[green]Online evidence bundle {verified}.[/green]")
 
 
+@app.command("online-evidence-fixture-server")
+def online_evidence_fixture_server() -> None:
+    """Start the loopback-only HTTP fixture server for the ke-online-evidence/v1 proof.
+
+    Serves three fixed, documented pages on an ephemeral loopback port -- one
+    retrievable/citable page, one HTTP 500 endpoint, and one response over
+    MAX_RESPONSE_BYTES -- the same server `tests/test_online_cli_end_to_end.py` uses for
+    Core's own end-to-end proof. Prints `{"port": <int>, "pages": {...}}` as one JSON line
+    to stdout once the server is accepting connections, then blocks until stdin closes or
+    the process receives SIGTERM, and shuts down cleanly either way.
+
+    This is the supported integration-test fixture for knowledge-engine-ai and
+    knowledge-engine-web to run the real `ke online-research` to `ke
+    online-evidence-validate` pipeline against in their own CI, instead of mocking the
+    Core CLI boundary. It proves the Core half only -- AI and Web still owe their own
+    non-mocked subprocess test against it. See docs/online_evidence_contract.md.
+    """
+
+    from knowledge_engine.online_evidence_fixture_server import run_fixture_server
+
+    run_fixture_server()
+
+
 @app.command("online-evidence-schema")
 def online_evidence_schema(
     output: Annotated[

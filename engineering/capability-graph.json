@@ -277,6 +277,119 @@
             "core-online-evidence-fixture-export-cli"
           ],
           "capability_level": 3
+        },
+        {
+          "id": "core-online-evidence-failure-classification",
+          "state": "PLANNED",
+          "objective": "Return 'http_error' if failure_reason contains, case-insensitively, 'http' plus whitespace plus three digits; else 'oversized' if it contains 'exceeds' and 'bytes'; else 'network_error' if it contains 'timed out', 'connection', or 'refused'; else 'unknown'. Blank input returns 'unknown'. Case-insensitive, whitespace-trimmed; ties break http_error > oversized > network_error; repeats don't change the result. Helps AI/Web bucket unavailable sources without re-parsing Core's free text.",
+          "acceptance": [
+            "a new pure function classify_retrieval_failure(failure_reason: str) -> str lives in a new knowledge_engine module and takes only the string itself -- no file, network, clock or random input",
+            "tests/test_online_evidence_failure_classification.py exercises every acceptance_example below literally, plus the empty-string and whitespace-only edge cases",
+            "Canonical preflight, required CI checks and review must pass at the exact head; no gate may be weakened."
+          ],
+          "acceptance_examples": [
+            {
+              "call": "classify_retrieval_failure('HTTP 500 from source.example.org')",
+              "expected": "http_error",
+              "why": "the text contains 'HTTP' immediately followed by whitespace and a three-digit status code."
+            },
+            {
+              "call": "classify_retrieval_failure('Response exceeds 100000 bytes')",
+              "expected": "oversized",
+              "why": "the text contains both 'exceeds' and 'bytes' with no HTTP status code present."
+            },
+            {
+              "call": "classify_retrieval_failure('')",
+              "expected": "unknown",
+              "why": "empty input has no recognizable keyword, so it falls back to unknown."
+            },
+            {
+              "call": "classify_retrieval_failure('Connection refused by host')",
+              "expected": "network_error",
+              "why": "the text contains 'connection' and 'refused', the network-error keywords, with no HTTP or size keywords present."
+            },
+            {
+              "call": "classify_retrieval_failure('HTTP 500 response exceeds 100000 bytes')",
+              "expected": "http_error",
+              "why": "http_error outranks oversized when both keyword sets are present in the same string."
+            }
+          ],
+          "allowed_paths": [
+            "knowledge_engine/online_evidence_failure_classification.py",
+            "tests/test_online_evidence_failure_classification.py"
+          ],
+          "forbidden_paths": [
+            "**/*.key",
+            "**/*.pem",
+            ".env",
+            ".github/**",
+            "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md",
+            "engineering/**",
+            "poetry.lock",
+            "private/**",
+            "pyproject.toml"
+          ],
+          "runner_requirements": [
+            "code",
+            "local",
+            "offline"
+          ],
+          "depends_on": [],
+          "capability_level": 1
+        },
+        {
+          "id": "core-online-evidence-claim-coverage-ratio",
+          "state": "PLANNED",
+          "objective": "Return the fraction of entries in claim_statuses equal, case-sensitively, to the exact string 'insufficient_evidence' subtracted from 1, i.e. covered_count / total_count rounded to four decimal places. Return 0.0 for an empty list. Matching is case-sensitive, so a differently-cased or unrecognized string counts as covered. Duplicate entries each count individually toward both the numerator and denominator. Lets AI/Web compute a bundle's claim-coverage ratio consistently instead of re-deriving it from ClaimStatus values themselves.",
+          "acceptance": [
+            "a new pure function claim_coverage_ratio(claim_statuses: list[str]) -> float lives in a new knowledge_engine module and takes only the list of strings itself -- no file, network, clock or random input",
+            "tests/test_online_evidence_claim_coverage.py exercises every acceptance_example below literally, plus a single-element and an all-covered list",
+            "Canonical preflight, required CI checks and review must pass at the exact head; no gate may be weakened."
+          ],
+          "acceptance_examples": [
+            {
+              "call": "claim_coverage_ratio([])",
+              "expected": 0.0,
+              "why": "an empty list has no claims to divide, so coverage is defined as 0.0."
+            },
+            {
+              "call": "claim_coverage_ratio(['supported', 'insufficient_evidence', 'contested'])",
+              "expected": 0.6667,
+              "why": "two of three statuses are not 'insufficient_evidence', and 2/3 rounds to 0.6667 at four decimal places."
+            },
+            {
+              "call": "claim_coverage_ratio(['insufficient_evidence', 'insufficient_evidence'])",
+              "expected": 0.0,
+              "why": "both duplicate entries count individually and neither is covered, so the ratio is 0.0."
+            },
+            {
+              "call": "claim_coverage_ratio(['Insufficient_Evidence'])",
+              "expected": 1.0,
+              "why": "matching is case-sensitive, so this differently-cased string is not recognized as insufficient_evidence and counts as covered."
+            }
+          ],
+          "allowed_paths": [
+            "knowledge_engine/online_evidence_claim_coverage.py",
+            "tests/test_online_evidence_claim_coverage.py"
+          ],
+          "forbidden_paths": [
+            "**/*.key",
+            "**/*.pem",
+            ".env",
+            ".github/**",
+            "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md",
+            "engineering/**",
+            "poetry.lock",
+            "private/**",
+            "pyproject.toml"
+          ],
+          "runner_requirements": [
+            "code",
+            "local",
+            "offline"
+          ],
+          "depends_on": [],
+          "capability_level": 1
         }
       ]
     }

@@ -92,6 +92,36 @@ The subprocess runs the shipped app; `tests/test_online_cli_harness.py` only swa
 provider and a loopback connection beneath the production `SafeHttpsFetcher`, so production keeps no bypass
 of its public-HTTPS policy. This proves the Core half only; it is not live-provider or AI/Web evidence.
 
+## Standalone integration fixture server
+
+`ke online-evidence-fixture-server` (`knowledge_engine/online_evidence_fixture_server.py`) starts the exact
+same loopback-only HTTP server as a standalone process -- not a private test harness and not a Python
+import. It binds an ephemeral loopback port, prints `{"port": <int>, "pages": {"retrievable": <url>,
+"http_500": <url>, "oversized": <url>}}` as one JSON line to stdout once it is accepting connections, then
+blocks until stdin closes or it receives SIGTERM, shutting down cleanly either way.
+
+The three page shapes are part of the contract and additive-only: `retrievable` is a citable page a
+retrieval can quote, `http_500` always fails with HTTP 500, and `oversized` always returns a response over
+`MAX_RESPONSE_BYTES`. A future change may add a new page shape, but never remove or change the meaning of
+these three.
+
+This is the **supported integration-test fixture** for knowledge-engine-ai and knowledge-engine-web: a
+consumer repository's own CI starts this command, parses its stdout for the port and page URLs, and runs
+the real `ke online-research` then `ke online-evidence-validate` against it -- the same CLI boundary
+`docs/core_interface_contract.md` already establishes -- instead of mocking the Core CLI boundary entirely.
+`tests/test_online_cli_end_to_end.py` and `tests/test_online_cli_harness.py` start and reference this same
+server code (`create_server`/`FixtureRequestHandler`, `GOOD_PATH`/`BROKEN_PATH`/`HUGE_PATH`) rather than
+keeping a second, private copy of the page-serving logic, so Core's own end-to-end test and the public
+command exercise identical server code. `tests/test_online_evidence_fixture_server_cli.py` spawns the
+command itself as a subprocess, parses its announcement, runs `online-research`/`online-evidence-validate`
+against it, and asserts the server exits cleanly within a bounded timeout once its stdin is closed.
+
+**This proves the Core half only.** Running this fixture server and the two commands against it inside
+Core's own test suite shows Core's CLI boundary works end to end against a known server; it does not
+exercise knowledge-engine-ai's or knowledge-engine-web's own code at all. AI and Web each still owe their
+own non-mocked subprocess test that starts this fixture server and runs their own pipeline against it --
+this command only removes the excuse that the fixture logic was private to Core's test suite.
+
 ## Next slices
 - **KEC-3:** bounded on-demand extraction that produces `OnlineSource` and `EvidenceExcerpt` records from fetched
   text, using a disk-bounded ephemeral cache keyed by `content_sha256`.
