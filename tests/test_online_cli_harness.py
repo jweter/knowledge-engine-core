@@ -10,6 +10,10 @@ Runs the *shipped* ``ke`` Typer app unchanged (argument parsing, ``online-resear
 
 Production code gains no bypass: the environment variable below is read only here.
 On exit it records which forbidden heavy modules were imported.
+
+The candidate paths below (``/good``, ``/broken``, ``/huge``) are the same fixed, documented
+page shapes ``knowledge_engine.online_evidence_fixture_server`` serves -- imported from there
+rather than hand-copied, so this harness and the server it points at can never drift apart.
 """
 
 from __future__ import annotations
@@ -21,6 +25,12 @@ import os
 import sys
 from functools import partial
 from pathlib import Path
+
+from knowledge_engine.online_evidence_fixture_server import (
+    BROKEN_PATH,
+    GOOD_PATH,
+    HUGE_PATH,
+)
 
 FORBIDDEN_MODULES = ("faiss", "qdrant_client", "sentence_transformers", "torch")
 SOURCE_HOST = "source.example.org"  # served by the loopback server, resolved to a public address
@@ -68,9 +78,9 @@ def _install_seams(port: int) -> None:
 
         def search(self, query):  # type: ignore[no-untyped-def]
             candidates = (
-                candidate("good", "/good"),
-                candidate("broken", "/broken"),
-                candidate("huge", "/huge"),
+                candidate("good", GOOD_PATH),
+                candidate("broken", BROKEN_PATH),
+                candidate("huge", HUGE_PATH),
             )
             return FederatedSearchResult(
                 query=query,
