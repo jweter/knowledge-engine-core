@@ -56,6 +56,7 @@ Source of detailed truth: `docs/integrations/README.md` in `jweter/rocksmith-cdl
 | Project | Intended role | Status | Current disposition |
 |---|---|---|---|
 | Editor on Fire (EOF) | Guitar Pro/Rocksmith compatibility oracle and external review surface | `PARTIAL` | Bridge and multiple parity/reference slices are implemented; additional EOF parity work remains. |
+| Charter (`Lordszynencja/Charter`) | Optional local Rocksmith authoring/validation/export backend and second independent EOF/Guitar Pro/Rocksmith XML oracle | `PLANNED` | Owner-authorized integration evaluation in Rocksmith issue [#769](https://github.com/jweter/rocksmith-cdlc-generator/issues/769); reviewed upstream v0.23.1 (2026-11-12), `CharterMain.java` (source blob `4052d0838773abf705c73d1eca8e9999dffc2359`), and BSD-3-Clause root license. GUI supports a path argument, but no verified headless validate/export CLI. Prove unattended synthetic input -> validated XML -> existing PSARC gates; preserve private media and current canonical timing/review authority. Vendor subtree license audit before copying. |
 | WhisperX | Speech/vocal timing and forced-alignment evidence | `PLANNED` | Evaluate narrowly as an isolated optional analysis provider. |
 | Basic Pitch | Audio-to-MIDI / note evidence | `PLANNED` | High-priority evaluation behind `NoteEvidenceProvider`; never arrangement authority. |
 | Demucs lineage / StemSplit | Stem separation | `PLANNED` | Compare maintained implementations behind `StemProvider`. |
