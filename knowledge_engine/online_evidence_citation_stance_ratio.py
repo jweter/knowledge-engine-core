@@ -11,7 +11,7 @@ def citation_stance_support_ratio(stances: list[str]) -> float:
     if not stances:
         return 0.0
 
-    supports_count = sum(1 for stance in stances if stance.lower() == "supports")
+    supports_count = sum(1 for stance in stances if stance == "supports")
     total_count = len(stances)
 
     return round(supports_count / total_count, 4)
