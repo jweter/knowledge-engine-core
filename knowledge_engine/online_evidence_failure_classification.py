@@ -1,3 +1,6 @@
+import re
+
+
 def classify_retrieval_failure(failure_reason: str) -> str:
     """
     Classify the retrieval failure based on the failure reason.
@@ -7,11 +10,7 @@ def classify_retrieval_failure(failure_reason: str) -> str:
     """
     failure_reason = failure_reason.strip().lower()
 
-    if (
-        "http" in failure_reason
-        and failure_reason.count(" ") >= 2
-        and failure_reason.split()[1].isdigit()
-    ):
+    if re.search(r"http\s+[0-9]{3}(?![0-9])", failure_reason):
         return "http_error"
     elif "exceeds" in failure_reason and "bytes" in failure_reason:
         return "oversized"
