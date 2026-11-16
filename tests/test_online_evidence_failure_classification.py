@@ -23,10 +23,7 @@ def test_classify_retrieval_failure_example_5() -> None:
 
 def test_http_status_matches_prefixed_punctuated_and_tab_separated_messages() -> None:
     assert classify_retrieval_failure("HTTP 503.") == "http_error"
-    assert (
-        classify_retrieval_failure("Request failed: HTTP 503 from provider.")
-        == "http_error"
-    )
+    assert classify_retrieval_failure("Request failed: HTTP 503 from provider.") == "http_error"
     assert classify_retrieval_failure("HTTP\t503 from provider") == "http_error"
 
 
@@ -37,6 +34,5 @@ def test_http_status_requires_exact_three_digits() -> None:
 
 def test_http_error_precedes_other_failure_classes() -> None:
     assert (
-        classify_retrieval_failure("connection refused; HTTP 503; exceeds 10 bytes")
-        == "http_error"
+        classify_retrieval_failure("connection refused; HTTP 503; exceeds 10 bytes") == "http_error"
     )
