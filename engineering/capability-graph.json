@@ -342,7 +342,7 @@
         },
         {
           "id": "core-online-evidence-claim-coverage-ratio",
-          "state": "PLANNED",
+          "state": "VERIFIED_COMPLETE",
           "objective": "Return the fraction of entries in claim_statuses equal, case-sensitively, to the exact string 'insufficient_evidence' subtracted from 1, i.e. covered_count / total_count rounded to four decimal places. Return 0.0 for an empty list. Matching is case-sensitive, so a differently-cased or unrecognized string counts as covered. Duplicate entries each count individually toward both the numerator and denominator. Lets AI/Web compute a bundle's claim-coverage ratio consistently instead of re-deriving it from ClaimStatus values themselves.",
           "acceptance": [
             "a new pure function claim_coverage_ratio(claim_statuses: list[str]) -> float lives in a new knowledge_engine module and takes only the list of strings itself -- no file, network, clock or random input",
@@ -392,7 +392,10 @@
             "offline"
           ],
           "depends_on": [],
-          "capability_level": 1
+          "capability_level": 1,
+          "verification": [
+            "https://github.com/jweter/knowledge-engine-core/pull/603 merged (capable-builder pull request)"
+          ]
         },
         {
           "id": "core-online-evidence-source-retrieval-success-ratio",
