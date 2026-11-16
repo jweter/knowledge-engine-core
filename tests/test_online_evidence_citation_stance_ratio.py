@@ -14,8 +14,12 @@ def test_citation_stance_support_ratio_example_3() -> None:
 
 
 def test_citation_stance_support_ratio_example_4() -> None:
-    assert citation_stance_support_ratio(["Supports"]) == 1.0
+    assert citation_stance_support_ratio(["Supports"]) == 0.0
 
 
 def test_citation_stance_support_ratio_example_5() -> None:
-    assert citation_stance_support_ratio(["supports", "Supports", "supports"]) == 1.0
+    assert citation_stance_support_ratio(["supports", "Supports", "supports"]) == 0.6667
+
+
+def test_case_sensitive_unknown_and_repeated_entries() -> None:
+    assert citation_stance_support_ratio(["SUPPORTS", "supports", "Supports", "unknown"]) == 0.25
