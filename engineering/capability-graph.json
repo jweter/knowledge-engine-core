@@ -393,6 +393,114 @@
           ],
           "depends_on": [],
           "capability_level": 1
+        },
+        {
+          "id": "core-online-evidence-source-retrieval-success-ratio",
+          "state": "PLANNED",
+          "objective": "Return the fraction of entries in source_statuses equal, case-sensitively, to the exact string 'retrieved', rounded to four decimal places. Return 0.0 for an empty list. Matching is case-sensitive, so a differently-cased or unrecognized string does not count as retrieved. Duplicate entries each count individually toward both the numerator and denominator. Lets AI/Web compute a bundle's source-retrieval success ratio consistently instead of re-deriving it from RetrievalStatus values themselves.",
+          "acceptance": [
+            "a new pure function source_retrieval_success_ratio(source_statuses: list[str]) -> float lives in a new knowledge_engine module and takes only the list of strings itself -- no file, network, clock or random input",
+            "tests/test_online_evidence_source_retrieval_ratio.py exercises every acceptance_example below literally, plus a single-element and an all-retrieved list",
+            "Canonical preflight, required CI checks and review must pass at the exact head; no gate may be weakened."
+          ],
+          "acceptance_examples": [
+            {
+              "call": "source_retrieval_success_ratio([])",
+              "expected": 0.0,
+              "why": "an empty list has no sources to divide, so the ratio is defined as 0.0."
+            },
+            {
+              "call": "source_retrieval_success_ratio(['retrieved', 'failed', 'unavailable'])",
+              "expected": 0.3333,
+              "why": "one of three statuses is exactly 'retrieved', and 1/3 rounds to 0.3333 at four decimal places."
+            },
+            {
+              "call": "source_retrieval_success_ratio(['retrieved', 'retrieved'])",
+              "expected": 1.0,
+              "why": "both duplicate entries count individually and both are retrieved, so the ratio is 1.0."
+            },
+            {
+              "call": "source_retrieval_success_ratio(['Retrieved'])",
+              "expected": 0.0,
+              "why": "matching is case-sensitive, so this differently-cased string is not recognized as retrieved."
+            }
+          ],
+          "allowed_paths": [
+            "knowledge_engine/online_evidence_source_retrieval_ratio.py",
+            "tests/test_online_evidence_source_retrieval_ratio.py"
+          ],
+          "forbidden_paths": [
+            "**/*.key",
+            "**/*.pem",
+            ".env",
+            ".github/**",
+            "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md",
+            "engineering/**",
+            "poetry.lock",
+            "private/**",
+            "pyproject.toml"
+          ],
+          "runner_requirements": [
+            "code",
+            "local",
+            "offline"
+          ],
+          "depends_on": [],
+          "capability_level": 1
+        },
+        {
+          "id": "core-online-evidence-citation-stance-support-ratio",
+          "state": "PLANNED",
+          "objective": "Return the fraction of entries in stances equal, case-sensitively, to the exact string 'supports', rounded to four decimal places. Return 0.0 for an empty list. Matching is case-sensitive, so a differently-cased or unrecognized string does not count as supporting. Duplicate entries each count individually toward both the numerator and denominator. Lets AI/Web compute a claim's citation-support ratio consistently instead of re-deriving it from EvidenceStance values themselves.",
+          "acceptance": [
+            "a new pure function citation_stance_support_ratio(stances: list[str]) -> float lives in a new knowledge_engine module and takes only the list of strings itself -- no file, network, clock or random input",
+            "tests/test_online_evidence_citation_stance_ratio.py exercises every acceptance_example below literally, plus a single-element and an all-supporting list",
+            "Canonical preflight, required CI checks and review must pass at the exact head; no gate may be weakened."
+          ],
+          "acceptance_examples": [
+            {
+              "call": "citation_stance_support_ratio([])",
+              "expected": 0.0,
+              "why": "an empty list has no citations to divide, so the ratio is defined as 0.0."
+            },
+            {
+              "call": "citation_stance_support_ratio(['supports', 'contradicts', 'inconclusive'])",
+              "expected": 0.3333,
+              "why": "one of three stances is exactly 'supports', and 1/3 rounds to 0.3333 at four decimal places."
+            },
+            {
+              "call": "citation_stance_support_ratio(['supports', 'supports'])",
+              "expected": 1.0,
+              "why": "both duplicate entries count individually and both support, so the ratio is 1.0."
+            },
+            {
+              "call": "citation_stance_support_ratio(['Supports'])",
+              "expected": 0.0,
+              "why": "matching is case-sensitive, so this differently-cased string is not recognized as supporting."
+            }
+          ],
+          "allowed_paths": [
+            "knowledge_engine/online_evidence_citation_stance_ratio.py",
+            "tests/test_online_evidence_citation_stance_ratio.py"
+          ],
+          "forbidden_paths": [
+            "**/*.key",
+            "**/*.pem",
+            ".env",
+            ".github/**",
+            "docs/OWNER_APPROVED_ROADMAP_2026-10-25.md",
+            "engineering/**",
+            "poetry.lock",
+            "private/**",
+            "pyproject.toml"
+          ],
+          "runner_requirements": [
+            "code",
+            "local",
+            "offline"
+          ],
+          "depends_on": [],
+          "capability_level": 1
         }
       ]
     }
