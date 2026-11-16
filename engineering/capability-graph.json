@@ -399,7 +399,7 @@
         },
         {
           "id": "core-online-evidence-source-retrieval-success-ratio",
-          "state": "PLANNED",
+          "state": "VERIFIED_COMPLETE",
           "objective": "Return the fraction of entries in source_statuses equal, case-sensitively, to the exact string 'retrieved', rounded to four decimal places. Return 0.0 for an empty list. Matching is case-sensitive, so a differently-cased or unrecognized string does not count as retrieved. Duplicate entries each count individually toward both the numerator and denominator. Lets AI/Web compute a bundle's source-retrieval success ratio consistently instead of re-deriving it from RetrievalStatus values themselves.",
           "acceptance": [
             "a new pure function source_retrieval_success_ratio(source_statuses: list[str]) -> float lives in a new knowledge_engine module and takes only the list of strings itself -- no file, network, clock or random input",
@@ -449,7 +449,10 @@
             "offline"
           ],
           "depends_on": [],
-          "capability_level": 1
+          "capability_level": 1,
+          "verification": [
+            "https://github.com/jweter/knowledge-engine-core/pull/604 merged as 883d9678ac8d"
+          ]
         },
         {
           "id": "core-online-evidence-citation-stance-support-ratio",
