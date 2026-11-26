@@ -7151,9 +7151,18 @@ def online_research(
                 f"Output file already exists: {target}. Use --force to overwrite."
             )
     try:
+        max_response_bytes = int(max_response_mb * 1_000_000)
+        if fixture_server_port is not None:
+            # The fixture's documented `oversized` page is only "over the bound"
+            # relative to MAX_RESPONSE_BYTES, so fixture mode never accepts a looser
+            # bound: a consumer that omits --max-response-mb (default 2 MB) would
+            # otherwise retrieve the oversized page and contradict the contract.
+            from knowledge_engine.online_evidence_fixture_server import MAX_RESPONSE_BYTES
+
+            max_response_bytes = min(max_response_bytes, MAX_RESPONSE_BYTES)
         limits = RetrievalLimits(
             max_sources=max_sources,
-            max_response_bytes=int(max_response_mb * 1_000_000),
+            max_response_bytes=max_response_bytes,
             timeout_seconds=timeout_seconds,
             cache_max_bytes=int(cache_max_mb * 1_000_000),
             cache_max_age_seconds=cache_max_age_minutes * 60,

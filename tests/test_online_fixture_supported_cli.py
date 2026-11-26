@@ -142,3 +142,51 @@ def test_installed_cli_retrieves_fixture_and_validates_without_private_harness(
             server.terminate()
             server.wait(timeout=5)
     assert server.returncode == 0
+
+
+def test_fixture_mode_oversized_page_fails_even_without_explicit_bound(tmp_path: Path) -> None:
+    """Consumers (AI/Web CI) omit --max-response-mb; /huge must still always fail."""
+
+    server = subprocess.Popen(
+        [*CLI, "online-evidence-fixture-server"],
+        cwd=tmp_path,
+        env={
+            **os.environ,
+            "PYTHONPATH": os.pathsep.join((str(REPO), os.environ.get("PYTHONPATH", ""))),
+        },
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    assert server.stdin is not None and server.stdout is not None
+    try:
+        port = json.loads(server.stdout.readline())["port"]
+        bundle = tmp_path / "evidence.json"
+        research = run_cli(
+            [
+                "online-research",
+                "Does semaglutide reduce body weight versus placebo?",
+                "--fixture-server-port",
+                str(port),
+                "--cache-dir",
+                str(tmp_path / "cache"),
+                "--ledger-root",
+                str(tmp_path / "ledger"),
+                "--output",
+                str(bundle),
+            ],
+            tmp_path,
+            allow_fixture=True,
+        )
+        assert research.returncode == 0, research.stdout + research.stderr
+        sources = {s["source_id"]: s for s in json.loads(bundle.read_text("utf-8"))["sources"]}
+        assert sources["doi:10.1/huge"]["status"] == "failed"
+        assert f"exceeds {MAX_RESPONSE_BYTES} bytes" in sources["doi:10.1/huge"]["failure_reason"]
+        assert sources["doi:10.1/good"]["status"] == "retrieved"
+    finally:
+        server.stdin.close()
+        try:
+            server.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            server.kill()
