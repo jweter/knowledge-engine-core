@@ -105,6 +105,12 @@ retrieval can quote, `http_500` always fails with HTTP 500, and `oversized` alwa
 `MAX_RESPONSE_BYTES`. A future change may add a new page shape, but never remove or change the meaning of
 these three.
 
+`oversized` is over the bound relative to `MAX_RESPONSE_BYTES` (100 000 bytes). In fixture mode
+(`ke online-research --fixture-server-port`) the retrieval bound is therefore capped at
+`MAX_RESPONSE_BYTES` even when `--max-response-mb` is omitted or larger, so consumers such as
+knowledge-engine-ai and knowledge-engine-web always see `oversized` fail with
+`exceeds 100000 bytes` without having to pass the flag.
+
 This is the **supported integration-test fixture** for knowledge-engine-ai and knowledge-engine-web: a
 consumer repository's own CI starts this command, parses its stdout for the port and page URLs, and runs
 the real `ke online-research` then `ke online-evidence-validate` against it -- the same CLI boundary
