@@ -44,6 +44,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from enum import StrEnum
 from typing import Any
 
+from knowledge_engine.federated_discovery import ProviderOutcome, SearchCompleteness
 from knowledge_engine.online_evidence import (
     ONLINE_EVIDENCE_SCHEMA,
     Citation,
@@ -53,6 +54,7 @@ from knowledge_engine.online_evidence import (
     EvidenceStance,
     OnlineEvidenceBundle,
     OnlineSource,
+    ProviderCoverage,
     RetrievalStatus,
 )
 
@@ -136,6 +138,10 @@ def _enum_schema(values: Iterable[StrEnum]) -> dict[str, Any]:
     return {"type": "string", "enum": [value.value for value in values]}
 
 
+def _nullable_enum_schema(values: Iterable[StrEnum]) -> dict[str, Any]:
+    return {"type": ["string", "null"], "enum": [value.value for value in values] + [None]}
+
+
 def build_schema() -> dict[str, Any]:
     """Build the ``ke-online-evidence/v1`` JSON Schema from Core's own types."""
 
@@ -172,6 +178,14 @@ def build_schema() -> dict[str, Any]:
         "status": _enum_schema(ClaimStatus),
         "citations": {"type": "array", "items": {"$ref": "#/$defs/Citation"}},
     }
+    provider_coverage_properties: dict[str, Any] = {
+        "provider": _STRING,
+        "outcome": _enum_schema(ProviderOutcome),
+        "attempted": {"type": "boolean"},
+        "result_count": {"type": "integer"},
+        "latency_ms": _NULLABLE_INTEGER,
+        "reason": _NULLABLE_STRING,
+    }
 
     required_bundle = required_fields_for_bundle()
     required_source = required_fields_for_source()
@@ -196,7 +210,19 @@ def build_schema() -> dict[str, Any]:
     assert ({"status"} | _dataclass_field_names(EvidenceClaim)) <= set(claim_properties), (
         "online_evidence_schema.py's EvidenceClaim properties must cover its own dataclass fields"
     )
-    bundle_property_names = {"schema", "question", "sources", "excerpts", "claims"}
+    assert _dataclass_field_names(ProviderCoverage) <= set(provider_coverage_properties), (
+        "online_evidence_schema.py's ProviderCoverage properties must cover its own dataclass "
+        "fields"
+    )
+    bundle_property_names = {
+        "schema",
+        "question",
+        "sources",
+        "excerpts",
+        "claims",
+        "provider_coverage",
+        "completeness",
+    }
     assert ({"schema"} | _dataclass_field_names(OnlineEvidenceBundle)) <= bundle_property_names, (
         "online_evidence_schema.py's top-level properties must cover OnlineEvidenceBundle's own "
         "dataclass fields"
@@ -230,6 +256,11 @@ def build_schema() -> dict[str, Any]:
             "sources": {"type": "array", "items": {"$ref": "#/$defs/OnlineSource"}},
             "excerpts": {"type": "array", "items": {"$ref": "#/$defs/EvidenceExcerpt"}},
             "claims": {"type": "array", "items": {"$ref": "#/$defs/EvidenceClaim"}},
+            "provider_coverage": {
+                "type": "array",
+                "items": {"$ref": "#/$defs/ProviderCoverage"},
+            },
+            "completeness": _nullable_enum_schema(SearchCompleteness),
         },
         "additionalProperties": True,
         "$defs": {
@@ -255,6 +286,12 @@ def build_schema() -> dict[str, Any]:
                 "type": "object",
                 "required": required_claim,
                 "properties": claim_properties,
+                "additionalProperties": True,
+            },
+            "ProviderCoverage": {
+                "type": "object",
+                "required": ["provider", "outcome", "attempted"],
+                "properties": provider_coverage_properties,
                 "additionalProperties": True,
             },
         },

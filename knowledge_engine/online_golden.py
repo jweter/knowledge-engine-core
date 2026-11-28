@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from knowledge_engine.federated_discovery import ProviderOutcome, SearchCompleteness
 from knowledge_engine.online_evidence import (
     Citation,
     EvidenceClaim,
@@ -17,6 +18,7 @@ from knowledge_engine.online_evidence import (
     EvidenceStance,
     OnlineEvidenceBundle,
     OnlineSource,
+    ProviderCoverage,
     RetrievalStatus,
     content_sha256,
     source_id_for,
@@ -78,6 +80,31 @@ def build_golden_bundle() -> tuple[OnlineEvidenceBundle, dict[str, str]]:
             ),
             EvidenceClaim("c2", "The effect persists beyond five years."),
         ),
+        # Example provider coverage: one clean success, one failure (matching the
+        # `failed` source above), one empty result -- so a consumer's own parser
+        # has a real degraded-provider case to exercise, not only an empty list.
+        provider_coverage=(
+            ProviderCoverage(
+                provider="europe_pmc",
+                outcome=ProviderOutcome.SUCCESS.value,
+                attempted=True,
+                result_count=1,
+            ),
+            ProviderCoverage(
+                provider="pubmed",
+                outcome=ProviderOutcome.FAILED.value,
+                attempted=True,
+                result_count=0,
+                reason="HTTP 503 from provider.",
+            ),
+            ProviderCoverage(
+                provider="arxiv",
+                outcome=ProviderOutcome.EMPTY.value,
+                attempted=True,
+                result_count=0,
+            ),
+        ),
+        completeness=SearchCompleteness.PARTIAL.value,
     )
     return bundle, {trial.source_id: _TRIAL_TEXT}
 

@@ -962,6 +962,17 @@ the supported CLI boundary, not import Core's internal Python modules.
   `status` and `citations[]` (`excerpt_id`, `stance`). Core's
   online retrieval does not invent analytical claims; the AI/report layer
   is responsible for claim formation and evidence interpretation.
+- `provider_coverage[]` (optional, additive 2026-11) records which federated
+  discovery providers were actually attempted for this question --
+  `provider`, `outcome`, `attempted`, `result_count`, `latency_ms`,
+  `reason` -- mirroring `federated_discovery.ProviderStatus`. `completeness`
+  (optional: `complete`/`partial`/`failed`) mirrors
+  `FederatedSearchResult.completeness`. `OnlineEvidenceBundle.degraded_providers`
+  is a computed property (not a wire field) over `provider_coverage` for an
+  attempted provider whose outcome was not a plain success/empty result. This
+  closes issue #433 item 2 for the online-research path: a consumer reading
+  the bundle alone, with no second call against Core's FRD ledger, can now
+  tell a provider was skipped, rate-limited or failed.
 
 Cache contents are request-scoped, bounded, and subject to expiry/cleanup.
 The JSON bundle is a provenance record, **not** a permanent copy of the

@@ -67,6 +67,7 @@ from knowledge_engine.online_evidence import (
     OnlineEvidenceBundle,
     OnlineEvidenceError,
     OnlineSource,
+    ProviderCoverage,
     RetrievalStatus,
     verify_against_retrieved_content,
 )
@@ -897,7 +898,24 @@ def _research(
                 failure_reason="Retrieved text was evicted from the cache before verification.",
             )
             excerpts = [e for e in excerpts if e.source_id != source.source_id]
-    bundle = OnlineEvidenceBundle(question, tuple(sources), tuple(excerpts))
+    provider_coverage = tuple(
+        ProviderCoverage(
+            provider=status.provider,
+            outcome=status.outcome.value,
+            attempted=status.attempted,
+            result_count=status.result_count,
+            latency_ms=status.latency_ms,
+            reason=status.reason,
+        )
+        for status in discovery.provider_statuses
+    )
+    bundle = OnlineEvidenceBundle(
+        question,
+        tuple(sources),
+        tuple(excerpts),
+        provider_coverage=provider_coverage,
+        completeness=discovery.completeness.value,
+    )
     contents = {
         s.source_id: text
         for s in sources

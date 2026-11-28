@@ -38,6 +38,7 @@ whether a claim is true.
 | `Citation` | `excerpt_id`, `stance` (`supports` / `contradicts` / `inconclusive`) | Must name an excerpt in the bundle |
 | `EvidenceClaim` | `claim_id`, `text`, `citations` | `status` is **computed**: supports and contradicts together → `contested`; no supporting or contradicting citation → `insufficient_evidence` |
 | `OnlineEvidenceBundle` | `question`, `sources`, `excerpts`, `claims` | Unique IDs; excerpts only from retrieved sources; citations only to known excerpts |
+| — optional `provider_coverage` (`ProviderCoverage[]`: `provider`, `outcome`, `attempted`, `result_count`, `latency_ms`, `reason`) and `completeness` (`complete`/`partial`/`failed`/absent) | — | Additive-only (2026-11): the federated discovery providers actually attempted for this question, mirroring `federated_discovery.ProviderStatus`/`FederatedSearchResult.completeness`. A consumer reading the bundle alone can now learn a provider was skipped, rate-limited or failed, via the computed `OnlineEvidenceBundle.degraded_providers` property, without a second CLI call against Core's internal FRD ledger. Closes issue #433 item 2 ("federated provider latency/degradation") for the online-research path and unblocks `knowledge-engine-ai`'s documented `provider_coverage`/`degraded_providers` ResearchReport fields (`docs/roadmap/research_report_v1.md`). |
 
 `OnlineSource.from_observation` records the retrieval of a federated-discovery `ProviderObservation`
 (`knowledge_engine/federated_discovery.py`), carrying over its identifiers, provider and licence.

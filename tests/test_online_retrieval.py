@@ -674,6 +674,59 @@ def test_a_question_becomes_a_valid_verifiable_bundle_with_explicit_failures(
     }
     assert verify_against_retrieved_content(bundle, contents) == []  # type: ignore[arg-type]
     assert OnlineEvidenceBundle.from_dict(json.loads(json.dumps(bundle.to_dict()))) == bundle
+    assert bundle.completeness == "complete"
+    assert [p.provider for p in bundle.provider_coverage] == ["openalex"]
+    assert bundle.degraded_providers == ()
+
+
+def test_the_bundle_carries_degraded_provider_coverage_from_discovery(tmp_path: Path) -> None:
+    """Issue #433 item 2: a degraded/failed provider must be visible on the bundle itself.
+
+    Before this, `research_online()` computed `FederatedSearchResult.provider_statuses`
+    but discarded them when building the returned bundle -- a consumer of the bundle
+    alone (as knowledge-engine-ai's online path is) had no way to learn a provider was
+    skipped, rate-limited or failed without a second call against Core's internal FRD
+    ledger.
+    """
+
+    class DegradedBroker:
+        def search(self, query: DiscoveryQuery) -> FederatedSearchResult:
+            return FederatedSearchResult(
+                query=query,
+                provider_statuses=(
+                    ProviderStatus("openalex", ProviderOutcome.SUCCESS, True, 1),
+                    ProviderStatus(
+                        "semantic_scholar",
+                        ProviderOutcome.RATE_LIMITED,
+                        True,
+                        0,
+                        reason="HTTP 429 from provider.",
+                    ),
+                    ProviderStatus("arxiv", ProviderOutcome.DISABLED, False),
+                ),
+                candidates=(
+                    candidate("c1", observation("example.org", "/trial", doi="10.1/trial")),
+                ),
+            )
+
+    broker, fetcher, cache, use = build_world(tmp_path)
+    result = research_online(
+        "semaglutide body weight placebo",
+        broker=DegradedBroker(),
+        fetcher=fetcher,
+        cache=cache,
+        limits=use,
+        now=lambda: NOW,
+    )
+
+    bundle = result.bundle
+    assert bundle.completeness == "partial"
+    assert bundle.degraded_providers == ("semantic_scholar",)
+    coverage = {p.provider: p for p in bundle.provider_coverage}
+    assert coverage["semantic_scholar"].outcome == "rate_limited"
+    assert coverage["semantic_scholar"].reason == "HTTP 429 from provider."
+    assert coverage["arxiv"].attempted is False
+    assert OnlineEvidenceBundle.from_dict(json.loads(json.dumps(bundle.to_dict()))) == bundle
 
 
 def test_the_bundle_validates_through_the_existing_cli_against_the_cache(tmp_path: Path) -> None:

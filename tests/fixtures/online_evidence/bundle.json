@@ -18,6 +18,7 @@
       "text": "The effect persists beyond five years."
     }
   ],
+  "completeness": "partial",
   "excerpts": [
     {
       "char_end": 113,
@@ -26,6 +27,32 @@
       "locator": "Results",
       "source_id": "doi:10.1000/golden-trial",
       "text": "Mean change in body weight from baseline to week 104 was -15.2% with semaglutide and -2.6% with placebo."
+    }
+  ],
+  "provider_coverage": [
+    {
+      "attempted": true,
+      "latency_ms": null,
+      "outcome": "success",
+      "provider": "europe_pmc",
+      "reason": null,
+      "result_count": 1
+    },
+    {
+      "attempted": true,
+      "latency_ms": null,
+      "outcome": "failed",
+      "provider": "pubmed",
+      "reason": "HTTP 503 from provider.",
+      "result_count": 0
+    },
+    {
+      "attempted": true,
+      "latency_ms": null,
+      "outcome": "empty",
+      "provider": "arxiv",
+      "reason": null,
+      "result_count": 0
     }
   ],
   "question": "Does semaglutide reduce body weight in adults with obesity?",

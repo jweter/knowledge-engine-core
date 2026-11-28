@@ -7,7 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 import knowledge_engine.entrypoint as entrypoint
-from knowledge_engine.federated_discovery import ProviderObservation
+from knowledge_engine.federated_discovery import ProviderObservation, ProviderOutcome
 from knowledge_engine.online_evidence import (
     Citation,
     ClaimStatus,
@@ -17,6 +17,7 @@ from knowledge_engine.online_evidence import (
     OnlineEvidenceBundle,
     OnlineEvidenceError,
     OnlineSource,
+    ProviderCoverage,
     RetrievalStatus,
     content_sha256,
     source_id_for,
@@ -386,3 +387,92 @@ def test_cli_still_rejects_modified_or_fabricated_text_with_other_newlines(
     assert faithful.exit_code == 1
     assert fabricated.excerpt_id in output and "text not found in its source" in output
     assert genuine.excerpt_id not in output
+
+
+# --- Provider coverage (issue #433 item 2: federated provider latency/degradation) ------
+
+
+def test_provider_coverage_round_trips_and_computes_degraded_providers() -> None:
+    bundle, _contents = _bundle()
+    covered = OnlineEvidenceBundle(
+        bundle.question,
+        bundle.sources,
+        bundle.excerpts,
+        bundle.claims,
+        provider_coverage=(
+            ProviderCoverage("europe_pmc", ProviderOutcome.SUCCESS.value, True, result_count=2),
+            ProviderCoverage(
+                "pubmed",
+                ProviderOutcome.RATE_LIMITED.value,
+                True,
+                reason="HTTP 429 from provider.",
+            ),
+            ProviderCoverage("arxiv", ProviderOutcome.DISABLED.value, False),
+        ),
+        completeness="partial",
+    )
+
+    assert covered.degraded_providers == ("pubmed",)
+
+    payload = json.loads(json.dumps(covered.to_dict()))
+    assert payload["completeness"] == "partial"
+    assert [p["provider"] for p in payload["provider_coverage"]] == [
+        "europe_pmc",
+        "pubmed",
+        "arxiv",
+    ]
+    assert OnlineEvidenceBundle.from_dict(payload) == covered
+
+
+def test_provider_coverage_without_data_is_empty_and_additive() -> None:
+    bundle, _contents = _bundle()
+
+    assert bundle.provider_coverage == ()
+    assert bundle.completeness is None
+    assert bundle.degraded_providers == ()
+    # Old bundles the wire format never had these fields for still parse.
+    payload = bundle.to_dict()
+    del payload["provider_coverage"]
+    del payload["completeness"]
+    assert OnlineEvidenceBundle.from_dict(payload) == bundle
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"provider": " ", "outcome": "success", "attempted": True}, "provider name"),
+        (
+            {"provider": "x", "outcome": "not_a_real_outcome", "attempted": True},
+            "Unknown provider outcome",
+        ),
+        (
+            {"provider": "x", "outcome": "success", "attempted": True, "result_count": -1},
+            "negative",
+        ),
+        ({"provider": "x", "outcome": "success", "attempted": True, "latency_ms": -1}, "negative"),
+    ],
+)
+def test_provider_coverage_entries_are_validated(kwargs: dict[str, object], message: str) -> None:
+    with pytest.raises(OnlineEvidenceError, match=message):
+        ProviderCoverage(**kwargs)  # type: ignore[arg-type]
+
+
+def test_bundle_rejects_duplicate_providers_and_unknown_completeness() -> None:
+    bundle, _contents = _bundle()
+    one = ProviderCoverage("europe_pmc", ProviderOutcome.SUCCESS.value, True)
+
+    with pytest.raises(OnlineEvidenceError, match="Duplicate provider_coverage"):
+        OnlineEvidenceBundle(
+            bundle.question,
+            bundle.sources,
+            bundle.excerpts,
+            bundle.claims,
+            provider_coverage=(
+                one,
+                ProviderCoverage("Europe_PMC", ProviderOutcome.EMPTY.value, True),
+            ),
+        )
+    with pytest.raises(OnlineEvidenceError, match="Unknown completeness"):
+        OnlineEvidenceBundle(
+            bundle.question, bundle.sources, bundle.excerpts, bundle.claims, completeness="mostly"
+        )

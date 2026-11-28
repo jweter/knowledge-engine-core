@@ -184,6 +184,50 @@
         "license"
       ],
       "type": "object"
+    },
+    "ProviderCoverage": {
+      "additionalProperties": true,
+      "properties": {
+        "attempted": {
+          "type": "boolean"
+        },
+        "latency_ms": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "outcome": {
+          "enum": [
+            "success",
+            "empty",
+            "rate_limited",
+            "unavailable",
+            "failed",
+            "skipped",
+            "disabled"
+          ],
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "result_count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "provider",
+        "outcome",
+        "attempted"
+      ],
+      "type": "object"
     }
   },
   "$id": "https://knowledge-engine.internal/schemas/online_evidence_v1.schema.json",
@@ -197,9 +241,27 @@
       },
       "type": "array"
     },
+    "completeness": {
+      "enum": [
+        "complete",
+        "partial",
+        "failed",
+        null
+      ],
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "excerpts": {
       "items": {
         "$ref": "#/$defs/EvidenceExcerpt"
+      },
+      "type": "array"
+    },
+    "provider_coverage": {
+      "items": {
+        "$ref": "#/$defs/ProviderCoverage"
       },
       "type": "array"
     },
