@@ -113,6 +113,20 @@ Research Report v1 requires Core to preserve and expose enough structured eviden
 
 Core must continue to prefer absence over invented metadata.
 
+**2026-11-28 (online-research path):** the `ke-online-evidence/v1` bundle
+(`ke online-research`) now carries optional `provider_coverage[]`/
+`completeness` fields (`knowledge_engine/online_evidence.py`,
+`docs/online_evidence_contract.md`), threaded from
+`federated_discovery.FederatedSearchResult` instead of being discarded.
+This closes issue #433 item 2 ("federated provider latency/degradation")
+for the online-research path: a consumer reading the bundle alone can now
+learn which providers were attempted, degraded or skipped, feeding AI's
+`provider_coverage`/`degraded_providers` ResearchReport fields and Web's
+"expose ... provider coverage ... and degradation clearly" requirement
+above without a second call against Core's internal FRD ledger. AI and Web
+must still opt into reading the new fields in their own report
+projection/rendering; this slice only makes the data available on the wire.
+
 ### `knowledge-engine-ai`
 
 AI owns research planning, adequacy, synthesis, and release discipline.

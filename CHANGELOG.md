@@ -9,6 +9,21 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Online evidence bundle provider coverage (issue #433 item 2)**: the
+  `ke-online-evidence/v1` bundle (`ke online-research`) gains two additive,
+  optional fields -- `provider_coverage[]` (per-provider `provider`,
+  `outcome`, `attempted`, `result_count`, `latency_ms`, `reason`, mirroring
+  `federated_discovery.ProviderStatus`) and `completeness`
+  (`complete`/`partial`/`failed`) -- plus a computed
+  `OnlineEvidenceBundle.degraded_providers` property. A consumer reading the
+  bundle alone can now tell whether a federated discovery provider was
+  skipped, rate-limited or failed, without a second call against Core's
+  internal FRD ledger. This closes the blocker
+  `docs/roadmap/research_report_v1.md` and knowledge-engine-ai's own roadmap
+  doc named for AI's `provider_coverage`/`degraded_providers` ResearchReport
+  fields. Schema, docs and the committed golden fixture are updated to
+  match.
+
 - **Roman-numbered scientific section headings (KEC-6)**: evidence-section
   detection now recognizes uppercase Roman prefixes such as `II. Methods`,
   `III. Results`, and `IV. Discussion`, while preserving decimal and

@@ -33,7 +33,11 @@ from enum import StrEnum
 from typing import Any
 from urllib.parse import urlsplit
 
-from knowledge_engine.federated_discovery import ProviderObservation
+from knowledge_engine.federated_discovery import (
+    ProviderObservation,
+    ProviderOutcome,
+    SearchCompleteness,
+)
 from knowledge_engine.utils import (
     normalize_arxiv_id,
     normalize_doi,
@@ -290,6 +294,43 @@ class EvidenceClaim:
 
 _SOURCE_FIELDS = frozenset(f.name for f in dataclasses.fields(OnlineSource))
 _EXCERPT_FIELDS = frozenset(f.name for f in dataclasses.fields(EvidenceExcerpt))
+_PROVIDER_OUTCOME_VALUES = frozenset(outcome.value for outcome in ProviderOutcome)
+_COMPLETENESS_VALUES = frozenset(value.value for value in SearchCompleteness)
+
+
+@dataclass(frozen=True)
+class ProviderCoverage:
+    """One federated discovery provider's recorded outcome for this request's search.
+
+    Mirrors the KEC-1-relevant subset of ``federated_discovery.ProviderStatus`` so a
+    consumer of the online evidence bundle (e.g. knowledge-engine-ai's report
+    projection) can learn which providers were actually attempted, degraded or
+    skipped -- issue #433 item 2's "federated provider latency/degradation" ask for
+    the online-research path -- without a second CLI call against Core's internal
+    FRD ledger. ``outcome`` is the plain string value of ``ProviderOutcome`` rather
+    than the enum itself, so this contract module does not require a consumer to
+    depend on Core's internal FRD types to parse its own wire format.
+    """
+
+    provider: str
+    outcome: str
+    attempted: bool
+    result_count: int = 0
+    latency_ms: int | None = None
+    reason: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.provider.strip():
+            raise OnlineEvidenceError("Provider coverage needs a provider name.")
+        if self.outcome not in _PROVIDER_OUTCOME_VALUES:
+            raise OnlineEvidenceError(f"Unknown provider outcome: {self.outcome!r}.")
+        if self.result_count < 0:
+            raise OnlineEvidenceError("Provider coverage result_count must not be negative.")
+        if self.latency_ms is not None and self.latency_ms < 0:
+            raise OnlineEvidenceError("Provider coverage latency_ms must not be negative.")
+
+
+_PROVIDER_COVERAGE_FIELDS = frozenset(f.name for f in dataclasses.fields(ProviderCoverage))
 
 
 @dataclass(frozen=True)
@@ -300,6 +341,8 @@ class OnlineEvidenceBundle:
     sources: tuple[OnlineSource, ...]
     excerpts: tuple[EvidenceExcerpt, ...] = ()
     claims: tuple[EvidenceClaim, ...] = ()
+    provider_coverage: tuple[ProviderCoverage, ...] = ()
+    completeness: str | None = None
 
     def __post_init__(self) -> None:
         problems: list[str] = []
@@ -313,6 +356,14 @@ class OnlineEvidenceBundle:
             problems.extend(
                 f"Duplicate {kind}: {value}" for value, n in Counter(ids).items() if n > 1
             )
+        provider_names = [p.provider.strip().lower() for p in self.provider_coverage]
+        problems.extend(
+            f"Duplicate provider_coverage provider: {value}"
+            for value, n in Counter(provider_names).items()
+            if n > 1
+        )
+        if self.completeness is not None and self.completeness not in _COMPLETENESS_VALUES:
+            problems.append(f"Unknown completeness: {self.completeness!r}.")
         sources = {source.source_id: source for source in self.sources}
         for excerpt in self.excerpts:
             source = sources.get(excerpt.source_id)
@@ -337,6 +388,15 @@ class OnlineEvidenceBundle:
     def unavailable_sources(self) -> tuple[OnlineSource, ...]:
         return tuple(s for s in self.sources if s.status is not RetrievalStatus.RETRIEVED)
 
+    @property
+    def degraded_providers(self) -> tuple[str, ...]:
+        """Attempted providers whose outcome was not a plain success or empty result."""
+
+        accepted = {ProviderOutcome.SUCCESS.value, ProviderOutcome.EMPTY.value}
+        return tuple(
+            p.provider for p in self.provider_coverage if p.attempted and p.outcome not in accepted
+        )
+
     def claims_with_status(self, status: ClaimStatus) -> tuple[EvidenceClaim, ...]:
         return tuple(claim for claim in self.claims if claim.status is status)
 
@@ -345,6 +405,18 @@ class OnlineEvidenceBundle:
             "schema": ONLINE_EVIDENCE_SCHEMA,
             "question": self.question,
             "sources": [_source_dict(source) for source in self.sources],
+            "provider_coverage": [
+                {
+                    "provider": p.provider,
+                    "outcome": p.outcome,
+                    "attempted": p.attempted,
+                    "result_count": p.result_count,
+                    "latency_ms": p.latency_ms,
+                    "reason": p.reason,
+                }
+                for p in self.provider_coverage
+            ],
+            "completeness": self.completeness,
             "excerpts": [
                 {
                     "excerpt_id": e.excerpt_id,
@@ -400,6 +472,13 @@ class OnlineEvidenceBundle:
                     )
                     for raw in payload.get("claims", [])
                 ),
+                provider_coverage=tuple(
+                    ProviderCoverage(
+                        **{k: v for k, v in raw.items() if k in _PROVIDER_COVERAGE_FIELDS}
+                    )
+                    for raw in payload.get("provider_coverage", [])
+                ),
+                completeness=payload.get("completeness"),
             )
         except (AttributeError, KeyError, TypeError, ValueError) as error:
             if isinstance(error, OnlineEvidenceError):
@@ -498,6 +577,7 @@ __all__ = [
     "OnlineEvidenceBundle",
     "OnlineEvidenceError",
     "OnlineSource",
+    "ProviderCoverage",
     "RetrievalStatus",
     "content_sha256",
     "excerpt_id_for",
