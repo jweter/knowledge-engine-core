@@ -84,6 +84,28 @@ def test_an_invalid_enum_value_is_rejected() -> None:
     assert any("downloaded" in problem for problem in problems)
 
 
+def test_provider_coverage_outcome_and_completeness_are_constrained() -> None:
+    """Codex finding (PR #613): the schema must reject what the bundle parser rejects.
+
+    `OnlineEvidenceBundle.from_dict()`/`ProviderCoverage` only accept known
+    `ProviderOutcome`/`SearchCompleteness` values, so the exported schema must
+    reject the same invalid strings -- otherwise a consumer validating against
+    the schema alone would accept a bundle Core's own parser refuses.
+    """
+
+    schema = _load_committed_schema()
+    bundle = copy.deepcopy(_load_fixture())
+    bundle["provider_coverage"][0]["outcome"] = "downloaded"
+    bundle["completeness"] = "mostly_complete"
+
+    problems = validate(bundle, schema)
+
+    assert any("downloaded" in problem for problem in problems)
+    assert any("mostly_complete" in problem for problem in problems)
+    # A genuinely absent completeness (no run attempted yet) must stay valid.
+    assert validate({**_load_fixture(), "completeness": None}, schema) == []
+
+
 def test_additive_optional_fields_are_allowed() -> None:
     schema = _load_committed_schema()
     bundle = copy.deepcopy(_load_fixture())

@@ -198,6 +198,15 @@
           ]
         },
         "outcome": {
+          "enum": [
+            "success",
+            "empty",
+            "rate_limited",
+            "unavailable",
+            "failed",
+            "skipped",
+            "disabled"
+          ],
           "type": "string"
         },
         "provider": {
@@ -233,6 +242,12 @@
       "type": "array"
     },
     "completeness": {
+      "enum": [
+        "complete",
+        "partial",
+        "failed",
+        null
+      ],
       "type": [
         "string",
         "null"

@@ -44,6 +44,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from enum import StrEnum
 from typing import Any
 
+from knowledge_engine.federated_discovery import ProviderOutcome, SearchCompleteness
 from knowledge_engine.online_evidence import (
     ONLINE_EVIDENCE_SCHEMA,
     Citation,
@@ -137,6 +138,10 @@ def _enum_schema(values: Iterable[StrEnum]) -> dict[str, Any]:
     return {"type": "string", "enum": [value.value for value in values]}
 
 
+def _nullable_enum_schema(values: Iterable[StrEnum]) -> dict[str, Any]:
+    return {"type": ["string", "null"], "enum": [value.value for value in values] + [None]}
+
+
 def build_schema() -> dict[str, Any]:
     """Build the ``ke-online-evidence/v1`` JSON Schema from Core's own types."""
 
@@ -175,7 +180,7 @@ def build_schema() -> dict[str, Any]:
     }
     provider_coverage_properties: dict[str, Any] = {
         "provider": _STRING,
-        "outcome": _STRING,
+        "outcome": _enum_schema(ProviderOutcome),
         "attempted": {"type": "boolean"},
         "result_count": {"type": "integer"},
         "latency_ms": _NULLABLE_INTEGER,
@@ -255,7 +260,7 @@ def build_schema() -> dict[str, Any]:
                 "type": "array",
                 "items": {"$ref": "#/$defs/ProviderCoverage"},
             },
-            "completeness": _NULLABLE_STRING,
+            "completeness": _nullable_enum_schema(SearchCompleteness),
         },
         "additionalProperties": True,
         "$defs": {
